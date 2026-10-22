@@ -370,7 +370,7 @@ func _fill_missions(mode_id: String) -> void:
 	if want == "dambuster":
 		for i in DamCampaign.count():
 			_mission_ids.append(str(i))
-			var tag: String = "  (passed)" if DamCampaign.is_passed(i) else ("" if DamCampaign.is_open(i) else "  (locked)")
+			var tag: String = "" if (DamCampaign.is_passed(i) or DamCampaign.is_open(i)) else "  (locked)"
 			_mission.add_item(str(DamCampaign.DAYS[i]["title"]) + tag)
 	elif want == "training":
 		for l in TrainingMode.LESSONS:
@@ -389,9 +389,18 @@ func _fill_missions(mode_id: String) -> void:
 const DONE_GREEN := Color(0.45, 0.85, 0.45)
 
 
-## True when the mission at list index i is a completed historical mission.
+## True when the entry at list index i is completed: a historical mission flown, or a Dam Busters day passed.
 func _mission_done_at(i: int) -> bool:
-	return _mission_kind == "historical" and i >= 0 and i < _mission_ids.size() and GameState.is_mission_done(str(_mission_ids[i]))
+	if i < 0 or i >= _mission_ids.size():
+		return false
+	if _mission_kind == "dambuster":
+		return DamCampaign.is_passed(int(_mission_ids[i]))
+	return _mission_kind == "historical" and GameState.is_mission_done(str(_mission_ids[i]))
+
+
+## Dam Busters days that are still locked are greyed out.
+func _mission_locked_at(i: int) -> bool:
+	return _mission_kind == "dambuster" and i >= 0 and i < _mission_ids.size() and not DamCampaign.is_open(int(_mission_ids[i]))
 
 
 ## The closed Mission box shows the chosen mission in green once it has been completed.
@@ -432,6 +441,8 @@ func _show_mission_list() -> void:
 		il.add_item(_mission.get_item_text(i))
 		if _mission_done_at(i):
 			il.set_item_custom_fg_color(i, DONE_GREEN)
+		elif _mission_locked_at(i):
+			il.set_item_custom_fg_color(i, UIKit.TEXT_DIM)
 	if _mission.selected >= 0:
 		il.select(_mission.selected)
 	il.item_selected.connect(func(i: int) -> void:
