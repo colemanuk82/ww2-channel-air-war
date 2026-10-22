@@ -116,3 +116,6 @@ NVIDIA DLSS is optional and is not shipped with the game. On NVIDIA RTX cards th
 
 ## Legal
 See `docs/legal/` (EULA, privacy policy, credits). Fill in the publisher name and contact in `tools/build_legal.py`, then run it to regenerate `data/legal.json`.
+
+## Installer
+Build the Windows installer with Inno Setup: `ISCC.exe installer\setup.iss` (output `build\WW2ChannelAirWar_Setup_v1.0.exe`). It installs per-user, so the optional DLSS download can write next to the game.
