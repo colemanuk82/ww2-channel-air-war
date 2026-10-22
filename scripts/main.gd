@@ -1538,6 +1538,7 @@ func start_game(cfg: Dictionary) -> void:
 	camera_rig.bind(player)
 
 	hud = (load(HUD_SCENE) as PackedScene).instantiate() as HUD
+	hud.visible = not _args.has("--nohud")      # debug: completely clean screenshots
 	add_child(hud)
 	hud.bind_aircraft(player)
 	hud.bind_camera(camera_rig.chase_cam)
@@ -2295,6 +2296,9 @@ func _parse_debug_args() -> void:
 			camera_rig.set_orbit(float(oq[0]), float(oq[1]) if oq.size() > 1 else 0.0)
 		elif a == "--noout":
 			GameState.outlines_enabled = false
+		elif a == "--nohud":      # debug: clean screenshots with the HUD and hints hidden
+			GameState.show_hud = false
+			GameState.show_hints = false
 		elif a.begins_with("--frames="):
 			_shot_frames = int(a.substr(9))
 		elif a.begins_with("--hawkinge"):

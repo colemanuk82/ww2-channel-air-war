@@ -32,6 +32,7 @@ sharper. No NVIDIA card? No problem: you get the standard renderer with AMD FSR 
 - **Sortie planner:** pick any airfield (runway or airborne) or any point on the map, choose a scenario, set the enemy strength.
 - **A living world:** real airfields, towns, rivers, rail, ports, Atlantic Wall guns, barrage balloons, searchlights, convoys and trains. Landmarks include Battersea Power Station, the Tower of London and Rochester Castle.
 - **Weather & time of day:** clear to storm, dawn to midnight.
+- **🎵 Bring your own soundtrack:** import your own MP3, OGG or WAV tracks from Options > Music and they play in the menu and in flight, right next to the built-in score.
 - **Radio chatter:** AI-voiced controllers, wingmen and bomber crews, with subtitles and static.
 - **Full gamepad support.** 🕹️
 
@@ -43,24 +44,87 @@ sharper. No NVIDIA card? No problem: you get the standard renderer with AMD FSR 
 
 ## 🎬 See it in action
 
-[![WW2 Channel Air War, in-game demo](docs/demo/channel-air-war-demo.gif)](docs/demo/channel-air-war-demo.mp4)
+All screenshots are taken in-game. Press `H` for a clean, HUD-free view.
 
-Dawn scramble from RAF Manston · a low pass through the Dover Barrage at dusk · a dogfight over Kent ·
-a night raid over the Pas-de-Calais · the Möhne dam · barrage balloons over London.
-**▶ [Full 31-second video](docs/demo/channel-air-war-demo.mp4)**
+### 🏠 Menu & intro
 
-[![A Lancaster formation and the tail gunner's station](docs/demo/channel-air-war-bombers.gif)](docs/demo/channel-air-war-bombers.mp4)
-
-A Lancaster formation inbound to Dunkirk, a fighter patrol over Kent, and the tail gunner's lonely seat.
-**▶ [Full 17-second video](docs/demo/channel-air-war-bombers.mp4)**
-
-| Dawn over Kent | Kent coastline |
+| Main menu | Epilepsy warning, shown before the menu loads |
 |:---:|:---:|
-| ![Dawn over Kent](screenshots/01_dawn_orbit.jpg) | ![Kent coastline](screenshots/02_kent_coast.jpg) |
+| ![Main menu](screenshots/g_menu.jpg) | ![Epilepsy warning, shown before the menu loads](screenshots/g_intro.jpg) |
 
-| Dunkirk at dusk | Night flak over Calais |
+### 🧑‍✈️ Cockpit views
+
+| Spitfire at noon | Hurricane under overcast skies |
 |:---:|:---:|
-| ![Dunkirk at dusk](screenshots/03_dunkirk_dusk.jpg) | ![Night flak over Calais](screenshots/04_night_flak.jpg) |
+| ![Spitfire at noon](screenshots/g_cockpit_spitfire.jpg) | ![Hurricane under overcast skies](screenshots/g_cockpit_hurricane.jpg) |
+
+| Bf 109 at dusk | Spitfire, HUD off |
+|:---:|:---:|
+| ![Bf 109 at dusk](screenshots/g_cockpit_bf109.jpg) | ![Spitfire, HUD off](screenshots/g_cockpit_clean.jpg) |
+
+### ⛈️ Weather systems
+
+| Fog at dawn | Overcast |
+|:---:|:---:|
+| ![Fog at dawn](screenshots/g_weather_fog.jpg) | ![Overcast](screenshots/g_weather_overcast.jpg) |
+
+| Rain at dusk | Storm |
+|:---:|:---:|
+| ![Rain at dusk](screenshots/g_weather_rain.jpg) | ![Storm](screenshots/g_weather_storm.jpg) |
+
+### 🌅 Time of day
+
+| Dawn over Kent | Noon off the white cliffs |
+|:---:|:---:|
+| ![Dawn over Kent](screenshots/g_time_dawn.jpg) | ![Noon off the white cliffs](screenshots/g_time_noon.jpg) |
+
+| Dusk over the Channel | Night, searchlights and flak |
+|:---:|:---:|
+| ![Dusk over the Channel](screenshots/g_time_dusk.jpg) | ![Night, searchlights and flak](screenshots/g_time_night.jpg) |
+
+### 🎥 Camera angles
+
+| Low chase | Overhead |
+|:---:|:---:|
+| ![Low chase](screenshots/g_angle_low.jpg) | ![Overhead](screenshots/g_angle_overhead.jpg) |
+
+| Orbit | Dawn, close behind |
+|:---:|:---:|
+| ![Orbit](screenshots/g_angle_orbit.jpg) | ![Dawn, close behind](screenshots/g_angle_close.jpg) |
+
+### ⚔️ Dogfights
+
+| Dogfight over Kent | Closing on a target |
+|:---:|:---:|
+| ![Dogfight over Kent](screenshots/g_fight_a.jpg) | ![Closing on a target](screenshots/g_fight_b.jpg) |
+
+| Dusk engagement | From the cockpit |
+|:---:|:---:|
+| ![Dusk engagement](screenshots/g_fight_dusk.jpg) | ![From the cockpit](screenshots/g_fight_cockpit.jpg) |
+
+### 💣 Bombing runs
+
+| Lancaster on its bombing run | Chase view |
+|:---:|:---:|
+| ![Lancaster on its bombing run](screenshots/g_bomb_run.jpg) | ![Chase view](screenshots/g_bomb_chase.jpg) |
+
+| Night raid | The gunner's seat |
+|:---:|:---:|
+| ![Night raid](screenshots/g_bomb_night.jpg) | ![The gunner's seat](screenshots/g_bomb_gunner.jpg) |
+
+| The Dam Busters |
+|:---:|
+| ![The Dam Busters](screenshots/g_bomb_dam.jpg) |
+
+### 🙈 HUD off
+
+| Storm, no HUD | Night, no HUD |
+|:---:|:---:|
+| ![Storm, no HUD](screenshots/g_hudoff_storm.jpg) | ![Night, no HUD](screenshots/g_hudoff_night.jpg) |
+
+| Dogfight, no HUD | Dawn, no HUD |
+|:---:|:---:|
+| ![Dogfight, no HUD](screenshots/g_hudoff_fight.jpg) | ![Dawn, no HUD](screenshots/g_hudoff_dawn.jpg) |
 
 ## 🤖 Honest disclosure
 
