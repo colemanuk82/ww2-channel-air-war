@@ -1,46 +1,60 @@
-# WW2 Channel Air War
+# ✈️ WW2 Channel Air War
 
-Arcade, cell-shaded WW2 flight game set in a real-scale (1 unit = 1 m) recreation of
-the Channel theatre, 1940–44: southern England up to the Midlands, the English Channel, Northern
-France, Belgium, the Netherlands and the Rhineland (about 954 × 453 km).
-Built on the NVIDIA RTX Godot fork (4.8-dev, GDScript) — DLSS and
-frame generation included. Pick the Allies or the Axis and fly fighters and
-bombers over real airfields, towns, roads, rivers and coastlines.
+> *"Scramble! Bandits over Dover, angels fifteen!"*
 
-> **Disclosure: this project was vibecoded.** All of the code was written by AI, and
-> every asset is either generated procedurally in-engine or is a free / copyright-free
-> work. Voice acting is generated with [ElevenLabs](https://elevenlabs.io), the music is
-> royalty-free from [Pixabay](https://pixabay.com) (track list below), and the world data
-> comes from CC-BY / ODbL-licensed sources listed in [ATTRIBUTION.md](ATTRIBUTION.md).
-> There are no hand-drawn assets, no photographed textures and no copyrighted material.
+A cell-shaded, arcade-flavoured WW2 flight game set over a **real-scale** (1 unit = 1 metre) slice of
+Europe: southern England up to the Midlands, the Channel, northern France, Belgium, the Netherlands and
+the Rhineland, about **954 × 453 km** of it. Take off from a grass strip in Kent, climb through the
+cloud, and find out whether the Stukas beat you to the radar station.
 
-## Demo
+Fly **either side**. Defend Britain in a Spitfire, escort the bombers to the Ruhr in a Mustang, or hit
+the coast in a Bf 109. Then skip the glory and go bounce a Lancaster formation instead.
 
-Footage from a live session, captured in Godot's Movie Maker mode (1280x720, 30 fps, scored with a
-royalty-free Pixabay track). Click the preview to play the full video.
+## 🎮 Play it
 
-[![WW2 Channel Air War — in-game demo](docs/demo/channel-air-war-demo.gif)](docs/demo/channel-air-war-demo.mp4)
+1. Grab the **installer** (`WW2ChannelAirWar_Setup_v1.0.exe`) from [Releases](../../releases/latest), or the
+   zip if you like things portable.
+2. Run it. It installs just for you, with no admin rights needed.
+3. Read the photosensitivity warning (really, it matters), accept the licence, and take off.
+
+**Got an NVIDIA RTX card?** The game will offer to download **DLSS** (about 213 MB, straight from
+NVIDIA's own GitHub repo, checksum-verified). It's optional, and it makes everything faster and
+sharper. No NVIDIA card? No problem: you get the standard renderer with AMD FSR 2 upscaling.
+
+## 🛩️ What's in the hangar
+
+- **Two sides, about two dozen aircraft:** Spitfire, Hurricane, Typhoon, Tempest, Mosquito, P-47, P-51, Lancaster, B-26 and more for the **Allies**. Bf 109, Fw 190, Ju 87, Ju 88, He 111, Me 262 and friends for the **Axis**. Each one flies differently and each one remembers its own chase-camera zoom.
+- **Modes:** dogfight, bombing run, ground attack, bomber escort, defend, fighter sweep, free flight, plus training lessons for the nervous.
+- **Historical missions:** Battle of Britain, Dieppe, D-Day, Dunkirk, Antwerp, Lille, Le Havre, V-1 sites and the Seine bridges. Completed ones glow green in the list. 🟢
+- **25 original missions** (the ones with the ◆ diamond): dawn patrols, convoy cover, night interceptions, steel for the Ruhr, jet hunts, armour on the road and more. Scripted ambushes, bomber raids and nasty surprises included.
+- **🌊 Dam Busters:** a seven-day campaign, one sortie a day. Skim low, hit your marks and put the bomb on the dam. Waypoints on your compass and minimap mean you'll actually know where the dam is.
+- **Dynamic campaign & Pilot's Life:** every sortie moves the war. Ranks, medals, telegrams, newsreels, and letters home you hope you never have to send.
+- **Sortie planner:** pick any airfield (runway or airborne) or any point on the map, choose a scenario, set the enemy strength.
+- **A living world:** real airfields, towns, rivers, rail, ports, Atlantic Wall guns, barrage balloons, searchlights, convoys and trains. Landmarks include Battersea Power Station, the Tower of London and Rochester Castle.
+- **Weather & time of day:** clear to storm, dawn to midnight.
+- **Radio chatter:** AI-voiced controllers, wingmen and bomber crews, with subtitles and static.
+- **Full gamepad support.** 🕹️
+
+## ⌨️ Controls
+
+**Keyboard:** `W`/`S` pitch · `A`/`D` roll · `Q`/`E` yaw · `Shift`/`Ctrl` throttle · `Tab` boost · `Space` fire (or drop a bomb) · `X`/`B` switch weapon · `G` gear · `C` camera · `R` auto-level · `T` time of day · `Y` weather · `O` outlines · `H` HUD · `F1` hide hints.
+
+**Gamepad:** left stick pitch/roll · right stick look · triggers throttle · `A` fire · `B` switch weapon · `Y` gear · `X` camera · `RB` boost · `LB` assist · `Back` respawn · D-pad time/weather/outlines/HUD · `Start` pause.
+
+## 🎬 See it in action
+
+[![WW2 Channel Air War, in-game demo](docs/demo/channel-air-war-demo.gif)](docs/demo/channel-air-war-demo.mp4)
 
 Dawn scramble from RAF Manston · a low pass through the Dover Barrage at dusk · a dogfight over Kent ·
 a night raid over the Pas-de-Calais · the Möhne dam · barrage balloons over London.
+**▶ [Full 31-second video](docs/demo/channel-air-war-demo.mp4)**
 
-**▶ [Full 31-second video (8 MB)](docs/demo/channel-air-war-demo.mp4)**
+[![A Lancaster formation and the tail gunner's station](docs/demo/channel-air-war-bombers.gif)](docs/demo/channel-air-war-bombers.mp4)
 
-### Bomber Command, with radio voice
+A Lancaster formation inbound to Dunkirk, a fighter patrol over Kent, and the tail gunner's lonely seat.
+**▶ [Full 17-second video](docs/demo/channel-air-war-bombers.mp4)**
 
-[![WW2 Channel Air War — Lancaster formation and the tail gunner's station](docs/demo/channel-air-war-bombers.gif)](docs/demo/channel-air-war-bombers.mp4)
-
-A Lancaster formation inbound to Dunkirk · a fighter patrol over Kent · the tail gunner's station. The
-radio calls are the game's own recorded voice set, composited over the score (the Movie Maker recorder
-captures video only).
-
-**▶ [Full 17-second video (5 MB)](docs/demo/channel-air-war-bombers.mp4)**
-
-## Screenshots
-
-In-game captures (1280x720):
-
-| Dawn over Kent (right-stick orbit camera) | Kent coastline |
+| Dawn over Kent | Kent coastline |
 |:---:|:---:|
 | ![Dawn over Kent](screenshots/01_dawn_orbit.jpg) | ![Kent coastline](screenshots/02_kent_coast.jpg) |
 
@@ -48,74 +62,46 @@ In-game captures (1280x720):
 |:---:|:---:|
 | ![Dunkirk at dusk](screenshots/03_dunkirk_dusk.jpg) | ![Night flak over Calais](screenshots/04_night_flak.jpg) |
 
-## Features
+## 🤖 Honest disclosure
 
-- Both sides: **Allies** (Spitfire, Hurricane, Typhoon, Mosquito, P-51, Lancaster...) and **Axis** (Bf 109, Fw 190, Ju 87, He 111, Me 262...) with national markings
-- Modes: dogfight, bombing run, ground attack/strafing, bomber escort, defend, historical missions (Battle of Britain, Dieppe 1942, D-Day 1944, Dunkirk 1940, Antwerp, Lille, Le Havre, V-1 sites, Seine bridges) and free flight
-- **Sortie planner:** pick any airfield (runway or airborne) or any point on the map, then a scenario — free flight, bombing run, ground strike, boat strike, bomber escort or fighter sweep — and the enemy strength
-- **Dynamic campaign:** a single-pilot career where every sortie moves the war (air strength, industry, bombed targets, enemy raids), with ranks, daily sortie offers and a saved state
-- **25 original missions** (diamond-marked) with scripted ambushes, raids and flybys, alongside the historical set.
-- Destructible airfield buildings and parked aircraft; five airfield layouts; farms and hedgerows that follow the field boundaries
-- Real world: RAF Manston, Biggin Hill, Hawkinge, Tangmere, Calais-Marck, Abbeville, Caen and more — with live traffic (convoys, trains, cars), ports, Atlantic Wall defences, AA guns, searchlights and barrage balloons
-- **Real rivers with water** — the OpenStreetMap waterway network drawn as terrain-hugging water ribbons that stream with the terrain and are carved into the heightmap, so the banks read from the air
-- **1940s waterfronts** — pleasure piers (Brighton, Southend...), harbour piers, dock basins and locks, dry docks and shipyards, river quays and fishing harbours, keyed to real locations (`data/docks_1940.json`)
-- **1940s industry** — gasworks (the gasholder silhouettes), collieries with pit head-frames, mills, breweries, power stations with cooling towers, shipyards, goods/marshalling yards, engine sheds, waterworks, cement works and coal staithes, each oriented to the nearest railway with a siding (`data/industry_1940.json`)
-- **Landmark skylines** — period silhouettes wired into the towns: Battersea Power Station, the Tower of London, Rochester Castle, Lille's Hôtel de Ville belfry, Brussels' Palais de Justice and more
-- **Streets, districts and skylines** — towns built along their real streets, with commercial cores, suburbs, civic centres and water-facing quays
-- Weather (clear, scattered, overcast, rain, storm, fog) and time of day (dawn, noon, dusk, night)
-- Radio with AI voice traffic, subtitles and static; bomber crew intercom
-- Optional DLSS / FSR2 upscaling and frame generation (built on the NVIDIA RTX Godot fork — see HANDOFF.md); runs in standard Godot 4.3+ without them
-- Full gamepad support
+This project was **vibecoded**: all of the code was written by AI. The art is generated procedurally
+inside the engine (no hand-drawn assets, no photographed textures), the menu paintings are AI-generated,
+and the radio voices are AI text-to-speech from [ElevenLabs](https://elevenlabs.io). There are no human
+voice recordings in the game. The music is royalty-free from [Pixabay](https://pixabay.com), and the world
+comes from open data (see below). It's a work of fiction inspired by real history.
 
-## Controls
+## 🔧 Under the bonnet
 
-**Keyboard:** W/S pitch, A/D roll, Q/E yaw, Shift/Ctrl throttle, Tab boost, Space fire
-(guns, or release a bomb when bombs are selected), X or B switch weapon, G gear,
-C camera, R auto-level assist, T time of day, Y weather, O outlines, H HUD, F1 hide hints.
+Built on a custom **NVIDIA RTX Godot fork (4.8-dev, GDScript)** with DLSS, Streamline and frame generation.
+Terrain uses `data/heightmap/region_height.png` + `region_meta.json`; the Python tools in `tools/`
+(see `tools/README.md`) rebuild the map from Sentinel-2, ESA WorldCover, AWS Terrain Tiles and OpenStreetMap.
 
-**Gamepad:** left stick pitch/roll, right stick look, triggers throttle, A fire,
-B switch weapon, Y gear, X camera, RB boost, LB assist, Back respawn,
-D-pad time/weather/outlines/HUD, Start pause.
+- Run the missions checker: `python tools/validate_missions.py`
+- Add or edit original missions: `tools/add_original_missions.py` (idempotent)
+- Build the installer: `ISCC.exe installer\setup.iss` (per-user install, so the DLSS download can write next to the game)
+- Legal texts live in `docs/legal/`; fill in the publisher and contact in `tools/build_legal.py` and run it to refresh `data/legal.json`
+- More notes for developers: [HANDOFF.md](HANDOFF.md), [SPEC.md](SPEC.md)
 
-## Run
+## 🎵 Credits
 
-Download the latest release zip ([Releases](releases/latest)), unzip,
-and run `WW2ChannelAirWar.exe`. Keep the NVIDIA DLLs next to the exe.
-RTX GPU recommended for DLSS / frame generation; runs without them too.
+Full credits and licences are in the game (**Credits** button on the main menu) and in
+[ATTRIBUTION.md](ATTRIBUTION.md).
 
-Terrain uses `data/heightmap/region_height.png` + `region_meta.json` when present,
-otherwise a procedural Kent/Channel/France fallback. The Python tools in `tools/`
-(see `tools/README.md`) regenerate the map data from Sentinel-2, ESA WorldCover,
-AWS Terrain Tiles and OpenStreetMap. The river network (`data/osm/rivers.json`) is
-carved into the heightmap by `tools/carve_rivers.py` after `fetch_osm.py`, so the
-water ribbons sit in real valleys; `tools/make_industry_1940.py` generates the
-hand-authored 1940s industry/dock datasets (`data/industry_1940.json`, `data/docks_1940.json`).
+- **Music** (Pixabay Content Licence): "Freedom" by [jeremusic70](https://pixabay.com/users/jeremusic70-25199461/) · "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans" and "Battle Cry of the Brave" by [nocopyrightsound633](https://pixabay.com/users/nocopyrightsound633-47610058/) · "Cinematic Action Movie Music", "Epic Orchestral Music with Flute" and "Suspenseful Thriller Music" by [musicwallah](https://pixabay.com/users/musicwallah-51797968/)
+- **Terrain imagery:** [Sentinel-2 cloudless 2020](https://s2maps.eu) by EOX IT Services GmbH (CC BY 4.0), containing modified Copernicus Sentinel data 2020
+- **Land cover:** [ESA WorldCover 10 m 2021](https://esa-worldcover.org) (CC BY 4.0)
+- **Elevation:** [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/)
+- **Roads, rail, rivers, woods, towns:** © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL)
+- **Water:** Ocean3D Lite by Justin Schroeder (MIT) · **Fonts:** Barlow by Jeremy Tribby (SIL OFL 1.1)
+- **Engine:** Godot (MIT). NVIDIA DLSS and Streamline belong to NVIDIA and are downloaded by the player, never bundled.
 
-## Credits
+## ☕ Support
 
-- **Voices** — generated with [ElevenLabs](https://elevenlabs.io)
-- **Music** — royalty-free tracks from [Pixabay](https://pixabay.com) (Pixabay Content License):
-  - ["Freedom"](https://pixabay.com/users/jeremusic70-25199461/) by **jeremusic70**
-  - ["Rise of Shadows"](https://pixabay.com/users/nocopyrightsound633-47610058/), ["Race Against Time"](https://pixabay.com/users/nocopyrightsound633-47610058/), ["Cinematic Violin Tribal"](https://pixabay.com/users/nocopyrightsound633-47610058/), ["Rise of the Titans"](https://pixabay.com/users/nocopyrightsound633-47610058/) and ["Battle Cry of the Brave"](https://pixabay.com/users/nocopyrightsound633-47610058/) by **nocopyrightsound633**
-  - ["Cinematic Action Movie Music"](https://pixabay.com/users/musicwallah-51797968/), ["Epic Orchestral Music with Flute"](https://pixabay.com/users/musicwallah-51797968/) and ["Suspenseful Thriller Music"](https://pixabay.com/users/musicwallah-51797968/) by **musicwallah**
-- **World data** — full details in [ATTRIBUTION.md](ATTRIBUTION.md):
-  - Terrain colour imagery: [Sentinel-2 cloudless 2020](https://s2maps.eu) (EOX IT Services GmbH, CC BY 4.0, tiles via [tiles.maps.eox.at](https://tiles.maps.eox.at)) — contains modified Copernicus Sentinel data 2020
-  - Land cover: [ESA WorldCover 10 m 2021](https://esa-worldcover.org) (© ESA WorldCover project 2021, CC BY 4.0)
-  - Elevation: [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (AWS Open Data, attribution to Mapzen/AWS)
-  - Roads, rails, rivers, woods, towns: [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL)
+Enjoying it? There's a **Support me on PayPal** button in the top-right of the main menu. Totally optional, always appreciated.
 
-## Licence
+## 📜 Licence
 
-This is a personal project, shared for viewing only. All rights reserved:
-no permission is given to copy, modify, redistribute or use it. Full
-notice in [LICENCE](LICENCE). Third-party data and audio carry their own
-licences as listed above.
+This is a personal project. All rights reserved: see [LICENCE](LICENCE), and the in-game licence agreement
+and privacy policy (`docs/legal/`). Third-party data and audio carry their own licences, listed above.
 
-## DLSS
-NVIDIA DLSS is optional and is not shipped with the game. On NVIDIA RTX cards the game offers to download NVIDIA's components on first launch (or later in Options > Render); everywhere else it uses the standard renderer with AMD FSR 2 upscaling.
-
-## Legal
-See `docs/legal/` (EULA, privacy policy, credits). Fill in the publisher name and contact in `tools/build_legal.py`, then run it to regenerate `data/legal.json`.
-
-## Installer
-Build the Windows installer with Inno Setup: `ISCC.exe installer\setup.iss` (output `build\WW2ChannelAirWar_Setup_v1.0.exe`). It installs per-user, so the optional DLSS download can write next to the game.
+*Chocks away!* 🛫
