@@ -120,6 +120,7 @@ var _rw_af: Airfield
 var _rw_want: int = 0
 var _rw_joined: bool = false
 var _rw_timer: Timer
+var _rw_old: Array = []       # queue entries from before a respawn: airborne or rolling, kept so they can rejoin
 
 
 ## How many of n wingmen roll before the player and how many after.
@@ -169,6 +170,13 @@ func _rw_spawn(pl: Aircraft, af: Airfield, want: int) -> bool:
 	var sp: Vector2i = runway_split(want - wingmen_list.size())
 	if sp.x + sp.y <= 0:
 		return false
+	# a respawn: the earlier queue entries (already rolling or released) must not hold up the new queue, whose
+	# timers and "aircraft ahead is clear" checks start from scratch. They are kept only so they can rejoin.
+	for e in _rw_before + _rw_after:
+		if bool(e["rolled"]) and is_instance_valid(e["ac"]):
+			_rw_old.append(e)
+	_rw_before.clear()
+	_rw_after.clear()
 	var id: String = pl.stats.id
 	var fwd: Vector3 = Vector3(pl.get_forward().x, 0.0, pl.get_forward().z)
 	fwd = fwd.normalized() if fwd.length() > 0.1 else WorldCoords.heading_to_dir(af.heading_deg)
@@ -232,7 +240,9 @@ func _rw_tick() -> void:
 	if pl == null or not is_instance_valid(pl) or pl.state != Aircraft.State.ALIVE:
 		_rw_active = false
 		for e in _rw_before + _rw_after:          # the player is gone: anyone still parked goes up anyway
-			_rw_release(e["ac"], AIPilot.State.PATROL)
+			if not bool(e["rolled"]):
+				e["rolled"] = true
+				_rw_release(e["ac"], AIPilot.State.PATROL)
 		return
 	_rw_t += 0.25
 	var pl_up: bool = not pl.on_ground and pl.altitude_agl > 25.0
@@ -271,7 +281,8 @@ func _rw_tick() -> void:
 		break
 	# once the player is up, everyone already airborne joins on him; anyone circling while he is still
 	# on the ground keeps circling the field
-	for e in _rw_before + _rw_after:
+	_rw_old = _rw_old.filter(func(e) -> bool: return is_instance_valid(e["ac"]))
+	for e in _rw_before + _rw_after + _rw_old:
 		var a: Variant = e["ac"]
 		if not bool(e["rolled"]) or not is_instance_valid(a):
 			continue

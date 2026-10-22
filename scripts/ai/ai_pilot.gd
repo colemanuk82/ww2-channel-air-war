@@ -222,6 +222,8 @@ func _set_state(s: int) -> void:
 func _on_damaged(_a: Aircraft, amount: float, health: float) -> void:
 	if role != Role.FIGHTER and role != Role.WINGMAN:
 		return
+	if state == State.TAKEOFF or state == State.LAND:
+		return          # a hit on the runway must not turn the take-off roll into airborne evasion
 	if _evade_cd <= 0.0 and state != State.RETURN and randf() < 0.25 + 0.5 * (1.0 - aggression) + minf(amount * 0.01, 0.2):
 		_begin_evade()
 
