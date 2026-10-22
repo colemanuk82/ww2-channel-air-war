@@ -132,7 +132,10 @@ void fragment() {
 	if mission_names.is_empty():
 		mission_names = ["(none)"]
 	_mission = UIKit.option_row(sortie, "Mission", mission_names, 20)
+	_mission.get_popup().about_to_popup.connect(_open_mission_list)    # custom list so completed missions can be coloured
+	_mission.item_selected.connect(func(_i: int) -> void: _tint_mission())
 	_mission_row = _mission.get_parent()
+	_tint_mission()
 
 	# --- START POINT (free flight) ---
 	var startpage := _new_page()
@@ -294,6 +297,17 @@ void fragment() {
 			get_tree().create_timer(14.0).timeout.connect(func() -> void:
 				get_viewport().get_texture().get_image().save_png(dshot)
 				get_tree().quit())
+		if arg.begins_with("--missions-shot="):   # debug: pretend 3 missions are done, open the Mission list, save a screenshot, quit
+			var ms_path: String = arg.substr(16)
+			for k in range(1, 4):
+				GameState.completed_missions.append(str(_mission_ids[k]))
+			_tint_mission()
+			_mission.select(2)
+			_tint_mission()
+			get_tree().create_timer(6.0).timeout.connect(_show_mission_list)
+			get_tree().create_timer(8.0).timeout.connect(func() -> void:
+				get_viewport().get_window().get_viewport().get_texture().get_image().save_png(ms_path)
+				get_tree().quit())
 		if arg.begins_with("--logbook-shot="):   # debug: open the logbook from the menu, save a screenshot, quit
 			var shot_path: String = arg.substr(15)
 			get_tree().create_timer(12.0).timeout.connect(_open_logbook)
@@ -369,6 +383,70 @@ func _fill_missions(mode_id: String) -> void:
 		if _mission_ids.is_empty():
 			_mission.add_item("(none)")
 	_mission.select(0)
+	_tint_mission()
+
+
+const DONE_GREEN := Color(0.45, 0.85, 0.45)
+
+
+## True when the mission at list index i is a completed historical mission.
+func _mission_done_at(i: int) -> bool:
+	return _mission_kind == "historical" and i >= 0 and i < _mission_ids.size() and GameState.is_mission_done(str(_mission_ids[i]))
+
+
+## The closed Mission box shows the chosen mission in green once it has been completed.
+func _tint_mission() -> void:
+	if _mission_done_at(_mission.selected):
+		_mission.add_theme_color_override("font_color", DONE_GREEN)
+		_mission.add_theme_color_override("font_hover_color", DONE_GREEN)
+		_mission.add_theme_color_override("font_focus_color", DONE_GREEN)
+	else:
+		_mission.remove_theme_color_override("font_color")
+		_mission.remove_theme_color_override("font_hover_color")
+		_mission.remove_theme_color_override("font_focus_color")
+
+
+## Replaces the Mission drop-down's plain popup (it cannot colour single rows) with a list that shows completed
+## missions in green.
+func _open_mission_list() -> void:
+	_mission.get_popup().hide.call_deferred()
+	_show_mission_list.call_deferred()
+
+
+func _show_mission_list() -> void:
+	var pp := PopupPanel.new()
+	pp.add_theme_stylebox_override("panel", UIKit.panel_style())
+	var il := ItemList.new()
+	il.auto_height = false
+	il.add_theme_font_override("font", UIKit.body_font())
+	il.add_theme_font_size_override("font_size", 18)
+	il.add_theme_color_override("font_color", UIKit.TEXT)
+	il.add_theme_color_override("font_selected_color", UIKit.ACCENT_HOT)
+	il.add_theme_color_override("font_hovered_color", UIKit.ACCENT_HOT)
+	il.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	var sel := StyleBoxFlat.new()
+	sel.bg_color = Color(0.93, 0.74, 0.32, 0.18)
+	il.add_theme_stylebox_override("selected", sel)
+	il.add_theme_stylebox_override("selected_focus", sel)
+	for i in _mission.item_count:
+		il.add_item(_mission.get_item_text(i))
+		if _mission_done_at(i):
+			il.set_item_custom_fg_color(i, DONE_GREEN)
+	if _mission.selected >= 0:
+		il.select(_mission.selected)
+	il.item_selected.connect(func(i: int) -> void:
+		_mission.select(i)
+		_mission.item_selected.emit(i)
+		pp.queue_free())
+	pp.popup_hide.connect(func() -> void: pp.queue_free())
+	var w: int = maxi(int(_mission.size.x), 360)
+	var h: int = mini(_mission.item_count * 32 + 16, 420)
+	il.custom_minimum_size = Vector2(w - 16, h - 16)
+	pp.add_child(il)
+	add_child(pp)
+	pp.popup(Rect2i(Vector2i(_mission.get_screen_position()) + Vector2i(0, int(_mission.size.y)), Vector2i(w, h)))
+	if _mission.selected >= 0:
+		il.ensure_current_is_visible()
 
 
 ## Picking a historical mission sets the side and aircraft the mission was written for (you can still change the aircraft).

@@ -189,10 +189,14 @@ func mark_mission_done(id: String) -> void:
 		save_settings()
 
 
+func is_mission_done(id: String) -> bool:
+	return completed_missions.has(id)
+
+
 func mission_label(id: String, mission_name: String) -> String:
 	if DatedOps.is_dated(id) and not DatedOps.is_open(id):
 		return "[LOCKED: opens %s]  %s" % [DatedOps.opens_text(id), mission_name]
-	var t: String = ("[DONE]  " + mission_name) if completed_missions.has(id) else mission_name
+	var t: String = mission_name      # completed missions are tinted green in the menu list (see StartMenu), not tagged
 	if DatedOps.is_dated(id):
 		t += "   (dated: %s)" % DatedOps.opens_text(id)
 	return t
