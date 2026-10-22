@@ -1,0 +1,355 @@
+{
+ "missions": [
+  {
+   "id": "bob_kent",
+   "name": "Battle of Britain: Kent Skies",
+   "year": 1940,
+   "date": "1940-08-15",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "biggin_hill",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "bf109",
+      "ju87",
+      "he111"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "radar_dover_ch",
+     "factory_short_rochester"
+    ],
+    "Axis": [
+     "radar_dover_ch",
+     "radar_dunkirk_ch",
+     "factory_short_rochester"
+    ]
+   },
+   "time_of_day": 14.0,
+   "weather": "scattered",
+   "brief": "Mid-August 1940. Waves of Stukas and Heinkels escorted by Bf 109s head across the Channel at Kent's radar stations and airfields. Scramble from Biggin Hill, break up the raid before it reaches the coast. (Axis: smash the Chain Home radar and Short Brothers works.)"
+  },
+  {
+   "id": "dieppe_1942",
+   "name": "Operation Jubilee: Dieppe",
+   "year": 1942,
+   "date": "1942-08-19",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "spitfire",
+      "typhoon"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "abbeville_drucat",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "radar_antifer",
+     "battery_todt",
+     "port_le_havre"
+    ],
+    "Axis": [
+     "convoy_neptune"
+    ]
+   },
+   "time_of_day": 6.0,
+   "weather": "overcast",
+   "brief": "Dawn, 19 August 1942. Canadian troops land at Dieppe. Provide fighter cover and suppress shore batteries from Tangmere against the new Focke-Wulf 190s. (Axis: intercept the landing force and its fighter umbrella.)"
+  },
+  {
+   "id": "dday_1944",
+   "name": "D-Day: Operation Overlord",
+   "year": 1944,
+   "date": "1944-06-06",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "typhoon",
+      "p51",
+      "p47",
+      "mosquito",
+      "b26"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "caen_carpiquet",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "battery_longues",
+     "battery_pointe_du_hoc",
+     "battery_merville",
+     "radar_douvres",
+     "bridge_vernon"
+    ],
+    "Axis": [
+     "convoy_neptune"
+    ]
+   },
+   "time_of_day": 5.5,
+   "weather": "overcast",
+   "brief": "6 June 1944. The largest amphibious landing in history. Strike the Atlantic Wall batteries and radar at Utah, Omaha, Gold, Juno and Sword before the first boats hit the beach, then keep the Luftwaffe off the fleet. (Axis: a handful of Fw 190s against the sky full of Allied fighters.)"
+  },
+  {
+   "id": "dunkirk_1940",
+   "name": "Operation Dynamo: Dunkirk Cover",
+   "year": 1940,
+   "date": "1940-05-30",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "bf109",
+      "ju87",
+      "he111"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_dunkirk_evac"
+    ],
+    "Axis": [
+     "port_dunkirk",
+     "convoy_dunkirk_evac"
+    ]
+   },
+   "time_of_day": 16.0,
+   "weather": "fog",
+   "brief": "Late May 1940. Over 300,000 men wait on the Dunkirk beaches. Patrol the patch of sky over the evacuation ships and keep the Stukas off them. (Axis: sink the little ships and bomb the Mole.)"
+  },
+  {
+   "id": "antwerp_raid",
+   "name": "Bomber Command: Antwerp Docks",
+   "year": 1944,
+   "date": "1944-10-12",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "northolt",
+     "aircraft": [
+      "lancaster",
+      "mosquito",
+      "b26"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "antwerp_deurne",
+     "aircraft": [
+      "me262",
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_antwerp",
+     "factory_minerva_antwerp"
+    ],
+    "Axis": [
+     "port_dunkirk"
+    ]
+   },
+   "time_of_day": 15.0,
+   "weather": "scattered",
+   "brief": "Autumn 1944. Antwerp's port is vital for Allied supply but V-weapons rain on the city. Hit the docks and yards on a bombing run across the Channel, and watch for Me 262 jets. (Axis: defend the docks.)"
+  },
+  {
+   "id": "lille_raid",
+   "name": "Lille Rail Yards Strike",
+   "year": 1943,
+   "date": "1943-05-13",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "hornchurch",
+     "aircraft": [
+      "b26",
+      "typhoon",
+      "spitfire"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "lille_nord",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rail_lille_fives",
+     "factory_fives_lille"
+    ],
+    "Axis": [
+     "radar_dover_ch"
+    ]
+   },
+   "time_of_day": 11.0,
+   "weather": "clear",
+   "brief": "Medium bombers escorted by Spitfires hit the Fives-Lille locomotive works and rail yards. Stay with the formation; Fw 190s will rise from Lille-Nord and Vendeville. (Axis: stop the Marauders.)"
+  },
+  {
+   "id": "lehavre_raid",
+   "name": "Le Havre Port Raid",
+   "year": 1944,
+   "date": "1944-09-05",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "lancaster",
+      "mosquito",
+      "typhoon"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "caen_carpiquet",
+     "aircraft": [
+      "fw190",
+      "bf109",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_le_havre",
+     "radar_antifer",
+     "bridge_tancarville"
+    ],
+    "Axis": [
+     "port_portsmouth"
+    ]
+   },
+   "time_of_day": 17.5,
+   "weather": "overcast",
+   "brief": "September 1944. The Germans still hold Le Havre as a fortress port. Pound the docks, radar and flak positions with heavy bombers and rocket-firing Typhoons before the ground assault. (Axis: raid Portsmouth.)"
+  },
+  {
+   "id": "v1_sites",
+   "name": "Crossbow: V-Weapon Sites",
+   "year": 1944,
+   "date": "1944-07-20",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "kenley",
+     "aircraft": [
+      "typhoon",
+      "p47",
+      "mosquito",
+      "lancaster"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "saint_omer",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "wizernes_v2",
+     "mimoyecques",
+     "watten_bunker",
+     "eperlecques",
+     "siracourt"
+    ],
+    "Axis": [
+     "radar_dover_ch"
+    ]
+   },
+   "time_of_day": 9.0,
+   "weather": "clear",
+   "brief": "Summer 1944. Strike the concrete V-weapon bunkers around Saint-Omer and the Pas-de-Calais: Wizernes, Mimoyecques, Watten and Eperlecques. Heavy flak. (Axis: defend the sites.)"
+  },
+  {
+   "id": "seine_bridges",
+   "name": "Interdiction: Seine Bridges",
+   "year": 1944,
+   "date": "1944-05-10",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "northolt",
+     "aircraft": [
+      "p47",
+      "p51",
+      "typhoon",
+      "b26"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "abbeville_drucat",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "bridge_rouen",
+     "bridge_oissel",
+     "bridge_vernon",
+     "bridge_mantes",
+     "rail_rouen_sotteville"
+    ],
+    "Axis": [
+     "convoy_neptune"
+    ]
+   },
+   "time_of_day": 12.0,
+   "weather": "scattered",
+   "brief": "Spring 1944. Cut the Seine bridges and rail yards to isolate Normandy from the German reinforcements. Strafe trains and convoys along the valley. (Axis: keep the bridges open.)"
+  }
+ ]
+}

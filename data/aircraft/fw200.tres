@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "fw200"
+display_name = "Focke-Wulf Fw 200 Condor"
+side = "Axis"
+nation = "Luftwaffe"
+model_id = "fw200"
+ammo = 3600
+bombs = 8
+gun_count = 4
+fire_rate = 8
+gear_height = 3.43
+max_speed = 100
+stall_speed = 35.4
+boost_bonus = 32
+accel = 3.4
+decel = 2.9
+pitch_rate_deg = 35
+roll_rate_deg = 50
+yaw_rate_deg = 12
+bank_turn_rate = 0.52
+rate_response = 3.2
+max_health = 450
+radius = 20
+engine_sound = "radial_bmw"
+engine_count = 4
+gun_sound = "mg_defensive"

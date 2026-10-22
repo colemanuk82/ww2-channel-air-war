@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "he111"
+display_name = "Heinkel He 111 H"
+side = "Axis"
+nation = "Luftwaffe"
+model_id = "he111"
+ammo = 4800
+bombs = 16
+gun_count = 5
+fire_rate = 10
+gear_height = 2.94
+engine_sound = "jumo211"
+engine_count = 2
+gun_sound = "mg_defensive"
+max_speed = 115.3
+stall_speed = 31.7
+boost_bonus = 36.9
+accel = 3.6
+decel = 3.1
+pitch_rate_deg = 38
+roll_rate_deg = 50
+yaw_rate_deg = 13
+bank_turn_rate = 0.54
+rate_response = 3.4
+max_health = 350
+radius = 20

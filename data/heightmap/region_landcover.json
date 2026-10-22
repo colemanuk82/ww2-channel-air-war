@@ -1,0 +1,23 @@
+{
+ "width": 3072,
+ "height": 1500,
+ "lat_min": 48.9,
+ "lat_max": 53.0,
+ "lon_min": -4.6,
+ "lon_max": 9.0,
+ "year": 2021,
+ "source": "ESA WorldCover 10m v200 (CC-BY 4.0)",
+ "classes": {
+  "10": "tree",
+  "20": "shrub",
+  "30": "grass",
+  "40": "crop",
+  "50": "built",
+  "60": "bare",
+  "70": "snow",
+  "80": "water",
+  "90": "wetland",
+  "95": "mangrove",
+  "100": "moss"
+ }
+}

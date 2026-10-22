@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "blenheim"
+display_name = "Bristol Blenheim Mk IV"
+side = "Allies"
+nation = "RAF"
+model_id = "blenheim"
+ammo = 3600
+bombs = 10
+gun_count = 3
+fire_rate = 9
+gear_height = 2.44
+engine_sound = "radial_mercury"
+engine_count = 2
+gun_sound = "browning303"
+max_speed = 118.9
+stall_speed = 34.1
+boost_bonus = 38
+accel = 4.7
+decel = 4
+pitch_rate_deg = 45
+roll_rate_deg = 66
+yaw_rate_deg = 16
+bank_turn_rate = 0.61
+rate_response = 3.9
+max_health = 202
+radius = 15

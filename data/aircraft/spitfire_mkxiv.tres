@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "spitfire_mkxiv"
+display_name = "Supermarine Spitfire Mk XIV (Griffon)"
+side = "Allies"
+nation = "RAF"
+model_id = "spitfire"
+ammo = 3600
+gun_count = 8
+rockets = 12
+bombs = 6
+max_speed = 196.0
+stall_speed = 40.5
+boost_bonus = 62.0
+accel = 10.8
+decel = 8.2
+pitch_rate_deg = 71
+roll_rate_deg = 104
+yaw_rate_deg = 24
+bank_turn_rate = 0.86
+rate_response = 6.3
+max_health = 138
+radius = 10
+engine_sound = "griffon"
+engine_count = 1
+gun_sound = "hispano20"

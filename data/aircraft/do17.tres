@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "do17"
+display_name = "Dornier Do 17 Z"
+side = "Axis"
+nation = "Luftwaffe"
+model_id = "do17"
+ammo = 3600
+bombs = 12
+gun_count = 4
+fire_rate = 8
+gear_height = 1.89
+engine_sound = "radial_bmw"
+engine_count = 2
+gun_sound = "mg_defensive"
+max_speed = 113.9
+stall_speed = 32.9
+boost_bonus = 36.4
+accel = 4.1
+decel = 3.5
+pitch_rate_deg = 41
+roll_rate_deg = 58
+yaw_rate_deg = 14
+bank_turn_rate = 0.57
+rate_response = 3.6
+max_health = 237
+radius = 16

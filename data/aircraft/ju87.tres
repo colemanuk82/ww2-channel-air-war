@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "ju87"
+display_name = "Junkers Ju 87 B Stuka"
+side = "Axis"
+nation = "Luftwaffe"
+model_id = "ju87"
+ammo = 3000
+bombs = 6
+gun_count = 3
+fire_rate = 10
+gear_height = 2.39
+engine_sound = "jumo211"
+engine_count = 1
+gun_sound = "mg17"
+max_speed = 106.4
+stall_speed = 31.4
+boost_bonus = 34
+accel = 3.8
+decel = 3.2
+pitch_rate_deg = 39
+roll_rate_deg = 72
+yaw_rate_deg = 13
+bank_turn_rate = 0.55
+rate_response = 3.5
+max_health = 125
+radius = 12

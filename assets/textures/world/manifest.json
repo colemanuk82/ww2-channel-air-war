@@ -1,0 +1,262 @@
+{
+  "brick_red": {
+    "file": "brick_red.png",
+    "size": 1024,
+    "kind": "brick",
+    "mean": [
+      137,
+      78,
+      63
+    ],
+    "roughness": 0.85,
+    "metallic": 0.0,
+    "scale_hint": 0.94
+  },
+  "brick_brown": {
+    "file": "brick_brown.png",
+    "size": 1024,
+    "kind": "brick",
+    "mean": [
+      116,
+      83,
+      64
+    ],
+    "roughness": 0.85,
+    "metallic": 0.0,
+    "scale_hint": 0.94
+  },
+  "render_white": {
+    "file": "render_white.png",
+    "size": 1024,
+    "kind": "render",
+    "mean": [
+      226,
+      225,
+      219
+    ],
+    "roughness": 0.9,
+    "metallic": 0.0,
+    "scale_hint": 1.0
+  },
+  "render_cream": {
+    "file": "render_cream.png",
+    "size": 1024,
+    "kind": "render",
+    "mean": [
+      227,
+      217,
+      192
+    ],
+    "roughness": 0.9,
+    "metallic": 0.0,
+    "scale_hint": 1.0
+  },
+  "stone_grey": {
+    "file": "stone_grey.png",
+    "size": 1024,
+    "kind": "stone",
+    "mean": [
+      127,
+      125,
+      119
+    ],
+    "roughness": 0.9,
+    "metallic": 0.0,
+    "scale_hint": 0.5
+  },
+  "concrete": {
+    "file": "concrete.png",
+    "size": 1024,
+    "kind": "concrete",
+    "mean": [
+      146,
+      144,
+      141
+    ],
+    "roughness": 0.85,
+    "metallic": 0.0,
+    "scale_hint": 0.5
+  },
+  "roof_tile_red": {
+    "file": "roof_tile_red.png",
+    "size": 1024,
+    "kind": "roof",
+    "mean": [
+      123,
+      57,
+      42
+    ],
+    "roughness": 0.7,
+    "metallic": 0.0,
+    "scale_hint": 0.38
+  },
+  "roof_tile_grey": {
+    "file": "roof_tile_grey.png",
+    "size": 1024,
+    "kind": "roof",
+    "mean": [
+      92,
+      92,
+      92
+    ],
+    "roughness": 0.7,
+    "metallic": 0.0,
+    "scale_hint": 0.38
+  },
+  "roof_slate": {
+    "file": "roof_slate.png",
+    "size": 1024,
+    "kind": "roof",
+    "mean": [
+      74,
+      78,
+      84
+    ],
+    "roughness": 0.45,
+    "metallic": 0.0,
+    "scale_hint": 0.21
+  },
+  "timber": {
+    "file": "timber.png",
+    "size": 1024,
+    "kind": "timber",
+    "mean": [
+      117,
+      88,
+      60
+    ],
+    "roughness": 0.75,
+    "metallic": 0.0,
+    "scale_hint": 0.83
+  },
+  "metal_dark": {
+    "file": "metal_dark.png",
+    "size": 1024,
+    "kind": "metal",
+    "mean": [
+      57,
+      59,
+      61
+    ],
+    "roughness": 0.45,
+    "metallic": 0.0,
+    "scale_hint": 0.5
+  },
+  "metal_rust": {
+    "file": "metal_rust.png",
+    "size": 1024,
+    "kind": "metal",
+    "mean": [
+      106,
+      85,
+      73
+    ],
+    "roughness": 0.88,
+    "metallic": 0.15,
+    "scale_hint": 0.5
+  },
+  "metal_bare": {
+    "file": "metal_bare.png",
+    "size": 1024,
+    "kind": "metal",
+    "mean": [
+      163,
+      165,
+      168
+    ],
+    "roughness": 0.35,
+    "metallic": 0.9,
+    "scale_hint": 1.0
+  },
+  "asphalt": {
+    "file": "asphalt.png",
+    "size": 1024,
+    "kind": "asphalt",
+    "mean": [
+      54,
+      53,
+      55
+    ],
+    "roughness": 0.9,
+    "metallic": 0.0,
+    "scale_hint": 1.0
+  },
+  "gravel": {
+    "file": "gravel.png",
+    "size": 1024,
+    "kind": "gravel",
+    "mean": [
+      103,
+      96,
+      85
+    ],
+    "roughness": 0.85,
+    "metallic": 0.0,
+    "scale_hint": 1.0
+  },
+  "grass": {
+    "file": "grass.png",
+    "size": 1024,
+    "kind": "ground",
+    "mean": [
+      47,
+      68,
+      31
+    ],
+    "roughness": 0.85,
+    "metallic": 0.0,
+    "scale_hint": 2.0
+  },
+  "foliage": {
+    "file": "foliage.png",
+    "size": 1024,
+    "kind": "foliage",
+    "mean": [
+      70,
+      108,
+      46
+    ],
+    "roughness": 0.6,
+    "metallic": 0.0,
+    "scale_hint": 1.0
+  },
+  "thatch": {
+    "file": "thatch.png",
+    "size": 1024,
+    "kind": "other",
+    "mean": [
+      110,
+      90,
+      52
+    ],
+    "roughness": 0.9,
+    "metallic": 0.0,
+    "scale_hint": 1.0
+  },
+  "sand": {
+    "file": "sand.png",
+    "size": 1024,
+    "kind": "ground",
+    "mean": [
+      189,
+      173,
+      129
+    ],
+    "roughness": 0.8,
+    "metallic": 0.0,
+    "scale_hint": 1.0
+  },
+  "snow": {
+    "file": "snow.png",
+    "size": 1024,
+    "kind": "ground",
+    "mean": [
+      226,
+      231,
+      240
+    ],
+    "roughness": 0.5,
+    "metallic": 0.0,
+    "scale_hint": 1.0
+  }
+}

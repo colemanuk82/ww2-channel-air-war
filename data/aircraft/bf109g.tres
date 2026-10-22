@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "bf109g"
+display_name = "Messerschmitt Bf 109 G-6"
+side = "Axis"
+nation = "Luftwaffe"
+model_id = "bf109"
+ammo = 1600
+bombs = 4
+gun_count = 3
+rockets = 6
+fire_rate = 13
+gear_height = 1.47
+max_speed = 174.0
+stall_speed = 40.0
+boost_bonus = 58.0
+accel = 10.4
+decel = 8.2
+pitch_rate_deg = 76
+roll_rate_deg = 112
+yaw_rate_deg = 27
+bank_turn_rate = 0.88
+rate_response = 6.4
+max_health = 132
+radius = 9
+engine_sound = "db605"
+engine_count = 1
+gun_sound = "mg151"

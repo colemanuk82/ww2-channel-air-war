@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "mosquito"
+display_name = "de Havilland Mosquito FB VI"
+side = "Allies"
+nation = "RAF"
+model_id = "mosquito"
+ammo = 3000
+bombs = 8
+gun_count = 4
+rockets = 16
+fire_rate = 12
+gear_height = 2.28
+max_speed = 169.4
+stall_speed = 41.8
+boost_bonus = 54.2
+accel = 6.8
+decel = 5.8
+pitch_rate_deg = 60
+roll_rate_deg = 86
+yaw_rate_deg = 21
+bank_turn_rate = 0.74
+rate_response = 5.1
+max_health = 293
+radius = 14
+engine_sound = "merlin"
+engine_count = 2
+gun_sound = "hispano20"

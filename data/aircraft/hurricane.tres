@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "hurricane"
+display_name = "Hawker Hurricane Mk I"
+side = "Allies"
+nation = "RAF"
+model_id = "hurricane"
+ammo = 3600
+bombs = 4
+gun_count = 8
+rockets = 16
+fire_rate = 14
+gear_height = 1.87
+max_speed = 144.4
+stall_speed = 32.9
+boost_bonus = 46.2
+accel = 6.4
+decel = 5.4
+pitch_rate_deg = 57
+roll_rate_deg = 99
+yaw_rate_deg = 20
+bank_turn_rate = 0.71
+rate_response = 4.8
+max_health = 103
+radius = 11
+engine_sound = "merlin"
+engine_count = 1
+gun_sound = "browning303"

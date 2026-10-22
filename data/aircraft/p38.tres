@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "p38"
+display_name = "Lockheed P-38L Lightning"
+side = "Allies"
+nation = "USAAF"
+model_id = "p38"
+ammo = 3600
+bombs = 2
+gun_count = 5
+rockets = 10
+fire_rate = 13
+gear_height = 2.22
+max_speed = 185.3
+stall_speed = 46.7
+boost_bonus = 59.3
+accel = 7
+decel = 6
+pitch_rate_deg = 61
+roll_rate_deg = 90
+yaw_rate_deg = 22
+bank_turn_rate = 0.75
+rate_response = 5.2
+max_health = 264
+radius = 14
+engine_sound = "allison"
+engine_count = 2
+gun_sound = "browning50"

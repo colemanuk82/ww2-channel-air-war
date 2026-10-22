@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "ju88"
+display_name = "Junkers Ju 88 A"
+side = "Axis"
+nation = "Luftwaffe"
+model_id = "ju88"
+ammo = 4200
+bombs = 12
+gun_count = 5
+fire_rate = 10
+gear_height = 2.67
+engine_sound = "jumo211"
+engine_count = 2
+gun_sound = "mg_defensive"
+max_speed = 128.1
+stall_speed = 39.6
+boost_bonus = 41
+accel = 4
+decel = 3.4
+pitch_rate_deg = 40
+roll_rate_deg = 55
+yaw_rate_deg = 14
+bank_turn_rate = 0.56
+rate_response = 3.5
+max_health = 327
+radius = 16

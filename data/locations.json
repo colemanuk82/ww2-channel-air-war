@@ -1,0 +1,4712 @@
+{
+ "airfields": [
+  {
+   "id": "biggin_hill",
+   "name": "Biggin Hill",
+   "side": "RAF",
+   "lat": 51.3308,
+   "lon": 0.0325,
+   "heading_deg": 30,
+   "runway_len_m": 1800,
+   "in_bounds": true
+  },
+  {
+   "id": "hawkinge",
+   "name": "Hawkinge",
+   "side": "RAF",
+   "lat": 51.115,
+   "lon": 1.1494,
+   "heading_deg": 100,
+   "runway_len_m": 900,
+   "in_bounds": true
+  },
+  {
+   "id": "hurn",
+   "name": "RAF Hurn (Bournemouth)",
+   "side": "RAF",
+   "lat": 50.78,
+   "lon": -1.8425,
+   "heading_deg": 80,
+   "runway_len_m": 1800,
+   "in_bounds": true
+  },
+  {
+   "id": "manston",
+   "name": "Manston",
+   "side": "RAF",
+   "lat": 51.3422,
+   "lon": 1.3461,
+   "heading_deg": 100,
+   "runway_len_m": 2700,
+   "in_bounds": true
+  },
+  {
+   "id": "tangmere",
+   "name": "Tangmere",
+   "side": "RAF",
+   "lat": 50.8472,
+   "lon": -0.7061,
+   "heading_deg": 100,
+   "runway_len_m": 1400,
+   "in_bounds": true
+  },
+  {
+   "id": "kenley",
+   "name": "Kenley",
+   "side": "RAF",
+   "lat": 51.3042,
+   "lon": -0.0903,
+   "heading_deg": 70,
+   "runway_len_m": 1000,
+   "in_bounds": true
+  },
+  {
+   "id": "northolt",
+   "name": "Northolt",
+   "side": "RAF",
+   "lat": 51.553,
+   "lon": -0.4181,
+   "heading_deg": 70,
+   "runway_len_m": 1600,
+   "in_bounds": true
+  },
+  {
+   "id": "duxford",
+   "name": "Duxford",
+   "side": "RAF",
+   "lat": 52.0908,
+   "lon": 0.1319,
+   "heading_deg": 60,
+   "runway_len_m": 1300,
+   "in_bounds": true
+  },
+  {
+   "id": "debden",
+   "name": "Debden",
+   "side": "RAF",
+   "lat": 51.9525,
+   "lon": 0.2686,
+   "heading_deg": 90,
+   "runway_len_m": 1100,
+   "in_bounds": true
+  },
+  {
+   "id": "westhampnett",
+   "name": "Westhampnett",
+   "side": "RAF",
+   "lat": 50.8586,
+   "lon": -0.7503,
+   "heading_deg": 60,
+   "runway_len_m": 1000,
+   "in_bounds": true
+  },
+  {
+   "id": "lympne",
+   "name": "Lympne",
+   "side": "RAF",
+   "lat": 51.0794,
+   "lon": 1.0183,
+   "heading_deg": 110,
+   "runway_len_m": 1000,
+   "in_bounds": true
+  },
+  {
+   "id": "hornchurch",
+   "name": "Hornchurch",
+   "side": "RAF",
+   "lat": 51.503,
+   "lon": 0.2078,
+   "heading_deg": 70,
+   "runway_len_m": 1100,
+   "in_bounds": true
+  },
+  {
+   "id": "calais_marck",
+   "name": "Calais-Marck",
+   "side": "Luftwaffe",
+   "lat": 50.9622,
+   "lon": 1.954,
+   "heading_deg": 60,
+   "runway_len_m": 1400,
+   "in_bounds": true,
+   "liberated": "1944-10-01"
+  },
+  {
+   "id": "cap_gris_nez",
+   "name": "Cap Gris-Nez (Audembert)",
+   "side": "Luftwaffe",
+   "lat": 50.866,
+   "lon": 1.613,
+   "heading_deg": 90,
+   "runway_len_m": 1000,
+   "in_bounds": true,
+   "liberated": "1944-09-29"
+  },
+  {
+   "id": "abbeville_drucat",
+   "name": "Abbeville-Drucat",
+   "side": "Luftwaffe",
+   "lat": 50.142,
+   "lon": 1.832,
+   "heading_deg": 60,
+   "runway_len_m": 1500,
+   "in_bounds": true,
+   "liberated": "1944-09-02"
+  },
+  {
+   "id": "caen_carpiquet",
+   "name": "Caen-Carpiquet",
+   "side": "Luftwaffe",
+   "lat": 49.1733,
+   "lon": -0.4505,
+   "heading_deg": 130,
+   "runway_len_m": 1800,
+   "in_bounds": true,
+   "liberated": "1944-07-09"
+  },
+  {
+   "id": "cherbourg_maupertus",
+   "name": "Cherbourg-Maupertus",
+   "side": "Luftwaffe",
+   "lat": 49.65,
+   "lon": -1.47,
+   "heading_deg": 100,
+   "runway_len_m": 1800,
+   "in_bounds": true,
+   "liberated": "1944-06-27"
+  },
+  {
+   "id": "merville",
+   "name": "Merville",
+   "side": "Luftwaffe",
+   "lat": 50.615,
+   "lon": 2.642,
+   "heading_deg": 90,
+   "runway_len_m": 1200,
+   "in_bounds": true,
+   "liberated": "1944-09-02"
+  },
+  {
+   "id": "saint_omer",
+   "name": "Saint-Omer (Longuenesse)",
+   "side": "Luftwaffe",
+   "lat": 50.7284,
+   "lon": 2.2556,
+   "heading_deg": 90,
+   "runway_len_m": 1200,
+   "in_bounds": true,
+   "liberated": "1944-09-04"
+  },
+  {
+   "id": "lille_nord",
+   "name": "Lille-Nord (Vendeville)",
+   "side": "Luftwaffe",
+   "lat": 50.656,
+   "lon": 3.1,
+   "heading_deg": 90,
+   "runway_len_m": 1500,
+   "in_bounds": true,
+   "liberated": "1944-09-03"
+  },
+  {
+   "id": "brussels_evere",
+   "name": "Brussels-Evere",
+   "side": "Luftwaffe",
+   "lat": 50.9019,
+   "lon": 4.495,
+   "heading_deg": 70,
+   "runway_len_m": 1900,
+   "in_bounds": true,
+   "liberated": "1944-09-03"
+  },
+  {
+   "id": "antwerp_deurne",
+   "name": "Antwerp-Deurne",
+   "side": "Luftwaffe",
+   "lat": 51.1894,
+   "lon": 4.4603,
+   "heading_deg": 110,
+   "runway_len_m": 1500,
+   "in_bounds": true,
+   "liberated": "1944-09-04"
+  },
+  {
+   "id": "castle_bromwich",
+   "name": "Castle Bromwich",
+   "side": "RAF",
+   "lat": 52.5122,
+   "lon": -1.7728,
+   "heading_deg": 50,
+   "runway_len_m": 1300,
+   "in_bounds": true
+  },
+  {
+   "id": "hucknall",
+   "name": "Hucknall",
+   "side": "RAF",
+   "lat": 53.0136,
+   "lon": -1.2292,
+   "heading_deg": 80,
+   "runway_len_m": 1200,
+   "in_bounds": false
+  },
+  {
+   "id": "bruntingthorpe",
+   "name": "Bruntingthorpe",
+   "side": "RAF",
+   "lat": 52.4903,
+   "lon": -1.1264,
+   "heading_deg": 60,
+   "runway_len_m": 1900,
+   "in_bounds": true
+  },
+  {
+   "id": "brussels_melsbroek",
+   "name": "Brussels-Melsbroek",
+   "side": "Luftwaffe",
+   "lat": 50.9014,
+   "lon": 4.4842,
+   "heading_deg": 70,
+   "runway_len_m": 2000,
+   "in_bounds": true,
+   "liberated": "1944-09-03"
+  },
+  {
+   "id": "grimbergen",
+   "name": "Grimbergen",
+   "side": "Luftwaffe",
+   "lat": 50.94,
+   "lon": 4.38,
+   "heading_deg": 90,
+   "runway_len_m": 1200,
+   "in_bounds": true,
+   "liberated": "1944-09-03"
+  },
+  {
+   "id": "chievres",
+   "name": "Chievres",
+   "side": "Luftwaffe",
+   "lat": 50.5758,
+   "lon": 3.8311,
+   "heading_deg": 100,
+   "runway_len_m": 2500,
+   "in_bounds": true,
+   "liberated": "1944-09-02"
+  },
+  {
+   "id": "st_trond",
+   "name": "St. Trond (Sint-Truiden)",
+   "side": "Luftwaffe",
+   "lat": 50.7919,
+   "lon": 5.1931,
+   "heading_deg": 90,
+   "runway_len_m": 2000,
+   "in_bounds": true,
+   "liberated": "1944-09-08"
+  },
+  {
+   "id": "florennes",
+   "name": "Florennes",
+   "side": "Luftwaffe",
+   "lat": 50.2433,
+   "lon": 4.6458,
+   "heading_deg": 60,
+   "runway_len_m": 2500,
+   "in_bounds": true,
+   "liberated": "1944-09-03"
+  },
+  {
+   "id": "le_culot",
+   "name": "Le Culot (Beauvechain)",
+   "side": "Luftwaffe",
+   "lat": 50.7586,
+   "lon": 4.7683,
+   "heading_deg": 70,
+   "runway_len_m": 1500,
+   "in_bounds": true,
+   "liberated": "1944-09-03"
+  },
+  {
+   "id": "diest",
+   "name": "Diest-Schaffen",
+   "side": "Luftwaffe",
+   "lat": 50.9967,
+   "lon": 5.075,
+   "heading_deg": 90,
+   "runway_len_m": 1300,
+   "in_bounds": true,
+   "liberated": "1944-09-04"
+  },
+  {
+   "id": "asch",
+   "name": "Asch (Genk)",
+   "side": "Luftwaffe",
+   "lat": 50.9697,
+   "lon": 5.5917,
+   "heading_deg": 90,
+   "runway_len_m": 1300,
+   "in_bounds": true,
+   "liberated": "1944-09-10"
+  },
+  {
+   "id": "woensdrecht",
+   "name": "Woensdrecht",
+   "side": "Luftwaffe",
+   "lat": 51.4491,
+   "lon": 4.3425,
+   "heading_deg": 70,
+   "runway_len_m": 2200,
+   "in_bounds": true,
+   "liberated": "1944-11-02"
+  },
+  {
+   "id": "gilze_rijen",
+   "name": "Gilze-Rijen",
+   "side": "Luftwaffe",
+   "lat": 51.5678,
+   "lon": 4.9319,
+   "heading_deg": 100,
+   "runway_len_m": 2300,
+   "in_bounds": true,
+   "liberated": "1944-10-28"
+  },
+  {
+   "id": "eindhoven",
+   "name": "Eindhoven",
+   "side": "Luftwaffe",
+   "lat": 51.4501,
+   "lon": 5.3745,
+   "heading_deg": 220,
+   "runway_len_m": 2000,
+   "in_bounds": true,
+   "liberated": "1944-09-18"
+  },
+  {
+   "id": "volkel",
+   "name": "Volkel",
+   "side": "Luftwaffe",
+   "lat": 51.6564,
+   "lon": 5.7075,
+   "heading_deg": 70,
+   "runway_len_m": 2400,
+   "in_bounds": true,
+   "liberated": "1944-09-18"
+  },
+  {
+   "id": "venlo",
+   "name": "Venlo",
+   "side": "Luftwaffe",
+   "lat": 51.35,
+   "lon": 6.12,
+   "heading_deg": 90,
+   "runway_len_m": 1800,
+   "in_bounds": true
+  },
+  {
+   "id": "deelen",
+   "name": "Deelen",
+   "side": "Luftwaffe",
+   "lat": 52.0603,
+   "lon": 5.8738,
+   "heading_deg": 80,
+   "runway_len_m": 2000,
+   "in_bounds": true
+  },
+  {
+   "id": "soesterberg",
+   "name": "Soesterberg",
+   "side": "Luftwaffe",
+   "lat": 52.1269,
+   "lon": 5.2761,
+   "heading_deg": 70,
+   "runway_len_m": 1800,
+   "in_bounds": true
+  },
+  {
+   "id": "schiphol",
+   "name": "Schiphol",
+   "side": "Luftwaffe",
+   "lat": 52.3081,
+   "lon": 4.7642,
+   "heading_deg": 90,
+   "runway_len_m": 2000,
+   "in_bounds": true
+  },
+  {
+   "id": "ypenburg",
+   "name": "Ypenburg",
+   "side": "Luftwaffe",
+   "lat": 52.0425,
+   "lon": 4.3578,
+   "heading_deg": 40,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "valkenburg",
+   "name": "Valkenburg",
+   "side": "Luftwaffe",
+   "lat": 52.1664,
+   "lon": 4.4203,
+   "heading_deg": 80,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rotterdam_waalhaven",
+   "name": "Rotterdam-Waalhaven",
+   "side": "Luftwaffe",
+   "lat": 51.895,
+   "lon": 4.437,
+   "heading_deg": 60,
+   "runway_len_m": 1300,
+   "in_bounds": true
+  },
+  {
+   "id": "twente",
+   "name": "Twente",
+   "side": "Luftwaffe",
+   "lat": 52.2756,
+   "lon": 6.8742,
+   "heading_deg": 70,
+   "runway_len_m": 2400,
+   "in_bounds": true
+  },
+  {
+   "id": "hopsten",
+   "name": "Hopsten",
+   "side": "Luftwaffe",
+   "lat": 52.3356,
+   "lon": 7.5444,
+   "heading_deg": 90,
+   "runway_len_m": 2000,
+   "in_bounds": true
+  },
+  {
+   "id": "rheine",
+   "name": "Rheine",
+   "side": "Luftwaffe",
+   "lat": 52.29,
+   "lon": 7.383,
+   "heading_deg": 100,
+   "runway_len_m": 1800,
+   "in_bounds": true
+  },
+  {
+   "id": "essen_mulheim",
+   "name": "Essen-Mulheim",
+   "side": "Luftwaffe",
+   "lat": 51.4025,
+   "lon": 6.9372,
+   "heading_deg": 90,
+   "runway_len_m": 1300,
+   "in_bounds": true
+  },
+  {
+   "id": "dusseldorf_lohausen",
+   "name": "Dusseldorf-Lohausen",
+   "side": "Luftwaffe",
+   "lat": 51.2895,
+   "lon": 6.7668,
+   "heading_deg": 50,
+   "runway_len_m": 2200,
+   "in_bounds": true
+  },
+  {
+   "id": "koln_butzweilerhof",
+   "name": "Koln-Butzweilerhof",
+   "side": "Luftwaffe",
+   "lat": 50.9867,
+   "lon": 6.8997,
+   "heading_deg": 100,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "koln_wahn",
+   "name": "Koln-Wahn",
+   "side": "Luftwaffe",
+   "lat": 50.8658,
+   "lon": 7.1428,
+   "heading_deg": 70,
+   "runway_len_m": 2400,
+   "in_bounds": true
+  },
+  {
+   "id": "bonn_hangelar",
+   "name": "Bonn-Hangelar",
+   "side": "Luftwaffe",
+   "lat": 50.7683,
+   "lon": 7.1631,
+   "heading_deg": 100,
+   "runway_len_m": 1200,
+   "in_bounds": true
+  },
+  {
+   "id": "aachen_merzbruck",
+   "name": "Aachen-Merzbruck",
+   "side": "Luftwaffe",
+   "lat": 50.8236,
+   "lon": 6.1861,
+   "heading_deg": 100,
+   "runway_len_m": 1300,
+   "in_bounds": true
+  },
+  {
+   "id": "frankfurt_rhein_main",
+   "name": "Frankfurt Rhein-Main",
+   "side": "Luftwaffe",
+   "lat": 50.0333,
+   "lon": 8.5706,
+   "heading_deg": 70,
+   "runway_len_m": 2500,
+   "in_bounds": true
+  },
+  {
+   "id": "wiesbaden_erbenheim",
+   "name": "Wiesbaden-Erbenheim",
+   "side": "Luftwaffe",
+   "lat": 50.05,
+   "lon": 8.325,
+   "heading_deg": 80,
+   "runway_len_m": 2000,
+   "in_bounds": true
+  },
+  {
+   "id": "gutersloh",
+   "name": "Gutersloh",
+   "side": "Luftwaffe",
+   "lat": 51.9228,
+   "lon": 8.3064,
+   "heading_deg": 90,
+   "runway_len_m": 2000,
+   "in_bounds": true
+  },
+  {
+   "id": "wittering",
+   "name": "Wittering",
+   "side": "RAF",
+   "lat": 52.6126,
+   "lon": -0.4764,
+   "heading_deg": 70,
+   "runway_len_m": 1800,
+   "in_bounds": true
+  },
+  {
+   "id": "cottesmore",
+   "name": "Cottesmore",
+   "side": "RAF",
+   "lat": 52.7367,
+   "lon": -0.6486,
+   "heading_deg": 40,
+   "runway_len_m": 1700,
+   "in_bounds": true
+  },
+  {
+   "id": "cosford",
+   "name": "Cosford",
+   "side": "RAF",
+   "lat": 52.64,
+   "lon": -2.3056,
+   "heading_deg": 60,
+   "runway_len_m": 1300,
+   "in_bounds": true
+  },
+  {
+   "id": "gaydon",
+   "name": "Gaydon",
+   "side": "RAF",
+   "lat": 52.1989,
+   "lon": -1.4747,
+   "heading_deg": 20,
+   "runway_len_m": 1700,
+   "in_bounds": true
+  },
+  {
+   "id": "silverstone",
+   "name": "Silverstone",
+   "side": "RAF",
+   "lat": 52.0719,
+   "lon": -1.0222,
+   "heading_deg": 70,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "bicester",
+   "name": "Bicester",
+   "side": "RAF",
+   "lat": 51.9167,
+   "lon": -1.1333,
+   "heading_deg": 70,
+   "runway_len_m": 1200,
+   "in_bounds": true
+  },
+  {
+   "id": "benson",
+   "name": "Benson",
+   "side": "RAF",
+   "lat": 51.6164,
+   "lon": -1.0975,
+   "heading_deg": 70,
+   "runway_len_m": 1700,
+   "in_bounds": true
+  },
+  {
+   "id": "abingdon",
+   "name": "Abingdon",
+   "side": "RAF",
+   "lat": 51.69,
+   "lon": -1.3167,
+   "heading_deg": 80,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "brize_norton",
+   "name": "Brize Norton",
+   "side": "RAF",
+   "lat": 51.75,
+   "lon": -1.5833,
+   "heading_deg": 90,
+   "runway_len_m": 2000,
+   "in_bounds": true
+  },
+  {
+   "id": "lyneham",
+   "name": "Lyneham",
+   "side": "RAF",
+   "lat": 51.5047,
+   "lon": -1.995,
+   "heading_deg": 70,
+   "runway_len_m": 1700,
+   "in_bounds": true
+  },
+  {
+   "id": "cranfield",
+   "name": "Cranfield",
+   "side": "RAF",
+   "lat": 52.0722,
+   "lon": -0.6167,
+   "heading_deg": 80,
+   "runway_len_m": 1400,
+   "in_bounds": true
+  },
+  {
+   "id": "tempsford",
+   "name": "Tempsford",
+   "side": "RAF",
+   "lat": 52.13,
+   "lon": -0.25,
+   "heading_deg": 80,
+   "runway_len_m": 1700,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_melsbroek",
+   "name": "Melsbroek",
+   "side": "RAF",
+   "lat": 50.8608,
+   "lon": 4.4995,
+   "heading_deg": 163,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_mill",
+   "name": "Mill",
+   "side": "Luftwaffe",
+   "lat": 51.6263,
+   "lon": 5.81,
+   "heading_deg": 200,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_kluis",
+   "name": "Kluis",
+   "side": "Luftwaffe",
+   "lat": 51.715,
+   "lon": 5.914,
+   "heading_deg": 190,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_hopsten",
+   "name": "Hopsten",
+   "side": "Luftwaffe",
+   "lat": 52.2518,
+   "lon": 7.5563,
+   "heading_deg": 170,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_twente",
+   "name": "Twente",
+   "side": "Luftwaffe",
+   "lat": 52.1739,
+   "lon": 6.9462,
+   "heading_deg": 198,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_asch",
+   "name": "Asch",
+   "side": "RAF",
+   "lat": 50.8918,
+   "lon": 5.5985,
+   "heading_deg": 237,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_schijndel",
+   "name": "Schijndel",
+   "side": "RAF",
+   "lat": 51.5375,
+   "lon": 5.5331,
+   "heading_deg": 173,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_deurne",
+   "name": "Deurne",
+   "side": "RAF",
+   "lat": 51.1481,
+   "lon": 4.4964,
+   "heading_deg": 25,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_munster_handorf",
+   "name": "Munster-Handorf",
+   "side": "Luftwaffe",
+   "lat": 51.9063,
+   "lon": 7.7458,
+   "heading_deg": 126,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_st_trond",
+   "name": "St. Trond",
+   "side": "RAF",
+   "lat": 50.7219,
+   "lon": 5.2246,
+   "heading_deg": 308,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_florennes",
+   "name": "Florennes",
+   "side": "RAF",
+   "lat": 50.1997,
+   "lon": 4.6174,
+   "heading_deg": 183,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_le_culot_east",
+   "name": "Le Culot East",
+   "side": "RAF",
+   "lat": 50.7271,
+   "lon": 4.8138,
+   "heading_deg": 89,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_petit_brogel",
+   "name": "Petit Brogel",
+   "side": "RAF",
+   "lat": 51.0956,
+   "lon": 5.4997,
+   "heading_deg": 74,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_helmond",
+   "name": "Helmond",
+   "side": "RAF",
+   "lat": 51.398,
+   "lon": 5.7561,
+   "heading_deg": 217,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_evere",
+   "name": "Evere",
+   "side": "RAF",
+   "lat": 50.8358,
+   "lon": 4.4375,
+   "heading_deg": 99,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_heesch",
+   "name": "Heesch",
+   "side": "RAF",
+   "lat": 51.6464,
+   "lon": 5.6296,
+   "heading_deg": 180,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_af_grimbergen",
+   "name": "Grimbergen",
+   "side": "RAF",
+   "lat": 50.9105,
+   "lon": 4.4161,
+   "heading_deg": 94,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "eastleigh",
+   "name": "RAF Eastleigh (Southampton)",
+   "side": "RAF",
+   "lat": 50.9503,
+   "lon": -1.3568,
+   "heading_deg": 20,
+   "runway_len_m": 1200,
+   "in_bounds": true
+  },
+  {
+   "id": "christchurch",
+   "name": "RAF Christchurch",
+   "side": "RAF",
+   "lat": 50.7256,
+   "lon": -1.755,
+   "heading_deg": 60,
+   "runway_len_m": 1200,
+   "in_bounds": true
+  },
+  {
+   "id": "ibsley",
+   "name": "RAF Ibsley",
+   "side": "RAF",
+   "lat": 50.865,
+   "lon": -1.785,
+   "heading_deg": 70,
+   "runway_len_m": 1400,
+   "in_bounds": true
+  },
+  {
+   "id": "beaulieu",
+   "name": "RAF Beaulieu",
+   "side": "RAF",
+   "lat": 50.808,
+   "lon": -1.505,
+   "heading_deg": 30,
+   "runway_len_m": 1400,
+   "in_bounds": true
+  },
+  {
+   "id": "needs_oar_point",
+   "name": "RAF Needs Oar Point",
+   "side": "RAF",
+   "lat": 50.769,
+   "lon": -1.431,
+   "heading_deg": 130,
+   "runway_len_m": 1200,
+   "in_bounds": true
+  }
+ ],
+ "cities": [
+  {
+   "id": "london",
+   "name": "London",
+   "lat": 51.5074,
+   "lon": -0.1278,
+   "size": 5,
+   "landmark": "Big Ben; Tower Bridge",
+   "in_bounds": true
+  },
+  {
+   "id": "dover",
+   "name": "Dover",
+   "lat": 51.1279,
+   "lon": 1.3134,
+   "size": 2,
+   "landmark": "Dover Castle",
+   "in_bounds": true
+  },
+  {
+   "id": "folkestone",
+   "name": "Folkestone",
+   "lat": 51.0814,
+   "lon": 1.1695,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "portsmouth",
+   "name": "Portsmouth",
+   "lat": 50.8198,
+   "lon": -1.088,
+   "size": 4,
+   "landmark": "Spinnaker (harbour forts)",
+   "in_bounds": true
+  },
+  {
+   "id": "southampton",
+   "name": "Southampton",
+   "lat": 50.9097,
+   "lon": -1.4044,
+   "size": 4,
+   "in_bounds": true
+  },
+  {
+   "id": "brighton",
+   "name": "Brighton",
+   "lat": 50.8225,
+   "lon": -0.1372,
+   "size": 3,
+   "landmark": "Palace Pier",
+   "in_bounds": true
+  },
+  {
+   "id": "plymouth",
+   "name": "Plymouth",
+   "lat": 50.3755,
+   "lon": -4.1427,
+   "size": 4,
+   "landmark": "Smeaton's Tower",
+   "in_bounds": true
+  },
+  {
+   "id": "canterbury",
+   "name": "Canterbury",
+   "lat": 51.2802,
+   "lon": 1.0789,
+   "size": 2,
+   "landmark": "Canterbury Cathedral",
+   "in_bounds": true
+  },
+  {
+   "id": "calais",
+   "name": "Calais",
+   "lat": 50.9513,
+   "lon": 1.8587,
+   "size": 3,
+   "landmark": "Hotel de Ville belfry",
+   "in_bounds": true
+  },
+  {
+   "id": "dunkirk",
+   "name": "Dunkirk",
+   "lat": 51.0343,
+   "lon": 2.3768,
+   "size": 3,
+   "landmark": "Belfry of Saint-Eloi",
+   "in_bounds": true
+  },
+  {
+   "id": "boulogne",
+   "name": "Boulogne-sur-Mer",
+   "lat": 50.7264,
+   "lon": 1.6147,
+   "size": 3,
+   "landmark": "Notre-Dame basilica",
+   "in_bounds": true
+  },
+  {
+   "id": "dieppe",
+   "name": "Dieppe",
+   "lat": 49.923,
+   "lon": 1.077,
+   "size": 3,
+   "landmark": "Chateau de Dieppe",
+   "in_bounds": true
+  },
+  {
+   "id": "le_havre",
+   "name": "Le Havre",
+   "lat": 49.4944,
+   "lon": 0.1079,
+   "size": 4,
+   "landmark": "Saint Joseph's Church",
+   "in_bounds": true
+  },
+  {
+   "id": "rouen",
+   "name": "Rouen",
+   "lat": 49.4432,
+   "lon": 1.0993,
+   "size": 4,
+   "landmark": "Rouen Cathedral",
+   "in_bounds": true
+  },
+  {
+   "id": "caen",
+   "name": "Caen",
+   "lat": 49.1829,
+   "lon": -0.3707,
+   "size": 3,
+   "landmark": "Abbaye aux Hommes",
+   "in_bounds": true
+  },
+  {
+   "id": "cherbourg",
+   "name": "Cherbourg",
+   "lat": 49.6337,
+   "lon": -1.622,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "bayeux",
+   "name": "Bayeux",
+   "lat": 49.2764,
+   "lon": -0.7024,
+   "size": 2,
+   "landmark": "Bayeux Cathedral",
+   "in_bounds": true
+  },
+  {
+   "id": "amiens",
+   "name": "Amiens",
+   "lat": 49.8941,
+   "lon": 2.2958,
+   "size": 3,
+   "landmark": "Amiens Cathedral",
+   "in_bounds": true
+  },
+  {
+   "id": "lille",
+   "name": "Lille",
+   "lat": 50.6292,
+   "lon": 3.0573,
+   "size": 4,
+   "landmark": "Beffroi",
+   "in_bounds": true
+  },
+  {
+   "id": "arras",
+   "name": "Arras",
+   "lat": 50.291,
+   "lon": 2.7775,
+   "size": 2,
+   "landmark": "Arras belfry",
+   "in_bounds": true
+  },
+  {
+   "id": "ostend",
+   "name": "Ostend",
+   "lat": 51.2154,
+   "lon": 2.9286,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "bruges",
+   "name": "Bruges",
+   "lat": 51.2093,
+   "lon": 3.2247,
+   "size": 3,
+   "landmark": "Belfry of Bruges",
+   "in_bounds": true
+  },
+  {
+   "id": "ghent",
+   "name": "Ghent",
+   "lat": 51.0543,
+   "lon": 3.7174,
+   "size": 3,
+   "landmark": "Saint Bavo Cathedral",
+   "in_bounds": true
+  },
+  {
+   "id": "brussels",
+   "name": "Brussels",
+   "lat": 50.8503,
+   "lon": 4.3517,
+   "size": 5,
+   "landmark": "Atomium (post-war)",
+   "in_bounds": true
+  },
+  {
+   "id": "antwerp",
+   "name": "Antwerp",
+   "lat": 51.2194,
+   "lon": 4.4025,
+   "size": 4,
+   "landmark": "Cathedral of Our Lady",
+   "in_bounds": true
+  },
+  {
+   "id": "ramsgate",
+   "name": "Ramsgate",
+   "lat": 51.3355,
+   "lon": 1.417,
+   "size": 1,
+   "in_bounds": true
+  },
+  {
+   "id": "chatham",
+   "name": "Chatham",
+   "lat": 51.3811,
+   "lon": 0.5272,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "maidstone",
+   "name": "Maidstone",
+   "lat": 51.272,
+   "lon": 0.529,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "hastings",
+   "name": "Hastings",
+   "lat": 50.8543,
+   "lon": 0.5735,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "eastbourne",
+   "name": "Eastbourne",
+   "lat": 50.7687,
+   "lon": 0.2905,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "chichester",
+   "name": "Chichester",
+   "lat": 50.8365,
+   "lon": -0.7792,
+   "size": 1,
+   "landmark": "Chichester Cathedral",
+   "in_bounds": true
+  },
+  {
+   "id": "guildford",
+   "name": "Guildford",
+   "lat": 51.2362,
+   "lon": -0.5704,
+   "size": 1,
+   "in_bounds": true
+  },
+  {
+   "id": "reading",
+   "name": "Reading",
+   "lat": 51.4543,
+   "lon": -0.9781,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "saint_omer_town",
+   "name": "Saint-Omer",
+   "lat": 50.7483,
+   "lon": 2.2519,
+   "size": 1,
+   "in_bounds": true
+  },
+  {
+   "id": "le_treport",
+   "name": "Le Treport",
+   "lat": 50.059,
+   "lon": 1.38,
+   "size": 1,
+   "in_bounds": true
+  },
+  {
+   "id": "abbeville",
+   "name": "Abbeville",
+   "lat": 50.1058,
+   "lon": 1.8366,
+   "size": 1,
+   "in_bounds": true
+  },
+  {
+   "id": "poole",
+   "name": "Poole",
+   "lat": 50.715,
+   "lon": -1.9872,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "dunkirk_la_panne",
+   "name": "De Panne",
+   "lat": 51.099,
+   "lon": 2.595,
+   "size": 1,
+   "in_bounds": true
+  },
+  {
+   "id": "lisieux",
+   "name": "Lisieux",
+   "lat": 49.1452,
+   "lon": 0.2272,
+   "size": 1,
+   "in_bounds": true
+  },
+  {
+   "id": "saint_lo",
+   "name": "Saint-Lo",
+   "lat": 49.116,
+   "lon": -1.091,
+   "size": 1,
+   "in_bounds": true
+  },
+  {
+   "id": "valognes",
+   "name": "Valognes",
+   "lat": 49.509,
+   "lon": -1.471,
+   "size": 1,
+   "in_bounds": true
+  },
+  {
+   "id": "birmingham",
+   "name": "Birmingham",
+   "lat": 52.4862,
+   "lon": -1.8904,
+   "size": 5,
+   "landmark": "Bull Ring; Rotunda",
+   "in_bounds": true
+  },
+  {
+   "id": "coventry",
+   "name": "Coventry",
+   "lat": 52.4068,
+   "lon": -1.5197,
+   "size": 4,
+   "landmark": "Cathedral",
+   "in_bounds": true
+  },
+  {
+   "id": "leicester",
+   "name": "Leicester",
+   "lat": 52.6369,
+   "lon": -1.1398,
+   "size": 4,
+   "in_bounds": true
+  },
+  {
+   "id": "derby",
+   "name": "Derby",
+   "lat": 52.9225,
+   "lon": -1.4746,
+   "size": 3,
+   "landmark": "Rolls-Royce works",
+   "in_bounds": true
+  },
+  {
+   "id": "leuven",
+   "name": "Leuven",
+   "lat": 50.8798,
+   "lon": 4.7005,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "liege",
+   "name": "Liege",
+   "lat": 50.6326,
+   "lon": 5.5797,
+   "size": 4,
+   "landmark": "Meuse bridges",
+   "in_bounds": true
+  },
+  {
+   "id": "namur",
+   "name": "Namur",
+   "lat": 50.4674,
+   "lon": 4.872,
+   "size": 3,
+   "landmark": "Citadel",
+   "in_bounds": true
+  },
+  {
+   "id": "charleroi",
+   "name": "Charleroi",
+   "lat": 50.4108,
+   "lon": 4.4446,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "mons",
+   "name": "Mons",
+   "lat": 50.4542,
+   "lon": 3.9523,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "maastricht",
+   "name": "Maastricht",
+   "lat": 50.8514,
+   "lon": 5.6909,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "eindhoven_city",
+   "name": "Eindhoven",
+   "lat": 51.4416,
+   "lon": 5.4697,
+   "size": 3,
+   "landmark": "Philips works",
+   "in_bounds": true
+  },
+  {
+   "id": "rotterdam",
+   "name": "Rotterdam",
+   "lat": 51.9244,
+   "lon": 4.4777,
+   "size": 5,
+   "landmark": "Maas harbour",
+   "in_bounds": true
+  },
+  {
+   "id": "the_hague",
+   "name": "The Hague",
+   "lat": 52.0705,
+   "lon": 4.3007,
+   "size": 4,
+   "in_bounds": true
+  },
+  {
+   "id": "amsterdam",
+   "name": "Amsterdam",
+   "lat": 52.3676,
+   "lon": 4.9041,
+   "size": 5,
+   "landmark": "Canal belt",
+   "in_bounds": true
+  },
+  {
+   "id": "utrecht",
+   "name": "Utrecht",
+   "lat": 52.0907,
+   "lon": 5.1214,
+   "size": 3,
+   "landmark": "Dom Tower",
+   "in_bounds": true
+  },
+  {
+   "id": "arnhem",
+   "name": "Arnhem",
+   "lat": 51.9851,
+   "lon": 5.8987,
+   "size": 3,
+   "landmark": "Rhine bridge",
+   "in_bounds": true
+  },
+  {
+   "id": "nijmegen",
+   "name": "Nijmegen",
+   "lat": 51.8126,
+   "lon": 5.8372,
+   "size": 3,
+   "landmark": "Waal bridge",
+   "in_bounds": true
+  },
+  {
+   "id": "breda",
+   "name": "Breda",
+   "lat": 51.5719,
+   "lon": 4.7683,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "tilburg",
+   "name": "Tilburg",
+   "lat": 51.5606,
+   "lon": 5.0919,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "den_bosch",
+   "name": "'s-Hertogenbosch",
+   "lat": 51.6978,
+   "lon": 5.3037,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "venlo_city",
+   "name": "Venlo",
+   "lat": 51.3704,
+   "lon": 6.1724,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "aachen",
+   "name": "Aachen",
+   "lat": 50.7753,
+   "lon": 6.0839,
+   "size": 4,
+   "landmark": "Cathedral",
+   "in_bounds": true
+  },
+  {
+   "id": "cologne",
+   "name": "Cologne",
+   "lat": 50.9375,
+   "lon": 6.9603,
+   "size": 5,
+   "landmark": "Cathedral; Rhine bridges",
+   "in_bounds": true
+  },
+  {
+   "id": "bonn",
+   "name": "Bonn",
+   "lat": 50.7374,
+   "lon": 7.0982,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "dusseldorf",
+   "name": "Dusseldorf",
+   "lat": 51.2277,
+   "lon": 6.7735,
+   "size": 4,
+   "in_bounds": true
+  },
+  {
+   "id": "duisburg",
+   "name": "Duisburg",
+   "lat": 51.4344,
+   "lon": 6.7623,
+   "size": 4,
+   "landmark": "Inland port",
+   "in_bounds": true
+  },
+  {
+   "id": "essen",
+   "name": "Essen",
+   "lat": 51.4556,
+   "lon": 7.0116,
+   "size": 4,
+   "landmark": "Krupp works",
+   "in_bounds": true
+  },
+  {
+   "id": "dortmund",
+   "name": "Dortmund",
+   "lat": 51.5136,
+   "lon": 7.4653,
+   "size": 4,
+   "in_bounds": true
+  },
+  {
+   "id": "munster",
+   "name": "Munster",
+   "lat": 51.9607,
+   "lon": 7.6261,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "osnabruck",
+   "name": "Osnabruck",
+   "lat": 52.2799,
+   "lon": 8.0472,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "bielefeld",
+   "name": "Bielefeld",
+   "lat": 52.0302,
+   "lon": 8.5325,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "paderborn",
+   "name": "Paderborn",
+   "lat": 51.7189,
+   "lon": 8.7575,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "frankfurt",
+   "name": "Frankfurt",
+   "lat": 50.1109,
+   "lon": 8.6821,
+   "size": 5,
+   "landmark": "Main bridges",
+   "in_bounds": true
+  },
+  {
+   "id": "wiesbaden",
+   "name": "Wiesbaden",
+   "lat": 50.0782,
+   "lon": 8.2397,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "mainz",
+   "name": "Mainz",
+   "lat": 49.9929,
+   "lon": 8.2473,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "koblenz",
+   "name": "Koblenz",
+   "lat": 50.3569,
+   "lon": 7.589,
+   "size": 3,
+   "landmark": "Deutsches Eck",
+   "in_bounds": true
+  },
+  {
+   "id": "wolverhampton",
+   "name": "Wolverhampton",
+   "lat": 52.587,
+   "lon": -2.1288,
+   "size": 3,
+   "in_bounds": true
+  },
+  {
+   "id": "nottingham",
+   "name": "Nottingham",
+   "lat": 52.9548,
+   "lon": -1.1581,
+   "size": 4,
+   "in_bounds": true
+  },
+  {
+   "id": "stoke",
+   "name": "Stoke-on-Trent",
+   "lat": 53.0027,
+   "lon": -2.1794,
+   "size": 3,
+   "in_bounds": false
+  },
+  {
+   "id": "northampton",
+   "name": "Northampton",
+   "lat": 52.2405,
+   "lon": -0.9027,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "gloucester",
+   "name": "Gloucester",
+   "lat": 51.8642,
+   "lon": -2.238,
+   "size": 2,
+   "landmark": "Cathedral",
+   "in_bounds": true
+  },
+  {
+   "id": "worcester",
+   "name": "Worcester",
+   "lat": 52.192,
+   "lon": -2.2216,
+   "size": 2,
+   "in_bounds": true
+  },
+  {
+   "id": "bristol",
+   "name": "Bristol",
+   "lat": 51.4545,
+   "lon": -2.5879,
+   "size": 4,
+   "landmark": "Clifton Suspension Bridge",
+   "in_bounds": true
+  },
+  {
+   "id": "cardiff",
+   "name": "Cardiff",
+   "lat": 51.4816,
+   "lon": -3.1791,
+   "size": 3,
+   "in_bounds": true
+  }
+ ],
+ "features": [
+  {
+   "id": "white_cliffs_dover",
+   "name": "White Cliffs of Dover",
+   "type": "cliff",
+   "lat": 51.133,
+   "lon": 1.365,
+   "radius_m": 4500,
+   "in_bounds": true
+  },
+  {
+   "id": "seven_sisters",
+   "name": "Seven Sisters",
+   "type": "cliff",
+   "lat": 50.745,
+   "lon": 0.155,
+   "radius_m": 4000,
+   "in_bounds": true
+  },
+  {
+   "id": "beachy_head",
+   "name": "Beachy Head",
+   "type": "cliff",
+   "lat": 50.734,
+   "lon": 0.242,
+   "radius_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "cap_blanc_nez",
+   "name": "Cap Blanc-Nez",
+   "type": "cliff",
+   "lat": 50.923,
+   "lon": 1.716,
+   "radius_m": 2500,
+   "in_bounds": true
+  },
+  {
+   "id": "cap_gris_nez_cape",
+   "name": "Cap Gris-Nez",
+   "type": "cliff",
+   "lat": 50.87,
+   "lon": 1.5833,
+   "radius_m": 2500,
+   "in_bounds": true
+  },
+  {
+   "id": "utah_beach",
+   "name": "Utah Beach",
+   "type": "beach",
+   "lat": 49.416,
+   "lon": -1.175,
+   "radius_m": 3500,
+   "in_bounds": true
+  },
+  {
+   "id": "omaha_beach",
+   "name": "Omaha Beach",
+   "type": "beach",
+   "lat": 49.37,
+   "lon": -0.87,
+   "radius_m": 4500,
+   "in_bounds": true
+  },
+  {
+   "id": "gold_beach",
+   "name": "Gold Beach",
+   "type": "beach",
+   "lat": 49.34,
+   "lon": -0.55,
+   "radius_m": 4500,
+   "in_bounds": true
+  },
+  {
+   "id": "juno_beach",
+   "name": "Juno Beach",
+   "type": "beach",
+   "lat": 49.335,
+   "lon": -0.455,
+   "radius_m": 3500,
+   "in_bounds": true
+  },
+  {
+   "id": "sword_beach",
+   "name": "Sword Beach",
+   "type": "beach",
+   "lat": 49.29,
+   "lon": -0.265,
+   "radius_m": 3500,
+   "in_bounds": true
+  },
+  {
+   "id": "dunkirk_beaches",
+   "name": "Dunkirk Beaches (Malo-les-Bains)",
+   "type": "beach",
+   "lat": 51.05,
+   "lon": 2.39,
+   "radius_m": 3500,
+   "in_bounds": true
+  },
+  {
+   "id": "la_panne_beach",
+   "name": "La Panne Beach (Dunkirk evacuation)",
+   "type": "beach",
+   "lat": 51.095,
+   "lon": 2.59,
+   "radius_m": 3000,
+   "in_bounds": true
+  },
+  {
+   "id": "longues_sur_mer",
+   "name": "Longues-sur-Mer Battery",
+   "type": "battery",
+   "lat": 49.34,
+   "lon": -0.693,
+   "radius_m": 600,
+   "in_bounds": true
+  },
+  {
+   "id": "pointe_du_hoc",
+   "name": "Pointe du Hoc Battery",
+   "type": "battery",
+   "lat": 49.3969,
+   "lon": -0.9889,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "merville_battery",
+   "name": "Merville Battery",
+   "type": "battery",
+   "lat": 49.28,
+   "lon": -0.2,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "thames",
+   "name": "River Thames",
+   "type": "river",
+   "lat": 51.49,
+   "lon": 0.2,
+   "radius_m": 25000,
+   "in_bounds": true
+  },
+  {
+   "id": "seine",
+   "name": "River Seine",
+   "type": "river",
+   "lat": 49.43,
+   "lon": 1.05,
+   "radius_m": 25000,
+   "in_bounds": true
+  },
+  {
+   "id": "somme",
+   "name": "River Somme",
+   "type": "river",
+   "lat": 50.11,
+   "lon": 1.8,
+   "radius_m": 25000,
+   "in_bounds": true
+  },
+  {
+   "id": "scheldt",
+   "name": "River Scheldt",
+   "type": "river",
+   "lat": 51.2,
+   "lon": 4.37,
+   "radius_m": 20000,
+   "in_bounds": true
+  },
+  {
+   "id": "new_forest",
+   "name": "New Forest",
+   "type": "forest",
+   "lat": 50.85,
+   "lon": -1.6,
+   "radius_m": 12000,
+   "in_bounds": true
+  },
+  {
+   "id": "ardennes",
+   "name": "Ardennes (western edge)",
+   "type": "forest",
+   "lat": 49.95,
+   "lon": 4.6,
+   "radius_m": 30000,
+   "in_bounds": true
+  },
+  {
+   "id": "foret_de_mormal",
+   "name": "Foret de Mormal",
+   "type": "forest",
+   "lat": 50.2,
+   "lon": 3.65,
+   "radius_m": 8000,
+   "in_bounds": true
+  },
+  {
+   "id": "mont_saint_michel",
+   "name": "Mont Saint-Michel",
+   "type": "landmark",
+   "lat": 48.6361,
+   "lon": -1.5115,
+   "radius_m": 1000,
+   "in_bounds": false
+  },
+  {
+   "id": "dover_castle",
+   "name": "Dover Castle",
+   "type": "landmark",
+   "lat": 51.1295,
+   "lon": 1.3217,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "tower_bridge",
+   "name": "Tower Bridge",
+   "type": "landmark",
+   "lat": 51.5055,
+   "lon": -0.0754,
+   "radius_m": 200,
+   "in_bounds": true
+  },
+  {
+   "id": "big_ben",
+   "name": "Big Ben",
+   "type": "landmark",
+   "lat": 51.5007,
+   "lon": -0.1246,
+   "radius_m": 200,
+   "in_bounds": true
+  },
+  {
+   "id": "st_pauls",
+   "name": "St Paul's Cathedral",
+   "type": "landmark",
+   "lat": 51.5138,
+   "lon": -0.0984,
+   "radius_m": 250,
+   "in_bounds": true
+  },
+  {
+   "id": "pegasus_bridge",
+   "name": "Pegasus Bridge",
+   "type": "landmark",
+   "lat": 49.2447,
+   "lon": -0.274,
+   "radius_m": 200,
+   "in_bounds": true
+  },
+  {
+   "id": "arromanches_mulberry",
+   "name": "Mulberry Harbour (Arromanches)",
+   "type": "landmark",
+   "lat": 49.34,
+   "lon": -0.619,
+   "radius_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "eddystone",
+   "name": "Eddystone Lighthouse",
+   "type": "landmark",
+   "lat": 50.1818,
+   "lon": -4.2688,
+   "radius_m": 200,
+   "in_bounds": true
+  },
+  {
+   "id": "needles",
+   "name": "The Needles",
+   "type": "landmark",
+   "lat": 50.662,
+   "lon": -1.592,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "beffroi_calais",
+   "name": "Calais Belfry",
+   "type": "landmark",
+   "lat": 50.9525,
+   "lon": 1.856,
+   "radius_m": 200,
+   "in_bounds": true
+  },
+  {
+   "id": "cologne_cathedral",
+   "name": "Cologne Cathedral",
+   "type": "landmark",
+   "lat": 50.9413,
+   "lon": 6.9583,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "antwerp_cathedral",
+   "name": "Antwerp Cathedral",
+   "type": "landmark",
+   "lat": 51.2205,
+   "lon": 4.4012,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "bruges_belfry",
+   "name": "Belfry of Bruges",
+   "type": "landmark",
+   "lat": 51.2087,
+   "lon": 3.225,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "utrecht_dom",
+   "name": "Dom Tower, Utrecht",
+   "type": "landmark",
+   "lat": 52.0907,
+   "lon": 5.1214,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "aachen_cathedral",
+   "name": "Aachen Cathedral",
+   "type": "landmark",
+   "lat": 50.7753,
+   "lon": 6.0839,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "frankfurt_cathedral",
+   "name": "Frankfurt Cathedral",
+   "type": "landmark",
+   "lat": 50.1106,
+   "lon": 8.6853,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "coventry_cathedral",
+   "name": "Coventry Cathedral (ruins)",
+   "type": "landmark",
+   "lat": 52.4082,
+   "lon": -1.5062,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "canterbury_cathedral",
+   "name": "Canterbury Cathedral",
+   "type": "landmark",
+   "lat": 51.2802,
+   "lon": 1.0829,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "salisbury_cathedral",
+   "name": "Salisbury Cathedral",
+   "type": "landmark",
+   "lat": 51.0651,
+   "lon": -1.797,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "rouen_cathedral",
+   "name": "Rouen Cathedral",
+   "type": "landmark",
+   "lat": 49.4402,
+   "lon": 1.0951,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "amiens_cathedral",
+   "name": "Amiens Cathedral",
+   "type": "landmark",
+   "lat": 49.8946,
+   "lon": 2.3023,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "caen_abbey",
+   "name": "Abbaye aux Hommes, Caen",
+   "type": "landmark",
+   "lat": 49.186,
+   "lon": -0.3495,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "bayeux_cathedral",
+   "name": "Bayeux Cathedral",
+   "type": "landmark",
+   "lat": 49.2765,
+   "lon": -0.7027,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "windsor_castle",
+   "name": "Windsor Castle",
+   "type": "landmark",
+   "lat": 51.4839,
+   "lon": -0.6044,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "stonehenge",
+   "name": "Stonehenge",
+   "type": "landmark",
+   "lat": 51.1789,
+   "lon": -1.8262,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "ludendorff_bridge",
+   "name": "Ludendorff Bridge, Remagen",
+   "type": "landmark",
+   "lat": 50.568,
+   "lon": 7.233,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "nijmegen_bridge",
+   "name": "Nijmegen Waal Bridge",
+   "type": "landmark",
+   "lat": 51.847,
+   "lon": 5.856,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "arnhem_bridge",
+   "name": "Arnhem Rhine Bridge",
+   "type": "landmark",
+   "lat": 51.974,
+   "lon": 5.907,
+   "radius_m": 400,
+   "in_bounds": true
+  },
+  {
+   "id": "battersea_power_station",
+   "name": "Battersea Power Station",
+   "type": "landmark",
+   "lat": 51.4817,
+   "lon": -0.1447,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "tower_of_london",
+   "name": "Tower of London",
+   "type": "landmark",
+   "lat": 51.5081,
+   "lon": -0.0759,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "westminster_abbey",
+   "name": "Westminster Abbey",
+   "type": "landmark",
+   "lat": 51.4993,
+   "lon": -0.1273,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "royal_albert_hall",
+   "name": "Royal Albert Hall",
+   "type": "landmark",
+   "lat": 51.5009,
+   "lon": -0.1774,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "crystal_palace",
+   "name": "Crystal Palace (Sydenham towers and terraces)",
+   "type": "landmark",
+   "lat": 51.4224,
+   "lon": -0.0735,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "wembley_stadium",
+   "name": "Wembley Stadium (Empire Stadium twin towers)",
+   "type": "landmark",
+   "lat": 51.556,
+   "lon": -0.2796,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "london_docks",
+   "name": "London Docks (Wapping)",
+   "type": "landmark",
+   "lat": 51.5128,
+   "lon": -0.0574,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "county_hall",
+   "name": "County Hall, London",
+   "type": "landmark",
+   "lat": 51.5012,
+   "lon": -0.119,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "the_monument",
+   "name": "The Monument to the Great Fire of London",
+   "type": "landmark",
+   "lat": 51.5102,
+   "lon": -0.086,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "rochester_castle",
+   "name": "Rochester Castle",
+   "type": "landmark",
+   "lat": 51.389,
+   "lon": 0.5012,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "rochester_cathedral",
+   "name": "Rochester Cathedral",
+   "type": "landmark",
+   "lat": 51.3893,
+   "lon": 0.5038,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "leeds_castle",
+   "name": "Leeds Castle",
+   "type": "landmark",
+   "lat": 51.2485,
+   "lon": 0.63,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "dover_great_tower",
+   "name": "Dover Castle Great Tower (the Keep)",
+   "type": "landmark",
+   "lat": 51.1299,
+   "lon": 1.3212,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "dover_admiralty_pier",
+   "name": "Dover Admiralty Pier",
+   "type": "landmark",
+   "lat": 51.1135,
+   "lon": 1.3226,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "hever_castle",
+   "name": "Hever Castle",
+   "type": "landmark",
+   "lat": 51.1857,
+   "lon": 0.1092,
+   "radius_m": 200,
+   "in_bounds": true
+  },
+  {
+   "id": "new_romney_st_nicholas",
+   "name": "St Nicholas Church, New Romney",
+   "type": "landmark",
+   "lat": 50.985,
+   "lon": 0.941,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "rye_st_mary",
+   "name": "St Mary's Church, Rye",
+   "type": "landmark",
+   "lat": 50.9503,
+   "lon": 0.734,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "sandwich_st_clements",
+   "name": "St Clement's Church, Sandwich",
+   "type": "landmark",
+   "lat": 51.2743,
+   "lon": 1.3395,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "chatham_dockyard",
+   "name": "Chatham Royal Dockyard",
+   "type": "landmark",
+   "lat": 51.397,
+   "lon": 0.53,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "ramsgate_harbour",
+   "name": "Ramsgate Royal Harbour",
+   "type": "landmark",
+   "lat": 51.331,
+   "lon": 1.418,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "dunkerque_belfry",
+   "name": "Belfry of Saint-Eloi, Dunkirk",
+   "type": "landmark",
+   "lat": 51.0341,
+   "lon": 2.3768,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "boulogne_basilica",
+   "name": "Basilica of Notre-Dame, Boulogne-sur-Mer",
+   "type": "landmark",
+   "lat": 50.7243,
+   "lon": 1.6139,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "boulogne_column",
+   "name": "Column of the Grande Armee, Wimille",
+   "type": "landmark",
+   "lat": 50.7447,
+   "lon": 1.607,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "lille_hotel_de_ville",
+   "name": "Lille Hotel de Ville and Belfry",
+   "type": "landmark",
+   "lat": 50.6328,
+   "lon": 3.0636,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "lille_citadel",
+   "name": "Citadelle de Lille",
+   "type": "landmark",
+   "lat": 50.6428,
+   "lon": 3.0518,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "ghent_belfry",
+   "name": "Belfry of Ghent",
+   "type": "landmark",
+   "lat": 51.0536,
+   "lon": 3.725,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "ghent_gravensteen",
+   "name": "Gravensteen, Ghent",
+   "type": "landmark",
+   "lat": 51.0573,
+   "lon": 3.7207,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "brussels_palais_de_justice",
+   "name": "Palais de Justice, Brussels",
+   "type": "landmark",
+   "lat": 50.8396,
+   "lon": 4.3525,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "brussels_hotel_de_ville",
+   "name": "Brussels Town Hall",
+   "type": "landmark",
+   "lat": 50.8466,
+   "lon": 4.3524,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "antwerp_docks",
+   "name": "Antwerp Kattendijk Docks",
+   "type": "landmark",
+   "lat": 51.23,
+   "lon": 4.402,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "zeebrugge_mole",
+   "name": "Zeebrugge Mole",
+   "type": "landmark",
+   "lat": 51.335,
+   "lon": 3.198,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "rotterdam_maashaven",
+   "name": "Rotterdam Maashaven Docks",
+   "type": "landmark",
+   "lat": 51.902,
+   "lon": 4.43,
+   "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "ostend_harbour",
+   "name": "Ostend Harbour",
+   "type": "landmark",
+   "lat": 51.231,
+   "lon": 2.925,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "cologne_hohenzollern_bridge",
+   "name": "Hohenzollern Bridge, Cologne",
+   "type": "landmark",
+   "lat": 50.9411,
+   "lon": 6.963,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "cologne_gross_st_martin",
+   "name": "Gross St. Martin, Cologne",
+   "type": "landmark",
+   "lat": 50.9385,
+   "lon": 6.9618,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "koblenz_deutsches_eck",
+   "name": "Deutsches Eck, Koblenz",
+   "type": "landmark",
+   "lat": 50.3646,
+   "lon": 7.6071,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "liege_palais_des_princes_eveques",
+   "name": "Palais des Princes-Eveques, Liege",
+   "type": "landmark",
+   "lat": 50.6464,
+   "lon": 5.5754,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "birmingham_town_hall",
+   "name": "Birmingham Town Hall",
+   "type": "landmark",
+   "lat": 52.4794,
+   "lon": -1.9039,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "birmingham_council_house",
+   "name": "Birmingham Council House",
+   "type": "landmark",
+   "lat": 52.4825,
+   "lon": -1.9023,
+   "radius_m": 500,
+   "in_bounds": true
+  },
+  {
+   "id": "coventry_holy_trinity_spire",
+   "name": "Holy Trinity Church Spire, Coventry",
+   "type": "landmark",
+   "lat": 52.409,
+   "lon": -1.5087,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "coventry_council_house",
+   "name": "Coventry Council House",
+   "type": "landmark",
+   "lat": 52.4075,
+   "lon": -1.51,
+   "radius_m": 300,
+   "in_bounds": true
+  },
+  {
+   "id": "nottingham_council_house",
+   "name": "Nottingham Council House",
+   "type": "landmark",
+   "lat": 52.9533,
+   "lon": -1.15,
+   "radius_m": 500,
+   "in_bounds": true
+  }
+ ],
+ "targets": [
+  {
+   "id": "wizernes_v2",
+   "name": "Wizernes V-2 Bunker (La Coupole)",
+   "type": "v1_site",
+   "lat": 50.7143,
+   "lon": 2.1055,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "mimoyecques",
+   "name": "Mimoyecques V-3 Supergun Site",
+   "type": "v1_site",
+   "lat": 50.8183,
+   "lon": 1.7117,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "watten_bunker",
+   "name": "Watten Blockhaus",
+   "type": "v1_site",
+   "lat": 50.8261,
+   "lon": 2.2128,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "eperlecques",
+   "name": "Eperlecques Blockhaus",
+   "type": "v1_site",
+   "lat": 50.8208,
+   "lon": 2.1989,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "siracourt",
+   "name": "Siracourt V-1 Bunker",
+   "type": "v1_site",
+   "lat": 50.4617,
+   "lon": 2.3333,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_lille_fives",
+   "name": "Lille-Fives Rail Yard",
+   "type": "rail_yard",
+   "lat": 50.63,
+   "lon": 3.08,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_amiens_longueau",
+   "name": "Amiens-Longueau Rail Yard",
+   "type": "rail_yard",
+   "lat": 49.875,
+   "lon": 2.36,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_rouen_sotteville",
+   "name": "Rouen-Sotteville Rail Yard",
+   "type": "rail_yard",
+   "lat": 49.415,
+   "lon": 1.08,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_caen",
+   "name": "Caen Rail Yard",
+   "type": "rail_yard",
+   "lat": 49.175,
+   "lon": -0.347,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_hazebrouck",
+   "name": "Hazebrouck Rail Junction",
+   "type": "rail_yard",
+   "lat": 50.725,
+   "lon": 2.54,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_arras",
+   "name": "Arras Rail Yard",
+   "type": "rail_yard",
+   "lat": 50.288,
+   "lon": 2.79,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_calais",
+   "name": "Calais Harbour",
+   "type": "port",
+   "lat": 50.968,
+   "lon": 1.855,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_boulogne",
+   "name": "Boulogne Harbour",
+   "type": "port",
+   "lat": 50.733,
+   "lon": 1.595,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_dunkirk",
+   "name": "Dunkirk Harbour",
+   "type": "port",
+   "lat": 51.048,
+   "lon": 2.355,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_le_havre",
+   "name": "Le Havre Docks",
+   "type": "port",
+   "lat": 49.48,
+   "lon": 0.12,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_cherbourg",
+   "name": "Cherbourg Naval Base",
+   "type": "port",
+   "lat": 49.65,
+   "lon": -1.63,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_antwerp",
+   "name": "Antwerp Docks",
+   "type": "port",
+   "lat": 51.27,
+   "lon": 4.35,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_ostend",
+   "name": "Ostend Harbour",
+   "type": "port",
+   "lat": 51.23,
+   "lon": 2.925,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_zeebrugge",
+   "name": "Zeebrugge Mole",
+   "type": "port",
+   "lat": 51.33,
+   "lon": 3.2,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_tancarville",
+   "name": "Tancarville Bridge (ferry/rail area)",
+   "type": "bridge",
+   "lat": 49.47,
+   "lon": 0.46,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_rouen",
+   "name": "Rouen Seine Bridges",
+   "type": "bridge",
+   "lat": 49.437,
+   "lon": 1.085,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_oissel",
+   "name": "Oissel Rail Bridge",
+   "type": "bridge",
+   "lat": 49.34,
+   "lon": 1.105,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_vernon",
+   "name": "Vernon Seine Bridge",
+   "type": "bridge",
+   "lat": 49.09,
+   "lon": 1.485,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_mantes",
+   "name": "Mantes-Gassicourt Seine Bridge",
+   "type": "bridge",
+   "lat": 48.99,
+   "lon": 1.71,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_abbeville",
+   "name": "Abbeville Somme Bridge",
+   "type": "bridge",
+   "lat": 50.105,
+   "lon": 1.835,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_minerva_antwerp",
+   "name": "Minerva Works Antwerp",
+   "type": "factory",
+   "lat": 51.19,
+   "lon": 4.43,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_fives_lille",
+   "name": "Fives-Lille Locomotive Works",
+   "type": "factory",
+   "lat": 50.631,
+   "lon": 3.087,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_rouen_oil",
+   "name": "Petit-Couronne Oil Refinery",
+   "type": "factory",
+   "lat": 49.39,
+   "lon": 1.02,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_lindemann",
+   "name": "Batterie Lindemann (Sangatte)",
+   "type": "battery",
+   "lat": 50.93,
+   "lon": 1.74,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_todt",
+   "name": "Batterie Todt (Haringzelles)",
+   "type": "battery",
+   "lat": 50.813,
+   "lon": 1.61,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_longues",
+   "name": "Longues-sur-Mer Battery",
+   "type": "battery",
+   "lat": 49.34,
+   "lon": -0.693,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_pointe_du_hoc",
+   "name": "Pointe du Hoc Battery",
+   "type": "battery",
+   "lat": 49.3969,
+   "lon": -0.9889,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_merville",
+   "name": "Merville Battery",
+   "type": "battery",
+   "lat": 49.28,
+   "lon": -0.2,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "radar_douvres",
+   "name": "Douvres-la-Delivrande Radar",
+   "type": "radar",
+   "lat": 49.29,
+   "lon": -0.38,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "radar_wissant",
+   "name": "Wissant Freya Radar",
+   "type": "radar",
+   "lat": 50.889,
+   "lon": 1.66,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "radar_antifer",
+   "name": "Cap d'Antifer Radar",
+   "type": "radar",
+   "lat": 49.685,
+   "lon": 0.16,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "radar_la_hague",
+   "name": "Cap de la Hague Radar",
+   "type": "radar",
+   "lat": 49.72,
+   "lon": -1.94,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_rouen_caen",
+   "name": "Axis Supply Convoy Route Rouen-Caen",
+   "type": "convoy_route",
+   "lat": 49.4432,
+   "lon": 1.0993,
+   "side_owner": "Axis",
+   "path": [
+    [
+     49.4432,
+     1.0993
+    ],
+    [
+     49.3,
+     0.75
+    ],
+    [
+     49.23,
+     0.3
+    ],
+    [
+     49.1829,
+     -0.3707
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_lille_calais",
+   "name": "Axis Supply Convoy Route Lille-Calais",
+   "type": "convoy_route",
+   "lat": 50.6292,
+   "lon": 3.0573,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.6292,
+     3.0573
+    ],
+    [
+     50.7,
+     2.5
+    ],
+    [
+     50.85,
+     2.1
+    ],
+    [
+     50.9513,
+     1.8587
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_antwerp_ostend",
+   "name": "Axis Shipping Route Antwerp-Ostend",
+   "type": "convoy_route",
+   "lat": 51.2194,
+   "lon": 4.4025,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.2194,
+     4.4025
+    ],
+    [
+     51.38,
+     3.8
+    ],
+    [
+     51.33,
+     3.2
+    ],
+    [
+     51.2154,
+     2.9286
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "radar_dover_ch",
+   "name": "Chain Home Dover (Swingate)",
+   "type": "radar",
+   "lat": 51.132,
+   "lon": 1.333,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "radar_dunkirk_ch",
+   "name": "Chain Home Dunkirk (Kent)",
+   "type": "radar",
+   "lat": 51.28,
+   "lon": 0.97,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "radar_pevensey_ch",
+   "name": "Chain Home Pevensey",
+   "type": "radar",
+   "lat": 50.82,
+   "lon": 0.36,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "radar_poling_ch",
+   "name": "Chain Home Poling",
+   "type": "radar",
+   "lat": 50.83,
+   "lon": -0.52,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "radar_ventnor_ch",
+   "name": "Chain Home Ventnor",
+   "type": "radar",
+   "lat": 50.59,
+   "lon": -1.2,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_short_rochester",
+   "name": "Short Brothers Rochester",
+   "type": "factory",
+   "lat": 51.383,
+   "lon": 0.503,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_supermarine_woolston",
+   "name": "Supermarine Woolston Works",
+   "type": "factory",
+   "lat": 50.89,
+   "lon": -1.38,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_hawker_kingston",
+   "name": "Hawker Aircraft Kingston",
+   "type": "factory",
+   "lat": 51.41,
+   "lon": -0.3,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "oil_thameshaven",
+   "name": "Thameshaven Oil Depot",
+   "type": "factory",
+   "lat": 51.51,
+   "lon": 0.52,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "port_royal_docks",
+   "name": "Royal Docks London",
+   "type": "port",
+   "lat": 51.51,
+   "lon": 0.03,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "port_portsmouth",
+   "name": "Portsmouth Dockyard",
+   "type": "port",
+   "lat": 50.799,
+   "lon": -1.106,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "port_southampton",
+   "name": "Southampton Docks",
+   "type": "port",
+   "lat": 50.897,
+   "lon": -1.406,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "port_dover",
+   "name": "Dover Harbour",
+   "type": "port",
+   "lat": 51.123,
+   "lon": 1.32,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "port_plymouth",
+   "name": "Plymouth Devonport Dockyard",
+   "type": "port",
+   "lat": 50.386,
+   "lon": -4.184,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_ashford",
+   "name": "Ashford Rail Works",
+   "type": "rail_yard",
+   "lat": 51.147,
+   "lon": 0.875,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_clapham",
+   "name": "Clapham Junction Rail Yard",
+   "type": "rail_yard",
+   "lat": 51.464,
+   "lon": -0.17,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_tower",
+   "name": "Tower Bridge",
+   "type": "bridge",
+   "lat": 51.5055,
+   "lon": -0.0754,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_thames_dover",
+   "name": "Allied Channel Convoy Route (Peewit)",
+   "type": "convoy_route",
+   "lat": 51.48,
+   "lon": 0.7,
+   "side_owner": "Allies",
+   "path": [
+    [
+     51.48,
+     0.7
+    ],
+    [
+     51.4,
+     1.45
+    ],
+    [
+     51.2,
+     1.65
+    ],
+    [
+     51.0,
+     1.45
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_dunkirk_evac",
+   "name": "Operation Dynamo Evacuation Route",
+   "type": "convoy_route",
+   "lat": 51.048,
+   "lon": 2.355,
+   "side_owner": "Allies",
+   "path": [
+    [
+     51.048,
+     2.355
+    ],
+    [
+     51.1,
+     1.9
+    ],
+    [
+     51.15,
+     1.5
+    ],
+    [
+     51.123,
+     1.32
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_neptune",
+   "name": "Operation Neptune Assault Convoy Route",
+   "type": "convoy_route",
+   "lat": 50.7,
+   "lon": -1.0,
+   "side_owner": "Allies",
+   "path": [
+    [
+     50.7,
+     -1.0
+    ],
+    [
+     50.2,
+     -0.8
+    ],
+    [
+     49.7,
+     -0.6
+    ],
+    [
+     49.35,
+     -0.55
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "factory_castle_bromwich_spitfire",
+   "name": "Castle Bromwich Spitfire Factory",
+   "type": "factory",
+   "lat": 52.511,
+   "lon": -1.779,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_rolls_royce_derby",
+   "name": "Rolls-Royce Derby Works",
+   "type": "factory",
+   "lat": 52.906,
+   "lon": -1.456,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_coventry_ordnance",
+   "name": "Coventry Ordnance Works",
+   "type": "factory",
+   "lat": 52.405,
+   "lon": -1.52,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_birmingham_new_street",
+   "name": "Birmingham New Street Yards",
+   "type": "rail_yard",
+   "lat": 52.4778,
+   "lon": -1.8985,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_ford_cologne",
+   "name": "Ford-Werke Koln-Niehl",
+   "type": "factory",
+   "lat": 51.003,
+   "lon": 6.975,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_krupp_essen",
+   "name": "Krupp Works Essen",
+   "type": "factory",
+   "lat": 51.443,
+   "lon": 7.0,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_rheinmetall_dusseldorf",
+   "name": "Rheinmetall Dusseldorf-Derendorf",
+   "type": "factory",
+   "lat": 51.24,
+   "lon": 6.79,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_scholven_oil",
+   "name": "Scholven Hydrogenation Plant (synthetic oil)",
+   "type": "factory",
+   "lat": 51.597,
+   "lon": 7.04,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_huls_marl",
+   "name": "Chemische Werke Huls, Marl",
+   "type": "factory",
+   "lat": 51.66,
+   "lon": 7.1,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_hoesch_dortmund",
+   "name": "Hoesch Steelworks Dortmund",
+   "type": "factory",
+   "lat": 51.5,
+   "lon": 7.48,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_bayer_leverkusen",
+   "name": "Bayer Leverkusen Chemical Works",
+   "type": "factory",
+   "lat": 51.03,
+   "lon": 6.98,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_opel_russelsheim",
+   "name": "Opel Works Russelsheim",
+   "type": "factory",
+   "lat": 49.99,
+   "lon": 8.415,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_philips_eindhoven",
+   "name": "Philips Works Eindhoven",
+   "type": "factory",
+   "lat": 51.44,
+   "lon": 5.47,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_fokker_amsterdam",
+   "name": "Fokker Works Amsterdam-Noord",
+   "type": "factory",
+   "lat": 52.4,
+   "lon": 4.84,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_cockerill_seraing",
+   "name": "Cockerill Steelworks Seraing",
+   "type": "factory",
+   "lat": 50.59,
+   "lon": 5.505,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_fn_herstal",
+   "name": "FN Herstal Arms Works",
+   "type": "factory",
+   "lat": 50.67,
+   "lon": 5.63,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_cologne_gremberg",
+   "name": "Cologne-Gremberg Marshalling Yard",
+   "type": "rail_yard",
+   "lat": 50.914,
+   "lon": 7.01,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_hamm",
+   "name": "Hamm Marshalling Yard",
+   "type": "rail_yard",
+   "lat": 51.672,
+   "lon": 7.82,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_hagen",
+   "name": "Hagen-Vorhalle Yard",
+   "type": "rail_yard",
+   "lat": 51.36,
+   "lon": 7.46,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_munster",
+   "name": "Munster Rail Junction",
+   "type": "rail_yard",
+   "lat": 51.957,
+   "lon": 7.633,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_osnabruck",
+   "name": "Osnabruck Rail Yards",
+   "type": "rail_yard",
+   "lat": 52.27,
+   "lon": 8.06,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_koblenz_lutzel",
+   "name": "Koblenz-Lutzel Yard",
+   "type": "rail_yard",
+   "lat": 50.375,
+   "lon": 7.595,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_liege_kinkempois",
+   "name": "Liege-Kinkempois Yard",
+   "type": "rail_yard",
+   "lat": 50.605,
+   "lon": 5.59,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_monceau",
+   "name": "Monceau-sur-Sambre Yard",
+   "type": "rail_yard",
+   "lat": 50.41,
+   "lon": 4.4,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_utrecht",
+   "name": "Utrecht Rail Junction",
+   "type": "rail_yard",
+   "lat": 52.089,
+   "lon": 5.11,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_nijmegen",
+   "name": "Nijmegen Waal Bridge",
+   "type": "bridge",
+   "lat": 51.847,
+   "lon": 5.856,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_arnhem",
+   "name": "Arnhem Rhine Bridge",
+   "type": "bridge",
+   "lat": 51.974,
+   "lon": 5.907,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_grave",
+   "name": "Grave Maas Bridge",
+   "type": "bridge",
+   "lat": 51.765,
+   "lon": 5.74,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_remagen",
+   "name": "Ludendorff Bridge, Remagen",
+   "type": "bridge",
+   "lat": 50.568,
+   "lon": 7.233,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_wesel",
+   "name": "Wesel Rhine Rail Bridge",
+   "type": "bridge",
+   "lat": 51.66,
+   "lon": 6.61,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_moerdijk",
+   "name": "Moerdijk Bridges",
+   "type": "bridge",
+   "lat": 51.7,
+   "lon": 4.59,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_hohenzollern",
+   "name": "Hohenzollern Bridge Cologne",
+   "type": "bridge",
+   "lat": 50.941,
+   "lon": 6.965,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_maastricht",
+   "name": "Maastricht Maas Bridges",
+   "type": "bridge",
+   "lat": 50.848,
+   "lon": 5.69,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_rotterdam",
+   "name": "Rotterdam Harbour",
+   "type": "port",
+   "lat": 51.95,
+   "lon": 4.14,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_amsterdam",
+   "name": "Amsterdam Harbour",
+   "type": "port",
+   "lat": 52.39,
+   "lon": 4.8,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_ghent",
+   "name": "Ghent Canal Docks",
+   "type": "port",
+   "lat": 51.1,
+   "lon": 3.79,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_duisburg",
+   "name": "Duisburg-Ruhrort Inland Port",
+   "type": "port",
+   "lat": 51.45,
+   "lon": 6.73,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_flushing",
+   "name": "Flushing (Vlissingen) Docks",
+   "type": "port",
+   "lat": 51.443,
+   "lon": 3.58,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "port_ijmuiden",
+   "name": "IJmuiden Harbour",
+   "type": "port",
+   "lat": 52.46,
+   "lon": 4.61,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_austin_longbridge",
+   "name": "Austin Longbridge Works",
+   "type": "factory",
+   "lat": 52.393,
+   "lon": -1.983,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_dunlop_birmingham",
+   "name": "Fort Dunlop, Birmingham",
+   "type": "factory",
+   "lat": 52.525,
+   "lon": -1.82,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_bsa_small_heath",
+   "name": "BSA Small Heath Works",
+   "type": "factory",
+   "lat": 52.46,
+   "lon": -1.85,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_morris_cowley",
+   "name": "Morris Motors Cowley",
+   "type": "factory",
+   "lat": 51.73,
+   "lon": -1.2,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_gloster_hucclecote",
+   "name": "Gloster Aircraft Hucclecote",
+   "type": "factory",
+   "lat": 51.84,
+   "lon": -2.2,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_bristol_filton",
+   "name": "Bristol Aeroplane Co., Filton",
+   "type": "factory",
+   "lat": 51.52,
+   "lon": -2.59,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "port_bristol",
+   "name": "Bristol Avonmouth Docks",
+   "type": "port",
+   "lat": 51.5,
+   "lon": -2.7,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "port_cardiff",
+   "name": "Cardiff Docks",
+   "type": "port",
+   "lat": 51.46,
+   "lon": -3.16,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "port_newport",
+   "name": "Newport Docks",
+   "type": "port",
+   "lat": 51.55,
+   "lon": -2.98,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "port_swansea",
+   "name": "Swansea Docks",
+   "type": "port",
+   "lat": 51.615,
+   "lon": -3.93,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "oil_llandarcy",
+   "name": "Llandarcy Oil Refinery",
+   "type": "oil_depot",
+   "lat": 51.633,
+   "lon": -3.858,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_cardiff",
+   "name": "Cardiff Railway Yards",
+   "type": "rail_yard",
+   "lat": 51.487,
+   "lon": -3.18,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_swindon",
+   "name": "Swindon Rail Works",
+   "type": "rail_yard",
+   "lat": 51.565,
+   "lon": -1.78,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "rail_derby_midland",
+   "name": "Derby Midland Railway Works",
+   "type": "rail_yard",
+   "lat": 52.916,
+   "lon": -1.463,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_boulogne_calais",
+   "name": "Axis Coastal Convoy Boulogne-Calais",
+   "type": "convoy_route",
+   "lat": 50.74,
+   "lon": 1.5,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.74,
+     1.5
+    ],
+    [
+     50.9,
+     1.6
+    ],
+    [
+     51.02,
+     1.9
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_ijmuiden_scheldt",
+   "name": "Axis Coastal Convoy IJmuiden-Scheldt",
+   "type": "convoy_route",
+   "lat": 52.5,
+   "lon": 4.4,
+   "side_owner": "Axis",
+   "path": [
+    [
+     52.5,
+     4.4
+    ],
+    [
+     52.1,
+     3.9
+    ],
+    [
+     51.8,
+     3.5
+    ],
+    [
+     51.45,
+     3.3
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_cherbourg_lehavre",
+   "name": "Axis Coastal Convoy Cherbourg-Le Havre",
+   "type": "convoy_route",
+   "lat": 49.78,
+   "lon": -1.4,
+   "side_owner": "Axis",
+   "path": [
+    [
+     49.78,
+     -1.4
+    ],
+    [
+     49.62,
+     -0.8
+    ],
+    [
+     49.55,
+     -0.2
+    ],
+    [
+     49.58,
+     0.0
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_solent_channel",
+   "name": "Allied Convoy Spithead-Lyme Bay",
+   "type": "convoy_route",
+   "lat": 50.7,
+   "lon": -1.05,
+   "side_owner": "Allies",
+   "path": [
+    [
+     50.7,
+     -1.05
+    ],
+    [
+     50.55,
+     -1.4
+    ],
+    [
+     50.4,
+     -2.0
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_east_coast",
+   "name": "Allied East Coast Convoy",
+   "type": "convoy_route",
+   "lat": 51.6,
+   "lon": 1.75,
+   "side_owner": "Allies",
+   "path": [
+    [
+     51.6,
+     1.75
+    ],
+    [
+     51.3,
+     2.0
+    ],
+    [
+     51.1,
+     1.95
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "rh_rail_yard_objective_near_seraing",
+   "name": "Objective near Seraing",
+   "type": "rail_yard",
+   "lat": 50.5425,
+   "lon": 5.5864,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_enemy_position_near_julich",
+   "name": "Enemy position near Julich",
+   "type": "battery",
+   "lat": 50.8589,
+   "lon": 6.3766,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_enemy_position_near_dusseldo",
+   "name": "Enemy position near Dusseldorf",
+   "type": "battery",
+   "lat": 51.1333,
+   "lon": 6.8165,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_enemy_position_near_wesel",
+   "name": "Enemy position near Wesel",
+   "type": "battery",
+   "lat": 51.5616,
+   "lon": 6.6437,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_dorsten",
+   "name": "Enemy column near Dorsten",
+   "type": "convoy_route",
+   "lat": 51.5642,
+   "lon": 6.9869,
+   "side_owner": "Allies",
+   "path": [
+    [
+     51.5642,
+     6.9869
+    ],
+    [
+     51.5742,
+     7.0169
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_geleen",
+   "name": "Enemy column near Geleen",
+   "type": "convoy_route",
+   "lat": 50.8339,
+   "lon": 5.8285,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.8339,
+     5.8285
+    ],
+    [
+     50.8439,
+     5.8585
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_wassenberg",
+   "name": "Enemy column near Wassenberg",
+   "type": "convoy_route",
+   "lat": 51.0146,
+   "lon": 6.1737,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.0146,
+     6.1737
+    ],
+    [
+     51.0246,
+     6.2037
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_barvaux",
+   "name": "Supply train near Barvaux",
+   "type": "convoy_route",
+   "lat": 50.2863,
+   "lon": 5.4967,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.2863,
+     5.4967
+    ],
+    [
+     50.3063,
+     5.5467
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_auwaille",
+   "name": "Supply train near Auwaille",
+   "type": "convoy_route",
+   "lat": 50.4501,
+   "lon": 5.5651,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.4501,
+     5.5651
+    ],
+    [
+     50.4701,
+     5.6151
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_spa",
+   "name": "Supply train near Spa",
+   "type": "convoy_route",
+   "lat": 50.4155,
+   "lon": 5.8582,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.4155,
+     5.8582
+    ],
+    [
+     50.4355,
+     5.9082
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_artillery_park_near_spa",
+   "name": "Artillery park near Spa",
+   "type": "battery",
+   "lat": 50.4168,
+   "lon": 5.8833,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_spa",
+   "name": "Enemy column near Spa",
+   "type": "convoy_route",
+   "lat": 50.413,
+   "lon": 5.8884,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.413,
+     5.8884
+    ],
+    [
+     50.423,
+     5.9184
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_auwaille",
+   "name": "Enemy column near Auwaille",
+   "type": "convoy_route",
+   "lat": 50.4056,
+   "lon": 5.6674,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.4056,
+     5.6674
+    ],
+    [
+     50.4156,
+     5.6974
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_aachen",
+   "name": "Supply train near Aachen",
+   "type": "convoy_route",
+   "lat": 50.6884,
+   "lon": 6.0944,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.6884,
+     6.0944
+    ],
+    [
+     50.7084,
+     6.1444
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_aachen",
+   "name": "Enemy column near Aachen",
+   "type": "convoy_route",
+   "lat": 50.6923,
+   "lon": 6.0884,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.6923,
+     6.0884
+    ],
+    [
+     50.7023,
+     6.1184
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_vise",
+   "name": "Supply train near Vise",
+   "type": "convoy_route",
+   "lat": 50.6312,
+   "lon": 5.6876,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.6312,
+     5.6876
+    ],
+    [
+     50.6512,
+     5.7376
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_artillery_park_near_seraing",
+   "name": "Artillery park near Seraing",
+   "type": "battery",
+   "lat": 50.5629,
+   "lon": 5.6198,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_objective_near_seraing",
+   "name": "Objective near Seraing",
+   "type": "battery",
+   "lat": 50.5445,
+   "lon": 5.5866,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_seraing",
+   "name": "Enemy column near Seraing",
+   "type": "convoy_route",
+   "lat": 50.592,
+   "lon": 5.5548,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.592,
+     5.5548
+    ],
+    [
+     50.602,
+     5.5848
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_eindhoven",
+   "name": "Supply train near Eindhoven",
+   "type": "convoy_route",
+   "lat": 51.381,
+   "lon": 5.6156,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.381,
+     5.6156
+    ],
+    [
+     51.401,
+     5.6656
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_objective_near_helmond",
+   "name": "Objective near Helmond",
+   "type": "battery",
+   "lat": 51.3882,
+   "lon": 5.6525,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_helmond",
+   "name": "Enemy column near Helmond",
+   "type": "convoy_route",
+   "lat": 51.4089,
+   "lon": 5.7022,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.4089,
+     5.7022
+    ],
+    [
+     51.4189,
+     5.7322
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_artillery_park_near_geldern",
+   "name": "Artillery park near Geldern",
+   "type": "battery",
+   "lat": 51.4378,
+   "lon": 6.3744,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_geldern",
+   "name": "Enemy column near Geldern",
+   "type": "convoy_route",
+   "lat": 51.4579,
+   "lon": 6.3692,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.4579,
+     6.3692
+    ],
+    [
+     51.4679,
+     6.3992
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_artillery_park_near_loenhout",
+   "name": "Artillery park near Loenhout",
+   "type": "battery",
+   "lat": 51.3202,
+   "lon": 4.5665,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_loenhout",
+   "name": "Enemy column near Loenhout",
+   "type": "convoy_route",
+   "lat": 51.3209,
+   "lon": 4.5662,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.3209,
+     4.5662
+    ],
+    [
+     51.3309,
+     4.5962
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_venlo",
+   "name": "Supply train near Venlo",
+   "type": "convoy_route",
+   "lat": 51.2828,
+   "lon": 6.2024,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.2828,
+     6.2024
+    ],
+    [
+     51.3028,
+     6.2524
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_objective_near_venlo",
+   "name": "Objective near Venlo",
+   "type": "battery",
+   "lat": 51.2818,
+   "lon": 6.204,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_bergen_op_",
+   "name": "Supply train near Bergen op Zoom",
+   "type": "convoy_route",
+   "lat": 51.4641,
+   "lon": 4.3739,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.4641,
+     4.3739
+    ],
+    [
+     51.4841,
+     4.4239
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_roosendaal",
+   "name": "Supply train near Roosendaal",
+   "type": "convoy_route",
+   "lat": 51.5006,
+   "lon": 4.5365,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.5006,
+     4.5365
+    ],
+    [
+     51.5206,
+     4.5865
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_breda",
+   "name": "Supply train near Breda",
+   "type": "convoy_route",
+   "lat": 51.5416,
+   "lon": 4.8487,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.5416,
+     4.8487
+    ],
+    [
+     51.5616,
+     4.8987
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_rail_yard_objective_near_bergen_op_zoo",
+   "name": "Objective near Bergen op Zoom",
+   "type": "rail_yard",
+   "lat": 51.4725,
+   "lon": 4.4035,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_rail_yard_objective_near_roosendaal",
+   "name": "Objective near Roosendaal",
+   "type": "rail_yard",
+   "lat": 51.4992,
+   "lon": 4.6271,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_rail_yard_objective_near_breda",
+   "name": "Objective near Breda",
+   "type": "rail_yard",
+   "lat": 51.5686,
+   "lon": 4.8091,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_rail_yard_objective_near_tilburg",
+   "name": "Objective near Tilburg",
+   "type": "rail_yard",
+   "lat": 51.4457,
+   "lon": 5.2884,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_rotterdam",
+   "name": "Supply train near Rotterdam",
+   "type": "convoy_route",
+   "lat": 51.9141,
+   "lon": 4.5474,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.9141,
+     4.5474
+    ],
+    [
+     51.9221,
+     4.5139
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_supply_train_near_den_haag",
+   "name": "Supply train near Den Haag",
+   "type": "convoy_route",
+   "lat": 52.0134,
+   "lon": 4.3565,
+   "side_owner": "Axis",
+   "path": [
+    [
+     52.0134,
+     4.3565
+    ],
+    [
+     51.9936,
+     4.3812
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_artillery_park_near_scheveni",
+   "name": "Artillery park near Scheveningen",
+   "type": "battery",
+   "lat": 51.9339,
+   "lon": 4.2332,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_schevening",
+   "name": "Enemy column near Scheveningen",
+   "type": "convoy_route",
+   "lat": 52.0657,
+   "lon": 4.3596,
+   "side_owner": "Axis",
+   "path": [
+    [
+     52.0657,
+     4.3596
+    ],
+    [
+     52.0577,
+     4.326
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_den_haag",
+   "name": "Enemy column near Den Haag",
+   "type": "convoy_route",
+   "lat": 52.0116,
+   "lon": 4.3591,
+   "side_owner": "Axis",
+   "path": [
+    [
+     52.0116,
+     4.3591
+    ],
+    [
+     51.9918,
+     4.3838
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_krefeld",
+   "name": "Enemy column near Krefeld",
+   "type": "convoy_route",
+   "lat": 51.2325,
+   "lon": 6.5651,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.2325,
+     6.5651
+    ],
+    [
+     51.2425,
+     6.5951
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_battery_artillery_park_near_maaseik",
+   "name": "Artillery park near Maaseik",
+   "type": "battery",
+   "lat": 51.1061,
+   "lon": 5.8825,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_maaseik",
+   "name": "Enemy column near Maaseik",
+   "type": "convoy_route",
+   "lat": 51.1118,
+   "lon": 5.9068,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.1118,
+     5.9068
+    ],
+    [
+     51.1218,
+     5.9368
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_weert",
+   "name": "Enemy column near Weert",
+   "type": "convoy_route",
+   "lat": 51.1438,
+   "lon": 5.9119,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.1438,
+     5.9119
+    ],
+    [
+     51.1538,
+     5.9419
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "rh_convoy_route_enemy_column_near_terneuzer",
+   "name": "Enemy column near Terneuzer",
+   "type": "convoy_route",
+   "lat": 51.4784,
+   "lon": 3.7119,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.4784,
+     3.7119
+    ],
+    [
+     51.4516,
+     3.722
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "factory_filton_bristol",
+   "name": "Bristol Aeroplane Company, Filton",
+   "type": "factory",
+   "lat": 51.52,
+   "lon": -2.58,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "factory_vickers_weybridge",
+   "name": "Vickers-Armstrongs Weybridge",
+   "type": "factory",
+   "lat": 51.37,
+   "lon": -0.46,
+   "side_owner": "Allies",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_azeville",
+   "name": "Azeville Battery",
+   "type": "battery",
+   "lat": 49.4896,
+   "lon": -1.2787,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_crisbecq",
+   "name": "Crisbecq Battery (St Marcouf)",
+   "type": "battery",
+   "lat": 49.4806,
+   "lon": -1.2692,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_wn62_omaha",
+   "name": "Omaha: Strongpoint WN62 (Colleville)",
+   "type": "battery",
+   "lat": 49.3633,
+   "lon": -0.8553,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_mont_fleury",
+   "name": "Gold: Mont Fleury Battery",
+   "type": "battery",
+   "lat": 49.3372,
+   "lon": -0.5928,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_courseulles",
+   "name": "Juno: Courseulles Strongpoint",
+   "type": "battery",
+   "lat": 49.3335,
+   "lon": -0.4605,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_riva_bella",
+   "name": "Sword: Riva Bella Battery",
+   "type": "battery",
+   "lat": 49.2872,
+   "lon": -0.2548,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "bridge_pegasus",
+   "name": "Benouville (Pegasus) Bridge",
+   "type": "bridge",
+   "lat": 49.2447,
+   "lon": -0.2748,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_gravelines",
+   "name": "Gravelines Heavy Battery",
+   "type": "battery",
+   "lat": 51.0128,
+   "lon": 2.1286,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_nieuport",
+   "name": "Nieuport Heavy Battery",
+   "type": "battery",
+   "lat": 51.1356,
+   "lon": 2.7513,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_utah",
+   "name": "Utah Beach Assault Waves",
+   "type": "convoy_route",
+   "lat": 49.55,
+   "lon": -0.95,
+   "side_owner": "Allies",
+   "path": [
+    [
+     49.56,
+     -0.92
+    ],
+    [
+     49.48,
+     -1.0
+    ],
+    [
+     49.425,
+     -1.1
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_omaha",
+   "name": "Omaha Beach Assault Waves",
+   "type": "convoy_route",
+   "lat": 49.62,
+   "lon": -0.88,
+   "side_owner": "Allies",
+   "path": [
+    [
+     49.62,
+     -0.88
+    ],
+    [
+     49.5,
+     -0.87
+    ],
+    [
+     49.4,
+     -0.87
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_gold",
+   "name": "Gold Beach Assault Waves",
+   "type": "convoy_route",
+   "lat": 49.55,
+   "lon": -0.6,
+   "side_owner": "Allies",
+   "path": [
+    [
+     49.55,
+     -0.6
+    ],
+    [
+     49.45,
+     -0.6
+    ],
+    [
+     49.37,
+     -0.6
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_sword",
+   "name": "Sword Beach Assault Waves",
+   "type": "convoy_route",
+   "lat": 49.5,
+   "lon": -0.3,
+   "side_owner": "Allies",
+   "path": [
+    [
+     49.5,
+     -0.3
+    ],
+    [
+     49.4,
+     -0.29
+    ],
+    [
+     49.33,
+     -0.28
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_mulberry",
+   "name": "Mulberry Harbour Supply Ships",
+   "type": "convoy_route",
+   "lat": 49.5,
+   "lon": -0.7,
+   "side_owner": "Allies",
+   "path": [
+    [
+     49.55,
+     -0.72
+    ],
+    [
+     49.45,
+     -0.66
+    ],
+    [
+     49.4,
+     -0.62
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_21panzer",
+   "name": "21st Panzer Division Column",
+   "type": "convoy_route",
+   "lat": 49.12,
+   "lon": -0.37,
+   "side_owner": "Axis",
+   "path": [
+    [
+     49.12,
+     -0.37
+    ],
+    [
+     49.2,
+     -0.37
+    ],
+    [
+     49.27,
+     -0.33
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_dunkirk_perimeter",
+   "name": "German Armoured Column (Bergues)",
+   "type": "convoy_route",
+   "lat": 50.93,
+   "lon": 2.5,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.93,
+     2.5
+    ],
+    [
+     50.97,
+     2.43
+    ],
+    [
+     51.01,
+     2.4
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "convoy_la_panne",
+   "name": "La Panne Evacuation Ships",
+   "type": "convoy_route",
+   "lat": 51.12,
+   "lon": 2.58,
+   "side_owner": "Allies",
+   "path": [
+    [
+     51.12,
+     2.58
+    ],
+    [
+     51.2,
+     2.4
+    ],
+    [
+     51.25,
+     2.0
+    ]
+   ],
+   "naval": true,
+   "in_bounds": true
+  }
+ ]
+}

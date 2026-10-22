@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "c47"
+display_name = "Douglas C-47 Skytrain"
+side = "Allies"
+nation = "USAAF"
+model_id = "c47"
+ammo = 600
+gun_count = 2
+fire_rate = 6
+gear_height = 3.32
+max_speed = 100
+stall_speed = 32.2
+boost_bonus = 32
+accel = 3.6
+decel = 3.1
+pitch_rate_deg = 38
+roll_rate_deg = 50
+yaw_rate_deg = 13
+bank_turn_rate = 0.54
+rate_response = 3.4
+max_health = 377
+radius = 20
+engine_sound = "radial_pw"
+engine_count = 2
+gun_sound = "browning50"

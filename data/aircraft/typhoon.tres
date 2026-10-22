@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "typhoon"
+display_name = "Hawker Typhoon Mk Ib"
+side = "Allies"
+nation = "RAF"
+model_id = "typhoon"
+ammo = 2400
+bombs = 4
+gun_count = 4
+rockets = 16
+fire_rate = 12
+gear_height = 1.95
+engine_sound = "napier"
+engine_count = 1
+gun_sound = "hispano20"
+max_speed = 188.6
+stall_speed = 42.1
+boost_bonus = 60.4
+accel = 6.6
+decel = 5.7
+pitch_rate_deg = 59
+roll_rate_deg = 99
+yaw_rate_deg = 21
+bank_turn_rate = 0.73
+rate_response = 5
+max_health = 182
+radius = 11

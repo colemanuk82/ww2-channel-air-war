@@ -1,0 +1,47 @@
+file,side,speaker,voice,line,speak,direction
+allies/chatter_139,allies,RAF sector controller,"Male, mid 40s, RAF squadron leader. Received Pronunciation, calm, measured and unhurried even when urgent.","Hello Blue Leader, bandits over Dover, angels fifteen.","Hello Blue Leader, bandits over Dover, angels fifteen.",background radio chatter
+allies/chatter_140,allies,RAF squadron leader,"Male, mid 30s, Scottish (Glasgow) accent, gruff and commanding.","Red section, go!","Red section, go!",background radio chatter
+allies/chatter_141,allies,RAF section leader,"Male, mid 20s, New Zealander, relaxed but sharp.","Green Two, close up.","Green Two, close up.",background radio chatter
+allies/chatter_142,allies,RAF pilot,"Male, mid 20s, Polish pilot of No. 303 Squadron, strong Polish accent in English, steady.",One Heinkel is smoking. I follow him.,One Heinkel is smoking. I follow him.,background radio chatter
+allies/chatter_143,allies,Observer Corps,"Male, about 50, civilian Royal Observer Corps volunteer, West Country (Devon) accent, careful.","Ten-plus over Rye, heading north.","Ten-plus over Rye, heading north.",background radio chatter
+allies/chatter_144,allies,RAF section leader,"Male, mid 20s, New Zealander, relaxed but sharp.","Yellow section, line astern.","Yellow section, line astern.",background radio chatter
+allies/chatter_145,allies,RAF sector controller,"Male, mid 40s, RAF squadron leader. Received Pronunciation, calm, measured and unhurried even when urgent.","All aircraft, raid is over Canterbury.","All aircraft, raid is over Canterbury.",background radio chatter
+allies/chatter_146,allies,RAF squadron leader,"Male, mid 30s, Scottish (Glasgow) accent, gruff and commanding.","Watch your tails, chaps.","Watch your tails, chaps.",background radio chatter
+allies/chatter_147,allies,"Coastguard, Dover","Male, late 50s, Kentish coastguard, weathered, slow, a little gravelly.",Aircraft in the sea off Deal.,Aircraft in the sea off Deal.,background radio chatter
+allies/chatter_148,allies,Air-Sea Rescue,"Male, early 40s, RAF rescue launch skipper, London Cockney accent, matter-of-fact, engine noise behind.",Launch away from Dover.,Launch away from Dover.,background radio chatter
+allies/chatter_149,allies,RAF sector controller,"Male, mid 40s, RAF squadron leader. Received Pronunciation, calm, measured and unhurried even when urgent.","Hello Green Leader, pancake.","Hello Green Leader, pancake.",background radio chatter
+allies/chatter_150,allies,RAF section leader,"Male, mid 20s, New Zealander, relaxed but sharp.",Tally-ho! Bandits below!,Tally-ho! Bandits below!,background radio chatter
+allies/chatter_151,allies,RAF pilot,"Male, mid 20s, Polish pilot of No. 303 Squadron, strong Polish accent in English, steady.","I am hit, but I am all right.","I am hit, but I am all right.",background radio chatter
+allies/chatter_152,allies,RAF section leader,"Male, mid 20s, New Zealander, relaxed but sharp.","Home, Yellow section.","Home, Yellow section.",background radio chatter
+allies/chatter_153,allies,RAF squadron leader,"Male, mid 30s, Scottish (Glasgow) accent, gruff and commanding.","Good hunting, everyone.","Good hunting, everyone.",background radio chatter
+axis/chatter_136,axis,Luftwaffe controller,"Male, mid 40s, Luftwaffe Major. German accent in English, precise, cool and formal.","All aircraft, Spitfires over Folkestone.","All aircraft, Spitfires over Folkestone.",background radio chatter
+axis/chatter_137,axis,Luftwaffe pilot,"Male, mid 20s, Austrian (Viennese) accent in English, cheerful.","Gelb Schwarm, attack!","Gelb Schwarm, attack!",background radio chatter
+axis/chatter_138,axis,Luftwaffe pilot,"Male, mid 20s, Austrian (Viennese) accent in English, cheerful.",I have one! He is burning!,I have one! He is burning!,background radio chatter
+axis/chatter_139,axis,Luftwaffe radar operator,"Male, late 20s, technical NCO, German accent in English, flat and monotone.",Twenty aircraft over Dover.,Twenty aircraft over Dover.,background radio chatter
+axis/chatter_140,axis,Luftwaffe flak officer,"Male, mid 50s, gruff Luftwaffe flak officer, heavy German accent in English, shouting over gunfire.",Fire! Fire!,Fire! Fire!,background radio chatter
+axis/chatter_141,axis,Luftwaffe controller,"Male, mid 40s, Luftwaffe Major. German accent in English, precise, cool and formal.",Return to base now.,Return to base now.,background radio chatter
+axis/chatter_142,axis,Luftwaffe controller,"Male, mid 40s, Luftwaffe Major. German accent in English, precise, cool and formal.",Bombers over the target.,Bombers over the target.,background radio chatter
+axis/chatter_143,axis,Luftwaffe pilot,"Male, mid 20s, Austrian (Viennese) accent in English, cheerful.",Watch the sun!,Watch the sun!,background radio chatter
+axis/chatter_144,axis,Luftwaffe pilot,"Male, mid 20s, Austrian (Viennese) accent in English, cheerful.",Fuel low. Going home.,Fuel low. Going home.,background radio chatter
+axis/chatter_145,axis,Luftwaffe sea rescue,"Male, mid 40s, northern German (Hamburg) naval officer, dry and calm.",Boat on its way.,Boat on its way.,background radio chatter
+axis/chatter_146,axis,Luftwaffe controller,"Male, mid 40s, Luftwaffe Major. German accent in English, precise, cool and formal.",Free hunt approved.,Free hunt approved.,background radio chatter
+axis/chatter_147,axis,Luftwaffe pilot,"Male, mid 20s, Austrian (Viennese) accent in English, cheerful.",Spitfires above us!,Spitfires above us!,background radio chatter
+axis/chatter_148,axis,Luftwaffe pilot,"Male, mid 20s, Austrian (Viennese) accent in English, cheerful.",Hurricane down near Dover.,Hurricane down near Dover.,background radio chatter
+axis/chatter_149,axis,Luftwaffe controller,"Male, mid 40s, Luftwaffe Major. German accent in English, precise, cool and formal.",Weather is clearing.,Weather is clearing.,background radio chatter
+axis/chatter_150,axis,Luftwaffe radar operator,"Male, late 20s, technical NCO, German accent in English, flat and monotone.",Enemy fighters landing.,Enemy fighters landing.,background radio chatter
+allies/chatter_154,allies,RAF squadron leader,"Male, mid 30s, Scottish (Glasgow) accent, gruff and commanding.",Break left!,Break left!,background radio chatter
+allies/chatter_155,allies,RAF section leader,"Male, mid 20s, New Zealander, relaxed but sharp.","Watch it, Green Two!","Watch it, Green Two!",background radio chatter
+allies/chatter_156,allies,RAF sector controller,"Male, mid 40s, RAF squadron leader. Received Pronunciation, calm, measured and unhurried even when urgent.",Bandits over Hythe.,Bandits over Hythe.,background radio chatter
+allies/chatter_157,allies,RAF section leader,"Male, mid 20s, New Zealander, relaxed but sharp.","Yellow, follow me.","Yellow, follow me.",background radio chatter
+allies/chatter_158,allies,RAF pilot,"Male, mid 20s, Polish pilot of No. 303 Squadron, strong Polish accent in English, steady.",I see them!,I see them!,background radio chatter
+allies/chatter_159,allies,RAF squadron leader,"Male, mid 30s, Scottish (Glasgow) accent, gruff and commanding.","Go, go, go!","Go, go, go!",background radio chatter
+allies/chatter_160,allies,Observer Corps,"Male, about 50, civilian Royal Observer Corps volunteer, West Country (Devon) accent, careful.",Aircraft down near Lydd.,Aircraft down near Lydd.,background radio chatter
+allies/chatter_161,allies,RAF sector controller,"Male, mid 40s, RAF squadron leader. Received Pronunciation, calm, measured and unhurried even when urgent.","All aircraft, pancake.","All aircraft, pancake.",background radio chatter
+axis/chatter_151,axis,Luftwaffe pilot,"Male, mid 20s, Austrian (Viennese) accent in English, cheerful.",Break right!,Break right!,background radio chatter
+axis/chatter_152,axis,Luftwaffe pilot,"Male, mid 20s, Austrian (Viennese) accent in English, cheerful.",I see them!,I see them!,background radio chatter
+axis/chatter_153,axis,Luftwaffe controller,"Male, mid 40s, Luftwaffe Major. German accent in English, precise, cool and formal.",Spitfires over Dover.,Spitfires over Dover.,background radio chatter
+axis/chatter_154,axis,Luftwaffe pilot,"Male, mid 20s, Austrian (Viennese) accent in English, cheerful.",Follow me!,Follow me!,background radio chatter
+axis/chatter_155,axis,Luftwaffe flak officer,"Male, mid 50s, gruff Luftwaffe flak officer, heavy German accent in English, shouting over gunfire.",Open fire!,Open fire!,background radio chatter
+axis/chatter_156,axis,Luftwaffe pilot,"Male, mid 20s, Austrian (Viennese) accent in English, cheerful.",He is down!,He is down!,background radio chatter
+axis/chatter_157,axis,Luftwaffe radar operator,"Male, late 20s, technical NCO, German accent in English, flat and monotone.",Aircraft over Deal.,Aircraft over Deal.,background radio chatter
+axis/chatter_158,axis,Luftwaffe controller,"Male, mid 40s, Luftwaffe Major. German accent in English, precise, cool and formal.","All aircraft, return.","All aircraft, return.",background radio chatter

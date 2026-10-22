@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "lancaster"
+display_name = "Avro Lancaster B.I"
+side = "Allies"
+nation = "RAF"
+model_id = "lancaster"
+ammo = 4800
+bombs = 28
+gun_count = 8
+fire_rate = 10
+gear_height = 2.94
+max_speed = 125
+stall_speed = 39.9
+boost_bonus = 40
+accel = 3.7
+decel = 3.1
+pitch_rate_deg = 38
+roll_rate_deg = 50
+yaw_rate_deg = 13
+bank_turn_rate = 0.54
+rate_response = 3.4
+max_health = 450
+radius = 20
+engine_sound = "merlin"
+engine_count = 4
+gun_sound = "browning303"

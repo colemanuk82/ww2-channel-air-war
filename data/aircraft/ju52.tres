@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "ju52"
+display_name = "Junkers Ju 52/3m"
+side = "Axis"
+nation = "Luftwaffe"
+model_id = "ju52"
+ammo = 1500
+gun_count = 2
+fire_rate = 8
+gear_height = 3.6
+max_speed = 76.4
+stall_speed = 26
+boost_bonus = 24.4
+accel = 3.4
+decel = 2.9
+pitch_rate_deg = 36
+roll_rate_deg = 50
+yaw_rate_deg = 12
+bank_turn_rate = 0.52
+rate_response = 3.2
+max_health = 296
+radius = 20
+engine_sound = "radial_bmw"
+engine_count = 3
+gun_sound = "mg_defensive"

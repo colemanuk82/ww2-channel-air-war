@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "tempest"
+display_name = "Hawker Tempest Mk V"
+side = "Allies"
+nation = "RAF"
+model_id = "tempest"
+ammo = 2400
+bombs = 2
+gun_count = 4
+rockets = 8
+fire_rate = 12
+gear_height = 2.11
+max_speed = 194.4
+stall_speed = 41.1
+boost_bonus = 62.2
+accel = 7.6
+decel = 6.5
+pitch_rate_deg = 65
+roll_rate_deg = 108
+yaw_rate_deg = 23
+bank_turn_rate = 0.79
+rate_response = 5.5
+max_health = 188
+radius = 11
+engine_sound = "napier"
+engine_count = 1
+gun_sound = "hispano20"

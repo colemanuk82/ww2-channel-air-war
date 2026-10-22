@@ -1,0 +1,9 @@
+{
+ "roads": "overpass",
+ "rails": "overpass",
+ "rivers": "overpass",
+ "coast": "overpass",
+ "woods": "fallback",
+ "towns": "overpass",
+ "power": "overpass"
+}

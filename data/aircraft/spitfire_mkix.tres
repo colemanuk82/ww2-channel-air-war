@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "spitfire_mkix"
+display_name = "Supermarine Spitfire Mk IX"
+side = "Allies"
+nation = "RAF"
+model_id = "spitfire"
+ammo = 3600
+gun_count = 8
+rockets = 12
+bombs = 4
+max_speed = 178.0
+stall_speed = 36.0
+boost_bonus = 54.0
+accel = 9.4
+decel = 7.8
+pitch_rate_deg = 74
+roll_rate_deg = 117
+yaw_rate_deg = 26
+bank_turn_rate = 0.90
+rate_response = 6.1
+max_health = 118
+radius = 10
+engine_sound = "merlin"
+engine_count = 1
+gun_sound = "browning303"

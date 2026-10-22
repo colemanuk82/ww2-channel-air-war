@@ -1,0 +1,12 @@
+{
+ "width": 7680,
+ "height": 3616,
+ "lat_min": 48.9,
+ "lat_max": 53.0,
+ "lon_min": -4.6,
+ "lon_max": 9.0,
+ "source": "OSM land polygons (osmddata.openstreetmap.de land-polygons-split-4326), ODbL",
+ "land_fraction": 0.7318,
+ "metres_per_px_x": 125.9,
+ "metres_per_px_y": 125.3
+}

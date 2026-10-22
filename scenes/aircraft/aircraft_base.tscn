@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft.gd" id="1"]
+[ext_resource type="Resource" path="res://data/aircraft/spitfire.tres" id="2"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_1"]
+radius = 6.0
+
+[node name="Aircraft" type="Node3D"]
+script = ExtResource("1")
+stats = ExtResource("2")
+
+[node name="CockpitMount" type="Marker3D" parent="."]
+
+[node name="Hurtbox" type="Area3D" parent="."]
+collision_layer = 2
+collision_mask = 0
+monitoring = false
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Hurtbox"]
+shape = SubResource("SphereShape3D_1")

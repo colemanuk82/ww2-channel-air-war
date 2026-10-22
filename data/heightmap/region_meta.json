@@ -1,0 +1,13 @@
+{
+ "width": 6144,
+ "height": 3000,
+ "lat_min": 48.9,
+ "lat_max": 53.0,
+ "lon_min": -4.6,
+ "lon_max": 9.0,
+ "max_elev_m": 1000,
+ "sea_level_value": 0,
+ "source": "AWS terrain tiles (terrarium) z10",
+ "rivers_carved": true,
+ "rivers_carved_note": "DEM lowered along data/osm/rivers.json by tools/carve_rivers.py (15479 lines / 43800 km); pre-carve backup in tools/cache/region_height_pre_rivers.png"
+}

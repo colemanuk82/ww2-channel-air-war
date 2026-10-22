@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "p51"
+display_name = "North American P-51D Mustang"
+side = "Allies"
+nation = "USAAF"
+model_id = "p51"
+ammo = 3000
+bombs = 4
+gun_count = 6
+rockets = 12
+fire_rate = 12
+gear_height = 1.68
+max_speed = 195.3
+stall_speed = 42.6
+boost_bonus = 62.5
+accel = 7.4
+decel = 6.3
+pitch_rate_deg = 64
+roll_rate_deg = 111
+yaw_rate_deg = 23
+bank_turn_rate = 0.78
+rate_response = 5.4
+max_health = 158
+radius = 10
+engine_sound = "merlin"
+engine_count = 1
+gun_sound = "browning50"

@@ -1,0 +1,12 @@
+{ "dir": "F:/ww2_dlss/tools/shots/readme",
+  "shots": [
+    {"name":"01_dusk_takeoff","lat":51.3422,"lon":1.3463,"alt":60,"hdg":70,"speed":100,"pitch":10,"time":"dawn","cam_yaw":25,"cam_pitch":-3,"settle":150},
+    {"name":"02_kent_orbit","lat":51.25,"lon":1.0,"alt":1500,"hdg":120,"speed":170,"bank":-55,"cam_yaw":120,"cam_pitch":8,"time":"dawn","settle":150},
+    {"name":"03_cliffs_low","lat":51.13,"lon":1.37,"alt":200,"hdg":100,"speed":175,"bank":35,"cam_yaw":-70,"cam_pitch":0,"time":"noon","settle":150},
+    {"name":"04_storm_channel","lat":50.95,"lon":1.35,"alt":450,"hdg":60,"speed":170,"bank":25,"weather":"storm","cam_yaw":40,"settle":200},
+    {"name":"05_dunkirk_dusk","lat":51.03,"lon":2.35,"alt":700,"hdg":90,"speed":160,"bank":-30,"time":"dusk","cam_yaw":-100,"cam_pitch":5,"settle":150},
+    {"name":"06_night_calais","lat":50.96,"lon":1.95,"alt":600,"hdg":200,"speed":160,"bank":25,"time":"night","cam_yaw":150,"cam_pitch":10,"settle":150},
+    {"name":"07_dive","lat":50.85,"lon":2.05,"alt":900,"hdg":150,"speed":190,"pitch":-35,"time":"noon","cam_yaw":0,"cam_pitch":-5,"settle":150},
+    {"name":"08_fog_farmland","lat":50.75,"lon":2.4,"alt":150,"hdg":300,"speed":150,"bank":-20,"weather":"fog","time":"dawn","cam_yaw":60,"settle":150},
+    {"name":"09_overcast_front","lat":51.1,"lon":1.5,"alt":900,"hdg":90,"speed":160,"bank":15,"weather":"overcast","time":"noon","cam_yaw":170,"cam_pitch":12,"settle":150}
+  ] }

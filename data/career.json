@@ -1,0 +1,1551 @@
+{
+  "chapters": [
+    {
+      "id": "1940",
+      "title": "1940 - The Summer Sky",
+      "Allies": [
+        {
+          "id": "posting",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Posting order",
+              "text": "Pilot Officer {name} is posted to {squadron} with effect from today. Report to the adjutant at the airfield before 0800. The squadron is at readiness. The Hurricanes and Spitfires are waiting. - Station Adjutant"
+            },
+            {
+              "kind": "text",
+              "title": "Biggin Hill, July 1940",
+              "text": "The grass is still wet from the night. Your new flight sits in the dispersal hut, playing cards and not talking about the Channel. {mate1} shakes your hand and says you look too young to be frightened. You are not sure he is joking.",
+              "image": "hornchurch_dawn.jpg"
+            }
+          ]
+        },
+        {
+          "id": "channel_patrol",
+          "kind": "mission",
+          "mode": "free",
+          "difficulty": 0.35,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "First patrol",
+              "text": "Convoy patrol off the Kent coast. Forty merchant ships are crawling up the Channel under the barrage balloons. The Stukas come out of the sun when they choose, and nobody warns you which way.",
+              "image": "channel_convoy.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram to the Air Ministry",
+              "text": "ENEMY ATTACK ON CONVOY REPULSED. ONE AIRCRAFT NOT RETURNED. THE CONVOY IS SAFE."
+            }
+          ]
+        },
+        {
+          "id": "scramble",
+          "kind": "mission",
+          "mode": "dogfight",
+          "difficulty": 0.5,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Scramble",
+              "text": "The Tannoy coughs. Already running, you pull on your helmet and find the Hurricane's wing with your hand. The engine catches. Behind you the ground crew are pulling the chocks away before the wheels have stopped.",
+              "image": "hornchurch_dawn.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "The Daily Telegraph",
+              "text": "Air battle over the Channel. Our fighters met the enemy in strength and sent many of them into the sea. Pilots are reported to be in good spirits."
+            }
+          ]
+        },
+        {
+          "id": "dunkirk_cover",
+          "kind": "mission",
+          "mode": "historical",
+          "mission": "dunkirk_1940",
+          "time": "dusk",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Over the beaches",
+              "text": "Thousands of men stand in the shallows at Dunkirk, waiting for the little ships. The smoke makes it hard to tell the boats from the wrecks. Your job is to keep the bombers off them for as long as the fuel holds.",
+              "image": "dunkirk_beach.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "letter",
+              "title": "From the squadron",
+              "text": "Dear Mrs {name}, your son flew his last patrol in the squadron with great courage. He was seen to fight on in the face of odds. We are proud of him. - {squadron}"
+            }
+          ]
+        },
+        {
+          "id": "eagle_day",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "news",
+              "title": "Evening Standard, 16 August 1940",
+              "text": "Over one thousand aircraft fought over Kent and Sussex today. The fighter stations are still standing. The pilots are tired but they are still in the air."
+            },
+            {
+              "kind": "text",
+              "title": "The dispersal hut",
+              "text": "Two of the flight are not back. {mate2} is in hospital at Tunbridge Wells with a broken arm. The rest of you sit in silence, eating sandwiches out of paper, waiting for the next scramble.",
+              "image": "hornchurch_dawn.jpg"
+            }
+          ]
+        },
+        {
+          "id": "bob_kent",
+          "kind": "mission",
+          "mode": "historical",
+          "mission": "bob_kent",
+          "time": "dusk",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Kent, late summer",
+              "text": "The bombers are coming up the Thames again. You can see their formation from fifteen thousand feet, dark against the haze. Every fighter in the south-east is airborne.",
+              "image": "london_night.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "{rank} {name} COMMENDED FOR GALLANTRY. KEEP FLYING. - {squadron}"
+            }
+          ]
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "September 1940",
+              "text": "The raids are still coming. The squadron is smaller than it was in July and the new faces are younger. You have learned to sleep in your flying boots. You are still here.",
+              "image": "hornchurch_dawn.jpg"
+            }
+          ]
+        }
+      ],
+      "Axis": [
+        {
+          "id": "posting",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Versetzungsbefehl",
+              "text": "Leutnant {name} is assigned to {squadron} at Calais-Marck, effective immediately. Report to the Staffelkapitän. The Bf 109s are fuelled and waiting for the weather to lift. - Geschwader Adjutant"
+            },
+            {
+              "kind": "text",
+              "title": "Calais-Marck, July 1940",
+              "text": "The airfield is a field of mud and camouflage netting. {mate1} is cleaning his machine gun with the care of a father. He tells you the English fly well and shoot badly, and that you must not believe either.",
+              "image": "calais_dawn.jpg"
+            }
+          ]
+        },
+        {
+          "id": "free_hunt",
+          "kind": "mission",
+          "mode": "free",
+          "difficulty": 0.35,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Freie Jagd",
+              "text": "Free hunt over Kent. No bombers to escort, no orders but to find the enemy and come back alive. The white cliffs are a grey line below you. Somewhere up there a Spitfire is doing the same thing.",
+              "image": "kent_freiejagd.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "FREIE JAGD ERFOLGREICH. ZWEI FEINDMASCHINEN ABGESCHOSSEN. VERLUSTE KEINE. - STAFFEL"
+            }
+          ]
+        },
+        {
+          "id": "dunkirk_cover",
+          "kind": "mission",
+          "mode": "historical",
+          "mission": "dunkirk_1940",
+          "time": "dusk",
+          "before": [
+            {
+              "kind": "text",
+              "title": "The beaches below",
+              "text": "Below you, the British have packed the sand with men. Ships burn offshore. The sky is brown with smoke. Your orders are simple: stop the Hurricanes from reaching the Stukas.",
+              "image": "channel_fleet.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "letter",
+              "title": "Feldpost",
+              "text": "Liebe Familie, ich bin unverletzt. Die Luft ist voller Rauch, und die Engländer kämpfen tapfer. Ich denke an euch jeden Abend. - {name}"
+            }
+          ]
+        },
+        {
+          "id": "stuka_escort",
+          "kind": "mission",
+          "mode": "historical",
+          "mission": "bob_kent",
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Escort",
+              "text": "The Ju 87s go in first. You are told to stay above them and keep the Spitfires off their backs. The dive brakes howl as the first wave goes down. You stay high, and you do not look at what is happening below.",
+              "image": "channel_fleet.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "Völkischer Beobachter",
+              "text": "Our Luftwaffe strikes the enemy airfields in the south of England. Pilots return to their bases with reports of great success."
+            }
+          ]
+        },
+        {
+          "id": "channel_rescue",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "The Channel, a week later",
+              "text": "A Dornier is down in the sea off Dover. A Seenot launch is searching the water. You circle at five hundred metres, because the rule is that you stay with the men in the water until the boat finds them. {mate2} waves from the dinghy.",
+              "image": "channel_fleet.jpg"
+            }
+          ]
+        },
+        {
+          "id": "night_blitz",
+          "kind": "mission",
+          "mode": "historical",
+          "mission": "blitz_black_saturday",
+          "time": "night",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Night over London",
+              "text": "The docks are burning. From the cockpit the city is a map of fires, with the searchlights walking across it. The flak is heavy. Keep the bomb run steady, and keep your eyes on the sky above.",
+              "image": "london_night.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "{rank} {name} AWARDED IRON CROSS SECOND CLASS. CONTINUE OPERATIONS. - GESCHWADER"
+            }
+          ]
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "Autumn 1940",
+              "text": "The daylight raids have been called off. The nights are longer now, and the work continues in the dark. You are still on the strength of the Staffel. You are still alive.",
+              "image": "calais_dawn.jpg"
+            }
+          ]
+        }
+      ],
+      "start": "1940-07-10"
+    },
+    {
+      "id": "1941",
+      "title": "1941 - The Long Winter",
+      "Allies": [
+        {
+          "id": "hornchurch_jan",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Posting change",
+              "text": "Pilot Officer {name} is transferred within the sector with {squadron}. The Blitz has moved north and west; the squadron now patrols the Channel instead of the Thames. Keep your boots by the bed. - Station Adjutant"
+            },
+            {
+              "kind": "text",
+              "title": "Hornchurch, January 1941",
+              "text": "The sky is grey most mornings and the ground crews work by hurricane lamp. {mate1} has been posted to an operational training unit, and nobody says where to. Dispersal is quieter. Nobody talks much about the people who have gone.",
+              "image": "snow_winter.jpg"
+            }
+          ]
+        },
+        {
+          "id": "channel_rhubarb",
+          "kind": "mission",
+          "mode": "free",
+          "difficulty": 0.45,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Rhubarb",
+              "text": "A low sweep over the French coast with four other Spitfires. The rules are simple: low, fast, and home before the flak gets its range. The fields of northern France are flat and wet, and every hedge has a gun behind it.",
+              "image": "channel_convoy.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "RHUBARB COMPLETE. NO LOSSES. ONE FIELD ATTACKED. - SECTOR"
+            }
+          ]
+        },
+        {
+          "id": "fw190_first",
+          "kind": "mission",
+          "mode": "dogfight",
+          "difficulty": 0.6,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "New enemy",
+              "text": "The Germans have a new fighter, the Focke-Wulf 190. Intelligence says it is faster than the Spitfire in a dive and climbs well. The pilots who have met it talk about it in lowered voices.",
+              "image": "channel_convoy.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "Daily Mail",
+              "text": "Our fighters have met a new type over the Channel. Our pilots report it fights with great skill. The Air Ministry declines to comment further."
+            }
+          ]
+        },
+        {
+          "id": "autumn_losses",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "REGRET TO INFORM YOU {mate2} MISSING OVER THE CHANNEL. - AIR MINISTRY"
+            },
+            {
+              "kind": "text",
+              "title": "The mess",
+              "text": "{mate2}'s chair is still at the end of the table. Nobody has moved it. The new pilots ask who he was, and {name} tells them. It is the only way the squadron has found to keep him here.",
+              "image": "snow_winter.jpg"
+            }
+          ]
+        },
+        {
+          "id": "london_intercept",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.55,
+          "time": "dusk",
+          "before": [
+            {
+              "kind": "text",
+              "title": "London again",
+              "text": "The bombers have returned to the capital, fewer now and better escorted. Your job is to get through the fighters to the bombers before they reach the docks.",
+              "image": "london_night.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "letter",
+              "title": "To the family",
+              "text": "Dear Mrs Mallory, your son was among the best of us. He flew his last patrol well. The squadron will not forget him. - {squadron}"
+            }
+          ],
+          "mission": "bob_kent"
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "December 1941",
+              "text": "The war has spread. Russia is at war with Germany, America is closer every week, and the squadron is still here, over the same green fields. You have flown more than sixty sorties. You still do not sleep well.",
+              "image": "snow_winter.jpg"
+            }
+          ]
+        }
+      ],
+      "Axis": [
+        {
+          "id": "abbeville_jan",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Versetzung",
+              "text": "Oberleutnant {name} is posted to {squadron} at Abbeville, effective immediately. The Staffel is re-equipping. Report to the Staffelkapitän. - Geschwader Adjutant"
+            },
+            {
+              "kind": "text",
+              "title": "Abbeville, January 1941",
+              "text": "Frost on the wings every morning. {mate1} says the English have started to fly low over the fields at night, and the ground crew laughs at him. The Blitz on London has moved to the ports and the west.",
+              "image": "calais_dawn.jpg"
+            }
+          ]
+        },
+        {
+          "id": "portsmouth_dusk",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.45,
+          "time": "dusk",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Portsmouth",
+              "text": "Dusk over the south coast. The bombers go in first, and you fly the escort above them, watching for the Spitfires that come up from the cloud. The docks at Portsmouth are dark below you.",
+              "image": "london_night.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "PORTSMOUTH ANGRIFF DURCHGEFÜHRT. KEINE VERLUSTE EIGENE. - GESCHWADER"
+            }
+          ],
+          "mission": "blitz_portsmouth_dusk"
+        },
+        {
+          "id": "freie_jagd_kent",
+          "kind": "mission",
+          "mode": "free",
+          "difficulty": 0.4,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Freie Jagd",
+              "text": "A free hunt over Kent. Nobody is in your way, which means the English will come to you when they choose. The fields are green and tidy, like a picture of a country at peace.",
+              "image": "kent_freiejagd.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "letter",
+              "title": "Feldpost",
+              "text": "Liebe Familie, ich bin gesund. Die Engländer fliegen tapfer, aber wir sind besser ausgebildet. Ich denke an euch. - {name}"
+            }
+          ]
+        },
+        {
+          "id": "plymouth_storm",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "dusk",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Plymouth in a storm",
+              "text": "Cloud down to the rooftops, and rain on the windscreen. The bombers have to find the target by dead reckoning, and so do you. The city's lights come on below the cloud like a rash.",
+              "image": "london_night.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "Völkischer Beobachter",
+              "text": "Our Luftwaffe has struck the naval base at Plymouth in the teeth of the weather. The crews returned to base with reports of success."
+            }
+          ],
+          "mission": "blitz_plymouth_storm"
+        },
+        {
+          "id": "barbarossa_rumour",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "Rumours",
+              "text": "The mess has gone quiet. Men talk about the east, about a front that stretches further than the map can show. {mate2} is transferred without ceremony. The new Staffelkapitän says only that the war is changing. Nobody believes him, and nobody asks.",
+              "image": "calais_dawn.jpg"
+            },
+            {
+              "kind": "letter",
+              "title": "Feldpost",
+              "text": "Dear mother, I cannot say where I am going, only that the English sky is not so bright any more. Pray for us. - {name}"
+            }
+          ]
+        },
+        {
+          "id": "spitfire_dover",
+          "kind": "mission",
+          "mode": "dogfight",
+          "difficulty": 0.6,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Over Dover",
+              "text": "Spitfires over Dover, and a fight that stretches from the cliffs out to the sea. Keep the sun behind you. Keep your speed. The enemy is good at this.",
+              "image": "kent_freiejagd.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "DOVER ABGESCHLOSSEN. ZWEI FEINDMASCHINEN ABGESCHOSSEN. - STAFFEL"
+            }
+          ]
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "December 1941",
+              "text": "The English still fly over the Channel, and the ships still cross to the east. The Staffel's losses are a little lighter than last year, and the new pilots are younger. You are no longer young. You are still here.",
+              "image": "calais_dawn.jpg"
+            }
+          ]
+        }
+      ],
+      "start": "1941-01-01"
+    },
+    {
+      "id": "1942",
+      "title": "1942 - Circus and Dieppe",
+      "Allies": [
+        {
+          "id": "spring_1942",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Sector order",
+              "text": "Flight Lieutenant {name}, you are to take command of the second flight of {squadron} from the first of the month. Keep the new men alive. - Wing Commander"
+            },
+            {
+              "kind": "text",
+              "title": "Spring at Hornchurch",
+              "text": "Circus operations: bombers in the middle, fighters all round. You have learned to fly the escort without looking at the bombers. The German fighters are waiting above the cloud, and you can taste the fear of the bomber crews through the radio.",
+              "image": "hornchurch_dawn.jpg"
+            }
+          ]
+        },
+        {
+          "id": "circus_spring",
+          "kind": "mission",
+          "mode": "free",
+          "difficulty": 0.5,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Circus",
+              "text": "A bomber raid on a French factory with a fighter escort around it. You are above the bombers, watching the sun. The Focke-Wulfs come out of the glare at eighteen thousand feet.",
+              "image": "channel_convoy.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "CIRCUS COMPLETE. BOMBERS RETURNED. TWO FIGHTERS NOT."
+            }
+          ]
+        },
+        {
+          "id": "dieppe_planning",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Operation Jubilee",
+              "text": "The squadron will support a landing on the French coast at Dieppe. Brief your pilots on the cover patrols. The ships will be in the Channel at dawn. Do not let them down. - Group"
+            },
+            {
+              "kind": "text",
+              "title": "Briefing",
+              "text": "The map on the wall is covered in arrows and lines. {mate1} traces the beach with his finger and asks what happens if the tanks cannot land. The answer is in the room, and nobody gives it.",
+              "image": "channel_convoy.jpg"
+            }
+          ]
+        },
+        {
+          "id": "dieppe_dawn",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Dieppe",
+              "text": "The beach is a line of smoke and noise. The landing craft are in the surf, and the shore batteries are firing across the water. Cover the ships, stay low, and keep the enemy off the men on the beach.",
+              "image": "dunkirk_beach.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "The Times",
+              "text": "A raid on the French coast was carried out this morning with forces of all arms. Heavy losses are reported on both sides. The Government has released no further figures."
+            }
+          ],
+          "mission": "dieppe_1942"
+        },
+        {
+          "id": "fw190_ambush",
+          "kind": "mission",
+          "mode": "dogfight",
+          "difficulty": 0.7,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Ambush",
+              "text": "A dozen Focke-Wulfs have been waiting above the clouds for the cover squadron. Your flight is the one the Germans have chosen to hit. Keep together, and keep your eyes on the sun.",
+              "image": "channel_convoy.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "AMBUSH SURVIVED. THREE GERMAN MACHINES DOWN. ONE OF OURS LOST."
+            }
+          ]
+        },
+        {
+          "id": "channel_dash_news",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "news",
+              "title": "The Daily Telegraph",
+              "text": "The German battle cruisers Scharnhorst and Gneisenau, with the cruiser Prinz Eugen, have passed through the Channel under heavy air cover. The Admiralty regrets that the ships were not stopped."
+            },
+            {
+              "kind": "text",
+              "title": "February 1942",
+              "text": "The squadron was on patrol when the German fleet came through. Nobody on the ground believed the reports until the wreckage came home. The men in the mess are angry in a way they have not been before.",
+              "image": "channel_convoy.jpg"
+            }
+          ]
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "December 1942",
+              "text": "The Russians are still holding, and the Americans are coming to Europe. The squadron has new aircraft and fewer old faces. You have been promoted again. You do not feel any different.",
+              "image": "hornchurch_dawn.jpg"
+            }
+          ]
+        }
+      ],
+      "Axis": [
+        {
+          "id": "abbeville_1942",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Verlegung",
+              "text": "Hauptmann {name}, the Staffel moves to Abbeville-Drucat. The new Fw 190s are arriving in the spring. Report to the Gruppenkommandeur. - Geschwader"
+            },
+            {
+              "kind": "text",
+              "title": "Abbeville, spring 1942",
+              "text": "The new Focke-Wulfs are fast, heavy and difficult to take off in the mud. {mate1} says they fly like a dream and land like a cart. The pilots love them anyway.",
+              "image": "calais_dawn.jpg"
+            }
+          ]
+        },
+        {
+          "id": "channel_cover_1942",
+          "kind": "mission",
+          "mode": "free",
+          "difficulty": 0.5,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Cover",
+              "text": "The convoy is out in the Channel, and the English are watching it from the cliffs. You are to find their fighters and keep them away from the ships.",
+              "image": "channel_fleet.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "GELEITSCHUTZ DURCHGEFÜHRT. FEINDLICHE FLUGZEUGE ZERSTREUT."
+            }
+          ]
+        },
+        {
+          "id": "dieppe_axis",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "The other side of the beach",
+              "text": "The landing craft are in the surf below you. The defenders are firing from the bunkers on the cliffs. You fly over the line of smoke and watch the enemy fall back from the shingle.",
+              "image": "channel_fleet.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "letter",
+              "title": "Feldpost",
+              "text": "Liebe Familie, wir haben den Feind am Strand zurückgeschlagen. Viele Verluste auf beiden Seiten. Ich bin unverletzt. - {name}"
+            }
+          ],
+          "mission": "dieppe_1942"
+        },
+        {
+          "id": "spitfire_trap",
+          "kind": "mission",
+          "mode": "dogfight",
+          "difficulty": 0.7,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Hunting",
+              "text": "The English squadron is waiting above the cloud over Kent. You are the bait and the hammer. Attack from the sun, and do not lose sight of your leader.",
+              "image": "kent_freiejagd.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "ZWEI SPITFIRES ABGESCHOSSEN. EIGENE VERLUSTE: EIN FLUGZEUG."
+            }
+          ]
+        },
+        {
+          "id": "cerberus",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "news",
+              "title": "Völkischer Beobachter",
+              "text": "The battle cruisers and the cruiser of the Navy have returned home through the Channel. The Luftwaffe's escort protected the squadron throughout the passage."
+            },
+            {
+              "kind": "text",
+              "title": "February 1942",
+              "text": "The fleet passed under your cover in the grey light of the morning. Nobody in the Staffel spoke about it afterwards. The news came out in the papers a day later, with photographs.",
+              "image": "channel_fleet.jpg"
+            }
+          ]
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "December 1942",
+              "text": "Russia is a long war now, and the Staffel is being asked for more. The new Focke-Wulfs are everywhere, and the English keep coming. You have learned how to fly a tired machine home.",
+              "image": "calais_dawn.jpg"
+            }
+          ]
+        }
+      ],
+      "start": "1942-01-01"
+    },
+    {
+      "id": "1943",
+      "title": "1943 - The Bomber Offensive",
+      "Allies": [
+        {
+          "id": "spring_1943",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Posting",
+              "text": "Squadron Leader {name}, you are given a flight in {squadron}. The Typhoons are at Hornchurch; the old Spitfires go to the training units. Teach them the job, and bring them back. - Group"
+            },
+            {
+              "kind": "text",
+              "title": "Hornchurch, May 1943",
+              "text": "The new Typhoons are heavy and fast, and they roar when you open the throttle. The men say the Germans are frightened of them. You are less sure. Every raid has a different face, and every face hides a gun.",
+              "image": "hornchurch_dawn.jpg"
+            }
+          ]
+        },
+        {
+          "id": "lille_raid_allies",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Lille",
+              "text": "A daylight raid on the railway yards at Lille. The bombers are Marauders and the escort is yours. The German fighters have been waiting all morning, and they are not going to let the bombers go home without a fight.",
+              "image": "dunkirk_beach.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "LILLE RAID COMPLETE. BOMBERS HOME. SEVEN ENEMY FIGHTERS DOWN. FOUR OF OURS NOT RETURNED."
+            }
+          ],
+          "mission": "lille_raid"
+        },
+        {
+          "id": "letter_essen",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "From a crewman's mother",
+              "text": "Dear Squadron Leader, my son wrote to tell me that you flew above his aircraft on the raid to the Ruhr. Thank you for bringing them back. The newspapers say nothing about the men who do this. - Mrs {name}"
+            },
+            {
+              "kind": "text",
+              "title": "Kent, the next night",
+              "text": "The Lancasters go east in the dark. You hear them above the cloud. {mate1} says the Germans have a new radar and the bombers are losing more men each night. Nobody says anything else.",
+              "image": "london_night.jpg"
+            }
+          ]
+        },
+        {
+          "id": "krupp_night",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.5,
+          "time": "night",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Essen",
+              "text": "A night raid on the great works at Essen. You fly as the fighter escort over the Channel, then the cover falls away and the bombers go on alone. The searchlights are waiting in the Ruhr.",
+              "image": "london_night.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "The Times",
+              "text": "Heavy bombers attacked the industrial centre of the Ruhr last night. Crews report large fires and much damage. Some aircraft did not return."
+            }
+          ],
+          "mission": "bmb_krupp_night"
+        },
+        {
+          "id": "typhoon_sweep",
+          "kind": "mission",
+          "mode": "dogfight",
+          "difficulty": 0.65,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Sweep",
+              "text": "A fighter sweep over the Pas de Calais with the Typhoons. Fast, low and noisy. Find the enemy and make them fight in the wrong place.",
+              "image": "channel_convoy.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "SWEEP COMPLETE. THREE CONFIRMED. ONE TYPHOON LOST IN THE SEA."
+            }
+          ]
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "December 1943",
+              "text": "The raids on Germany are longer and heavier now. The squadron is larger, and the losses are measured in weeks rather than days. You have been given a rest and a little leave. You do not know how to spend it.",
+              "image": "snow_winter.jpg"
+            }
+          ]
+        }
+      ],
+      "Axis": [
+        {
+          "id": "ruhr_1943",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Versetzung",
+              "text": "Hauptmann {name}, the Gruppe is to defend the Ruhr against the night bombers. You will fly from the forward field at Venlo. Report to the Gruppenkommandeur. - Geschwader"
+            },
+            {
+              "kind": "text",
+              "title": "Venlo, March 1943",
+              "text": "The night is full of noise. The searchlights walk across the sky and the flak fires in long streams. {mate1} says the English have started to come in at night in hundreds. You have been told to shoot them down.",
+              "image": "ruhr_night.jpg"
+            }
+          ]
+        },
+        {
+          "id": "lille_axis",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Lille",
+              "text": "The raid on Lille is coming. Your job is to get the Mustangs and Typhoons off the bombers before they reach the marshalling yards.",
+              "image": "ruhr_night.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "LILLE ABWEHR ERFOLGREICH. ZWEI FEINDBOMBER ABGESCHOSSEN."
+            }
+          ],
+          "mission": "lille_raid"
+        },
+        {
+          "id": "ruhr_night_free",
+          "kind": "mission",
+          "mode": "free",
+          "difficulty": 0.55,
+          "time": "night",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Night hunt",
+              "text": "You are alone over the Ruhr. The searchlights find you, and the flak follows the light. Find the bombers by their exhaust fires and follow them home.",
+              "image": "ruhr_night.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "letter",
+              "title": "Feldpost",
+              "text": "Liebe Familie, die Nächte sind lang und kalt. Die Engländer kommen in großer Zahl. Ich habe zwei Bomber gesehen, die nicht zurückkehrten. - {name}"
+            }
+          ]
+        },
+        {
+          "id": "typhoon_sweep_axis",
+          "kind": "mission",
+          "mode": "dogfight",
+          "difficulty": 0.7,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "The Typhoons",
+              "text": "The Typhoons are over the field at Abbeville. They fly low and fast, and they do not stop for anyone. Your Staffel is to take them on before they reach the runway.",
+              "image": "calais_dawn.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "Völkischer Beobachter",
+              "text": "Our fighter pilots have shot down large numbers of the enemy over northern France. Our losses are reported to be light."
+            }
+          ]
+        },
+        {
+          "id": "gruppe_loss",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "{mate2} VERMISST. - GESCHWADER"
+            },
+            {
+              "kind": "text",
+              "title": "The Staffel",
+              "text": "There are fewer machines on the field each morning. The new men are sent to the front before they have flown the Fw 190 in bad weather. {name} signs for the replacements and does not look at the names.",
+              "image": "ruhr_night.jpg"
+            }
+          ]
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "December 1943",
+              "text": "The air war over the Reich is more and more a war of attrition. The Staffel has been pulled back to the Ruhr. You are still flying. You have stopped counting the men who have not come home.",
+              "image": "ruhr_night.jpg"
+            }
+          ]
+        }
+      ],
+      "start": "1943-01-01"
+    },
+    {
+      "id": "1944",
+      "title": "1944 - Overlord",
+      "Allies": [
+        {
+          "id": "invasion_eve",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Operation Overlord",
+              "text": "Wing Commander {name}, you will lead the squadron's cover patrol for the landing. The Typhoons will strike the coastal guns, and your Spitfires will hold the sky above the beaches. Do not let them down. - Group"
+            },
+            {
+              "kind": "text",
+              "title": "Eve of the invasion",
+              "text": "The airfield is full of aircraft with black and white stripes on their wings. Every man on the station knows what tomorrow is. {mate1} writes a letter and folds it twice. He does not say to whom.",
+              "image": "normandy_dawn.jpg"
+            }
+          ]
+        },
+        {
+          "id": "omaha_dawn",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.65,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Dawn over the beaches",
+              "text": "A grey dawn. The landing craft are in the surf and the cover fighters are above them. The shore guns are silent, and then not silent at all. Keep the enemy off the men in the water.",
+              "image": "normandy_dawn.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "The Times",
+              "text": "The Allied landings in Normandy have begun. Our forces are established ashore. Heavy fighting continues at the beaches."
+            }
+          ],
+          "mission": "dday_omaha_h_hour"
+        },
+        {
+          "id": "seine_bridges",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "The bridges",
+              "text": "The Germans are moving men and tanks across the Seine. The bridges are the only way through. Your job is to stop them crossing.",
+              "image": "normandy_dawn.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "SEINE BRIDGES ATTACKED. ROUTE CUT. FIVE AIRCRAFT RETURNED DAMAGED."
+            }
+          ],
+          "mission": "seine_bridges"
+        },
+        {
+          "id": "v1_letter",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "A letter from home",
+              "text": "Dear {name}, the flying bombs are falling on London now. We hear them in the night, and then the silence. The people here are very brave. Come home safely. - Mother"
+            },
+            {
+              "kind": "text",
+              "title": "The flying bombs",
+              "text": "The V-1s come across the Channel at low level, in a line. You are ordered to find them, and to go after the ones aimed at London. {mate2} says it is like shooting at a cart of pigs in the dark.",
+              "image": "london_night.jpg"
+            }
+          ]
+        },
+        {
+          "id": "v1_hunt",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "dusk",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Doodlebugs",
+              "text": "The V-1s are heading for the capital. Each one is a pulse of noise and then a silence. Get in front of them and break their wings before the coast.",
+              "image": "london_night.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "EIGHT FLYING BOMBS DESTROYED. NO LOSSES."
+            }
+          ],
+          "mission": "v1_sites"
+        },
+        {
+          "id": "antwerp_cover",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Antwerp",
+              "text": "The port is open at last, and the German rockets are falling on the city. Cover the convoys on the Scheldt and keep the sky clear above the quays.",
+              "image": "dunkirk_beach.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "Daily Express",
+              "text": "Antwerp was the target of enemy rocket fire again this morning. Allied air forces have been ordered to destroy the launching sites wherever they can be found."
+            }
+          ],
+          "mission": "antwerp_raid"
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "December 1944",
+              "text": "The Germans are still fighting in the west, and the rockets still fall on London. The squadron has more new faces than old ones, and the old ones are tired in a way that does not go away with leave.",
+              "image": "normandy_dawn.jpg"
+            }
+          ]
+        }
+      ],
+      "Axis": [
+        {
+          "id": "normandy_axis",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Einsatzbefehl",
+              "text": "Major {name}, the Gruppe is to fly against the invasion. Strike the enemy wherever his ships and landing craft can be found. Report to the Geschwaderkommodore. - Luftflotte 3"
+            },
+            {
+              "kind": "text",
+              "title": "Normandy, June 1944",
+              "text": "The sea is full of ships. You can see them from fifteen thousand feet, a grey mass moving slowly towards the coast. {mate1} says it cannot be stopped. Nobody answers him, and you fly on.",
+              "image": "channel_fleet.jpg"
+            }
+          ]
+        },
+        {
+          "id": "panzer_counter",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.7,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Counter-attack",
+              "text": "A Panzer division is moving to the coast to throw the Allies back into the sea. Your job is to cover the attack from the air and drive off the enemy fighters above the tanks.",
+              "image": "channel_fleet.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "Völkischer Beobachter",
+              "text": "German forces have launched a counter-attack in Normandy. The enemy has been held and driven back in heavy fighting."
+            }
+          ],
+          "mission": "dday_panzer_counter"
+        },
+        {
+          "id": "v_weapons",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Vergeltung",
+              "text": "Hauptmann {name}, the V-weapons are to be defended on the coast. You will fly cover over the launching sites in the Pas de Calais. The Führer's order is clear. - Geschwader"
+            },
+            {
+              "kind": "text",
+              "title": "The launching sites",
+              "text": "The concrete is wet and the air is cold. The rockets are on the rails under the camouflage, and the men look at them the way the farmers look at the sky. You fly cover above them, and you do not ask what they will do.",
+              "image": "calais_dawn.jpg"
+            }
+          ]
+        },
+        {
+          "id": "v1_defence",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.65,
+          "time": "dusk",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Defence",
+              "text": "The English fighters come at the launching sites over the Channel. Keep them off the rockets, and keep your flight together.",
+              "image": "calais_dawn.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "ABWEHR ERFOLGREICH. DREI FEINDJÄGER ABGESCHOSSEN. ZWEI EIGENE VERLUSTE."
+            }
+          ],
+          "mission": "v1_sites"
+        },
+        {
+          "id": "reich_defence",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.7,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Defence of the Reich",
+              "text": "The American bombers are over Germany in their hundreds. Your Gruppe is to strike the bomber stream and break it up before the target.",
+              "image": "berlin_fires.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "DEFENSIVE ABGESCHLOSSEN. ZWEI FESTUNGEN ABGESCHOSSEN. ZWEI EIGENE VERLUSTE."
+            }
+          ],
+          "mission": "rh_bf109_g6_late_defense_of_the_reich"
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "December 1944",
+              "text": "The war is being fought on the ground now, and the air above it is full of ghosts. The Gruppe has lost half its pilots since the spring. You are still there, which means that someone has to be.",
+              "image": "berlin_fires.jpg"
+            }
+          ]
+        }
+      ],
+      "start": "1944-06-01"
+    },
+    {
+      "id": "1945",
+      "title": "1945 - The Last Winter",
+      "Allies": [
+        {
+          "id": "snow_jan",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Posting",
+              "text": "Squadron Leader {name}, the squadron is to support the advance into Germany. The Spitfires are to be replaced by Tempests and Mustangs. Brief the new pilots on the snow and the cloud. - Group"
+            },
+            {
+              "kind": "text",
+              "title": "January 1945",
+              "text": "Snow on the Dutch fields and black smoke over the roads. The Army is moving east, and the squadron moves with it. {mate1} is on leave and does not come back. You think you know why.",
+              "image": "snow_winter.jpg"
+            }
+          ]
+        },
+        {
+          "id": "snow_patrol",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.5,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Snow patrol",
+              "text": "A patrol over the snow of the Ardennes. The Germans are on the roads below, and they are looking up. Keep the ground attack flights safe.",
+              "image": "snow_winter.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "PATROL COMPLETE. TWO TRANSPORTS DESTROYED. NO LOSSES."
+            }
+          ],
+          "mission": "rh_spitfire_mk_ix_snow_patrol"
+        },
+        {
+          "id": "air_superiority",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Air superiority",
+              "text": "The German fighters are back in the air over the front, in twos and threes. Find them before they find the bombers.",
+              "image": "hornchurch_dawn.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "The Times",
+              "text": "Allied aircraft have swept the skies over the western front. Enemy fighter activity has fallen sharply."
+            }
+          ],
+          "mission": "rh_p_51d_air_supperiority"
+        },
+        {
+          "id": "bodenplatte_news",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "news",
+              "title": "Daily Mirror",
+              "text": "Over one hundred German aircraft were destroyed on the ground in an attack on Allied airfields in the Low Countries on New Year's Day. Our airfields are repaired and back in action."
+            },
+            {
+              "kind": "text",
+              "title": "Hornchurch's sister field",
+              "text": "The attack came at dawn. The men on the field talk about it in whispers. The Germans had been sent to die, and they went. You are not sure whether to be angry or sad.",
+              "image": "snow_winter.jpg"
+            }
+          ]
+        },
+        {
+          "id": "typhoon_cab_rank",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "noon",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Cab rank",
+              "text": "The ground column is stuck on the road. Call in the Typhoons, and do not let the Germans hit the column first.",
+              "image": "dunkirk_beach.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegram",
+              "text": "CAB RANK SUCCESSFUL. TANKS DESTROYED. COLUMN ADVANCING."
+            }
+          ],
+          "mission": "rh_typhoon_cab_rank"
+        },
+        {
+          "id": "dusseldorf_escort",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.55,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Düsseldorf",
+              "text": "The bombers are going to the city's rail yards. Your Mustangs are to stay on the bombers until they are over the target.",
+              "image": "hornchurch_dawn.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "letter",
+              "title": "To {name}'s mother",
+              "text": "Dear Mrs {name}, your son flew his last escort mission before the end. He brought the bombers home. We are all very grateful. - {squadron}"
+            }
+          ],
+          "mission": "rh_p_51d_escort_to_dusseldorf"
+        },
+        {
+          "id": "chapter_end",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "text",
+              "title": "May 1945",
+              "text": "The war in Europe is over. The squadron is parading on the field, and nobody knows what to do with their hands. {mate2} is not there to see it. You have flown the last sortie of the war. You are going home.",
+              "image": "snow_winter.jpg"
+            }
+          ]
+        }
+      ],
+      "Axis": [
+        {
+          "id": "bodenplatte_axis",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Einsatzbefehl",
+              "text": "Major {name}, the Geschwader is to strike the airfields in Belgium and Holland at dawn on New Year's Day. The aircraft will be fuelled tonight. Brief your pilots. There will be no time to come back for those who fall behind. - Luftflotte"
+            },
+            {
+              "kind": "text",
+              "title": "New Year's Eve, 1944",
+              "text": "The men are quiet. Nobody has been told the whole plan. {mate1} asks what the English will do when they see us. Nobody answers. The weather is cold and clear, and the stars are very bright over the field.",
+              "image": "calais_dawn.jpg"
+            }
+          ]
+        },
+        {
+          "id": "bodenplatte_strike",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.65,
+          "time": "dawn",
+          "before": [
+            {
+              "kind": "text",
+              "title": "Dawn strike",
+              "text": "The airfields are in the mist below you. Their aircraft are lined up on the grass, and nobody is in the air to stop you. Strike quickly, and then get home if you can.",
+              "image": "calais_dawn.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "EINSATZ DURCHGEFÜHRT. ZAHLREICHE FEINDFLUGZEUGE AM BODEN ZERSTÖRT. VERLUSTE HOCH."
+            }
+          ],
+          "mission": "rh_fw190_d9_raid_alarm"
+        },
+        {
+          "id": "night_jets",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.7,
+          "time": "night",
+          "before": [
+            {
+              "kind": "text",
+              "title": "The jets",
+              "text": "The Me 262 is new and fast, and it is the best thing the Staffel has. Fly it through the night and find the bombers that the English have sent to Germany.",
+              "image": "berlin_fires.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "news",
+              "title": "Völkischer Beobachter",
+              "text": "New fighter aircraft are now in service in the Luftwaffe and are attacking the enemy bomber stream with great success."
+            }
+          ],
+          "mission": "rh_me262_night_operations"
+        },
+        {
+          "id": "last_letter",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Feldpost",
+              "text": "Liebe Familie, ich lebe noch. Es ist kalt, und die Front ist nah. Wenn ihr diesen Brief lest, bin ich vielleicht nicht mehr da. Ich liebe euch. - {name}"
+            },
+            {
+              "kind": "text",
+              "title": "April 1945",
+              "text": "The roads are full of refugees and the army is retreating across the Rhine. The Staffel has been ordered to fly one last convoy attack before the fuel runs out. Nobody says what will happen after that.",
+              "image": "berlin_fires.jpg"
+            }
+          ]
+        },
+        {
+          "id": "convoy_last",
+          "kind": "mission",
+          "mode": "historical",
+          "difficulty": 0.6,
+          "time": "dusk",
+          "before": [
+            {
+              "kind": "text",
+              "title": "The last convoy",
+              "text": "A column on the road, moving west in the rain. The English fighters are above it. You are the only cover the convoy has, and it is not enough.",
+              "image": "berlin_fires.jpg"
+            }
+          ],
+          "after": [
+            {
+              "kind": "telegram",
+              "title": "Telegramm",
+              "text": "KONVOI ANGEGRIFFEN. ZWEI EIGENE VERLUSTE. KEIN FEIND WEITER IN DER LUFT."
+            }
+          ],
+          "mission": "rh_fw190_a8_convoy_attack_in_dorsten"
+        },
+        {
+          "id": "surrender",
+          "kind": "story",
+          "pages": [
+            {
+              "kind": "news",
+              "title": "Radio announcement",
+              "text": "The German forces in the west have surrendered unconditionally. All hostilities have ceased."
+            },
+            {
+              "kind": "text",
+              "title": "The field, May 1945",
+              "text": "The aircraft are standing silent on the grass. {name} walks across the field and sees the pilots sitting in the wet grass, smoking, not talking. The war is over. Nobody knows what to do next.",
+              "image": "berlin_fires.jpg"
+            }
+          ]
+        }
+      ],
+      "start": "1945-01-01"
+    }
+  ]
+}

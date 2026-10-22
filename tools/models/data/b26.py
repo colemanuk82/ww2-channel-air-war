@@ -1,0 +1,287 @@
+"""Martin B-26B/C Marauder (long-wing "B-10" airframe) - 1:1 dimensions + station tables.
+
+Figures (each with its source URL in tools/models/data/b26.md):
+  length 17.75 m (58 ft 3 in)   span 21.64 m (71 ft 0 in)   height 6.55 m (21 ft 6 in)
+  wing area 61.1 m2 (659 sq ft)  4-blade Curtiss 13 ft 6 in (4.11 m) props.
+
+Airframe: shoulder wing, plexiglas bombardier nose, SINGLE tall fin-and-rudder, Martin 250CE
+dorsal turret + twin-gun tail + two waist guns + two fixed nose guns + two "package" guns,
+tricycle gear with the main wheels under the under-slung nacelles. Built in metres, nose toward +Y.
+"""
+import math
+import bpy
+import bmesh
+import mathutils
+import kit
+
+# ---------------------------------------------------------------- published headline figures
+LENGTH = 17.75
+SPAN = 21.64
+HEIGHT = 6.55
+WING_AREA = 61.1
+
+NOSE_Y = 8.90
+TAIL_Y = -8.85                     # NOSE_Y - TAIL_Y == LENGTH
+GROUND_Z = 2.30
+FIN_TOP = HEIGHT - GROUND_Z        # 4.25
+
+WING_LE_Y = 0.60
+TAIL_LE_Y = -6.45                  # tailplane TE lands on TAIL_Y
+TAILPLANE_HALF = 4.30
+
+NACELLE_X = 3.80
+NACELLE_Z = 0.12
+PROP_R = 4.11 * 0.5                # 13 ft 6 in
+MAIN_WHEEL_R = 0.64
+NOSE_WHEEL_R = 0.36
+
+
+# ---------------------------------------------------------------- local helpers (kit untouched)
+def loft_profiles(name, profiles, flip=False):
+    verts, faces = [], []
+    m = len(profiles[0])
+    for p in profiles:
+        verts.extend(p)
+    for k in range(len(profiles) - 1):
+        a, b = k * m, (k + 1) * m
+        for i in range(m):
+            j = (i + 1) % m
+            faces.append((a + j, a + i, b + i, b + j) if flip else (a + i, a + j, b + j, b + i))
+    base = (len(profiles) - 1) * m
+    if flip:
+        faces.append(tuple(range(0, m)))
+        faces.append(tuple(range(base + m - 1, base - 1, -1)))
+    else:
+        faces.append(tuple(range(m - 1, -1, -1)))
+        faces.append(tuple(range(base, base + m)))
+    return kit.new_mesh_object(name, verts, faces)
+
+
+def vertical_fin(name, x0, stations, camber=0.0, n=14, flip=False):
+    profiles = []
+    for (z, chord, y_le, th) in stations:
+        ring = kit.airfoil_ring(th, camber, n)
+        profiles.append([(x0 + fz * chord, y_le - chord * fx, z) for (fx, fz) in ring])
+    return loft_profiles(name, profiles, flip)
+
+
+def make_prop(name, sub, loc, radius, blades=4, spinner_r=0.36, blade_chord=0.36):
+    prop = kit.empty(name, loc)
+    sp = kit.cylinder("Spinner" + sub, spinner_r * 0.95, 0.05, spinner_r * 2.3,
+                      loc=(0, 0, 0), rot=(90, 0, 0), n=20)
+    kit.parent_to(sp, prop)
+    bl = kit.group("Blades" + sub, (0, 0, 0), prop)
+    for i in range(blades):
+        a = kit.TAU * i / blades
+        b = kit.new_mesh_object("Blade%d%s" % (i, sub), *kit.loft([
+            kit.ring_xyz(kit.airfoil_ring(0.20, 0.06, 10), -spinner_r * 0.6, scale=blade_chord * 0.5),
+            kit.ring_xyz(kit.airfoil_ring(0.16, 0.05, 10), -radius * 0.55, scale=blade_chord * 0.8),
+            kit.ring_xyz(kit.airfoil_ring(0.11, 0.04, 10), -radius, scale=blade_chord * 0.5),
+        ], cap_start=True, cap_end=True))
+        b.rotation_euler = (math.radians(90.0), 0.0, a)
+        kit.parent_to(b, bl)
+        tip = kit.box("BladeTip%d%s" % (i, sub), (blade_chord * 0.5, 0.18, 0.11),
+                      loc=(0, 0, -radius + 0.07))
+        tip.rotation_euler = (math.radians(90.0), 0.0, a)
+        kit.parent_to(tip, bl)
+    disc = kit.plate("PropDisc" + sub, 0.0, radius, radius, n=28, thickness=0.02)
+    kit.parent_to(disc, prop)
+    return prop
+
+
+def belly_doors(base, x_center, y0, y1, z, half_w, seg=4):
+    for i in range(seg):
+        ya = y0 + (y1 - y0) * i / seg
+        yb = y0 + (y1 - y0) * (i + 1) / seg
+        kit.box("%s%d" % (base, i), (half_w * 2.0, abs(yb - ya) * 0.96, 0.05),
+                loc=(x_center, (ya + yb) * 0.5, z))
+
+
+def refine(ob, cuts=2):
+    me = ob.data
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    bmesh.ops.subdivide_edges(bm, edges=bm.edges[:], cuts=cuts, use_grid_fill=True)
+    bm.to_mesh(me)
+    bm.free()
+    me.update()
+    for p in me.polygons:
+        p.use_smooth = True
+    return ob
+
+
+# ---------------------------------------------------------------- station tables
+FUS_STATIONS = [
+    (NOSE_Y, 0.06, 0.07, 0.05),
+    (8.70, 0.32, 0.30, 0.04),
+    (8.42, 0.50, 0.46, 0.04),
+    (8.05, 0.64, 0.60, 0.06),
+    (7.60, 0.78, 0.74, 0.08),
+    (7.05, 0.88, 0.84, 0.10),
+    (6.30, 0.94, 0.91, 0.12),
+    (5.30, 0.97, 0.95, 0.14),
+    (4.20, 0.97, 0.95, 0.16),
+    (3.10, 0.95, 0.93, 0.18),
+    (2.00, 0.91, 0.90, 0.20),
+    (0.90, 0.85, 0.85, 0.22),
+    (-0.20, 0.77, 0.79, 0.24),
+    (-1.30, 0.67, 0.71, 0.26),
+    (-2.40, 0.56, 0.61, 0.28),
+    (-3.50, 0.46, 0.51, 0.30),
+    (-4.60, 0.36, 0.42, 0.32),
+    (-5.70, 0.27, 0.33, 0.34),
+    (-6.70, 0.19, 0.25, 0.36),
+    (-7.60, 0.12, 0.18, 0.38),
+    (-8.40, 0.07, 0.11, 0.40),
+    (TAIL_Y, 0.03, 0.05, 0.40),
+]
+
+WING_STATIONS = [
+    (0.00, 3.75, 0.0, 0.50, 0.16),
+    (1.00, 3.72, 0.0, 0.505, 0.155),
+    (2.20, 3.62, 0.0, 0.515, 0.15),
+    (3.80, 3.42, 0.0, 0.53, 0.145),
+    (5.20, 3.15, 0.0, 0.545, 0.138),
+    (6.80, 2.80, 0.0, 0.56, 0.13),
+    (8.40, 2.45, 0.0, 0.575, 0.122),
+    (9.80, 2.10, 0.0, 0.59, 0.115),
+    (10.40, 1.95, 0.0, 0.598, 0.112),
+    (SPAN * 0.5, 1.55, 0.0, 0.605, 0.108),
+]
+
+TAIL_STATIONS = [
+    (0.12, 2.40, 0.0, 0.30, 0.10),
+    (1.20, 2.15, 0.0, 0.32, 0.095),
+    (2.40, 1.78, 0.0, 0.35, 0.09),
+    (3.50, 1.42, 0.0, 0.38, 0.088),
+    (TAILPLANE_HALF, 1.10, 0.0, 0.405, 0.085),
+]
+
+FIN_STATIONS = [
+    (0.35, 3.50, -5.35, 0.11),
+    (1.20, 3.10, -5.35, 0.105),
+    (2.20, 2.50, -5.40, 0.10),
+    (3.20, 1.85, -5.45, 0.095),
+    (FIN_TOP, 1.10, -5.55, 0.09),
+]
+
+
+def build():
+    parts = []
+
+    parts.append(kit.tube("Fuselage", FUS_STATIONS, n=44, power=2.3))
+
+    wing = kit.surface("Wing", WING_STATIONS, camber=0.02, n=18)
+    wing.location = (0.0, WING_LE_Y, 0.0)
+    parts.append(wing)
+
+    tail = kit.surface("Tailplane", TAIL_STATIONS, camber=0.0, n=14)
+    tail.location = (0.0, TAIL_LE_Y, 0.0)
+    parts.append(tail)
+
+    parts.append(vertical_fin("Fin", 0.0, FIN_STATIONS, n=16))
+
+    for sgn in (1.0, -1.0):
+        sd = "L" if sgn > 0 else "R"
+        nac = kit.nacelle("Nacelle" + sd, -1.00, 0.0, 0.82, 0.66, 4.00, cy=NACELLE_Z)
+        nac.location = (sgn * NACELLE_X, 0.0, 0.0)          # kit.nacelle() has no x offset
+        parts.append(nac)
+        parts.append(kit.cylinder("Cowling" + sd, 0.90, 0.88, 0.62,
+                                  loc=(sgn * NACELLE_X, 1.05, NACELLE_Z), rot=(90, 0, 0), n=26))
+        parts.append(kit.box("Exhaust" + sd, (0.15, 1.20, 0.14),
+                             loc=(sgn * NACELLE_X, 0.10, NACELLE_Z + 0.72)))
+        parts.append(kit.box("Intake" + sd, (0.20, 0.48, 0.34),
+                             loc=(sgn * NACELLE_X, 1.00, NACELLE_Z - 0.80)))
+
+    make_prop("Propeller", "", (NACELLE_X, 1.16, NACELLE_Z), PROP_R, blades=4,
+              spinner_r=0.38, blade_chord=0.38)
+    make_prop("Propeller2", "2", (-NACELLE_X, 1.16, NACELLE_Z), PROP_R, blades=4,
+              spinner_r=0.38, blade_chord=0.38)
+
+    parts.append(kit.canopy("CanopyNose", [
+        (8.55, 0.36, 0.28, 0.28),
+        (8.28, 0.48, 0.38, 0.34),
+        (7.95, 0.56, 0.46, 0.40),
+        (7.60, 0.60, 0.50, 0.46),
+    ], n=16))
+    parts.append(kit.canopy("Canopy", [
+        (7.55, 0.66, 0.32, 0.98),
+        (7.05, 0.74, 0.38, 1.04),
+        (6.40, 0.76, 0.38, 1.06),
+        (5.70, 0.68, 0.34, 1.04),
+        (5.15, 0.52, 0.26, 1.00),
+    ], n=16))
+    parts.append(kit.box("Windscreen", (0.62, 0.05, 0.38), loc=(0.0, 7.62, 0.70)))
+
+    parts.append(kit.turret("TurretDorsal", 0.0, 2.00, 1.05, 0.60, barrels=2, length=1.15))
+    parts.append(kit.turret("TurretTail", 0.0, -7.40, 0.35, 0.52, barrels=2, length=1.05))
+    parts.append(kit.turret("TurretWaistL", 0.90, -1.60, 0.00, 0.26, barrels=1, length=0.85))
+    parts.append(kit.turret("TurretWaistR", -0.90, -1.60, 0.00, 0.26, barrels=1, length=0.85))
+    parts.append(kit.box("GunNoseL", (0.06, 0.55, 0.06), loc=(0.22, 8.58, 0.05)))
+    parts.append(kit.box("GunNoseR", (0.06, 0.55, 0.06), loc=(-0.22, 8.58, 0.05)))
+    for sgn in (1.0, -1.0):
+        for k in range(2):
+            parts.append(kit.box("GunPack%s%d" % ("L" if sgn > 0 else "R", k),
+                                 (0.07, 0.80, 0.07),
+                                 loc=(sgn * 0.70, 7.20 - 0.0, 0.30 - 0.28 * k)))
+
+    belly_doors("BombBayDoorL", 0.44, 1.40, -3.20, -0.78, 0.42)
+    belly_doors("BombBayDoorR", -0.44, 1.40, -3.20, -0.78, 0.42)
+
+    leg_len = GROUND_Z - MAIN_WHEEL_R - 0.15
+    kit.gear_leg("GearL", NACELLE_X - 0.35, -0.70, -0.15, leg_len, MAIN_WHEEL_R, track_out=0.0)
+    kit.gear_leg("GearR", -(NACELLE_X - 0.35), -0.70, -0.15, leg_len, MAIN_WHEEL_R, track_out=0.0)
+    nose_len = GROUND_Z - NOSE_WHEEL_R - 0.36
+    kit.gear_leg("NoseGear", 0.0, 7.20, -0.36, nose_len, NOSE_WHEEL_R, track_out=0.0)
+
+    kit.pilot((0.0, 6.95, 1.04))
+
+    kit.markings("USAAF", fus_x=0.95, fus_y=2.10, fus_z=0.34, fus_r=0.54,
+                 wing_y=-1.50, wing_span_x=SPAN * 0.5, wing_z=0.62, wing_r=0.66,
+                 fin_x=0.0, fin_y=-6.30, fin_z=1.90, fin_r=0.46)
+
+    body = kit.group("Body")
+    for ob in list(bpy.data.objects):
+        if ob is not body and ob.parent is None:
+            kit.parent_to(ob, body)
+
+    kit.empty("CockpitEye", (0.0, 6.95, 1.06))
+    kit.empty("MuzzleL", (0.22, 8.85, 0.05))
+    kit.empty("MuzzleR", (-0.22, 8.85, 0.05))
+
+    for nm in ("Fuselage", "Wing", "Tailplane", "Fin",
+               "NacelleL", "NacelleR", "CowlingL", "CowlingR", "Canopy", "CanopyNose"):
+        ob = bpy.data.objects.get(nm)
+        if ob is not None:
+            refine(ob, 2)
+
+    bpy.context.view_layer.update()
+    gate()
+
+
+# ---------------------------------------------------------------- accuracy gate
+def _bounds():
+    xs, ys, zs = [], [], []
+    for ob in bpy.data.objects:
+        if ob.type != 'MESH':
+            continue
+        for c in ob.bound_box:
+            w = ob.matrix_world @ mathutils.Vector(c)
+            xs.append(w.x); ys.append(w.y); zs.append(w.z)
+    return min(xs), max(xs), min(ys), max(ys), min(zs), max(zs)
+
+
+def gate():
+    x0, x1, y0, y1, z0, z1 = _bounds()
+    length = y1 - y0
+    span = x1 - x0
+    height = z1 - z0
+
+    def pct(a, b):
+        return (a - b) / b * 100.0
+
+    ok = (abs(pct(length, LENGTH)) <= 2.0 and abs(pct(span, SPAN)) <= 2.0
+          and abs(pct(height, HEIGHT)) <= 2.0)
+    print("ACCURACY b26 length %.2f/%.2fm (%+.1f%%) span %.2f/%.2fm (%+.1f%%) height %.2f/%.2fm (%+.1f%%) %s"
+          % (length, LENGTH, pct(length, LENGTH), span, SPAN, pct(span, SPAN),
+             height, HEIGHT, pct(height, HEIGHT), "PASS" if ok else "FAIL"))

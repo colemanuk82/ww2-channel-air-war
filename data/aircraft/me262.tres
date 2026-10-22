@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "me262"
+display_name = "Messerschmitt Me 262"
+side = "Axis"
+nation = "Luftwaffe"
+model_id = "me262"
+ammo = 1200
+bombs = 4
+gun_count = 4
+rockets = 24
+fire_rate = 10
+gear_height = 1.60
+max_speed = 241.7
+stall_speed = 44.8
+boost_bonus = 77.3
+accel = 8.6
+decel = 7.3
+pitch_rate_deg = 72
+roll_rate_deg = 116
+yaw_rate_deg = 26
+bank_turn_rate = 0.85
+rate_response = 6
+max_health = 173
+radius = 11
+engine_sound = "jet"
+engine_count = 2
+gun_sound = "mk108"

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "a20"
+display_name = "Douglas A-20G Havoc"
+side = "Allies"
+nation = "USAAF"
+model_id = "a20"
+ammo = 3600
+bombs = 10
+gun_count = 6
+fire_rate = 11
+gear_height = 2.22
+max_speed = 141.7
+stall_speed = 43.1
+boost_bonus = 45.3
+accel = 4.8
+decel = 4
+pitch_rate_deg = 46
+roll_rate_deg = 60
+yaw_rate_deg = 16
+bank_turn_rate = 0.61
+rate_response = 4
+max_health = 318
+radius = 16
+engine_sound = "radial_pw"
+engine_count = 2
+gun_sound = "browning50"

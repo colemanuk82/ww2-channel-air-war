@@ -1,0 +1,24 @@
+shader_type spatial;
+render_mode cull_front, unshaded, shadows_disabled, blend_mix, depth_draw_never;
+
+// Team outline for AI aircraft (used as a material overlay): red = enemy, yellow = friendly. Faint, and it fades out
+// beyond a few kilometres so it only helps pick aircraft out at closer range.
+uniform vec4 outline_color : source_color = vec4(1.0, 0.15, 0.1, 1.0);
+uniform float thickness = 0.05;
+uniform float dist_scale = 0.0009;
+uniform float fade_start = 700.0;
+uniform float fade_end = 2600.0;
+uniform float strength = 0.5;
+
+varying float v_dist;
+
+void vertex() {
+	float d = length((MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz);
+	v_dist = d;
+	VERTEX += NORMAL * (thickness + min(d, fade_end) * dist_scale);
+}
+
+void fragment() {
+	ALBEDO = outline_color.rgb;
+	ALPHA = strength * (1.0 - smoothstep(fade_start, fade_end, v_dist));
+}

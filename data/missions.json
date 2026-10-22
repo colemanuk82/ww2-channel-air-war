@@ -1,0 +1,6689 @@
+{
+ "missions": [
+  {
+   "id": "train_wales_bomber",
+   "name": "Bomber Training: South Wales",
+   "year": 1943,
+   "date": "1943-06-14",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "hurn",
+     "aircraft": [
+      "lancaster",
+      "b26",
+      "b25",
+      "a20",
+      "blenheim"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_swansea",
+     "oil_llandarcy",
+     "port_cardiff",
+     "rail_cardiff",
+     "port_newport"
+    ]
+   },
+   "time_of_day": 12.0,
+   "weather": "clear",
+   "brief": "A training sortie for bomber crews. Take off from RAF Hurn, Bournemouth, and climb away west along the Channel until the Bristol Channel opens up ahead. Five practice targets are laid out across South Wales: Swansea Docks, the Llandarcy oil refinery, Cardiff Docks, the Cardiff railway yards and Newport Docks. Press N for the bombsight: dial the speed and altitude shown on your instruments so the hit marker is true, then release when the target is in the sight. There are no enemy fighters on this run. When all five are down, turn for home and land back at Hurn.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "time_limit": 5400,
+   "no_fighters": true,
+   "airborne": false,
+   "difficulty_hint": 0.2
+  },
+  {
+   "id": "bob_kent",
+   "name": "Battle of Britain: Kent Skies",
+   "year": 1940,
+   "date": "1940-08-15",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "biggin_hill",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "bf109",
+      "ju87",
+      "he111"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "radar_dover_ch",
+     "factory_short_rochester"
+    ],
+    "Axis": [
+     "radar_dover_ch",
+     "radar_dunkirk_ch",
+     "factory_short_rochester"
+    ]
+   },
+   "time_of_day": 14.0,
+   "weather": "scattered",
+   "brief": "Mid-August 1940. Waves of Stukas and Heinkels escorted by Bf 109s head across the Channel at Kent's radar stations and airfields. Scramble from Biggin Hill, break up the raid before it reaches the coast. (Axis: smash the Chain Home radar and Short Brothers works.)",
+   "roles": {
+    "Allies": "defend",
+    "Axis": "strike"
+   },
+   "protect": {
+    "Allies": [
+     "radar_dover_ch",
+     "factory_short_rochester"
+    ]
+   },
+   "time_limit": 1560,
+   "waves": 4,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "defend",
+    "Axis": "bombing"
+   },
+   "_source": "derived from data/missions_seed.json by Stage 3 (roles/modes/protect/time_limit added)"
+  },
+  {
+   "id": "dieppe_1942",
+   "name": "Operation Jubilee: Dieppe",
+   "year": 1942,
+   "date": "1942-08-19",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "spitfire",
+      "typhoon"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "abbeville_drucat",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "radar_antifer",
+     "battery_todt",
+     "port_le_havre"
+    ],
+    "Axis": [
+     "convoy_neptune"
+    ]
+   },
+   "time_of_day": 6.0,
+   "weather": "overcast",
+   "brief": "Dawn, 19 August 1942. Canadian troops land at Dieppe. Provide fighter cover and suppress shore batteries from Tangmere against the new Focke-Wulf 190s. (Axis: intercept the landing force and its fighter umbrella.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "strafe"
+   },
+   "protect": {},
+   "time_limit": 4560,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "ground_attack"
+   },
+   "_source": "derived from data/missions_seed.json by Stage 3 (roles/modes/protect/time_limit added)"
+  },
+  {
+   "id": "dday_1944",
+   "name": "D-Day: Operation Overlord",
+   "year": 1944,
+   "date": "1944-06-06",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "typhoon",
+      "p51",
+      "p47",
+      "mosquito",
+      "b26"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "caen_carpiquet",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "battery_longues",
+     "battery_pointe_du_hoc",
+     "battery_merville",
+     "radar_douvres",
+     "bridge_vernon"
+    ],
+    "Axis": [
+     "convoy_neptune"
+    ]
+   },
+   "time_of_day": 5.5,
+   "weather": "overcast",
+   "brief": "6 June 1944. The largest amphibious landing in history. Strike the Atlantic Wall batteries and radar at Utah, Omaha, Gold, Juno and Sword before the first boats hit the beach, then keep the Luftwaffe off the fleet. (Axis: a handful of Fw 190s against the sky full of Allied fighters.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "strafe"
+   },
+   "protect": {},
+   "time_limit": 4320,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "ground_attack"
+   },
+   "_source": "derived from data/missions_seed.json by Stage 3 (roles/modes/protect/time_limit added)"
+  },
+  {
+   "id": "dunkirk_1940",
+   "name": "Operation Dynamo: Dunkirk Cover",
+   "year": 1940,
+   "date": "1940-05-30",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "bf109",
+      "ju87",
+      "he111"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_dunkirk_evac"
+    ],
+    "Axis": [
+     "port_dunkirk",
+     "convoy_dunkirk_evac"
+    ]
+   },
+   "time_of_day": 16.0,
+   "weather": "fog",
+   "brief": "Late May 1940. Over 300,000 men wait on the Dunkirk beaches. Patrol the patch of sky over the evacuation ships and keep the Stukas off them. (Axis: sink the little ships and bomb the Mole.)",
+   "roles": {
+    "Allies": "defend",
+    "Axis": "strike"
+   },
+   "protect": {
+    "Allies": [
+     "convoy_dunkirk_evac"
+    ]
+   },
+   "time_limit": 1200,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "defend",
+    "Axis": "bombing"
+   },
+   "_source": "derived from data/missions_seed.json by Stage 3 (roles/modes/protect/time_limit added)"
+  },
+  {
+   "id": "antwerp_raid",
+   "name": "Bomber Command: Antwerp Docks",
+   "year": 1944,
+   "date": "1944-10-12",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "northolt",
+     "aircraft": [
+      "lancaster",
+      "mosquito",
+      "b26"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "gilze_rijen",
+     "aircraft": [
+      "me262",
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_antwerp",
+     "factory_minerva_antwerp"
+    ],
+    "Axis": [
+     "port_dunkirk"
+    ]
+   },
+   "time_of_day": 15.0,
+   "weather": "scattered",
+   "brief": "Autumn 1944. Antwerp's port is vital for Allied supply but V-weapons rain on the city. Hit the docks and yards on a bombing run across the Channel, and watch for Me 262 jets. (Axis: defend the docks.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "port_antwerp",
+     "factory_minerva_antwerp"
+    ]
+   },
+   "time_limit": 10140,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "defend"
+   },
+   "_source": "derived from data/missions_seed.json by Stage 3 (roles/modes/protect/time_limit added)"
+  },
+  {
+   "id": "lille_raid",
+   "name": "Lille Rail Yards Strike",
+   "year": 1943,
+   "date": "1943-05-13",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "hornchurch",
+     "aircraft": [
+      "b26",
+      "typhoon",
+      "spitfire"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "lille_nord",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rail_lille_fives",
+     "factory_fives_lille"
+    ],
+    "Axis": [
+     "radar_dover_ch"
+    ]
+   },
+   "time_of_day": 11.0,
+   "weather": "clear",
+   "brief": "Medium bombers escorted by Spitfires hit the Fives-Lille locomotive works and rail yards. Stay with the formation; Fw 190s will rise from Lille-Nord and Vendeville. (Axis: stop the Marauders.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "rail_lille_fives",
+     "factory_fives_lille"
+    ]
+   },
+   "time_limit": 6780,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "defend"
+   },
+   "_source": "derived from data/missions_seed.json by Stage 3 (roles/modes/protect/time_limit added)"
+  },
+  {
+   "id": "lehavre_raid",
+   "name": "Le Havre Port Raid",
+   "year": 1944,
+   "date": "1944-09-05",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "lancaster",
+      "mosquito",
+      "typhoon"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "fw190",
+      "bf109",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_le_havre",
+     "radar_antifer",
+     "bridge_tancarville"
+    ],
+    "Axis": [
+     "port_portsmouth",
+     "port_southampton"
+    ]
+   },
+   "time_of_day": 17.5,
+   "weather": "overcast",
+   "brief": "September 1944. The Germans still hold Le Havre as a fortress port. Pound the docks, radar and flak positions with heavy bombers and rocket-firing Typhoons before the ground assault. (Axis: raid Portsmouth.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "strike"
+   },
+   "protect": {},
+   "time_limit": 5040,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "bombing"
+   },
+   "_source": "derived from data/missions_seed.json by Stage 3 (roles/modes/protect/time_limit added)"
+  },
+  {
+   "id": "v1_sites",
+   "name": "Crossbow: V-Weapon Sites",
+   "year": 1944,
+   "date": "1944-07-20",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "kenley",
+     "aircraft": [
+      "typhoon",
+      "p47",
+      "mosquito",
+      "lancaster"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "saint_omer",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "wizernes_v2",
+     "mimoyecques",
+     "watten_bunker",
+     "eperlecques",
+     "siracourt"
+    ],
+    "Axis": [
+     "radar_dover_ch"
+    ]
+   },
+   "time_of_day": 9.0,
+   "weather": "clear",
+   "brief": "Summer 1944. Strike the concrete V-weapon bunkers around Saint-Omer and the Pas-de-Calais: Wizernes, Mimoyecques, Watten and Eperlecques. Heavy flak. (Axis: defend the sites.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "wizernes_v2",
+     "mimoyecques",
+     "watten_bunker",
+     "eperlecques",
+     "siracourt"
+    ]
+   },
+   "time_limit": 4320,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "defend"
+   },
+   "_source": "derived from data/missions_seed.json by Stage 3 (roles/modes/protect/time_limit added)"
+  },
+  {
+   "id": "seine_bridges",
+   "name": "Interdiction: Seine Bridges",
+   "year": 1944,
+   "date": "1944-05-10",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "northolt",
+     "aircraft": [
+      "p47",
+      "p51",
+      "typhoon",
+      "b26"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "abbeville_drucat",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "bridge_rouen",
+     "bridge_oissel",
+     "bridge_vernon",
+     "bridge_mantes",
+     "rail_rouen_sotteville"
+    ],
+    "Axis": [
+     "convoy_neptune"
+    ]
+   },
+   "time_of_day": 12.0,
+   "weather": "scattered",
+   "brief": "Spring 1944. Cut the Seine bridges and rail yards to isolate Normandy from the German reinforcements. Strafe trains and convoys along the valley. (Axis: keep the bridges open.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "bridge_rouen",
+     "bridge_oissel",
+     "bridge_vernon",
+     "bridge_mantes"
+    ]
+   },
+   "time_limit": 5160,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "defend"
+   },
+   "_source": "derived from data/missions_seed.json by Stage 3 (roles/modes/protect/time_limit added)"
+  },
+  {
+   "id": "rh_a_20_bombing_raid_on_liege_railway_junction",
+   "name": "\u2605 A-20 - Bombing raid on Liege railway junction",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_melsbroek",
+     "aircraft": [
+      "b26"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_rail_yard_objective_near_seraing"
+    ]
+   },
+   "time_of_day": 9.5,
+   "weather": "scattered",
+   "brief": "1944-10-01. Bombing sortie in a b26 from Melsbroek.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "protect": {},
+   "time_limit": 2760,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 8,
+     "lat": 50.6005,
+     "lon": 5.2835,
+     "alt_m": 6000,
+     "trigger_km": 25,
+     "label": "random patrol GER"
+    }
+   ]
+  },
+  {
+   "id": "rh_a20_refinery_on_fire",
+   "name": "\u2605 A20 - Refinery on fire",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "b26"
+     ],
+     "spawn": {
+      "lat": 51.927,
+      "lon": 3.9262,
+      "heading": 90,
+      "alt": 1500
+     }
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_rotterdam",
+     "bridge_moerdijk",
+     "port_flushing"
+    ]
+   },
+   "time_of_day": 12.5,
+   "weather": "scattered",
+   "brief": "1944-10-01. Bombing sortie in a b26 from Manston.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "protect": {},
+   "time_limit": 3540,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "events": []
+  },
+  {
+   "id": "rh_bf109_g6_late_defense_of_the_reich",
+   "name": "\u2605 Bf109 G6 late - Defense of the Reich",
+   "year": 1944,
+   "date": "1944-08-01",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "rh_af_mill",
+     "aircraft": [
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "bridge_grave",
+     "bridge_nijmegen"
+    ]
+   },
+   "time_of_day": 7.5,
+   "weather": "overcast",
+   "brief": "1944-08-01. Defensive sortie in a bf109 from Mill.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "bridge_grave",
+     "bridge_nijmegen"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 51.4771,
+     "lon": 5.6045,
+     "alt_m": 2500,
+     "trigger_km": 18,
+     "label": "109 flyby"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p51",
+     "count": 8,
+     "lat": 51.1642,
+     "lon": 4.9583,
+     "alt_m": 3500,
+     "trigger_km": 25,
+     "label": "P-51 Ambush"
+    },
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 52.2226,
+     "lon": 4.9304,
+     "alt_m": 4100,
+     "trigger_km": 18,
+     "label": "Bomber and escort RAF"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p51",
+     "count": 8,
+     "lat": 52.067,
+     "lon": 4.6579,
+     "alt_m": 3500,
+     "trigger_km": 25,
+     "label": "P-51 Ambush"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p51",
+     "count": 8,
+     "lat": 52.2561,
+     "lon": 4.8163,
+     "alt_m": 3500,
+     "trigger_km": 25,
+     "label": "P-51 Ambush"
+    }
+   ]
+  },
+  {
+   "id": "rh_bf109_k4_dark_clouds",
+   "name": "\u2605 Bf109 K4 - Dark clouds",
+   "year": 1944,
+   "date": "1944-08-01",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "rh_af_kluis",
+     "aircraft": [
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "bridge_grave",
+     "bridge_nijmegen"
+    ]
+   },
+   "time_of_day": 19.5,
+   "weather": "overcast",
+   "brief": "1944-08-01. Defensive sortie in a bf109 from Kluis.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "bridge_grave",
+     "bridge_nijmegen"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 51.7864,
+     "lon": 5.7904,
+     "alt_m": 1200,
+     "trigger_km": 18,
+     "label": "Fw190 A8 joins"
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "he111",
+     "count": 3,
+     "lat": 51.7006,
+     "lon": 5.6906,
+     "alt_m": 1200,
+     "trigger_km": 18,
+     "label": "ju42 fly by"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 51.8387,
+     "lon": 5.6572,
+     "alt_m": 800,
+     "trigger_km": 18,
+     "label": "109 flyby"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p51",
+     "count": 8,
+     "lat": 51.8939,
+     "lon": 4.6942,
+     "alt_m": 3500,
+     "trigger_km": 25,
+     "label": "P-51 Ambush"
+    },
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 52.2226,
+     "lon": 4.9304,
+     "alt_m": 3100,
+     "trigger_km": 18,
+     "label": "Bomber and escort RAF"
+    }
+   ]
+  },
+  {
+   "id": "rh_bf110_g2_defending_frankfurt",
+   "name": "\u2605 Bf110 G2 - Defending Frankfurt",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "frankfurt_rhein_main",
+     "aircraft": [
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "factory_opel_russelsheim",
+     "rail_koblenz_lutzel"
+    ]
+   },
+   "time_of_day": 7.5,
+   "weather": "scattered",
+   "brief": "1944-10-01. Defensive sortie in a bf109 from Frankfurt Rhein-Main.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "factory_opel_russelsheim",
+     "rail_koblenz_lutzel"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 50.2507,
+     "lon": 7.561,
+     "alt_m": 5500,
+     "trigger_km": 18,
+     "label": "B25 and escort RAF"
+    }
+   ]
+  },
+  {
+   "id": "rh_fw190_d9_raid_alarm",
+   "name": "\u2605 Fw190 D9 - Raid Alarm",
+   "year": 1945,
+   "date": "1945-01-01",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "koln_butzweilerhof",
+     "aircraft": [
+      "fw190"
+     ],
+     "spawn": {
+      "lat": 50.8884,
+      "lon": 6.91,
+      "heading": 198,
+      "alt": 1500
+     }
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "bridge_hohenzollern",
+     "rail_cologne_gremberg"
+    ]
+   },
+   "time_of_day": 9.5,
+   "weather": "scattered",
+   "brief": "1945-01-01. Defensive sortie in a fw190 from Koln-Butzweilerhof.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "bridge_hohenzollern",
+     "rail_cologne_gremberg"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p47",
+     "count": 8,
+     "lat": 50.9257,
+     "lon": 6.8341,
+     "alt_m": 700,
+     "trigger_km": 25,
+     "label": "P38"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p47",
+     "count": 8,
+     "lat": 50.9195,
+     "lon": 6.7463,
+     "alt_m": 1500,
+     "trigger_km": 25,
+     "label": "P-47"
+    }
+   ]
+  },
+  {
+   "id": "rh_me262_intercept_b25s",
+   "name": "\u2605 Me262 - Intercept B25s",
+   "year": 1944,
+   "date": "1944-08-01",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "rh_af_hopsten",
+     "aircraft": [
+      "me262"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "rail_munster",
+     "rail_osnabruck"
+    ]
+   },
+   "time_of_day": 17.5,
+   "weather": "overcast",
+   "brief": "1944-08-01. Defensive sortie in a me262 from Hopsten.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "rail_munster",
+     "rail_osnabruck"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "he111",
+     "count": 3,
+     "lat": 52.2409,
+     "lon": 7.3117,
+     "alt_m": 1200,
+     "trigger_km": 18,
+     "label": "ju42 fly by"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 52.1886,
+     "lon": 7.1993,
+     "alt_m": 800,
+     "trigger_km": 18,
+     "label": "109 flyby"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 51.9156,
+     "lon": 6.306,
+     "alt_m": 7000,
+     "trigger_km": 18,
+     "label": "GER spawn"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 52.1694,
+     "lon": 6.037,
+     "alt_m": 3600,
+     "trigger_km": 18,
+     "label": "GER spawn"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 51.3917,
+     "lon": 6.7101,
+     "alt_m": 2500,
+     "trigger_km": 18,
+     "label": "GER spawn"
+    }
+   ]
+  },
+  {
+   "id": "rh_me262_night_operations",
+   "name": "\u2605 Me262 - Night operations",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "rh_af_twente",
+     "aircraft": [
+      "me262"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "rail_munster",
+     "factory_huls_marl"
+    ]
+   },
+   "time_of_day": 0.5,
+   "weather": "clear",
+   "brief": "1944-10-01. Defensive sortie in a me262 from Twente.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "rail_munster",
+     "factory_huls_marl"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p47",
+     "count": 1,
+     "lat": 51.5761,
+     "lon": 5.6428,
+     "alt_m": 1300,
+     "trigger_km": 25,
+     "label": "P38"
+    },
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 51.905,
+     "lon": 5.1708,
+     "alt_m": 3100,
+     "trigger_km": 18,
+     "label": "Bombers"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p47",
+     "count": 1,
+     "lat": 51.4991,
+     "lon": 4.8863,
+     "alt_m": 1300,
+     "trigger_km": 25,
+     "label": "P38"
+    }
+   ]
+  },
+  {
+   "id": "rh_p_47_d28_forward_patrol",
+   "name": "\u2605 P-47 D28 - Forward patrol",
+   "year": 1944,
+   "date": "1944-09-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "p47"
+     ],
+     "spawn": {
+      "lat": 51.927,
+      "lon": 3.9262,
+      "heading": 90,
+      "alt": 1500
+     }
+    }
+   ],
+   "objectives": {},
+   "time_of_day": 16.5,
+   "weather": "scattered",
+   "brief": "1944-09-01. Fighter sortie in a p47 from Manston.",
+   "roles": {
+    "Allies": "sweep"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "dogfight"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 8,
+     "lat": 51.9884,
+     "lon": 4.2707,
+     "alt_m": 8000,
+     "trigger_km": 25,
+     "label": "Group 2"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 52.1103,
+     "lon": 4.4323,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "Group 1"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 51.9298,
+     "lon": 4.3695,
+     "alt_m": 6000,
+     "trigger_km": 25,
+     "label": "Group 3"
+    }
+   ]
+  },
+  {
+   "id": "rh_p_51d_air_supperiority",
+   "name": "\u2605 P-51D - Air supperiority",
+   "year": 1945,
+   "date": "1945-01-21",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_asch",
+     "aircraft": [
+      "p51"
+     ]
+    }
+   ],
+   "objectives": {},
+   "time_of_day": 15.5,
+   "weather": "overcast",
+   "brief": "1945-01-21. Fighter sortie in a p51 from Asch.",
+   "roles": {
+    "Allies": "sweep"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "dogfight"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 50.7144,
+     "lon": 7.0382,
+     "alt_m": 2000,
+     "trigger_km": 25,
+     "label": "random patrol GER"
+    },
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "he111",
+     "count": 3,
+     "lat": 50.7465,
+     "lon": 7.1463,
+     "alt_m": 1000,
+     "trigger_km": 18,
+     "label": "ju42 fly by"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "me262",
+     "count": 1,
+     "lat": 50.9086,
+     "lon": 7.2002,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "Ambush"
+    }
+   ]
+  },
+  {
+   "id": "rh_p_51d_b25_escort_to_aachen",
+   "name": "\u2605 P-51D - B25 escort to Aachen",
+   "year": 1944,
+   "date": "1944-09-24",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "asch",
+     "aircraft": [
+      "p51"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rail_liege_kinkempois"
+    ]
+   },
+   "time_of_day": 14.5,
+   "weather": "scattered",
+   "brief": "1944-09-24. Escort sortie in a p51 from Asch (Genk).",
+   "roles": {
+    "Allies": "escort"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "escort"
+   },
+   "events": [
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 51.0994,
+     "lon": 5.7975,
+     "alt_m": 3500,
+     "trigger_km": 18,
+     "label": "B25"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p47",
+     "count": 6,
+     "lat": 50.7837,
+     "lon": 5.8723,
+     "alt_m": 3500,
+     "trigger_km": 18,
+     "label": "Angus"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 50.7435,
+     "lon": 6.2208,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "A8 attack"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 3,
+     "lat": 50.5819,
+     "lon": 6.3741,
+     "alt_m": 3500,
+     "trigger_km": 25,
+     "label": "109 patrol"
+    }
+   ]
+  },
+  {
+   "id": "rh_p_51d_escort_to_dusseldorf",
+   "name": "\u2605 P-51D - Escort to Dusseldorf",
+   "year": 1945,
+   "date": "1945-04-08",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "asch",
+     "aircraft": [
+      "p51"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "factory_rheinmetall_dusseldorf"
+    ]
+   },
+   "time_of_day": 17.0,
+   "weather": "scattered",
+   "brief": "1945-04-08. Escort sortie in a p51 from Asch (Genk).",
+   "roles": {
+    "Allies": "escort"
+   },
+   "protect": {},
+   "time_limit": 1980,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "escort"
+   },
+   "events": [
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 8,
+     "lat": 50.8648,
+     "lon": 5.8227,
+     "alt_m": 1500,
+     "trigger_km": 18,
+     "label": "P51 flyby"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 51.1402,
+     "lon": 6.5359,
+     "alt_m": 5000,
+     "trigger_km": 25,
+     "label": "Ambush"
+    }
+   ]
+  },
+  {
+   "id": "rh_spitfire_mk_xiv_b_25_escort_in_the_low_countries",
+   "name": "\u2605 Spitfire Mk XIV - B-25 escort in the low countries",
+   "year": 1944,
+   "date": "1944-09-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "spitfire"
+     ],
+     "spawn": {
+      "lat": 51.927,
+      "lon": 3.9262,
+      "heading": 90,
+      "alt": 1500
+     }
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_ijmuiden"
+    ]
+   },
+   "time_of_day": 16.5,
+   "weather": "scattered",
+   "brief": "1944-09-01. Escort sortie in a spitfire from Manston.",
+   "roles": {
+    "Allies": "escort"
+   },
+   "protect": {},
+   "time_limit": 5340,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "escort"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 52.0682,
+     "lon": 4.7515,
+     "alt_m": 5000,
+     "trigger_km": 25,
+     "label": "Ambush"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 6,
+     "lat": 51.9118,
+     "lon": 5.2868,
+     "alt_m": 5000,
+     "trigger_km": 25,
+     "label": "random patrol GER"
+    }
+   ]
+  },
+  {
+   "id": "rh_spitfire_mk_ix_snow_patrol",
+   "name": "\u2605 Spitfire Mk. IX - Snow patrol",
+   "year": 1945,
+   "date": "1945-01-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_schijndel",
+     "aircraft": [
+      "spitfire"
+     ]
+    }
+   ],
+   "objectives": {},
+   "time_of_day": 9.5,
+   "weather": "clear",
+   "brief": "1945-01-01. Fighter sortie in a spitfire from Schijndel.",
+   "roles": {
+    "Allies": "sweep"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "dogfight"
+   },
+   "events": [
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "b26",
+     "count": 1,
+     "lat": 51.5662,
+     "lon": 5.4922,
+     "alt_m": 600,
+     "trigger_km": 18,
+     "label": "Transport"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 51.8509,
+     "lon": 6.072,
+     "alt_m": 6000,
+     "trigger_km": 25,
+     "label": "Group"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p51",
+     "count": 8,
+     "lat": 51.715,
+     "lon": 6.563,
+     "alt_m": 4500,
+     "trigger_km": 18,
+     "label": "P51 flyby"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "me262",
+     "count": 3,
+     "lat": 51.701,
+     "lon": 6.816,
+     "alt_m": 2500,
+     "trigger_km": 25,
+     "label": "Me262"
+    },
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "he111",
+     "count": 3,
+     "lat": 51.6492,
+     "lon": 6.9932,
+     "alt_m": 2000,
+     "trigger_km": 18,
+     "label": "ju42 fly by"
+    }
+   ]
+  },
+  {
+   "id": "rh_spitfire_mk_ix_wingman_patrol",
+   "name": "\u2605 Spitfire Mk. IX - Wingman patrol",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_deurne",
+     "aircraft": [
+      "spitfire"
+     ]
+    }
+   ],
+   "objectives": {},
+   "time_of_day": 16.5,
+   "weather": "overcast",
+   "brief": "1944-10-01. Fighter sortie in a spitfire from Deurne.",
+   "roles": {
+    "Allies": "sweep"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "dogfight"
+   },
+   "events": [
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 3,
+     "lat": 51.193,
+     "lon": 4.9161,
+     "alt_m": 5000,
+     "trigger_km": 18,
+     "label": "Mitor flight"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p47",
+     "count": 8,
+     "lat": 51.4833,
+     "lon": 4.3649,
+     "alt_m": 1500,
+     "trigger_km": 18,
+     "label": "P47 flyby"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 51.6498,
+     "lon": 4.8017,
+     "alt_m": 6500,
+     "trigger_km": 25,
+     "label": "Ambush 3"
+    },
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "ju88",
+     "count": 2,
+     "lat": 51.5666,
+     "lon": 5.1389,
+     "alt_m": 9000,
+     "trigger_km": 18,
+     "label": "Ju88 recon"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 51.9298,
+     "lon": 4.4384,
+     "alt_m": 6500,
+     "trigger_km": 25,
+     "label": "Ambush 1"
+    }
+   ]
+  },
+  {
+   "id": "rh_fw190_a8_convoy_attack_in_dorsten",
+   "name": "\u2605 Fw190 A8 - Convoy attack in Dorsten",
+   "year": 1945,
+   "date": "1945-04-08",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "rh_af_munster_handorf",
+     "aircraft": [
+      "fw190"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "rh_convoy_route_enemy_column_near_dorsten"
+    ]
+   },
+   "time_of_day": 10.5,
+   "weather": "scattered",
+   "brief": "1945-04-08. Ground-attack sortie in a fw190 from Munster-Handorf.",
+   "roles": {
+    "Axis": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1620,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Axis": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "ju88",
+     "count": 2,
+     "lat": 51.9016,
+     "lon": 7.7817,
+     "alt_m": 650,
+     "trigger_km": 18,
+     "label": "Ju88 landing"
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "he111",
+     "count": 3,
+     "lat": 51.7734,
+     "lon": 7.5341,
+     "alt_m": 1200,
+     "trigger_km": 18,
+     "label": "ju42 fly by"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p47",
+     "count": 8,
+     "lat": 51.5305,
+     "lon": 7.0955,
+     "alt_m": 2000,
+     "trigger_km": 25,
+     "label": "Ambush"
+    }
+   ]
+  },
+  {
+   "id": "rh_p_38_strike_on_radar_station",
+   "name": "\u2605 P-38 - Strike on radar station",
+   "year": 1944,
+   "date": "1944-08-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_st_trond",
+     "aircraft": [
+      "p47"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_enemy_column_near_geleen",
+     "rh_convoy_route_enemy_column_near_wassenberg"
+    ]
+   },
+   "time_of_day": 16.5,
+   "weather": "scattered",
+   "brief": "1944-08-01. Ground-attack sortie in a p47 from St. Trond.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 50.9283,
+     "lon": 5.7603,
+     "alt_m": 2500,
+     "trigger_km": 25,
+     "label": "Ambush"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "me262",
+     "count": 2,
+     "lat": 50.8742,
+     "lon": 6.0825,
+     "alt_m": 2500,
+     "trigger_km": 25,
+     "label": "Me262 random patrol GER"
+    }
+   ]
+  },
+  {
+   "id": "rh_p_38_supressing_artillery_near_spa",
+   "name": "\u2605 P-38 - Supressing artillery near Spa",
+   "year": 1944,
+   "date": "1944-09-28",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_florennes",
+     "aircraft": [
+      "p47"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_supply_train_near_barvaux",
+     "rh_convoy_route_supply_train_near_auwaille",
+     "rh_convoy_route_supply_train_near_spa",
+     "rh_battery_artillery_park_near_spa",
+     "rh_convoy_route_enemy_column_near_spa",
+     "rh_convoy_route_enemy_column_near_auwaille"
+    ]
+   },
+   "time_of_day": 8.5,
+   "weather": "overcast",
+   "brief": "1944-09-28. Ground-attack sortie in a p47 from Florennes.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p47",
+     "count": 8,
+     "lat": 50.3742,
+     "lon": 5.4961,
+     "alt_m": 750,
+     "trigger_km": 18,
+     "label": "Allied ground attack"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p47",
+     "count": 4,
+     "lat": 50.4366,
+     "lon": 5.5896,
+     "alt_m": 800,
+     "trigger_km": 18,
+     "label": "P-47 attack"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p47",
+     "count": 5,
+     "lat": 50.2589,
+     "lon": 5.7902,
+     "alt_m": 1200,
+     "trigger_km": 18,
+     "label": "P-47 flyby"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 3,
+     "lat": 50.2953,
+     "lon": 6.0448,
+     "alt_m": 3500,
+     "trigger_km": 25,
+     "label": "190 patrol"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 50.3426,
+     "lon": 6.1669,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "A8 attack"
+    }
+   ]
+  },
+  {
+   "id": "rh_p_47_d22_advance_on_aachen",
+   "name": "\u2605 P-47 D22 - Advance on Aachen",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_le_culot_east",
+     "aircraft": [
+      "p47"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_supply_train_near_aachen",
+     "rh_convoy_route_enemy_column_near_aachen"
+    ]
+   },
+   "time_of_day": 15.5,
+   "weather": "overcast",
+   "brief": "1944-10-01. Ground-attack sortie in a p47 from Le Culot East.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 2040,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p47",
+     "count": 8,
+     "lat": 50.7752,
+     "lon": 5.6364,
+     "alt_m": 4000,
+     "trigger_km": 18,
+     "label": "P38 flyby"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "typhoon",
+     "count": 5,
+     "lat": 50.753,
+     "lon": 6.1487,
+     "alt_m": 1300,
+     "trigger_km": 18,
+     "label": "Typhoon"
+    }
+   ]
+  },
+  {
+   "id": "rh_p_47_d22_attack_on_liege",
+   "name": "\u2605 P-47 D22 - Attack on Liege",
+   "year": 1944,
+   "date": "1944-09-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_asch",
+     "aircraft": [
+      "p47"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_supply_train_near_vise",
+     "rh_battery_artillery_park_near_seraing",
+     "rh_battery_objective_near_seraing",
+     "rh_convoy_route_enemy_column_near_seraing"
+    ]
+   },
+   "time_of_day": 6.5,
+   "weather": "scattered",
+   "brief": "1944-09-01. Ground-attack sortie in a p47 from Asch.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": []
+  },
+  {
+   "id": "rh_p_47_d28_barge_strafing_sortie",
+   "name": "\u2605 P-47 D28 - Barge strafing sortie",
+   "year": 1944,
+   "date": "1944-08-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_petit_brogel",
+     "aircraft": [
+      "p47"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_supply_train_near_eindhoven",
+     "rh_battery_objective_near_helmond",
+     "rh_convoy_route_enemy_column_near_helmond"
+    ]
+   },
+   "time_of_day": 7.5,
+   "weather": "scattered",
+   "brief": "1944-08-01. Ground-attack sortie in a p47 from Petit Brogel.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 51.2644,
+     "lon": 5.809,
+     "alt_m": 1500,
+     "trigger_km": 18,
+     "label": "B25 and escort RAF"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 8,
+     "lat": 51.2905,
+     "lon": 5.8946,
+     "alt_m": 2000,
+     "trigger_km": 25,
+     "label": "random patrol GER"
+    }
+   ]
+  },
+  {
+   "id": "rh_p_47_d28_knocking_on_enemy_gates_rheinland",
+   "name": "\u2605 P-47 D28 - Knocking on enemy gates (Rheinland)",
+   "year": 1945,
+   "date": "1945-01-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_helmond",
+     "aircraft": [
+      "p47"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_battery_artillery_park_near_geldern",
+     "rh_convoy_route_enemy_column_near_geldern"
+    ]
+   },
+   "time_of_day": 9.5,
+   "weather": "clear",
+   "brief": "1945-01-01. Ground-attack sortie in a p47 from Helmond.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "typhoon",
+     "count": 8,
+     "lat": 51.3403,
+     "lon": 6.0325,
+     "alt_m": 1500,
+     "trigger_km": 18,
+     "label": "dogfight"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 8,
+     "lat": 51.5736,
+     "lon": 6.3975,
+     "alt_m": 3500,
+     "trigger_km": 25,
+     "label": "Ambush"
+    }
+   ]
+  },
+  {
+   "id": "rh_spitfire_mk_ix_dive_bombing_from_evere",
+   "name": "\u2605 Spitfire Mk. IX - Dive bombing from Evere",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_evere",
+     "aircraft": [
+      "spitfire"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_battery_artillery_park_near_loenhout",
+     "rh_convoy_route_enemy_column_near_loenhout"
+    ]
+   },
+   "time_of_day": 15.5,
+   "weather": "clear",
+   "brief": "1944-10-01. Ground-attack sortie in a spitfire from Evere.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1920,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 51.3994,
+     "lon": 4.4503,
+     "alt_m": 3500,
+     "trigger_km": 25,
+     "label": "Ambush"
+    }
+   ]
+  },
+  {
+   "id": "rh_tempest_v_attack_on_venlo",
+   "name": "\u2605 Tempest V - Attack on Venlo",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_heesch",
+     "aircraft": [
+      "typhoon"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_supply_train_near_venlo",
+     "rh_battery_objective_near_venlo"
+    ]
+   },
+   "time_of_day": 8.5,
+   "weather": "clear",
+   "brief": "1944-10-01. Ground-attack sortie in a typhoon from Heesch.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1680,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "b26",
+     "count": 4,
+     "lat": 51.5617,
+     "lon": 5.8844,
+     "alt_m": 1000,
+     "trigger_km": 18,
+     "label": "B25"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 51.5489,
+     "lon": 6.0836,
+     "alt_m": 2500,
+     "trigger_km": 25,
+     "label": "Ambush"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "me262",
+     "count": 8,
+     "lat": 51.1357,
+     "lon": 6.1826,
+     "alt_m": 2000,
+     "trigger_km": 25,
+     "label": "random patrol GER"
+    }
+   ]
+  },
+  {
+   "id": "rh_tempest_v_last_train_to_eindhoven",
+   "name": "\u2605 Tempest V - Last train to Eindhoven",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_grimbergen",
+     "aircraft": [
+      "typhoon"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_supply_train_near_bergen_op_",
+     "rh_convoy_route_supply_train_near_roosendaal",
+     "rh_convoy_route_supply_train_near_breda",
+     "rh_rail_yard_objective_near_bergen_op_zoo",
+     "rh_rail_yard_objective_near_roosendaal",
+     "rh_rail_yard_objective_near_breda",
+     "rh_rail_yard_objective_near_tilburg"
+    ]
+   },
+   "time_of_day": 9.5,
+   "weather": "overcast",
+   "brief": "1944-10-01. Ground-attack sortie in a typhoon from Grimbergen.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1800,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p51",
+     "count": 8,
+     "lat": 51.3834,
+     "lon": 4.4492,
+     "alt_m": 3100,
+     "trigger_km": 18,
+     "label": "P51 flyby"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 51.4467,
+     "lon": 4.7572,
+     "alt_m": 2200,
+     "trigger_km": 25,
+     "label": "Ambush"
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 51.4282,
+     "lon": 5.1202,
+     "alt_m": 2400,
+     "trigger_km": 18,
+     "label": "B25 and escort RAF"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 6,
+     "lat": 51.6001,
+     "lon": 4.746,
+     "alt_m": 1500,
+     "trigger_km": 18,
+     "label": "Spitfire flyby"
+    }
+   ]
+  },
+  {
+   "id": "rh_tempest_v_u_boats_in_rotterdam",
+   "name": "\u2605 Tempest V - U-Boats in Rotterdam",
+   "year": 1944,
+   "date": "1944-09-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_deurne",
+     "aircraft": [
+      "typhoon"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_supply_train_near_rotterdam"
+    ]
+   },
+   "time_of_day": 9.55,
+   "weather": "overcast",
+   "brief": "1944-09-01. Ground-attack sortie in a typhoon from Deurne.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 2340,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "b26",
+     "count": 3,
+     "lat": 51.2621,
+     "lon": 4.5649,
+     "alt_m": 900,
+     "trigger_km": 18,
+     "label": "C47"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p51",
+     "count": 8,
+     "lat": 51.4616,
+     "lon": 4.3651,
+     "alt_m": 1500,
+     "trigger_km": 18,
+     "label": "P51 flyby"
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 51.9101,
+     "lon": 4.156,
+     "alt_m": 1500,
+     "trigger_km": 18,
+     "label": "B25 attack"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 51.9462,
+     "lon": 4.6819,
+     "alt_m": 2500,
+     "trigger_km": 25,
+     "label": "Ambush"
+    }
+   ]
+  },
+  {
+   "id": "rh_typhoon_atlantic_wall",
+   "name": "\u2605 Typhoon - Atlantic wall",
+   "year": 1944,
+   "date": "1944-09-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "typhoon"
+     ],
+     "spawn": {
+      "lat": 51.927,
+      "lon": 3.9262,
+      "heading": 90,
+      "alt": 1500
+     }
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_supply_train_near_den_haag",
+     "rh_battery_artillery_park_near_scheveni",
+     "rh_convoy_route_enemy_column_near_schevening",
+     "rh_convoy_route_enemy_column_near_den_haag"
+    ]
+   },
+   "time_of_day": 16.5,
+   "weather": "scattered",
+   "brief": "1944-09-01. Ground-attack sortie in a typhoon from Manston.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 3360,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 52.0177,
+     "lon": 3.9178,
+     "alt_m": 3100,
+     "trigger_km": 18,
+     "label": "B25 and escort RAF"
+    }
+   ]
+  },
+  {
+   "id": "rh_typhoon_cab_rank",
+   "name": "\u2605 Typhoon - Cab Rank",
+   "year": 1945,
+   "date": "1945-01-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_petit_brogel",
+     "aircraft": [
+      "typhoon"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_enemy_column_near_krefeld",
+     "rh_convoy_route_enemy_column_near_geldern"
+    ]
+   },
+   "time_of_day": 8.5,
+   "weather": "scattered",
+   "brief": "1945-01-01. Ground-attack sortie in a typhoon from Petit Brogel.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 2160,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "b26",
+     "count": 1,
+     "lat": 51.1652,
+     "lon": 5.3731,
+     "alt_m": 600,
+     "trigger_km": 18,
+     "label": "C47"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 8,
+     "lat": 51.2965,
+     "lon": 5.8957,
+     "alt_m": 3000,
+     "trigger_km": 18,
+     "label": "Spitfire flyby"
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 51.089,
+     "lon": 6.1514,
+     "alt_m": 3100,
+     "trigger_km": 18,
+     "label": "B25 and escort RAF"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p47",
+     "count": 5,
+     "lat": 51.1981,
+     "lon": 6.5545,
+     "alt_m": 1300,
+     "trigger_km": 18,
+     "label": "P47 group"
+    }
+   ]
+  },
+  {
+   "id": "rh_typhoon_supporting_tank_advance",
+   "name": "\u2605 Typhoon - Supporting tank advance",
+   "year": 1944,
+   "date": "1944-08-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_petit_brogel",
+     "aircraft": [
+      "typhoon"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_battery_artillery_park_near_maaseik",
+     "rh_convoy_route_enemy_column_near_maaseik",
+     "rh_convoy_route_enemy_column_near_weert"
+    ]
+   },
+   "time_of_day": 17.5,
+   "weather": "scattered",
+   "brief": "1944-08-01. Ground-attack sortie in a typhoon from Petit Brogel.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "p47",
+     "count": 1,
+     "lat": 51.1432,
+     "lon": 5.9338,
+     "alt_m": 1500,
+     "trigger_km": 18,
+     "label": "Recon"
+    }
+   ]
+  },
+  {
+   "id": "rh_typhoon_walcheren_causeway",
+   "name": "\u2605 Typhoon - Walcheren Causeway",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_deurne",
+     "aircraft": [
+      "typhoon"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_enemy_column_near_terneuzer"
+    ]
+   },
+   "time_of_day": 7.5,
+   "weather": "overcast",
+   "brief": "1944-10-01. Ground-attack sortie in a typhoon from Deurne.",
+   "roles": {
+    "Allies": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1920,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "b26",
+     "count": 2,
+     "lat": 51.1518,
+     "lon": 4.5338,
+     "alt_m": 600,
+     "trigger_km": 18,
+     "label": "C47"
+    },
+    {
+     "kind": "flyby",
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 5,
+     "lat": 51.1584,
+     "lon": 4.4872,
+     "alt_m": 2500,
+     "trigger_km": 18,
+     "label": "Spitfire  flyby"
+    },
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "he111",
+     "count": 3,
+     "lat": 51.5419,
+     "lon": 3.7561,
+     "alt_m": 680,
+     "trigger_km": 18,
+     "label": "Ju52 Supplies"
+    }
+   ]
+  },
+  {
+   "id": "bmb_lille_locos",
+   "name": "Fives-Lille Locomotive Works",
+   "year": 1943,
+   "date": "1943-10-09",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "b26",
+      "b25"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "factory_fives_lille",
+     "rail_lille_fives"
+    ]
+   },
+   "time_of_day": 10.5,
+   "weather": "scattered",
+   "brief": "Medium bombers from Kent hit the Fives-Lille locomotive works and its rail yard. Expect flak over the target and 109s on the way home. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "time_limit": 4500,
+   "waves": 2,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "_source": "bomber campaign (bombsight missions)",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 51.0435,
+     "lon": 2.0773,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "rain",
+     "text": "Rain squalls ahead. The ground will be hard to see.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 50.8586,
+     "lon": 2.5299,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Flak ships off the coast ahead! Keep your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 50.7448,
+     "lon": 2.8085,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 51.2,
+     "lon": 1.6943,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 50.9866,
+     "lon": 2.2166,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Allies": {
+     "count": 5,
+     "aircraft": "b26",
+     "alt_m": 2400
+    }
+   }
+  },
+  {
+   "id": "bmb_rouen_oil",
+   "name": "Petit-Couronne Refinery and the Seine Yards",
+   "year": 1944,
+   "date": "1944-05-27",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "b25",
+      "b26"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "factory_rouen_oil",
+     "rail_rouen_sotteville"
+    ]
+   },
+   "time_of_day": 13.0,
+   "weather": "clear",
+   "brief": "Before the invasion: smash the refinery at Petit-Couronne and the Sotteville marshalling yard to choke the German fuel and rail supply in Normandy. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "time_limit": 6360,
+   "waves": 2,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "_source": "bomber campaign (bombsight missions)",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 50.2352,
+     "lon": 0.0189,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 49.8563,
+     "lon": 0.4676,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Flak ships off the coast ahead! Keep your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 49.6232,
+     "lon": 0.7438,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 50.5558,
+     "lon": -0.3609,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 50.1186,
+     "lon": 0.157,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ]
+  },
+  {
+   "id": "bmb_krupp_night",
+   "name": "Night Raid on the Krupp Works, Essen",
+   "year": 1943,
+   "date": "1943-03-05",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_petit_brogel",
+     "aircraft": [
+      "lancaster"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "factory_krupp_essen",
+     "factory_scholven_oil"
+    ]
+   },
+   "time_of_day": 1.5,
+   "weather": "clear",
+   "brief": "Bomber Command goes to the Ruhr by night. Find Essen by the searchlights and flak, hold a steady run at the right settings and put your load on the Krupp works. Night fighters hunt hard, but a dark sky hides you from them. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "time_limit": 3600,
+   "waves": 3,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "_source": "bomber campaign (bombsight missions)",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf110",
+     "count": 3,
+     "lat": 51.2415,
+     "lon": 6.1298,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 51.3318,
+     "lon": 6.5199,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Searchlights ahead, a whole belt of them. Hold your height and do not weave.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 51.3874,
+     "lon": 6.76,
+     "trigger_km": 18
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf110",
+     "count": 4,
+     "lat": 51.2693,
+     "lon": 6.2499,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Allies": {
+     "count": 6,
+     "aircraft": "lancaster",
+     "alt_m": 2600
+    }
+   }
+  },
+  {
+   "id": "bmb_cologne_night",
+   "name": "Night Raid on Cologne",
+   "year": 1943,
+   "date": "1943-06-28",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_asch",
+     "aircraft": [
+      "lancaster"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "factory_ford_cologne",
+     "factory_bayer_leverkusen",
+     "rail_cologne_gremberg"
+    ]
+   },
+   "time_of_day": 2.5,
+   "weather": "clear",
+   "brief": "A night raid on the Ford-Werke at Niehl, the Bayer chemical works at Leverkusen and the Gremberg marshalling yard. Three aiming points: plan the legs on the chart. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "time_limit": 3180,
+   "waves": 3,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "_source": "bomber campaign (bombsight missions)",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf110",
+     "count": 3,
+     "lat": 50.9385,
+     "lon": 6.1766,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 50.9674,
+     "lon": 6.5345,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Searchlights ahead, a whole belt of them. Hold your height and do not weave.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 50.9852,
+     "lon": 6.7548,
+     "trigger_km": 18
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf110",
+     "count": 4,
+     "lat": 50.9474,
+     "lon": 6.2867,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Allies": {
+     "count": 6,
+     "aircraft": "lancaster",
+     "alt_m": 2600
+    }
+   }
+  },
+  {
+   "id": "bmb_channel_ports_1940",
+   "name": "Barges at Boulogne and Calais",
+   "year": 1940,
+   "date": "1940-09-17",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "blenheim"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_boulogne",
+     "port_calais"
+    ]
+   },
+   "time_of_day": 6.8,
+   "weather": "scattered",
+   "brief": "Invasion barges are massing in the Channel ports. Blenheims go in at dawn to bomb Boulogne and Calais harbours before the Luftwaffe wakes up. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "time_limit": 2460,
+   "waves": 2,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "_source": "bomber campaign (bombsight missions)",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 51.0863,
+     "lon": 1.4506,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "rain",
+     "text": "Rain squalls ahead. The ground will be hard to see.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 50.9279,
+     "lon": 1.5154,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Flak ships off the coast ahead! Keep your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 50.8305,
+     "lon": 1.5552,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 51.2204,
+     "lon": 1.3959,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 51.0376,
+     "lon": 1.4706,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ]
+  },
+  {
+   "id": "bmb_minerva_mosquito",
+   "name": "Mosquito Raid on the Minerva Works",
+   "year": 1944,
+   "date": "1944-08-18",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "mosquito"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "factory_minerva_antwerp"
+    ]
+   },
+   "time_of_day": 12.0,
+   "weather": "clear",
+   "brief": "A precision raid by Mosquito: fast, high, one target. Get the settings right and you only need one pass at the Minerva works in Antwerp. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "time_limit": 4980,
+   "waves": 2,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "_source": "bomber campaign (bombsight missions)",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 51.2783,
+     "lon": 2.6413,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 51.2387,
+     "lon": 3.4432,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Flak ships off the coast ahead! Keep your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 51.2144,
+     "lon": 3.9366,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 51.3118,
+     "lon": 1.9629,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 51.2661,
+     "lon": 2.888,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ]
+  },
+  {
+   "id": "bmb_london_docks_night",
+   "name": "London Docks by Night",
+   "year": 1940,
+   "date": "1940-09-07",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "he111",
+      "do17",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "port_royal_docks",
+     "oil_thameshaven"
+    ]
+   },
+   "time_of_day": 22.0,
+   "weather": "clear",
+   "brief": "The Blitz begins. Follow the Thames to the Royal Docks and the Thameshaven oil depot. The dark helps you against the fighters, but the searchlights and flak will find you. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 5700,
+   "waves": 3,
+   "difficulty_hint": 0.65,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "bomber campaign (bombsight missions)",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 3,
+     "lat": 51.1923,
+     "lon": 1.1459,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 51.3347,
+     "lon": 0.6457,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Searchlights ahead, a whole belt of them. Hold your height and do not weave.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 51.4224,
+     "lon": 0.3378,
+     "trigger_km": 18
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "defiant",
+     "count": 4,
+     "lat": 51.2361,
+     "lon": 0.992,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 6,
+     "aircraft": "he111",
+     "alt_m": 2200
+    }
+   }
+  },
+  {
+   "id": "bmb_coventry_night",
+   "name": "Coventry by Night",
+   "year": 1940,
+   "date": "1940-11-14",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "he111",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "factory_coventry_ordnance",
+     "factory_castle_bromwich_spitfire"
+    ]
+   },
+   "time_of_day": 19.8,
+   "weather": "clear",
+   "brief": "A long night flight to the Midlands: the ordnance works at Coventry and the Spitfire factory at Castle Bromwich. Plan the route on the chart. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 10920,
+   "waves": 3,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "bomber campaign (bombsight missions)",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 3,
+     "lat": 51.5682,
+     "lon": 0.4949,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 51.9433,
+     "lon": -0.4083,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Searchlights ahead, a whole belt of them. Hold your height and do not weave.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 52.1742,
+     "lon": -0.9642,
+     "trigger_km": 18
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "defiant",
+     "count": 4,
+     "lat": 51.6836,
+     "lon": 0.217,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 6,
+     "aircraft": "he111",
+     "alt_m": 2400
+    }
+   }
+  },
+  {
+   "id": "bmb_woolston_day",
+   "name": "Supermarine Woolston",
+   "year": 1940,
+   "date": "1940-09-26",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "caen_carpiquet",
+     "aircraft": [
+      "ju88",
+      "he111"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "factory_supermarine_woolston",
+     "port_southampton"
+    ]
+   },
+   "time_of_day": 12.0,
+   "weather": "scattered",
+   "brief": "A daylight raid on the factory building the Spitfire. Fly a steady run over Southampton Water. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 6360,
+   "waves": 2,
+   "difficulty_hint": 0.65,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "bomber campaign (bombsight missions)",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 49.8943,
+     "lon": -0.8409,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "rain",
+     "text": "Rain squalls ahead. The ground will be hard to see.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 50.3407,
+     "lon": -1.0826,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Barrage balloons ahead, over the target. Do not drop below your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 50.6153,
+     "lon": -1.2313,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 49.5166,
+     "lon": -0.6364,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 4,
+     "lat": 50.0316,
+     "lon": -0.9152,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 5,
+     "aircraft": "ju88",
+     "alt_m": 2300
+    }
+   }
+  },
+  {
+   "id": "bmb_rochester_day",
+   "name": "Short Brothers, Rochester",
+   "year": 1940,
+   "date": "1940-08-15",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "do17",
+      "he111"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "factory_short_rochester",
+     "oil_thameshaven"
+    ]
+   },
+   "time_of_day": 9.5,
+   "weather": "clear",
+   "brief": "Dornier raid on the Short Brothers works at Rochester and the oil depot at Thameshaven. Keep a tight line along the Thames estuary. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 3900,
+   "waves": 2,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "bomber campaign (bombsight missions)",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 51.1389,
+     "lon": 1.3446,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 51.2483,
+     "lon": 0.9673,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Barrage balloons ahead, over the target. Do not drop below your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 51.3157,
+     "lon": 0.7352,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 51.0464,
+     "lon": 1.6638,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 4,
+     "lat": 51.1726,
+     "lon": 1.2285,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 5,
+     "aircraft": "do17",
+     "alt_m": 2100
+    }
+   }
+  },
+  {
+   "id": "blitz_black_saturday",
+   "name": "Black Saturday: the Docks Ablaze",
+   "year": 1940,
+   "date": "1940-09-07",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "he111",
+      "ju88",
+      "do17"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "port_royal_docks",
+     "oil_thameshaven"
+    ]
+   },
+   "time_of_day": 17.3,
+   "weather": "clear",
+   "brief": "The first great daylight raid on London, flown into the evening. Hundreds of bombers, fighters swarming: bomb the docks in the late sun and be home before dark. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 5700,
+   "waves": 2,
+   "difficulty_hint": 0.75,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "Blitz campaign",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 51.1923,
+     "lon": 1.1459,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 51.3347,
+     "lon": 0.6457,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Barrage balloons ahead, over the target. Do not drop below your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 51.4224,
+     "lon": 0.3378,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 51.0718,
+     "lon": 1.5692,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 4,
+     "lat": 51.2361,
+     "lon": 0.992,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 8,
+     "aircraft": "he111",
+     "alt_m": 2300
+    }
+   }
+  },
+  {
+   "id": "blitz_london_dawn_fog",
+   "name": "Dawn Over the Thames Fog",
+   "year": 1940,
+   "date": "1940-10-15",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "cap_gris_nez",
+     "aircraft": [
+      "ju88",
+      "he111"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "rail_clapham",
+     "bridge_tower"
+    ]
+   },
+   "time_of_day": 5.8,
+   "weather": "fog",
+   "brief": "A dawn raid under a fog bank. Clapham Junction and the river crossings are the aim, but the fog hides the ground as well as you. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 4560,
+   "waves": 2,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "Blitz campaign",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 51.1172,
+     "lon": 0.8641,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "clear",
+     "text": "There is a break in the weather ahead. The ground is opening up.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 51.2726,
+     "lon": 0.4006,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Barrage balloons ahead, over the target. Do not drop below your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 51.3683,
+     "lon": 0.1153,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 50.9856,
+     "lon": 1.2564,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 4,
+     "lat": 51.165,
+     "lon": 0.7215,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 5,
+     "aircraft": "he111",
+     "alt_m": 2100
+    }
+   }
+  },
+  {
+   "id": "blitz_birmingham_night",
+   "name": "Birmingham: Longbridge by Night",
+   "year": 1940,
+   "date": "1940-11-19",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "he111",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "factory_austin_longbridge",
+     "rail_birmingham_new_street",
+     "factory_castle_bromwich_spitfire"
+    ]
+   },
+   "time_of_day": 20.5,
+   "weather": "overcast",
+   "brief": "Deep into the Midlands under cloud. The beams are unreliable and the ground is blind: hold your heading on the chart and trust the dials. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 11880,
+   "waves": 2,
+   "difficulty_hint": 0.75,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "Blitz campaign",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 3,
+     "lat": 51.5631,
+     "lon": 0.3005,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "clear",
+     "text": "There is a break in the weather ahead. The ground is opening up.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 51.9351,
+     "lon": -0.7232,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Searchlights ahead, a whole belt of them. Hold your height and do not weave.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 52.1641,
+     "lon": -1.3531,
+     "trigger_km": 18
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "defiant",
+     "count": 4,
+     "lat": 51.6776,
+     "lon": -0.0145,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 4,
+     "aircraft": "he111",
+     "alt_m": 2400
+    }
+   }
+  },
+  {
+   "id": "blitz_portsmouth_dusk",
+   "name": "Portsmouth Dockyard at Dusk",
+   "year": 1941,
+   "date": "1941-01-10",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "cherbourg_maupertus",
+     "aircraft": [
+      "he111",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "port_portsmouth",
+     "port_southampton"
+    ]
+   },
+   "time_of_day": 18.2,
+   "weather": "scattered",
+   "brief": "Dusk over the Solent. Fires from the first wave light the way for the second: dockyard first, Southampton docks after. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 5040,
+   "waves": 2,
+   "difficulty_hint": 0.65,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "Blitz campaign",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 50.1326,
+     "lon": -1.3171,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "rain",
+     "text": "Rain squalls ahead. The ground will be hard to see.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 50.4313,
+     "lon": -1.2225,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Barrage balloons ahead, over the target. Do not drop below your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 50.6152,
+     "lon": -1.1642,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 49.8798,
+     "lon": -1.3972,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 4,
+     "lat": 50.2245,
+     "lon": -1.288,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 6,
+     "aircraft": "ju88",
+     "alt_m": 2200
+    }
+   }
+  },
+  {
+   "id": "blitz_plymouth_storm",
+   "name": "Plymouth in the Rain",
+   "year": 1941,
+   "date": "1941-04-21",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "cherbourg_maupertus",
+     "aircraft": [
+      "he111",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "port_plymouth"
+    ]
+   },
+   "time_of_day": 22.5,
+   "weather": "rain",
+   "brief": "A wet moonless night over Devonport dockyard. Cloud and rain hide you from the night fighters, and the target from you. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 7860,
+   "waves": 2,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "Blitz campaign",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 3,
+     "lat": 49.9591,
+     "lon": -2.6099,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "clear",
+     "text": "There is a break in the weather ahead. The ground is opening up.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 50.1505,
+     "lon": -3.3155,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Searchlights ahead, a whole belt of them. Hold your height and do not weave.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 50.2682,
+     "lon": -3.7498,
+     "trigger_km": 18
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "defiant",
+     "count": 4,
+     "lat": 50.018,
+     "lon": -2.827,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 5,
+     "aircraft": "he111",
+     "alt_m": 2000
+    }
+   }
+  },
+  {
+   "id": "blitz_filton_day",
+   "name": "Filton: the Bristol Works",
+   "year": 1940,
+   "date": "1940-09-25",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "caen_carpiquet",
+     "aircraft": [
+      "ju88",
+      "he111"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "factory_filton_bristol",
+     "port_bristol"
+    ]
+   },
+   "time_of_day": 12.5,
+   "weather": "clear",
+   "brief": "A midday raid on the Bristol Aeroplane Company at Filton. A long run over the Channel and Somerset, and the Spitfires will know you are coming. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 9300,
+   "waves": 2,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "Blitz campaign",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 50.1589,
+     "lon": -1.3449,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 50.7691,
+     "lon": -1.8986,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Barrage balloons ahead, over the target. Do not drop below your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 51.1445,
+     "lon": -2.2393,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 49.6426,
+     "lon": -0.8764,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 4,
+     "lat": 50.3466,
+     "lon": -1.5152,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 5,
+     "aircraft": "ju88",
+     "alt_m": 2300
+    }
+   }
+  },
+  {
+   "id": "blitz_weybridge_evening",
+   "name": "Weybridge and Kingston",
+   "year": 1940,
+   "date": "1940-09-04",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "abbeville_drucat",
+     "aircraft": [
+      "he111",
+      "ju88",
+      "do17"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "factory_vickers_weybridge",
+     "factory_hawker_kingston"
+    ]
+   },
+   "time_of_day": 16.8,
+   "weather": "scattered",
+   "brief": "Late afternoon on the aircraft works that build the Wellington and the Hurricane. Two aiming points, a few minutes apart. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 7980,
+   "waves": 2,
+   "difficulty_hint": 0.65,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "Blitz campaign",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 50.6578,
+     "lon": 0.8694,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "rain",
+     "text": "Rain squalls ahead. The ground will be hard to see.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 50.977,
+     "lon": 0.2734,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Barrage balloons ahead, over the target. Do not drop below your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 51.1735,
+     "lon": -0.0933,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 50.3876,
+     "lon": 1.3736,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 4,
+     "lat": 50.756,
+     "lon": 0.686,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 5,
+     "aircraft": "do17",
+     "alt_m": 2100
+    }
+   }
+  },
+  {
+   "id": "blitz_swansea_night",
+   "name": "Swansea: Three Nights Blitz",
+   "year": 1941,
+   "date": "1941-02-19",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "cherbourg_maupertus",
+     "aircraft": [
+      "he111",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "port_swansea"
+    ]
+   },
+   "time_of_day": 23.5,
+   "weather": "clear",
+   "brief": "The longest flight of the Blitz: across the Bristol Channel to the docks of South Wales, deep in the night. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 10380,
+   "waves": 2,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "Blitz campaign",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 3,
+     "lat": 50.4753,
+     "lon": -2.5032,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 50.9862,
+     "lon": -3.1428,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Searchlights ahead, a whole belt of them. Hold your height and do not weave.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 51.3006,
+     "lon": -3.5364,
+     "trigger_km": 18
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "defiant",
+     "count": 4,
+     "lat": 50.6325,
+     "lon": -2.7,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 4,
+     "aircraft": "he111",
+     "alt_m": 2200
+    }
+   }
+  },
+  {
+   "id": "blitz_derby_predawn",
+   "name": "Derby: Rolls-Royce before Sunrise",
+   "year": 1941,
+   "date": "1941-07-27",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "he111",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "factory_rolls_royce_derby"
+    ]
+   },
+   "time_of_day": 4.3,
+   "weather": "clear",
+   "brief": "The engines that power the Spitfire come from Derby. A predawn raid with a clear sky: dark enough to hide you, light enough to find the works. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 12000,
+   "waves": 2,
+   "difficulty_hint": 0.8,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "Blitz campaign",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 3,
+     "lat": 51.7786,
+     "lon": 0.5218,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "overcast",
+     "text": "Cloud is closing in ahead. Visibility dropping.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 52.284,
+     "lon": -0.3648,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Searchlights ahead, a whole belt of them. Hold your height and do not weave.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 52.595,
+     "lon": -0.9104,
+     "trigger_km": 18
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "defiant",
+     "count": 4,
+     "lat": 51.9341,
+     "lon": 0.249,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 4,
+     "aircraft": "he111",
+     "alt_m": 2300
+    }
+   }
+  },
+  {
+   "id": "blitz_southampton_night",
+   "name": "Southampton: the Winter Raid",
+   "year": 1940,
+   "date": "1940-11-30",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "cherbourg_maupertus",
+     "aircraft": [
+      "he111",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "factory_supermarine_woolston",
+     "port_southampton"
+    ]
+   },
+   "time_of_day": 19.2,
+   "weather": "overcast",
+   "brief": "A winter night over Southampton Water. Fires fill the sky and the flak is heavy. Bomber crews: press N for the bombsight (dial the speed and altitude shown on your instruments so the hit marker is true), M for the chart; your gunners cover you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "time_limit": 5280,
+   "waves": 2,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "_source": "Blitz campaign",
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 50.1708,
+     "lon": -1.4322,
+     "alt_m": 2500,
+     "trigger_km": 28,
+     "label": "intercept_out"
+    },
+    {
+     "kind": "weather",
+     "weather": "clear",
+     "text": "There is a break in the weather ahead. The ground is opening up.",
+     "speaker": "Navigator",
+     "label": "WEATHER CHANGING",
+     "lat": 50.4932,
+     "lon": -1.4088,
+     "trigger_km": 22
+    },
+    {
+     "kind": "message",
+     "text": "Barrage balloons ahead, over the target. Do not drop below your height.",
+     "speaker": "Crew",
+     "label": "HEAVY DEFENCES AHEAD",
+     "lat": 50.6916,
+     "lon": -1.3944,
+     "trigger_km": 18
+    },
+    {
+     "kind": "escort",
+     "hostile": false,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 49.898,
+     "lon": -1.452,
+     "alt_m": 3000,
+     "trigger_km": 30,
+     "label": "escort"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 4,
+     "lat": 50.27,
+     "lon": -1.425,
+     "alt_m": 2200,
+     "trigger_km": 30,
+     "after_done": 1,
+     "label": "intercept_home"
+    }
+   ],
+   "wing_by_side": {
+    "Axis": {
+     "count": 6,
+     "aircraft": "ju88",
+     "alt_m": 2200
+    }
+   }
+  },
+  {
+   "id": "dday_utah_dawn",
+   "name": "D-Day: Utah Beach, First Light",
+   "year": 1944,
+   "date": "1944-06-06",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "typhoon",
+      "p47",
+      "b26"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "cherbourg_maupertus",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "battery_azeville",
+     "battery_crisbecq",
+     "battery_pointe_du_hoc"
+    ],
+    "Axis": [
+     "convoy_utah"
+    ]
+   },
+   "time_of_day": 5.3,
+   "weather": "overcast",
+   "brief": "Sixth of June, before dawn. Four thousand ships are off the Cotentin. At Utah Beach the Fourth Division goes ashore at half past six. Your job is to silence the batteries at Azeville and Crisbecq, and the guns on the Pointe du Hoc, before the first landing craft touch down. Marauders go in first, rocket Typhoons after. Look for the smoke and for the boats in the water below you, and do not hit our own ships. (Axis: Alarm! The invasion has begun. Landing craft are heading for the coast in their hundreds under a roof of fighters.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "strafe"
+   },
+   "protect": {},
+   "time_limit": 4020,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "ground_attack"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dday",
+    "beaches": [
+     "utah"
+    ],
+    "phase": "predawn",
+    "intensity": 1.3
+   },
+   "wing_by_side": {
+    "Allies": {
+     "count": 5,
+     "aircraft": "b26",
+     "alt_m": 2300
+    }
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 49.62,
+     "lon": -1.0,
+     "trigger_km": 30,
+     "text": "The fleet is below you. Battleships are firing, look at the flashes on the horizon.",
+     "speaker": "Control",
+     "label": "THE FLEET"
+    },
+    {
+     "kind": "ambush",
+     "lat": 49.55,
+     "lon": -1.15,
+     "trigger_km": 20,
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 2,
+     "alt_m": 1200,
+     "label": "luftwaffe_dawn"
+    },
+    {
+     "kind": "message",
+     "lat": 49.45,
+     "lon": -1.2,
+     "trigger_km": 14,
+     "text": "The first boats are running in. Hit the batteries before they reach the sand.",
+     "speaker": "Control",
+     "label": "LANDING CRAFT"
+    }
+   ]
+  },
+  {
+   "id": "dday_omaha_h_hour",
+   "name": "D-Day: Omaha, H-Hour",
+   "year": 1944,
+   "date": "1944-06-06",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "p47",
+      "typhoon",
+      "p51"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "caen_carpiquet",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "battery_wn62_omaha",
+     "battery_pointe_du_hoc",
+     "battery_longues"
+    ],
+    "Axis": [
+     "convoy_omaha"
+    ]
+   },
+   "time_of_day": 6.4,
+   "weather": "overcast",
+   "brief": "H-Hour at Omaha, and it is going badly. The bombers dropped too far inland and the German strongpoints are untouched. The first waves are pinned on the beach below the bluffs. Hit the strongpoint at Colleville, the Pointe du Hoc, and the Longues battery that still has the fleet under fire. Come in low, the cloud is at two thousand, and keep clear of the naval gunfire. (Axis: The Americans are landing at Omaha, but our coast guns have them pinned on the beach. If you can break up the second wave of landing craft, the first will be thrown back into the sea.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "strafe"
+   },
+   "protect": {},
+   "time_limit": 3420,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "ground_attack"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dday",
+    "beaches": [
+     "omaha"
+    ],
+    "phase": "assault",
+    "intensity": 1.6
+   },
+   "wing_by_side": {
+    "Allies": {
+     "count": 6,
+     "aircraft": "b26",
+     "alt_m": 2400
+    }
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 49.5,
+     "lon": -0.85,
+     "trigger_km": 22,
+     "text": "Heavy fire on Omaha. The infantry are pinned on the shingle. Every bunker you hit is a hundred lives.",
+     "speaker": "Control",
+     "label": "OMAHA"
+    },
+    {
+     "kind": "ambush",
+     "lat": 49.4,
+     "lon": -0.8,
+     "trigger_km": 18,
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 2,
+     "alt_m": 900,
+     "label": "jabo_pair"
+    },
+    {
+     "kind": "flyby",
+     "lat": 49.45,
+     "lon": -0.95,
+     "trigger_km": 20,
+     "hostile": false,
+     "aircraft": "typhoon",
+     "count": 4,
+     "alt_m": 800,
+     "label": "typhoon_flight"
+    }
+   ]
+  },
+  {
+   "id": "dday_gold_juno_sword",
+   "name": "D-Day: Gold, Juno and Sword",
+   "year": 1944,
+   "date": "1944-06-06",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "typhoon",
+      "p51",
+      "tempest"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "caen_carpiquet",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "battery_mont_fleury",
+     "battery_courseulles",
+     "battery_riva_bella",
+     "battery_longues"
+    ],
+    "Axis": [
+     "battery_mont_fleury",
+     "battery_courseulles",
+     "battery_riva_bella"
+    ]
+   },
+   "time_of_day": 7.3,
+   "weather": "clear",
+   "brief": "By half past seven the British and Canadians are going ashore on three beaches, with the tanks swimming in beside the infantry. Rockets and bombs on the strongpoints at Mont Fleury, Courseulles and Riva Bella, and the big guns at Longues that still reach the fleet. Then keep the Fw 190s off the beach. Visibility is perfect: you will see the whole invasion laid out below you. (Axis: The British are landing on a front of twenty miles and our coast batteries are the only thing holding them. Protect the strongpoints at Mont Fleury, Courseulles and Riva Bella from the bombers and Typhoons.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "battery_mont_fleury",
+     "battery_courseulles",
+     "battery_riva_bella"
+    ]
+   },
+   "time_limit": 4320,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "defend"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dday",
+    "beaches": [
+     "gold",
+     "juno",
+     "sword"
+    ],
+    "phase": "assault",
+    "intensity": 1.2
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 49.45,
+     "lon": -0.55,
+     "trigger_km": 28,
+     "text": "Landing craft by the hundred. The British and Canadian beaches are in front of you.",
+     "speaker": "Control",
+     "label": "THE BEACHES"
+    },
+    {
+     "kind": "ambush",
+     "lat": 49.2,
+     "lon": -0.4,
+     "trigger_km": 22,
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 3,
+     "alt_m": 1500,
+     "label": "jg26"
+    },
+    {
+     "kind": "message",
+     "lat": 49.3,
+     "lon": -0.3,
+     "trigger_km": 16,
+     "text": "Sword is under fire from Riva Bella. Hit it.",
+     "speaker": "Control",
+     "label": "RIVA BELLA"
+    }
+   ]
+  },
+  {
+   "id": "dday_night_airborne",
+   "name": "D-Day: Night of the Airborne",
+   "year": 1944,
+   "date": "1944-06-06",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "lancaster",
+      "mosquito"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "caen_carpiquet",
+     "aircraft": [
+      "bf110",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "bridge_pegasus",
+     "battery_merville"
+    ],
+    "Axis": []
+   },
+   "time_of_day": 0.6,
+   "weather": "clear",
+   "brief": "Just after midnight, sixth of June. Six Horsa gliders are about to land beside the canal bridges at Benouville, and the Merville battery must be silenced before it can fire on the beaches at dawn. Strike the targets on the pathfinders' marks, then draw the night fighters away from the transport stream. It is dark, with a good moon. Keep radio silence over the coast. (Axis: Alarm! Strong formations are over the Cotentin in the dark and parachutes are falling south of Caen. Night-fighter crews are to take off at once and engage the transport stream.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "sweep"
+   },
+   "protect": {},
+   "time_limit": 5520,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "dogfight"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "wing_by_side": {
+    "Allies": {
+     "count": 6,
+     "aircraft": "lancaster",
+     "alt_m": 1700
+    }
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 50.2,
+     "lon": -0.6,
+     "trigger_km": 30,
+     "text": "Pathfinders are on the ground. Gliders are cast off over the coast.",
+     "speaker": "Control",
+     "label": "THE AIRBORNE"
+    },
+    {
+     "kind": "message",
+     "lat": 49.3,
+     "lon": -0.35,
+     "trigger_km": 18,
+     "text": "Searchlights on the right. Light flak over Ranville. Keep your height.",
+     "speaker": "Navigator",
+     "label": "FLAK"
+    },
+    {
+     "kind": "ambush",
+     "lat": 49.35,
+     "lon": -0.6,
+     "trigger_km": 24,
+     "hostile": true,
+     "aircraft": "bf110",
+     "count": 2,
+     "alt_m": 1800,
+     "label": "night_fighters"
+    }
+   ]
+  },
+  {
+   "id": "dday_beachhead_noon",
+   "name": "D-Day: The Beachhead",
+   "year": 1944,
+   "date": "1944-06-06",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "spitfire",
+      "p51",
+      "tempest"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "caen_carpiquet",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_neptune"
+    ],
+    "Axis": [
+     "convoy_neptune"
+    ]
+   },
+   "time_of_day": 12.0,
+   "weather": "clear",
+   "brief": "Noon over the beachhead. Troops, tanks and guns are coming ashore at every beach and the Luftwaffe knows it. A handful of Fw 190s are trying to get through the patrols. Defend the invasion fleet. Stay at medium height, keep your eyes on the low ground, and do not follow anyone down into our own flak. (Axis: Sixth of June, noon. The sky is not ours, but we are told the fleet must be hit.)",
+   "roles": {
+    "Allies": "defend",
+    "Axis": "strafe"
+   },
+   "protect": {
+    "Allies": [
+     "convoy_neptune"
+    ]
+   },
+   "time_limit": 3720,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "defend",
+    "Axis": "ground_attack"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dday",
+    "beaches": [
+     "gold",
+     "sword",
+     "omaha"
+    ],
+    "phase": "buildup",
+    "intensity": 0.9
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 49.6,
+     "lon": -0.6,
+     "trigger_km": 30,
+     "text": "The fleet is unloading. Barrage balloons over the transports. Remember your recognition stripes.",
+     "speaker": "Control",
+     "label": "ON PATROL"
+    },
+    {
+     "kind": "raid",
+     "lat": 49.3,
+     "lon": 0.0,
+     "trigger_km": 25,
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 4,
+     "alt_m": 1000,
+     "label": "luftwaffe_noon"
+    },
+    {
+     "kind": "flyby",
+     "lat": 49.8,
+     "lon": -0.4,
+     "trigger_km": 25,
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 4,
+     "alt_m": 3000,
+     "label": "top_cover"
+    }
+   ]
+  },
+  {
+   "id": "dday_panzer_counter",
+   "name": "D-Day: The Panzer Counter-Attack",
+   "year": 1944,
+   "date": "1944-06-06",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "typhoon",
+      "p47"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "caen_carpiquet",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_21panzer"
+    ],
+    "Axis": [
+     "convoy_21panzer"
+    ]
+   },
+   "time_of_day": 17.8,
+   "weather": "clear",
+   "brief": "Evening of D-Day. The Twenty-first Panzer Division is rolling north from Caen to throw the British back into the sea. A column of tanks and half-tracks is on the Bi\u00e9ville road. Typhoons with rockets, Thunderbolts with bombs: hit the column before it reaches Sword. Strafe first, then rockets, and watch for flak wagons in the column. (Axis: Twenty-first Panzer is moving on Sword, our one real chance to throw the English back into the sea. The enemy fighter-bombers are over the road and the column must get through.)",
+   "roles": {
+    "Allies": "strafe",
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "convoy_21panzer"
+    ]
+   },
+   "time_limit": 4920,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "ground_attack",
+    "Axis": "defend"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dday",
+    "beaches": [
+     "sword"
+    ],
+    "phase": "counter",
+    "intensity": 1.0
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 49.1,
+     "lon": -0.4,
+     "trigger_km": 28,
+     "text": "Twenty-first Panzer is on the road from Caen, tanks in the open. Roads are dusty, they will be easy to see.",
+     "speaker": "Control",
+     "label": "PANZERS"
+    },
+    {
+     "kind": "ambush",
+     "lat": 49.2,
+     "lon": -0.45,
+     "trigger_km": 20,
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 3,
+     "alt_m": 1200,
+     "label": "jabo_escort"
+    },
+    {
+     "kind": "message",
+     "lat": 49.25,
+     "lon": -0.35,
+     "trigger_km": 12,
+     "text": "Smoke on the road. That is the lead column.",
+     "speaker": "Control",
+     "label": "LEAD COLUMN"
+    }
+   ]
+  },
+  {
+   "id": "dday_mulberry_dusk",
+   "name": "D-Day: Mulberry at Dusk",
+   "year": 1944,
+   "date": "1944-06-09",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "spitfire",
+      "p51",
+      "tempest"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "cherbourg_maupertus",
+     "aircraft": [
+      "ju88",
+      "he111"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_mulberry"
+    ],
+    "Axis": [
+     "convoy_mulberry"
+    ]
+   },
+   "time_of_day": 19.8,
+   "weather": "clear",
+   "brief": "Nine days after the landings, the Mulberry harbour at Arromanches is nearly ready, and the Luftwaffe knows it. Their bombers are coming in at dusk, out of the sun, heading for the supply ships. It is the same trick as every night this week. Patrol over the harbour, break up the raid, and bring the bombers down before they release. (Axis: Ninth of June. The Allies have built an artificial harbour off Arromanches and every day it unloads more tanks and guns than we can destroy.)",
+   "roles": {
+    "Allies": "defend",
+    "Axis": "strike"
+   },
+   "protect": {
+    "Allies": [
+     "convoy_mulberry"
+    ]
+   },
+   "time_limit": 2040,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "defend",
+    "Axis": "bombing"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dday",
+    "beaches": [
+     "gold"
+    ],
+    "phase": "buildup",
+    "intensity": 1.0
+   },
+   "wing_by_side": {
+    "Axis": {
+     "count": 5,
+     "aircraft": "ju88",
+     "alt_m": 2400
+    }
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 49.7,
+     "lon": -0.5,
+     "trigger_km": 28,
+     "text": "The harbour is almost finished. Sunken blockships make a breakwater, and every stone is covered in guns.",
+     "speaker": "Control",
+     "label": "MULBERRY"
+    },
+    {
+     "kind": "raid",
+     "lat": 49.3,
+     "lon": -0.2,
+     "trigger_km": 22,
+     "hostile": true,
+     "aircraft": "ju88",
+     "count": 3,
+     "alt_m": 2200,
+     "label": "dusk_raid"
+    },
+    {
+     "kind": "flyby",
+     "lat": 49.75,
+     "lon": -0.6,
+     "trigger_km": 25,
+     "hostile": false,
+     "aircraft": "spitfire",
+     "count": 4,
+     "alt_m": 2800,
+     "label": "night_patrol"
+    }
+   ]
+  },
+  {
+   "id": "dunkirk_first_light",
+   "name": "Dunkirk: First Light",
+   "year": 1940,
+   "date": "1940-05-28",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "ju87",
+      "he111",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_dunkirk_evac"
+    ],
+    "Axis": [
+     "port_dunkirk"
+    ]
+   },
+   "time_of_day": 5.0,
+   "weather": "fog",
+   "brief": "Twenty-eighth of May. The army is being pushed back onto the Dunkirk beaches and there is a thick fog on the coast. In the fog, the navy and the little ships are lifting men off. Patrol the coast, find the Stukas before they reach the evacuation ships, and stay out of the cloud over the town. The Hurricanes will cover the east beaches. Good hunting. (Axis: The British are trapped against the sea at Dunkirk and the F\u00fchrer has halted the panzers. It is up to the Luftwaffe to finish the job from the air.)",
+   "roles": {
+    "Allies": "defend",
+    "Axis": "strike"
+   },
+   "protect": {
+    "Allies": [
+     "convoy_dunkirk_evac"
+    ]
+   },
+   "time_limit": 1560,
+   "waves": 3,
+   "difficulty_hint": 0.45,
+   "modes": {
+    "Allies": "defend",
+    "Axis": "bombing"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dunkirk",
+    "beaches": [
+     "malo",
+     "bray",
+     "mole"
+    ],
+    "intensity": 0.8
+   },
+   "wing_by_side": {
+    "Axis": {
+     "count": 5,
+     "aircraft": "ju87",
+     "alt_m": 1800
+    }
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 51.1,
+     "lon": 2.0,
+     "trigger_km": 28,
+     "text": "The Channel is full of boats. Destroyers, ferries, tugs and fishing smacks, all heading for the beaches.",
+     "speaker": "Control",
+     "label": "THE LITTLE SHIPS"
+    },
+    {
+     "kind": "ambush",
+     "lat": 51.1,
+     "lon": 2.3,
+     "trigger_km": 18,
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 3,
+     "alt_m": 1800,
+     "label": "109_patrol"
+    }
+   ]
+  },
+  {
+   "id": "dunkirk_mole_stukas",
+   "name": "Dunkirk: The Mole",
+   "year": 1940,
+   "date": "1940-05-29",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "ju87",
+      "he111",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_dunkirk",
+     "convoy_dunkirk_evac"
+    ],
+    "Axis": [
+     "port_dunkirk",
+     "convoy_dunkirk_evac"
+    ]
+   },
+   "time_of_day": 15.0,
+   "weather": "overcast",
+   "brief": "Twenty-ninth of May. The East Mole is the best way off the beach: a mile of jetty with a destroyer on each side, taking a thousand men at a time. The Stukas know it. Everything depends on keeping them off the Mole. Climb to angels fifteen, find the dive bombers before they start their dives, and never mind the escort. (Axis: The Mole at Dunkirk is the key to the evacuation: a long concrete jetty at which the destroyers can load a thousand men an hour. If we sink a ship alongside it, we block it.)",
+   "roles": {
+    "Allies": "defend",
+    "Axis": "strike"
+   },
+   "protect": {
+    "Allies": [
+     "port_dunkirk",
+     "convoy_dunkirk_evac"
+    ]
+   },
+   "time_limit": 1560,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "defend",
+    "Axis": "bombing"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dunkirk",
+    "beaches": [
+     "mole",
+     "malo",
+     "bray",
+     "lapanne"
+    ],
+    "intensity": 1.2
+   },
+   "wing_by_side": {
+    "Axis": {
+     "count": 6,
+     "aircraft": "ju87",
+     "alt_m": 2400
+    }
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 51.12,
+     "lon": 2.1,
+     "trigger_km": 26,
+     "text": "The Mole is crowded with men. A destroyer is alongside, loading from both sides.",
+     "speaker": "Control",
+     "label": "THE MOLE"
+    },
+    {
+     "kind": "raid",
+     "lat": 51.1,
+     "lon": 2.5,
+     "trigger_km": 18,
+     "hostile": true,
+     "aircraft": "ju87",
+     "count": 4,
+     "alt_m": 2600,
+     "label": "stuka_dive"
+    },
+    {
+     "kind": "ambush",
+     "lat": 51.05,
+     "lon": 2.3,
+     "trigger_km": 20,
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 2,
+     "alt_m": 2000,
+     "label": "escort_109"
+    }
+   ]
+  },
+  {
+   "id": "dunkirk_smoke_pall",
+   "name": "Dunkirk: The Perimeter",
+   "year": 1940,
+   "date": "1940-05-31",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "hurricane",
+      "spitfire"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "saint_omer",
+     "aircraft": [
+      "bf109",
+      "bf110"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_dunkirk_perimeter"
+    ],
+    "Axis": [
+     "convoy_dunkirk_perimeter"
+    ]
+   },
+   "time_of_day": 10.0,
+   "weather": "clear",
+   "brief": "Thirty-first of May. Our infantry are holding a perimeter around the port with rifles and a handful of guns, and German armour is closing in from the south. Hurricanes and Spitfires are to strafe the column on the Bergues road. Fly low, hit the lorries and the tanks, and climb away before the flak finds you. (Axis: Thirty-first of May. Our panzers and infantry are advancing on the port from the south.)",
+   "roles": {
+    "Allies": "strafe",
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "convoy_dunkirk_perimeter"
+    ]
+   },
+   "time_limit": 2640,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack",
+    "Axis": "defend"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dunkirk",
+    "beaches": [
+     "malo",
+     "bray"
+    ],
+    "intensity": 0.9
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 50.98,
+     "lon": 2.2,
+     "trigger_km": 24,
+     "text": "German armour is closing on the perimeter at Bergues. The army is holding with rifles and anti-tank guns.",
+     "speaker": "Control",
+     "label": "THE PERIMETER"
+    },
+    {
+     "kind": "ambush",
+     "lat": 50.95,
+     "lon": 2.3,
+     "trigger_km": 20,
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 3,
+     "alt_m": 1500,
+     "label": "109_cover"
+    },
+    {
+     "kind": "message",
+     "lat": 51.0,
+     "lon": 2.4,
+     "trigger_km": 12,
+     "text": "Tanks to the south of the canal. They are in the open.",
+     "speaker": "Control",
+     "label": "PANZERS"
+    }
+   ]
+  },
+  {
+   "id": "dunkirk_night_raid",
+   "name": "Dunkirk: The Night Raid",
+   "year": 1940,
+   "date": "1940-05-30",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "defiant",
+      "hurricane"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "he111"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_dunkirk"
+    ],
+    "Axis": [
+     "port_dunkirk",
+     "convoy_la_panne"
+    ]
+   },
+   "time_of_day": 22.5,
+   "weather": "clear",
+   "brief": "Night of the thirtieth. The evacuation continues in the dark, with the burning oil tanks lighting the beaches. The Heinkels are coming to finish the job. Defiants and Hurricanes: patrol the harbour at night, find the bombers by their exhaust glow and bring them down before they bomb the ships. Do not use your landing lights. (Axis: Night of the thirtieth. The enemy evacuates in the dark and every ship that leaves is a battle lost.)",
+   "roles": {
+    "Allies": "defend",
+    "Axis": "strike"
+   },
+   "protect": {
+    "Allies": [
+     "port_dunkirk"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "defend",
+    "Axis": "bombing"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dunkirk",
+    "beaches": [
+     "mole",
+     "malo",
+     "bray"
+    ],
+    "intensity": 1.1
+   },
+   "wing_by_side": {
+    "Axis": {
+     "count": 5,
+     "aircraft": "he111",
+     "alt_m": 1900
+    }
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 51.2,
+     "lon": 1.9,
+     "trigger_km": 26,
+     "text": "The oil tanks are still burning. The glow is visible from a hundred miles. Follow it.",
+     "speaker": "Navigator",
+     "label": "THE GLOW"
+    },
+    {
+     "kind": "message",
+     "lat": 51.07,
+     "lon": 2.35,
+     "trigger_km": 14,
+     "text": "Searchlights and tracer over the harbour. Light flak on the Mole.",
+     "speaker": "Crew",
+     "label": "FLAK"
+    },
+    {
+     "kind": "ambush",
+     "lat": 51.1,
+     "lon": 2.0,
+     "trigger_km": 20,
+     "hostile": true,
+     "aircraft": "defiant",
+     "count": 2,
+     "alt_m": 2200,
+     "label": "night_fighters"
+    }
+   ]
+  },
+  {
+   "id": "dunkirk_black_friday",
+   "name": "Dunkirk: Black Friday",
+   "year": 1940,
+   "date": "1940-06-01",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "ju87",
+      "he111",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_dunkirk_evac",
+     "convoy_la_panne"
+    ],
+    "Axis": [
+     "convoy_dunkirk_evac",
+     "convoy_la_panne",
+     "port_dunkirk"
+    ]
+   },
+   "time_of_day": 7.5,
+   "weather": "clear",
+   "brief": "First of June, the worst day of the evacuation. The sun is out and the Luftwaffe knows it. The Stukas are coming in all day, wave after wave, and the destroyers and troopships are taking terrible losses. Every Spitfire we can put up is needed. Stay over the ships, fight the Stukas before they dive, and keep going until you run out of ammunition. (Axis: First of June. Clear skies at last, and the enemy is still lifting men from the beaches.)",
+   "roles": {
+    "Allies": "defend",
+    "Axis": "strike"
+   },
+   "protect": {
+    "Allies": [
+     "convoy_dunkirk_evac",
+     "convoy_la_panne"
+    ]
+   },
+   "time_limit": 1560,
+   "waves": 3,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Allies": "defend",
+    "Axis": "bombing"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dunkirk",
+    "beaches": [
+     "mole",
+     "malo",
+     "bray",
+     "lapanne"
+    ],
+    "intensity": 1.7
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 51.1,
+     "lon": 2.0,
+     "trigger_km": 28,
+     "text": "Stukas in the sun. A great stack of them, nine thousand feet. Dive bombers over the ships.",
+     "speaker": "Control",
+     "label": "STUKAS"
+    },
+    {
+     "kind": "ambush",
+     "lat": 51.08,
+     "lon": 2.3,
+     "trigger_km": 20,
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 4,
+     "alt_m": 2200,
+     "label": "jg27"
+    },
+    {
+     "kind": "raid",
+     "lat": 51.15,
+     "lon": 2.5,
+     "trigger_km": 20,
+     "hostile": true,
+     "aircraft": "ju87",
+     "count": 4,
+     "alt_m": 2600,
+     "label": "second_wave"
+    }
+   ]
+  },
+  {
+   "id": "dunkirk_gravelines_guns",
+   "name": "Dunkirk: The Gun Line",
+   "year": 1940,
+   "date": "1940-06-02",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "blenheim"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "bf109",
+      "bf110"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "battery_gravelines",
+     "battery_nieuport"
+    ],
+    "Axis": [
+     "battery_gravelines",
+     "battery_nieuport"
+    ]
+   },
+   "time_of_day": 14.0,
+   "weather": "overcast",
+   "brief": "Second of June. German heavy guns at Gravelines and at Nieuport are shelling the escape route, and the destroyers have to run past them to reach the beaches. Blenheims will bomb them from medium height. The cloud will give you cover to the coast, but it breaks up over the target. Keep a tight formation and let the escort do its work. (Axis: Second of June. Our heavy guns at Gravelines and Nieuport are shelling the English embarkation, but the English bombers will try to silence them.)",
+   "roles": {
+    "Allies": "strike",
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "battery_gravelines",
+     "battery_nieuport"
+    ]
+   },
+   "time_limit": 2340,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "bombing",
+    "Axis": "defend"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "wing_by_side": {
+    "Allies": {
+     "count": 4,
+     "aircraft": "blenheim",
+     "alt_m": 2100
+    }
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 51.1,
+     "lon": 1.7,
+     "trigger_km": 24,
+     "text": "Heavy guns on the coast at Gravelines. Their shells are hitting the Mole and the Dunkirk roads.",
+     "speaker": "Control",
+     "label": "HEAVY GUNS"
+    },
+    {
+     "kind": "ambush",
+     "lat": 51.05,
+     "lon": 2.0,
+     "trigger_km": 20,
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 3,
+     "alt_m": 2000,
+     "label": "109_intercept"
+    }
+   ]
+  },
+  {
+   "id": "dunkirk_last_day",
+   "name": "Dunkirk: The Last Day",
+   "year": 1940,
+   "date": "1940-06-04",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "manston",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    },
+    {
+     "side": "Axis",
+     "start_airfield": "saint_omer",
+     "aircraft": [
+      "bf109",
+      "bf110"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_dunkirk_evac"
+    ],
+    "Axis": [
+     "convoy_dunkirk_evac"
+    ]
+   },
+   "time_of_day": 4.8,
+   "weather": "fog",
+   "brief": "Fourth of June, before dawn. The last of the army is going aboard, and the rearguard is still on the Mole. Three hundred thousand men have been taken off, and the Admiralty has ordered the last ships to leave with the dawn. The Luftwaffe will be back when the fog clears. One last patrol: keep them off the ships until the final boats are away. (Axis: The enemy is still on the beaches at dawn and his ships are loading the last men. If the fog clears, strike the last convoy off the Mole.)",
+   "roles": {
+    "Allies": "defend",
+    "Axis": "strafe"
+   },
+   "protect": {
+    "Allies": [
+     "convoy_dunkirk_evac"
+    ]
+   },
+   "time_limit": 1400,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "defend",
+    "Axis": "ground_attack"
+   },
+   "_source": "D-Day / Dunkirk campaign",
+   "scene": {
+    "kind": "dunkirk",
+    "beaches": [
+     "mole",
+     "malo"
+    ],
+    "intensity": 0.6
+   },
+   "events": [
+    {
+     "kind": "message",
+     "lat": 51.1,
+     "lon": 1.9,
+     "trigger_km": 26,
+     "text": "The last ships are loading. The rearguard are holding the line at the Mole.",
+     "speaker": "Control",
+     "label": "THE LAST SHIPS"
+    },
+    {
+     "kind": "ambush",
+     "lat": 51.08,
+     "lon": 2.2,
+     "trigger_km": 18,
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 2,
+     "alt_m": 1200,
+     "label": "dawn_patrol"
+    }
+   ]
+  },
+  {
+   "id": "op_kent_dawn_patrol",
+   "name": "\u25c6 Dawn Patrol over the Weald",
+   "year": 1940,
+   "date": "1940-09-07",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "kenley",
+     "aircraft": [
+      "hurricane",
+      "spitfire"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "radar_pevensey_ch"
+    ]
+   },
+   "time_of_day": 6.0,
+   "weather": "fog",
+   "brief": "Mist lies over the Weald as Pevensey reports plots building over the Channel. Climb out of Kenley and meet the first wave before it reaches the coast.",
+   "roles": {
+    "Allies": "defend"
+   },
+   "protect": {
+    "Allies": [
+     "radar_pevensey_ch"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.45,
+   "modes": {
+    "Allies": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 6,
+     "lat": 50.95,
+     "lon": 0.9,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "Fighter screen"
+    },
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "he111",
+     "count": 8,
+     "lat": 50.85,
+     "lon": 0.6,
+     "alt_m": 4200,
+     "trigger_km": 20,
+     "label": "Bomber stream"
+    }
+   ]
+  },
+  {
+   "id": "op_solent_watch",
+   "name": "\u25c6 Solent Watch",
+   "year": 1940,
+   "date": "1940-08-16",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_portsmouth"
+    ]
+   },
+   "time_of_day": 13.0,
+   "weather": "clear",
+   "brief": "Ju 87s are diving on the Portsmouth approaches. Get above them from Tangmere and keep the dockyard intact.",
+   "roles": {
+    "Allies": "defend"
+   },
+   "protect": {
+    "Allies": [
+     "port_portsmouth"
+    ]
+   },
+   "time_limit": 1400,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "ju87",
+     "count": 8,
+     "lat": 50.7,
+     "lon": -1.05,
+     "alt_m": 2800,
+     "trigger_km": 25,
+     "label": "Stuka formation"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 6,
+     "lat": 50.6,
+     "lon": -1.0,
+     "alt_m": 4800,
+     "trigger_km": 25,
+     "label": "Escort"
+    }
+   ]
+  },
+  {
+   "id": "op_peewit_convoy",
+   "name": "\u25c6 Convoy Peewit Cover",
+   "year": 1940,
+   "date": "1940-07-25",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "hawkinge",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_thames_dover"
+    ]
+   },
+   "time_of_day": 11.0,
+   "weather": "scattered",
+   "brief": "The Channel convoy is steaming past Dover with E-boats and Stukas in the area. Protect the ships from Hawkinge.",
+   "roles": {
+    "Allies": "defend"
+   },
+   "protect": {
+    "Allies": [
+     "convoy_thames_dover"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "ju87",
+     "count": 8,
+     "lat": 51.15,
+     "lon": 1.55,
+     "alt_m": 2500,
+     "trigger_km": 25,
+     "label": "Stukas on the convoy"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf110",
+     "count": 6,
+     "lat": 51.1,
+     "lon": 1.8,
+     "alt_m": 4200,
+     "trigger_km": 25,
+     "label": "Zerstorer escort"
+    }
+   ]
+  },
+  {
+   "id": "op_thames_night",
+   "name": "\u25c6 Night Over the Estuary",
+   "year": 1941,
+   "date": "1941-03-19",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "hornchurch",
+     "aircraft": [
+      "hurricane"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "oil_thameshaven"
+    ]
+   },
+   "time_of_day": 23.0,
+   "weather": "clear",
+   "brief": "A night raid is heading up the Thames for the oil depots at Thameshaven. Find the bombers by their engine glow and break them up.",
+   "roles": {
+    "Allies": "defend"
+   },
+   "protect": {
+    "Allies": [
+     "oil_thameshaven"
+    ]
+   },
+   "time_limit": 1400,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "defend"
+   },
+   "events": [
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "he111",
+     "count": 8,
+     "lat": 51.7,
+     "lon": 1.2,
+     "alt_m": 3500,
+     "trigger_km": 20,
+     "label": "Bomber stream"
+    },
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "ju88",
+     "count": 6,
+     "lat": 51.6,
+     "lon": 0.95,
+     "alt_m": 3800,
+     "trigger_km": 20,
+     "label": "Bomber stream"
+    }
+   ]
+  },
+  {
+   "id": "op_east_coast_sweep",
+   "name": "\u25c6 East Coast Sweep",
+   "year": 1941,
+   "date": "1941-06-12",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "duxford",
+     "aircraft": [
+      "spitfire"
+     ]
+    }
+   ],
+   "objectives": {},
+   "time_of_day": 10.0,
+   "weather": "scattered",
+   "brief": "Fighter Command wants the sky cleared off the Suffolk coast. Sweep out from Duxford and engage whatever flies.",
+   "roles": {
+    "Allies": "sweep"
+   },
+   "protect": {},
+   "time_limit": 1300,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "dogfight"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 8,
+     "lat": 52.0,
+     "lon": 1.9,
+     "alt_m": 5200,
+     "trigger_km": 25,
+     "label": "Fighter patrol"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 6,
+     "lat": 51.8,
+     "lon": 2.1,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_ruhr_steel",
+   "name": "\u25c6 Steel for the Ruhr",
+   "year": 1944,
+   "date": "1944-10-14",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_melsbroek",
+     "aircraft": [
+      "b26"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "factory_krupp_essen"
+    ]
+   },
+   "time_of_day": 11.0,
+   "weather": "clear",
+   "brief": "A medium-bomber raid on the Essen works, flown in daylight with fighter cover that may not stay with you the whole way.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "protect": {},
+   "time_limit": 4500,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 51.2,
+     "lon": 6.3,
+     "alt_m": 5500,
+     "trigger_km": 25,
+     "label": "Defending fighters"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 6,
+     "lat": 51.4,
+     "lon": 6.8,
+     "alt_m": 5500,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_marshalling_hamm",
+   "name": "\u25c6 Hamm Marshalling Yard",
+   "year": 1944,
+   "date": "1944-11-02",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_asch",
+     "aircraft": [
+      "b25"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rail_hamm"
+    ]
+   },
+   "time_of_day": 10.0,
+   "weather": "overcast",
+   "brief": "Break the main rail artery feeding the front. Cloud helps on the approach and hurts on the run-in.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "protect": {},
+   "time_limit": 4500,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 8,
+     "lat": 51.5,
+     "lon": 7.2,
+     "alt_m": 5200,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    },
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "ju88",
+     "count": 2,
+     "lat": 51.55,
+     "lon": 7.4,
+     "alt_m": 4500,
+     "trigger_km": 20,
+     "label": "Interceptor wave"
+    }
+   ]
+  },
+  {
+   "id": "op_oil_scholven",
+   "name": "\u25c6 Scholven Oil",
+   "year": 1944,
+   "date": "1944-12-11",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_florennes",
+     "aircraft": [
+      "b26"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "factory_scholven_oil"
+    ]
+   },
+   "time_of_day": 12.0,
+   "weather": "scattered",
+   "brief": "Synthetic fuel keeps the Luftwaffe flying. Hit the Scholven plant and return before the fighters regroup.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "protect": {},
+   "time_limit": 5400,
+   "waves": 3,
+   "difficulty_hint": 0.65,
+   "modes": {
+    "Allies": "bombing"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 51.5,
+     "lon": 6.9,
+     "alt_m": 5000,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "me262",
+     "count": 2,
+     "lat": 51.6,
+     "lon": 7.1,
+     "alt_m": 6500,
+     "trigger_km": 25,
+     "label": "Jet interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_waal_crossing",
+   "name": "\u25c6 Waal Crossing",
+   "year": 1944,
+   "date": "1944-09-20",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_helmond",
+     "aircraft": [
+      "typhoon"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "bridge_nijmegen"
+    ]
+   },
+   "time_of_day": 13.5,
+   "weather": "clear",
+   "brief": "Suppress the defenders on the approaches to the Waal bridge so the ground column can cross.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "protect": {},
+   "time_limit": 1700,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 6,
+     "lat": 51.85,
+     "lon": 5.8,
+     "alt_m": 2200,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 4,
+     "lat": 51.9,
+     "lon": 5.9,
+     "alt_m": 3000,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_scheldt_barges",
+   "name": "\u25c6 Scheldt Barges",
+   "year": 1944,
+   "date": "1944-10-30",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_deurne",
+     "aircraft": [
+      "typhoon",
+      "tempest"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "convoy_antwerp_ostend"
+    ]
+   },
+   "time_of_day": 9.0,
+   "weather": "overcast",
+   "brief": "The enemy still moves supplies by water around the Scheldt. Rocket and cannon the barge traffic at low level.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "protect": {},
+   "time_limit": 1600,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 6,
+     "lat": 51.4,
+     "lon": 3.8,
+     "alt_m": 1800,
+     "trigger_km": 25,
+     "label": "Fighter cover"
+    }
+   ]
+  },
+  {
+   "id": "op_venlo_flak",
+   "name": "\u25c6 Venlo Flak Belt",
+   "year": 1944,
+   "date": "1944-11-23",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_schijndel",
+     "aircraft": [
+      "p47"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_battery_objective_near_venlo"
+    ]
+   },
+   "time_of_day": 14.0,
+   "weather": "scattered",
+   "brief": "Dive-bomb the flak belt at Venlo and strafe the guns that survive.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 6,
+     "lat": 51.35,
+     "lon": 6.1,
+     "alt_m": 2500,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_lines_of_supply",
+   "name": "\u25c6 Lines of Supply",
+   "year": 1944,
+   "date": "1944-12-02",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_evere",
+     "aircraft": [
+      "p51",
+      "p47"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "rh_convoy_route_supply_train_near_spa"
+    ]
+   },
+   "time_of_day": 8.5,
+   "weather": "fog",
+   "brief": "Dawn fog hides the supply trains. Find them on the rails near Spa before the haze lifts.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "protect": {},
+   "time_limit": 2400,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 6,
+     "lat": 50.5,
+     "lon": 5.9,
+     "alt_m": 2500,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_schiphol_sweep",
+   "name": "\u25c6 Schiphol Sweep",
+   "year": 1944,
+   "date": "1944-10-05",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "rh_af_grimbergen",
+     "aircraft": [
+      "spitfire",
+      "tempest"
+     ]
+    }
+   ],
+   "objectives": {},
+   "time_of_day": 15.0,
+   "weather": "clear",
+   "brief": "A free-ranging sweep across Holland to pull the Luftwaffe up where you can fight it.",
+   "roles": {
+    "Allies": "sweep"
+   },
+   "protect": {},
+   "time_limit": 1400,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "dogfight"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 52.2,
+     "lon": 4.8,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 6,
+     "lat": 52.0,
+     "lon": 5.2,
+     "alt_m": 5000,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_axis_coast_raid",
+   "name": "\u25c6 Coastal Raid on Dover",
+   "year": 1940,
+   "date": "1940-08-12",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "calais_marck",
+     "aircraft": [
+      "ju87",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "radar_dover_ch",
+     "port_dover"
+    ]
+   },
+   "time_of_day": 8.5,
+   "weather": "clear",
+   "brief": "Strike the radar at Dover and the harbour behind it. The RAF will rise to meet you.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "protect": {},
+   "time_limit": 1400,
+   "waves": 4,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 8,
+     "lat": 51.12,
+     "lon": 1.45,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 6,
+     "lat": 51.2,
+     "lon": 1.3,
+     "alt_m": 5000,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_axis_thames_dusk",
+   "name": "\u25c6 Dusk on the Thames",
+   "year": 1940,
+   "date": "1940-09-07",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "cap_gris_nez",
+     "aircraft": [
+      "he111",
+      "ju88"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "port_royal_docks"
+    ]
+   },
+   "time_of_day": 18.0,
+   "weather": "scattered",
+   "brief": "A long run up the estuary to the Royal Docks as the light fails. Fighters will be waiting.",
+   "roles": {
+    "Axis": "strike"
+   },
+   "protect": {},
+   "time_limit": 3600,
+   "waves": 4,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Axis": "bombing"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 8,
+     "lat": 51.4,
+     "lon": 0.6,
+     "alt_m": 5000,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "hurricane",
+     "count": 8,
+     "lat": 51.45,
+     "lon": 0.3,
+     "alt_m": 4200,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_axis_bridge_defence",
+   "name": "\u25c6 Hold the Bridges",
+   "year": 1944,
+   "date": "1944-09-21",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "rh_af_mill",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "bridge_grave"
+    ]
+   },
+   "time_of_day": 10.0,
+   "weather": "clear",
+   "brief": "Allied fighter-bombers are working over the Maas crossings. Stop them.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "bridge_grave"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "typhoon",
+     "count": 8,
+     "lat": 51.75,
+     "lon": 5.8,
+     "alt_m": 2000,
+     "trigger_km": 25,
+     "label": "Fighter-bombers"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 6,
+     "lat": 51.85,
+     "lon": 5.7,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_axis_jet_hunt",
+   "name": "\u25c6 Jet Hunt",
+   "year": 1945,
+   "date": "1945-03-03",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "rh_af_hopsten",
+     "aircraft": [
+      "me262"
+     ]
+    }
+   ],
+   "objectives": {},
+   "time_of_day": 12.0,
+   "weather": "scattered",
+   "brief": "Use the speed advantage to slash through the escorts and pick off bombers.",
+   "roles": {
+    "Axis": "sweep"
+   },
+   "protect": {},
+   "time_limit": 1300,
+   "waves": 3,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Axis": "dogfight"
+   },
+   "events": [
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "b26",
+     "count": 8,
+     "lat": 52.1,
+     "lon": 6.2,
+     "alt_m": 5500,
+     "trigger_km": 20,
+     "label": "Medium bombers"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p51",
+     "count": 8,
+     "lat": 52.0,
+     "lon": 6.1,
+     "alt_m": 6000,
+     "trigger_km": 25,
+     "label": "Escort"
+    }
+   ]
+  }
+ ]
+}

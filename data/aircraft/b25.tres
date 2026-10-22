@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "b25"
+display_name = "North American B-25J Mitchell"
+side = "Allies"
+nation = "USAAF"
+model_id = "b25"
+ammo = 4800
+bombs = 12
+gun_count = 6
+fire_rate = 10
+gear_height = 2.72
+max_speed = 121.7
+stall_speed = 44.3
+boost_bonus = 38.9
+accel = 4.1
+decel = 3.5
+pitch_rate_deg = 41
+roll_rate_deg = 50
+yaw_rate_deg = 14
+bank_turn_rate = 0.57
+rate_response = 3.6
+max_health = 436
+radius = 18
+engine_sound = "radial_pw"
+engine_count = 2
+gun_sound = "browning50"

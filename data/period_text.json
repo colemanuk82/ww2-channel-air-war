@@ -1,0 +1,27 @@
+{
+ "note": "Original period-style text written for this game. Fictional units, places and people; no quotations from real publications.",
+ "items": [
+  {"id": "intel_allies_radar", "side": "Allies", "kind": "intel", "title": "Summary: coastal radar plots", "when": {"done": 0},
+   "body": "Plots from the coastal chain show raids forming over the Pas de Calais between 0900 and 1100 hours. Reported strength is consistent across three stations. Fighter Command is asked to keep reserves at readiness through the forenoon."},
+  {"id": "press_allies_marsh", "side": "Allies", "kind": "press", "title": "Local paper: 'Kent Pilots Hold the Line'", "when": {"done": 2},
+   "body": "The county weekly reports from the fighter stations of the south-east. Ground crews work through the night refuelling and re-arming, and the village hall has become a canteen for pilots who come down with cuts from the cockpit canopy. Residents are asked to keep to the blackout and to report any aircraft down to the police station."},
+  {"id": "intel_allies_bomber_routes", "side": "Allies", "kind": "intel", "title": "Intelligence: enemy bomber routes", "when": {"done": 5},
+   "body": "Enemy bombers are using the same three corridors each evening, climbing over the coast near the estuary and turning inland at the same reference hills. Escort strength has been rising. Crews are reminded that a formation which breaks off early is usually a decoy."},
+  {"id": "press_allies_review", "side": "Allies", "kind": "press", "title": "Weekly review: the air over the Channel", "when": {"day": 3},
+   "body": "This week the Channel was the front line. Convoys moved by night, and the coastal batteries answered every raid. The review's correspondent counted the wrecks on the foreshore at dawn and stopped at forty. The commentary asks the public for patience: the work is slow, and the sky is not a stage for good news every day."},
+  {"id": "intel_allies_v1", "side": "Allies", "kind": "intel", "title": "Summary: launch sites in the Pas de Calais", "when": {"mission": "v1_sites"},
+   "body": "Photographic reconnaissance shows new ramps and storage pits in the woods behind the coast. The works are small and are built to be hard to see from the air. Attacks on the supply routes to them are assessed as the only practical way to slow the programme."},
+  {"id": "press_allies_factories", "side": "Allies", "kind": "press", "title": "Works news: night shifts at the aircraft factories", "when": {"air": 3},
+   "body": "Night shifts at the aircraft works have been extended to meet the demand for replacement machines. A foreman at one works said the girls on the sheet-metal lines now outnumber the men, and that the canteen tea is strong enough to stand a spoon in."},
+  {"id": "intel_axis_weather", "side": "Axis", "kind": "intel", "title": "Lagebericht: Channel weather and sorties", "when": {"done": 0},
+   "body": "Low cloud over the Straits is expected to break after noon. Sorties flown from the forward fields in the morning are to be coordinated with the coastal flak so that the same gun sector does not fire on our own formations on the return leg."},
+  {"id": "press_axis_paper", "side": "Axis", "kind": "press", "title": "Regional paper: the work at the coast", "when": {"done": 2},
+   "body": "The regional paper praises the ground staff who keep the forward airfields serviceable under the bombing. A local reporter describes a squadron cook who fed a whole flight from a single field stove during a long stand-by, and the ration cards that were issued for the extra meals."},
+  {"id": "intel_axis_raf_strength", "side": "Axis", "kind": "intel", "title": "Estimate: enemy fighter strength", "when": {"done": 4},
+   "body": "The estimated serviceable strength of enemy fighter squadrons in the south-east has fallen by about a fifth in the last fortnight. Replacement pilots are arriving with fewer hours than their predecessors. Commanders are asked to avoid long fights over the water."},
+  {"id": "press_axis_diary", "side": "Axis", "kind": "press", "title": "From a squadron diary", "when": {"day": 4},
+   "body": "The diary of a fighter squadron records a day of three scrambles, one landing with a damaged undercarriage and a long evening spent writing letters home. The last entry notes only that the weather is fair and the coffee has run out."},
+  {"id": "intel_axis_airfields", "side": "Axis", "kind": "intel", "title": "Report: forward airfield status", "when": {"done": 8},
+   "body": "Several forward fields have been bombed more than once in the past week. Repairs to the runways are being made at night with prefabricated matting. Fuel stocks at the coastal dumps are sufficient for the present tempo, but no longer for a sustained offensive."}
+ ]
+}

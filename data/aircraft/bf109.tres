@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "bf109"
+display_name = "Messerschmitt Bf 109 E"
+side = "Axis"
+nation = "Luftwaffe"
+model_id = "bf109"
+ammo = 2400
+bombs = 2
+gun_count = 3
+rockets = 6
+fire_rate = 12
+gear_height = 1.47
+engine_sound = "db601"
+engine_count = 1
+gun_sound = "mg17"
+max_speed = 155.6
+stall_speed = 37.4
+boost_bonus = 49.8
+accel = 7.5
+decel = 6.4
+pitch_rate_deg = 64
+roll_rate_deg = 117
+yaw_rate_deg = 23
+bank_turn_rate = 0.78
+rate_response = 5.4
+max_health = 100
+radius = 9

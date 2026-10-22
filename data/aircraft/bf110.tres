@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "bf110"
+display_name = "Messerschmitt Bf 110 C"
+side = "Axis"
+nation = "Luftwaffe"
+model_id = "bf110"
+ammo = 3000
+bombs = 2
+gun_count = 6
+fire_rate = 12
+gear_height = 2.33
+engine_sound = "db601"
+engine_count = 2
+gun_sound = "mg151"
+max_speed = 150.3
+stall_speed = 36.3
+boost_bonus = 48.1
+accel = 5.7
+decel = 4.9
+pitch_rate_deg = 52
+roll_rate_deg = 78
+yaw_rate_deg = 18
+bank_turn_rate = 0.67
+rate_response = 4.5
+max_health = 201
+radius = 14

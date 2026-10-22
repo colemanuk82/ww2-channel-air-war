@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "p47"
+display_name = "Republic P-47D Thunderbolt"
+side = "Allies"
+nation = "USAAF"
+model_id = "p47"
+ammo = 4200
+bombs = 6
+gun_count = 8
+rockets = 20
+fire_rate = 14
+gear_height = 2.23
+max_speed = 191.7
+stall_speed = 43.1
+boost_bonus = 61.3
+accel = 7
+decel = 6
+pitch_rate_deg = 61
+roll_rate_deg = 103
+yaw_rate_deg = 22
+bank_turn_rate = 0.75
+rate_response = 5.2
+max_health = 206
+radius = 11
+engine_sound = "radial_pw"
+engine_count = 1
+gun_sound = "browning50"

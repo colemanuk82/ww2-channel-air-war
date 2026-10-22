@@ -1,0 +1,144 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="WW2 Channel Air War"
+config/version="1.0"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.3", "Forward Plus")
+
+[audio]
+
+general/text_to_speech=true
+
+[autoload]
+
+WorldCoords="*res://scripts/world_coords.gd"
+GameState="*res://scripts/game_state.gd"
+TimeOfDay="*res://scripts/time_of_day.gd"
+WeatherManager="*res://scripts/weather_manager.gd"
+AudioManager="*res://scripts/audio_manager.gd"
+SaveSystem="*res://scripts/save_system.gd"
+FX="*res://scripts/effects/fx.gd"
+Weapons="*res://scripts/weapons/weapon_world.gd"
+Radio="*res://scripts/radio.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/mode=3
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[input]
+
+view_dist_increase={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194437,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":61,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+view_dist_decrease={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194435,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":45,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+view_dist_reset={
+"deadzone": 0.5,
+"events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194310,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+, Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":4194309,"key_label":0,"unicode":0,"location":0,"echo":false,"script":null)
+]
+}
+
+[layer_names]
+
+3d_physics/layer_1="world"
+3d_physics/layer_2="aircraft"
+3d_physics/layer_3="projectiles"
+3d_physics/layer_4="ground_targets"
+
+[rendering]
+
+environment/defaults/default_clear_color=Color(0.45, 0.6, 0.8, 1)
+anti_aliasing/quality/msaa_3d=2
+
+[shader_globals]
+
+water_debug={
+"type": "float",
+"value": 0.0
+}
+sky_top={
+"type": "vec3",
+"value": Vector3(0.2, 0.48, 0.88)
+}
+sky_horizon={
+"type": "vec3",
+"value": Vector3(0.72, 0.84, 0.95)
+}
+wake_0={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+wake_1={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+wake_2={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+wake_3={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}
+outline_enabled={
+"type": "float",
+"value": 1.0
+}
+night_amount={
+"type": "float",
+"value": 0.0
+}
+blackout={
+"type": "float",
+"value": 0.0
+}
+raid_dim={
+"type": "float",
+"value": 0.0
+}
+raid_black_k={
+"type": "float",
+"value": 0.0
+}
+raid_black_pos={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+raid_black_r={
+"type": "float",
+"value": 1.0
+}
+cloud_shadow={
+"type": "float",
+"value": 0.0
+}
+wetness={
+"type": "float",
+"value": 0.0
+}
+real_rivers={
+"type": "float",
+"value": 0.0
+}

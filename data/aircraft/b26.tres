@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "b26"
+display_name = "Martin B-26 Marauder"
+side = "Allies"
+nation = "USAAF"
+model_id = "b26"
+ammo = 4800
+bombs = 16
+gun_count = 6
+fire_rate = 10
+gear_height = 2.83
+max_speed = 126.4
+stall_speed = 46.4
+boost_bonus = 40.4
+accel = 4.2
+decel = 3.5
+pitch_rate_deg = 41
+roll_rate_deg = 50
+yaw_rate_deg = 14
+bank_turn_rate = 0.57
+rate_response = 3.6
+max_health = 450
+radius = 19
+engine_sound = "radial_pw"
+engine_count = 2
+gun_sound = "browning50"

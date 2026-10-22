@@ -1,0 +1,22 @@
+# Godot 4
+.godot/
+
+# Build output (exported exe + NVIDIA Streamline/DLSS runtime DLLs)
+build/
+
+# Dev caches and raw dev screenshots (curated in-game shots live in screenshots/)
+tools/cache/
+tools/shots/
+
+# Editor session data
+.commandcode/
+
+# Local toolchain dumps / reference outputs (untracked dev artifacts)
+__pycache__/
+
+# Release binaries
+/*.exe
+/*.dll
+/*.lnk
+*.bak-*
+*.bundle
