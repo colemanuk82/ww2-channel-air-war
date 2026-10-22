@@ -1,5 +1,9 @@
 # ✈️ WW2 Channel Air War
 
+[![WW2 Channel Air War promo](docs/promo/channel-air-war-promo.gif)](docs/promo/channel-air-war-promo.mp4)
+
+**▶ [Watch the full 31-second promo with music](docs/promo/channel-air-war-promo.mp4)** · **100% free and open on GitHub**
+
 > *"Scramble! Bandits over Dover, angels fifteen!"*
 
 A cell-shaded, arcade-flavoured WW2 flight game set over a **real-scale** (1 unit = 1 metre) slice of
