@@ -1,134 +1,94 @@
+<div align="center">
+
 # ✈️ WW2 Channel Air War
+
+### *"Scramble! Bandits over Dover, angels fifteen!"*
+
+**A free, cell-shaded WW2 flight game over a real-scale slice of Europe.**<br>
+Take off from Kent. Cross the Channel. Come home. Maybe.
+
+![Free](https://img.shields.io/badge/price-100%25%20free-2ea44f) ![Windows](https://img.shields.io/badge/platform-Windows%2064--bit-0078d4) ![Engine](https://img.shields.io/badge/engine-Godot%204-478cbf) ![Missions](https://img.shields.io/badge/missions-69-d4a017)
 
 [![WW2 Channel Air War promo](docs/promo/channel-air-war-promo.gif)](docs/promo/channel-air-war-promo.mp4)
 
-**▶ [Watch the full 31-second promo with music](docs/promo/channel-air-war-promo.mp4)** · **100% free and open on GitHub**
+**▶ [Watch the full promo with music](docs/promo/channel-air-war-promo.mp4)**
 
-> *"Scramble! Bandits over Dover, angels fifteen!"*
+### [⬇️ Download the free installer](../../releases/latest)
 
-A cell-shaded, arcade-flavoured WW2 flight game set over a **real-scale** (1 unit = 1 metre) slice of
-Europe: southern England up to the Midlands, the Channel, northern France, Belgium, the Netherlands and
-the Rhineland, about **954 × 453 km** of it. Take off from a grass strip in Kent, climb through the
-cloud, and find out whether the Stukas beat you to the radar station.
+</div>
 
-Fly **either side**. Defend Britain in a Spitfire, escort the bombers to the Ruhr in a Mustang, or hit
-the coast in a Bf 109. Then skip the glory and go bounce a Lancaster formation instead.
+---
 
-## 🎮 Play it
+## 🔥 Why you'll want to play
 
-1. Grab the **installer** (`WW2ChannelAirWar_Setup_v1.0.exe`) from [Releases](../../releases/latest), or the
-   zip if you like things portable.
+|  |  |
+|---|---|
+| 🌍 **Real-scale Europe** | **954 × 453 km** of England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports. Fly from Kent to the Ruhr and it actually takes a while. |
+| ✈️ **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
+| ⚔️ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and free flight. Or just go sightseeing over the white cliffs. |
+| 🌊 **Dam Busters** | A seven-day campaign. Skim low, hit your marks, put the bomb on the dam. |
+| 🎖️ **A war that moves** | Dynamic campaign and Pilot's Life: ranks, medals, telegrams, newsreels, and the occasional letter home you hope you never have to send. |
+| 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, rain squalls, searchlights and flak at night. |
+| 🎵 **Bring your own soundtrack** | Import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
+| 💸 **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
+
+<div align="center">
+<table>
+<tr>
+<td><img src="screenshots/g_time_dawn.jpg" alt="Dawn over Kent" width="320"></td>
+<td><img src="screenshots/g_weather_storm.jpg" alt="Storm over the Channel" width="320"></td>
+<td><img src="screenshots/g_cockpit_spitfire.jpg" alt="Spitfire cockpit" width="320"></td>
+</tr>
+<tr>
+<td><img src="screenshots/g_fight_a.jpg" alt="Dogfight over Kent" width="320"></td>
+<td><img src="screenshots/g_bomb_night.jpg" alt="Night raid" width="320"></td>
+<td><img src="screenshots/g_menu.jpg" alt="Main menu" width="320"></td>
+</tr>
+</table>
+<sub>Dawn over Kent · Storm · Spitfire cockpit · Dogfight · Night raid · Main menu</sub>
+</div>
+
+## 🎮 Play it in 3 steps
+
+1. Download **`WW2ChannelAirWar_Setup_v1.0.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
-3. Read the photosensitivity warning (really, it matters), accept the licence, and take off.
+3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
-**Got an NVIDIA RTX card?** The game will offer to download **DLSS** (about 213 MB, straight from
-NVIDIA's own GitHub repo, checksum-verified). It's optional, and it makes everything faster and
-sharper. No NVIDIA card? No problem: you get the standard renderer with AMD FSR 2 upscaling.
+**Got an NVIDIA RTX card?** The game offers to download **DLSS** (about 213 MB, straight from NVIDIA's own GitHub repo, checksum-verified). It's optional and makes everything faster and sharper. No NVIDIA card? You get the standard renderer with AMD FSR 2 upscaling.
 
-## 🛩️ What's in the hangar
+## 🛩️ In the hangar
 
-- **Two sides, about two dozen aircraft:** Spitfire, Hurricane, Typhoon, Tempest, Mosquito, P-47, P-51, Lancaster, B-26 and more for the **Allies**. Bf 109, Fw 190, Ju 87, Ju 88, He 111, Me 262 and friends for the **Axis**. Each one flies differently and each one remembers its own chase-camera zoom.
 - **Modes:** dogfight, bombing run, ground attack, bomber escort, defend, fighter sweep, free flight, plus training lessons for the nervous.
-- **Historical missions:** Battle of Britain, Dieppe, D-Day, Dunkirk, Antwerp, Lille, Le Havre, V-1 sites and the Seine bridges. Completed ones glow green in the list. 🟢
-- **25 original missions** (the ones with the ◆ diamond): dawn patrols, convoy cover, night interceptions, steel for the Ruhr, jet hunts, armour on the road and more. Scripted ambushes, bomber raids and nasty surprises included.
-- **🌊 Dam Busters:** a seven-day campaign, one sortie a day. Skim low, hit your marks and put the bomb on the dam. Waypoints on your compass and minimap mean you'll actually know where the dam is.
-- **Dynamic campaign & Pilot's Life:** every sortie moves the war. Ranks, medals, telegrams, newsreels, and letters home you hope you never have to send.
-- **Sortie planner:** pick any airfield (runway or airborne) or any point on the map, choose a scenario, set the enemy strength.
-- **A living world:** real airfields, towns, rivers, rail, ports, Atlantic Wall guns, barrage balloons, searchlights, convoys and trains. Landmarks include Battersea Power Station, the Tower of London and Rochester Castle.
-- **Weather & time of day:** clear to storm, dawn to midnight.
-- **🎵 Bring your own soundtrack:** import your own MP3, OGG or WAV tracks from Options > Music and they play in the menu and in flight, right next to the built-in score.
+- **69 missions:** historical ones (Battle of Britain, Dieppe, D-Day, Dunkirk, Antwerp, Lille, Le Havre, V-1 sites, the Seine bridges) glow green once you've completed them, and **25 originals** (marked ◆) cover dawn patrols, convoy cover, night interceptions, steel for the Ruhr, jet hunts and armour on the road.
+- **Sortie planner:** start from any airfield (runway or airborne) or any point on the map, choose a scenario, set the enemy strength.
+- **A living world:** barrage balloons, searchlights, Atlantic Wall guns, convoys and trains. Landmarks include Battersea Power Station, the Tower of London and Rochester Castle.
 - **Radio chatter:** AI-voiced controllers, wingmen and bomber crews, with subtitles and static.
+- **Cockpit, chase, orbit and overhead cameras,** and a clean no-HUD view (`H`) for screenshots.
 - **Full gamepad support.** 🕹️
 
 ## ⌨️ Controls
 
-**Keyboard:** `W`/`S` pitch · `A`/`D` roll · `Q`/`E` yaw · `Shift`/`Ctrl` throttle · `Tab` boost · `Space` fire (or drop a bomb) · `X`/`B` switch weapon · `G` gear · `C` camera · `R` auto-level · `T` time of day · `Y` weather · `O` outlines · `H` HUD · `F1` hide hints.
+| | Keyboard | Gamepad |
+|---|---|---|
+| Pitch / roll | `W` `S` / `A` `D` | Left stick |
+| Yaw | `Q` `E` | Right stick look |
+| Throttle | `Shift` / `Ctrl` | Triggers |
+| Boost | `Tab` | `RB` |
+| Fire / drop bomb | `Space` | `A` |
+| Switch weapon | `X` / `B` | `B` |
+| Gear | `G` | `Y` |
+| Camera | `C` | `X` |
+| Auto-level | `R` | `LB` (assist) |
+| Time of day / weather | `T` / `Y` | D-pad |
+| Outlines / HUD / hints | `O` / `H` / `F1` | D-pad |
+| Pause / respawn | | `Start` / `Back` |
 
-**Gamepad:** left stick pitch/roll · right stick look · triggers throttle · `A` fire · `B` switch weapon · `Y` gear · `X` camera · `RB` boost · `LB` assist · `Back` respawn · D-pad time/weather/outlines/HUD · `Start` pause.
+## ❓ Quick answers
 
-## 🎬 See it in action
-
-All screenshots are taken in-game. Press `H` for a clean, HUD-free view.
-
-### 🏠 Menu & intro
-
-| Main menu | Epilepsy warning, shown before the menu loads |
-|:---:|:---:|
-| ![Main menu](screenshots/g_menu.jpg) | ![Epilepsy warning, shown before the menu loads](screenshots/g_intro.jpg) |
-
-### 🧑‍✈️ Cockpit views
-
-| Spitfire at noon | Hurricane under overcast skies |
-|:---:|:---:|
-| ![Spitfire at noon](screenshots/g_cockpit_spitfire.jpg) | ![Hurricane under overcast skies](screenshots/g_cockpit_hurricane.jpg) |
-
-| Bf 109 at dusk | Spitfire, HUD off |
-|:---:|:---:|
-| ![Bf 109 at dusk](screenshots/g_cockpit_bf109.jpg) | ![Spitfire, HUD off](screenshots/g_cockpit_clean.jpg) |
-
-### ⛈️ Weather systems
-
-| Fog at dawn | Overcast |
-|:---:|:---:|
-| ![Fog at dawn](screenshots/g_weather_fog.jpg) | ![Overcast](screenshots/g_weather_overcast.jpg) |
-
-| Rain at dusk | Storm |
-|:---:|:---:|
-| ![Rain at dusk](screenshots/g_weather_rain.jpg) | ![Storm](screenshots/g_weather_storm.jpg) |
-
-### 🌅 Time of day
-
-| Dawn over Kent | Noon off the white cliffs |
-|:---:|:---:|
-| ![Dawn over Kent](screenshots/g_time_dawn.jpg) | ![Noon off the white cliffs](screenshots/g_time_noon.jpg) |
-
-| Dusk over the Channel | Night, searchlights and flak |
-|:---:|:---:|
-| ![Dusk over the Channel](screenshots/g_time_dusk.jpg) | ![Night, searchlights and flak](screenshots/g_time_night.jpg) |
-
-### 🎥 Camera angles
-
-| Low chase | Overhead |
-|:---:|:---:|
-| ![Low chase](screenshots/g_angle_low.jpg) | ![Overhead](screenshots/g_angle_overhead.jpg) |
-
-| Orbit | Dawn, close behind |
-|:---:|:---:|
-| ![Orbit](screenshots/g_angle_orbit.jpg) | ![Dawn, close behind](screenshots/g_angle_close.jpg) |
-
-### ⚔️ Dogfights
-
-| Dogfight over Kent | Closing on a target |
-|:---:|:---:|
-| ![Dogfight over Kent](screenshots/g_fight_a.jpg) | ![Closing on a target](screenshots/g_fight_b.jpg) |
-
-| Dusk engagement | From the cockpit |
-|:---:|:---:|
-| ![Dusk engagement](screenshots/g_fight_dusk.jpg) | ![From the cockpit](screenshots/g_fight_cockpit.jpg) |
-
-### 💣 Bombing runs
-
-| Lancaster on its bombing run | Chase view |
-|:---:|:---:|
-| ![Lancaster on its bombing run](screenshots/g_bomb_run.jpg) | ![Chase view](screenshots/g_bomb_chase.jpg) |
-
-| Night raid | The gunner's seat |
-|:---:|:---:|
-| ![Night raid](screenshots/g_bomb_night.jpg) | ![The gunner's seat](screenshots/g_bomb_gunner.jpg) |
-
-| The Dam Busters |
-|:---:|
-| ![The Dam Busters](screenshots/g_bomb_dam.jpg) |
-
-### 🙈 HUD off
-
-| Storm, no HUD | Night, no HUD |
-|:---:|:---:|
-| ![Storm, no HUD](screenshots/g_hudoff_storm.jpg) | ![Night, no HUD](screenshots/g_hudoff_night.jpg) |
-
-| Dogfight, no HUD | Dawn, no HUD |
-|:---:|:---:|
-| ![Dogfight, no HUD](screenshots/g_hudoff_fight.jpg) | ![Dawn, no HUD](screenshots/g_hudoff_dawn.jpg) |
+- **Is it really free?** Yes, completely. Donations are optional.
+- **Will it run on my PC?** It needs 64-bit Windows and a reasonably modern graphics card. RTX owners get optional DLSS.
+- **Is there multiplayer?** No, it's single player.
+- **Is it safe?** The source is right here. The game has a photosensitivity warning, a licence screen and a privacy policy.
 
 ## 🤖 Honest disclosure
 
