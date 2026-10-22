@@ -1331,15 +1331,33 @@ func _test_ai_takeoff_all() -> void:
 			var dir: Vector3 = WorldCoords.heading_to_dir(90.0)
 			var ac: Aircraft = AIFactory.spawn(self, sid, side, Vector3(0.0, 12.0 + st.gear_height, 0.0), 90.0, 0.0, 0.5, role, null, true)
 			var p: AIPilot = AIFactory.pilot_of(ac)
+			# ground stance: wheels / tail wheel / propeller measured from the model
+			if _check(ac._gg_ok, "%s: ground geometry read from the model" % sid):
+				var rest: float = ac.ground_rest_pitch()
+				if ac._gg_tail:
+					_check(rest > deg_to_rad(3.0) and rest < deg_to_rad(22.0), "%s tail-dragger rests nose-up at a sensible angle (%.1f deg)" % [sid, rad_to_deg(rest)])
+					var hm: float = -(ac._gg_ym * cos(rest) - ac._gg_zm * sin(rest))
+					var ht: float = -(ac._gg_yt * cos(rest) - ac._gg_zt * sin(rest))
+					_check(absf(hm - ht) < 0.08, "%s: mains and tail wheel touch together at rest (%.2f vs %.2f)" % [sid, hm, ht])
+				if ac._gg_pr > 0.0:
+					for dg in [0.0, 5.0, 10.0, 15.0]:
+						var pt: float = deg_to_rad(dg)
+						var prop_low: float = ac.ground_offset(pt) + (ac._gg_py - ac._gg_pr) * cos(pt) - ac._gg_pz * sin(pt)
+						_check(prop_low >= 0.1, "%s: propeller clears the runway at %.0f deg (%.2f m)" % [sid, dg, prop_low])
+				print("   stance %s: rest %.1f deg, origin %.2f m (gear stat %.2f), prop r %.2f" % [sid, rad_to_deg(rest), ac.ground_offset(rest), st.gear_height, ac._gg_pr])
 			p.begin_takeoff(dir, AIPilot.State.PATROL)
 			var t: float = 0.0
 			var lift_t: float = -1.0
 			var run_m: float = 0.0
 			var crashed: bool = false
-			ac.crashed.connect(func(_a: Aircraft, _r: String) -> void: crashed = true)
+			var crash_info: Array = []         # lambdas capture by value, so the reason goes into an array
+			ac.crashed.connect(func(_a: Aircraft, r: String) -> void: crash_info.append(r))
 			var trace: String = ""
 			var next_s: float = 0.0
 			while t < 150.0 and not crashed:
+				crashed = not crash_info.is_empty() or ac.state != Aircraft.State.ALIVE
+				if crashed:
+					break
 				p._process(dt)
 				ac._process(dt)
 				t += dt
@@ -1352,7 +1370,7 @@ func _test_ai_takeoff_all() -> void:
 				if lift_t > 0.0 and ac.altitude_agl > 60.0 and p.state != AIPilot.State.TAKEOFF:
 					break
 			var ok: bool = lift_t > 0.0 and not crashed and ac.altitude_agl > 40.0
-			_check(ok, "%s takes off by itself (lift-off %.0f s, %.0f m run, agl %.0f, crashed %s)%s" % [sid, lift_t, run_m, ac.altitude_agl, str(crashed), trace if (not ok and sid in ["lancaster", "defiant", "p38"]) else ""])
+			_check(ok, "%s takes off by itself (lift-off %.0f s, %.0f m run, agl %.0f, crashed %s %s)%s" % [sid, lift_t, run_m, ac.altitude_agl, str(crashed), str(crash_info), trace if (not ok and sid in ["lancaster", "defiant", "p38"]) else ""])
 			if ok:
 				_check(lift_t < 90.0, "%s lifts off in a sane time (%.0f s)" % [sid, lift_t])
 			ac.free()      # at once: a frozen leftover would trigger the next pilot's collision avoidance

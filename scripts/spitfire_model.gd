@@ -277,6 +277,7 @@ static func build(nation: String = "RAF") -> Node3D:
 	tail_wheel.mesh = MeshUtil.disc(0.12, 0.08, Vector3.RIGHT, 8)
 	tail_wheel.material_override = dark
 	tail_wheel.position = Vector3(0, -0.12, 4.5)
+	tail_wheel.name = "TailWheel"
 	body.add_child(tail_wheel)
 
 	# Propeller group

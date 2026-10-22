@@ -703,7 +703,8 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		wheel.name = "Wheel"
 	if spec.has("tail_wheel"):
 		var tw: Array = spec["tail_wheel"]
-		_mi(body, MeshUtil.disc(0.14, 0.09, Vector3.RIGHT, 8), dark, Vector3(0, tw[0], tw[1]))
+		var twm: MeshInstance3D = _mi(body, MeshUtil.disc(0.14, 0.09, Vector3.RIGHT, 8), dark, Vector3(0, tw[0], tw[1]))
+		twm.name = "TailWheel"
 
 	# Markings
 	var mz: float = spec["mark_z"]

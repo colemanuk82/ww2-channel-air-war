@@ -178,6 +178,7 @@ func _build_model() -> void:
 	_prop_blades = _prop.find_child("Blades", true, false) as Node3D if _prop else null
 	_gear_l = _model.find_child("GearL", true, false) as Node3D
 	_gear_r = _model.find_child("GearR", true, false) as Node3D
+	_scan_ground_geometry()
 	_canopy = _model.find_child("Canopy", true, false) as Node3D
 	_eye = _model.find_child("CockpitEye", true, false) as Node3D
 	_flap_l = _model.find_child("FlapL", true, false) as Node3D
@@ -192,6 +193,101 @@ func _build_model() -> void:
 	var mount: Node3D = get_node_or_null("CockpitMount") as Node3D
 	if mount and _eye:
 		mount.position = _eye.position
+
+
+# ---------------------------------------------------------------- ground stance
+## Where the wheels and the propeller sit on the airframe (aircraft-local metres), read from the built model, so a
+## tail-dragger rests tail-down on its two main wheels and tail wheel, the tail comes up as it gathers speed, and
+## the propeller disc always clears the runway.
+var _gg_ok: bool = false
+var _gg_ym: float = 0.0       # lowest point of the main wheels
+var _gg_zm: float = 0.0       # ... and where along the fuselage they are (+z = aft)
+var _gg_tail: bool = false
+var _gg_yt: float = 0.0       # lowest point of the tail wheel
+var _gg_zt: float = 0.0
+var _gg_py: float = 0.0       # propeller centre height / station / radius
+var _gg_pz: float = 0.0
+var _gg_pr: float = 0.0
+var _gg_rest: float = 0.0     # nose-up attitude at rest (radians); 0 for nose-wheel types
+
+
+func _aabb_local(n: Node3D) -> AABB:
+	var out := AABB()
+	var first: bool = true
+	if n == null:
+		return out
+	var inv: Transform3D = global_transform.affine_inverse()
+	var nodes: Array = n.find_children("*", "MeshInstance3D", true, false)
+	if n is MeshInstance3D:
+		nodes.append(n)
+	for m in nodes:
+		var mi: MeshInstance3D = m as MeshInstance3D
+		if mi == null or mi.mesh == null:
+			continue
+		var xf: Transform3D = inv * mi.global_transform
+		var bb: AABB = mi.mesh.get_aabb()
+		for i in 8:
+			var p: Vector3 = xf * bb.get_endpoint(i)
+			if first:
+				out = AABB(p, Vector3.ZERO)
+				first = false
+			else:
+				out = out.expand(p)
+	return out
+
+
+func _scan_ground_geometry() -> void:
+	if not is_inside_tree():
+		return
+	_gg_ok = false
+	_gg_tail = false
+	_gg_rest = 0.0
+	_gg_pr = 0.0
+	if _gear_l == null or _gear_r == null:
+		return
+	var gb: AABB = _aabb_local(_gear_l).merge(_aabb_local(_gear_r))
+	if gb.size.y <= 0.01:
+		return
+	_gg_ym = gb.position.y
+	_gg_zm = gb.position.z + gb.size.z * 0.5
+	var tw: Node3D = _model.find_child("TailWheel", true, false) as Node3D
+	if tw != null:
+		var tb: AABB = _aabb_local(tw)
+		if tb.size.y > 0.01:
+			_gg_tail = true
+			_gg_yt = tb.position.y
+			_gg_zt = tb.position.z + tb.size.z * 0.5
+			if absf(_gg_zt - _gg_zm) > 0.5:
+				_gg_rest = clampf(atan((_gg_ym - _gg_yt) / (_gg_zm - _gg_zt)), 0.0, deg_to_rad(22.0))
+			else:
+				_gg_tail = false
+	if _prop != null:
+		var pb: AABB = _aabb_local(_prop)
+		if pb.size.x > 0.5:
+			_gg_pr = maxf(pb.size.x, pb.size.y) * 0.5
+			_gg_py = pb.position.y + pb.size.y * 0.5
+			_gg_pz = (global_transform.affine_inverse() * _prop.global_transform).origin.z
+	_gg_ok = true
+
+
+## Height of the aircraft origin above the ground for the given pitch (nose up positive): the lowest of the main
+## wheels, the tail wheel and the propeller tips (with a little clearance) rests on the surface.
+func ground_offset(pit: float) -> float:
+	if not _gg_ok:
+		return stats.gear_height
+	var c: float = cos(pit)
+	var s: float = sin(pit)
+	var h: float = -(_gg_ym * c - _gg_zm * s)
+	if _gg_tail:
+		h = maxf(h, -(_gg_yt * c - _gg_zt * s))
+	if _gg_pr > 0.0:
+		h = maxf(h, (_gg_pr - _gg_py) * c + _gg_pz * s + 0.12)
+	return h
+
+
+## Nose-up angle (radians) the aircraft rests at on its wheels.
+func ground_rest_pitch() -> float:
+	return _gg_rest
 
 
 # ---------------------------------------------------------------- public API
@@ -1068,14 +1164,17 @@ func _move_and_ground(delta: float) -> void:
 		var pit: float = _pitch_angle()
 		var rotate_speed: float = stats.stall_speed * 0.65
 		if pit < 0.0 or ground_airspeed() < rotate_speed:
-			rotate_object_local(Vector3.RIGHT, -pit * clampf(5.0 * delta, 0.0, 1.0))
+			# a tail-dragger sits tail-down on its mains and tail wheel, and the tail lifts as the speed builds
+			var tail_down: float = 1.0 - smoothstep(stats.stall_speed * 0.12, stats.stall_speed * 0.5, ground_airspeed())
+			var goal: float = _gg_rest * tail_down if ground_airspeed() < rotate_speed else 0.0
+			rotate_object_local(Vector3.RIGHT, (goal - pit) * clampf(5.0 * delta, 0.0, 1.0))
 		if fwd.y > 0.04 and ground_airspeed() > stats.stall_speed * (0.95 - 0.10 * flap_deploy):
 			on_ground = false
 			_path_dir = fwd.rotated(global_transform.basis.x, -WingModel.trim_alpha(stats.stall_speed, maxf(ground_airspeed(), 20.0), flap_deploy))
 			position.y += 0.6
 			took_off.emit(self)
 		else:
-			position.y = floor_y
+			position.y = lerpf(position.y, gh + ground_offset(_pitch_angle()), clampf(12.0 * delta, 0.0, 1.0)) if _gg_ok else floor_y
 			if over_water and state == State.ALIVE:
 				_crash("ditched")
 			elif state == State.DYING:
