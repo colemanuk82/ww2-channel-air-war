@@ -49,6 +49,7 @@ func _ready() -> void:
 	_test_military_depth()
 	_test_moon_weather()
 	_test_history()
+	_test_ai_takeoff_all()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -86,6 +87,11 @@ class TestTerrain:
 	extends Node
 	func get_terrain_y(_x: float, _z: float) -> float:
 		return 12.0
+	# the aircraft flight code asks for these (flat dry land), used by the take-off soak test
+	func get_height_at(_pos: Vector3) -> float:
+		return 12.0
+	func is_water_at(_pos: Vector3) -> bool:
+		return false
 
 
 func _install_test_terrain() -> void:
@@ -1307,3 +1313,46 @@ func _test_history() -> void:
 	_check(nc != null, "newsreel card plays")
 	nc.queue_free()
 
+# ------------------------------------------------------------------ AI take-off soak
+
+## Every flyable aircraft, flown by the AI pilot from a standing start on flat ground: it must lift off, climb
+## away and hand over to its next state without crashing, within a sane time. The simulation is stepped by hand.
+func _test_ai_takeoff_all() -> void:
+	print("-- AI take-off soak (every aircraft)")
+	var dt: float = 1.0 / 60.0
+	for side in ["Allies", "Axis"]:
+		for id in AircraftCatalog.ids_for_side(side):
+			var sid: String = String(id)
+			var st: AircraftStats = AircraftCatalog.load_stats(sid)
+			if st == null:
+				continue
+			var bomber: bool = AircraftCatalog.is_bomber(sid)
+			var role: int = AIPilot.Role.BOMBER_LEADER if bomber else AIPilot.Role.FIGHTER
+			var dir: Vector3 = WorldCoords.heading_to_dir(90.0)
+			var ac: Aircraft = AIFactory.spawn(self, sid, side, Vector3(0.0, 12.0 + st.gear_height, 0.0), 90.0, 0.0, 0.5, role, null, true)
+			var p: AIPilot = AIFactory.pilot_of(ac)
+			p.begin_takeoff(dir, AIPilot.State.PATROL)
+			var t: float = 0.0
+			var lift_t: float = -1.0
+			var run_m: float = 0.0
+			var crashed: bool = false
+			ac.crashed.connect(func(_a: Aircraft, _r: String) -> void: crashed = true)
+			var trace: String = ""
+			var next_s: float = 0.0
+			while t < 150.0 and not crashed:
+				p._process(dt)
+				ac._process(dt)
+				t += dt
+				if t >= next_s:
+					next_s += 1.0 if (lift_t > 0.0 and t < lift_t + 24.0) else 12.0
+					trace += "\n      t=%.1f gnd=%s spd=%.1f agl=%.2f pit=%.1f pathy=%.3f aoa=%.1f g=%.2f st=%d cp=%.2f vy=%.2f" % [t, str(ac.on_ground), ac.speed, ac.altitude_agl, rad_to_deg(ac._pitch_angle()), ac._path_dir.y, rad_to_deg(ac._aoa), ac.g_load, p.state, ac.cmd_pitch, ac.velocity.y]
+				if lift_t < 0.0 and not ac.on_ground:
+					lift_t = t
+					run_m = ac.global_position.length()
+				if lift_t > 0.0 and ac.altitude_agl > 60.0 and p.state != AIPilot.State.TAKEOFF:
+					break
+			var ok: bool = lift_t > 0.0 and not crashed and ac.altitude_agl > 40.0
+			_check(ok, "%s takes off by itself (lift-off %.0f s, %.0f m run, agl %.0f, crashed %s)%s" % [sid, lift_t, run_m, ac.altitude_agl, str(crashed), trace if (not ok and sid in ["lancaster", "defiant", "p38"]) else ""])
+			if ok:
+				_check(lift_t < 90.0, "%s lifts off in a sane time (%.0f s)" % [sid, lift_t])
+			ac.free()      # at once: a frozen leftover would trigger the next pilot's collision avoidance

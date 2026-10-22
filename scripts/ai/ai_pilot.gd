@@ -968,6 +968,7 @@ func _shallow(d: Vector3) -> Vector3:
 ## Start a take-off roll from the current spot along `rdir`; `next_state` is entered once airborne and clear.
 func begin_takeoff(rdir: Vector3, next_state: int) -> void:
 	runway_dir = Vector3(rdir.x, 0.0, rdir.z).normalized()
+	_airborne_t = 0.0
 	after_takeoff = next_state
 	_set_state(State.TAKEOFF)
 
@@ -1022,6 +1023,9 @@ func begin_climb_out() -> void:
 
 
 ## Returns true while the aircraft is still on the ground (controls set directly), false once airborne.
+var _airborne_t: float = 0.0       # TAKEOFF: seconds since the wheels left the ground
+
+
 func _run_takeoff(_delta: float) -> bool:
 	var stall: float = ac.stats.stall_speed
 	if ac.on_ground:
@@ -1041,9 +1045,16 @@ func _run_takeoff(_delta: float) -> bool:
 	# why bombers appeared not to climb out after lifting off.
 	var agl: float = ac.altitude_agl
 	_thr = 1.0
-	var climb: float = 0.10 if ac.speed < stall * 1.2 else 0.18
+	# Just after lift-off the wings need a high angle of attack, so a nose pointed 10 degrees up does not climb at
+	# all: the aircraft hovered a few metres off the runway at ~1.25x stall (heavy bombers, the Defiant, the P-38).
+	# Stay nearly level in ground effect until there is speed in hand, then ease the climb angle in.
+	var margin: float = clampf((ac.speed - stall * 1.25) / (stall * 0.45), 0.0, 1.0)
+	var climb: float = lerpf(0.03, 0.18, margin)
 	_dir = (runway_dir + Vector3.UP * climb).normalized()
-	if agl > 35.0 and ac.gear_down:
+	# Gear up as soon as the aircraft is flying: the gear's drag is large and, left down until 35 m, it capped the
+	# speed of the heavy bombers just above the stall so they never got that high.
+	_airborne_t += _delta
+	if ac.gear_down and (_airborne_t > 2.0 or agl > 35.0):
 		ac.set_gear(false)
 	if agl > 130.0 and ac.speed > stall * 1.25:
 		_set_state(after_takeoff)
