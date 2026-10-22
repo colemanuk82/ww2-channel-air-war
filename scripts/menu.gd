@@ -11,6 +11,8 @@ const DIFFICULTIES := {"Easy": 0.2, "Normal": 0.5, "Hard": 0.85}
 const TIMES := ["dawn", "noon", "dusk", "night"]
 const PAGES := ["SORTIE", "START POINT", "CONDITIONS", "BRIEFING"]
 
+const DONATE_URL := "https://paypal.me/colemanuk82"
+
 var _side: OptionButton
 var _aircraft: OptionButton
 var _mode: OptionButton
@@ -241,6 +243,14 @@ void fragment() {
 	ver.offset_right = -22.0
 	ver.offset_top = 14.0
 	root.add_child(ver)
+	# voluntary donation link, top-right under the version label (opens the player's browser; nothing is sent by the game)
+	var sup := UIKit.button("Support me on PayPal", func() -> void: OS.shell_open(DONATE_URL), 15)
+	sup.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	sup.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	sup.offset_right = -22.0
+	sup.offset_top = 40.0
+	sup.tooltip_text = "Optional. Opens " + DONATE_URL + " in your web browser."
+	root.add_child(sup)
 
 	_side.item_selected.connect(func(_i: int) -> void: _refresh_aircraft())
 	_side.item_selected.connect(func(_i: int) -> void: _refresh_mode())
