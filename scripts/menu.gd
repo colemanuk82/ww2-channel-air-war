@@ -254,6 +254,8 @@ void fragment() {
 	sup.offset_top = 40.0
 	sup.tooltip_text = "Optional. Opens " + DONATE_URL + " in your web browser."
 	root.add_child(sup)
+	if FirstRun.pending():
+		_welcome_when_clear(root)
 
 	_side.item_selected.connect(func(_i: int) -> void: _refresh_aircraft())
 	_side.item_selected.connect(func(_i: int) -> void: _refresh_mode())
@@ -572,6 +574,57 @@ func _open_planner() -> void:
 		_plan_label.text = "Planned: %s, %s" % [String(plan["scenario"]).capitalize(), "runway" if not bool(plan["spawn_airborne"]) else "airborne"]
 		_on_start())
 	add_child(fp)
+
+
+## First launch only: offer the training flight before the player is dropped into a full mission menu.
+func _welcome_when_clear(root: Control) -> void:
+	# let the opening newsreel card finish first so the two do not overlap
+	await get_tree().process_frame
+	while is_inside_tree():
+		var busy: bool = false
+		for c in get_children():
+			if c is NewsreelCard:
+				busy = true
+		if not busy:
+			break
+		await get_tree().create_timer(0.3).timeout
+	if is_inside_tree():
+		_show_welcome(root)
+
+
+func _show_welcome(root: Control) -> void:
+	var dim: Control = UIKit.dimmer(0.7)
+	root.add_child(dim)
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", UIKit.panel_style())
+	card.custom_minimum_size = Vector2(660, 0)
+	card.set_anchors_preset(Control.PRESET_CENTER)
+	card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	card.grow_vertical = Control.GROW_DIRECTION_BOTH
+	dim.add_child(card)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	card.add_child(box)
+	box.add_child(UIKit.label("WELCOME, PILOT", 34, UIKit.TEXT, true))
+	var body := UIKit.label("New to WW2 Channel Air War? The training flight takes about five minutes and walks you through the controls: taking off, turning, firing and landing. You can run it any time from Mode > Training.\n\nPrefer to jump straight in? Pick a mission from the menu. It's completely free, so have fun.", 18, UIKit.TEXT_DIM)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(body)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	box.add_child(row)
+	row.add_child(UIKit.button("Start the training flight", func() -> void:
+		FirstRun.mark_offered()
+		dim.queue_free()
+		var ti: int = _mode_ids.find("training")
+		if ti >= 0:
+			_mode.select(ti)
+			_refresh_mode()
+			if _mission.item_count > 0:
+				_mission.select(0)
+			_on_start(), 22, true))
+	row.add_child(UIKit.button("Skip, take me to the menu", func() -> void:
+		FirstRun.mark_offered()
+		dim.queue_free(), 20))
 
 
 func _on_start() -> void:
