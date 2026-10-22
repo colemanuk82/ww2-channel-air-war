@@ -244,7 +244,7 @@ func _menu_test() -> void:
 	var hist_idx: int = _menu._mode_ids.find("historical")
 	_menu._mode.select(hist_idx)
 	_menu._mode.item_selected.emit(hist_idx)
-	for mid in ["bob_kent", "rh_bf109_g6_late_defense_of_the_reich", "rh_typhoon_walcheren_causeway", "dday_1944", "dunkirk_first_light"]:
+	for mid in ["bob_kent", "op_axis_reich_defence", "op_waal_crossing", "dday_1944", "dunkirk_first_light"]:
 		var i: int = _menu._mission_ids.find(mid)
 		_menu._mission.select(i)
 		_menu._mission.item_selected.emit(i)
@@ -1427,8 +1427,22 @@ func _show_menu() -> void:
 	_menu.start_requested.connect(start_game)
 	_menu.quit_requested.connect(func() -> void: get_tree().quit())
 	_update_menu_cam(0.0)
+	_show_legal_gate()
 	if _args.has("--menu-test"):    # debug: pick missions in the start menu and print the side / aircraft it selects
 		_menu_test.call_deferred()
+
+
+## Photosensitivity warning on every launch, licence agreement on first launch, optional DLSS download offer.
+## Not shown in headless / automated runs (--menu-test, --skip-legal).
+func _show_legal_gate() -> void:
+	if DisplayServer.get_name() == "headless" or _args.has("--menu-test") or _args.has("--skip-legal"):
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	add_child(layer)
+	var gate := LegalGate.new()
+	gate.done.connect(func() -> void: layer.queue_free())
+	layer.add_child(gate)
 
 
 func _update_menu_cam(delta: float) -> void:

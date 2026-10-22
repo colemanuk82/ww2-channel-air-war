@@ -212,11 +212,6 @@ def main():
                 pv = st[sd["aircraft"][0]]["max_speed"]
                 if pv < BOMBER_CAP * 1.15 and sd["aircraft"][0] not in bombers:
                     W("player aircraft %s (%.0f u/s) barely faster than the bomber cruise cap (%.0f u/s)" % (sd["aircraft"][0], pv, BOMBER_CAP))
-            # voice coverage (text always works; clips are optional)
-            if mid.startswith("rh_"):
-                base = "mission/%s/%s/start_1" % (mid, side.lower())
-                if base not in voice_csv:
-                    W("no place-name voice line for this mission")
     # report
     print("checked %d missions: %d errors, %d warnings" % (n_checked, len(errors), len(warns)))
     for mid, msg in errors:

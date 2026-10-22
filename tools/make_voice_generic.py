@@ -1,5 +1,5 @@
 """Generic, mission-independent voice lines (briefing + radio calls per role/side) -> assets/voice/voice_generic.csv.
-Used as the fallback for any historical mission without its own recordings (e.g. the star Rheinland missions).
+Used as the fallback for any historical mission without its own recordings (e.g. the diamond original missions).
 Files: brief/generic_<role>_<side>.mp3 and generic/<role>/<side>/<key>.mp3 (roles: strike, strafe, defend).
 Run:  python tools/make_voice_generic.py
 Then (own terminal; key never goes in a file):  $env:ELEVENLABS_API_KEY = "<key>"

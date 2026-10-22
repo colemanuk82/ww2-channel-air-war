@@ -1,0 +1,40 @@
+CREDITS AND LICENCES
+WW2 Channel Air War
+
+DESIGN, CODE, PROCEDURAL ART AND MISSIONS
+{PUBLISHER}. Aircraft, terrain, sea, sky, clouds, HUD and all 25 original missions are generated or written for this game.
+
+ENGINE
+Godot Engine, built from the Godot source with NVIDIA RTX/Streamline integration. Copyright (c) 2014-present Godot Engine contributors; Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur. Licensed under the MIT licence. The full list of engine third-party components and licences is shown under "Engine licences" on this screen. Includes AMD FidelityFX Super Resolution 2 (MIT).
+
+OPTIONAL NVIDIA COMPONENTS (DOWNLOADED BY THE PLAYER)
+NVIDIA DLSS, DLSS Frame Generation, NVIDIA Streamline and NVIDIA Reflex are the property of NVIDIA Corporation and are not distributed with this game. If you choose to download them from Options, they are fetched from NVIDIA's own repository and their licence files are saved to the "licenses" folder next to the game. NVIDIA, DLSS, GeForce and RTX are trademarks of NVIDIA Corporation.
+
+WATER
+Ocean3D Lite by Justin Schroeder, MIT licence (text below). Gerstner wave field adapted for the sea surface.
+
+TERRAIN AND MAP DATA
+- Terrain colour imagery: Sentinel-2 cloudless 2020 by EOX IT Services GmbH, containing modified Copernicus Sentinel data 2020, CC BY 4.0. https://s2maps.eu
+- Land cover: ESA WorldCover 10 m 2021 v200, (c) ESA WorldCover project 2021, containing modified Copernicus Sentinel data (2021) processed by ESA, CC BY 4.0. https://esa-worldcover.org
+- Elevation: Terrain Tiles on AWS Open Data (attribution to Mapzen and AWS). https://registry.opendata.aws/terrain-tiles/
+- Roads, rail, rivers, coast, woods and towns: (c) OpenStreetMap contributors, Open Database Licence. https://www.openstreetmap.org/copyright ; regional extracts via Geofabrik GmbH.
+- Historical site positions (industry, docks, landmarks, dams, sea defences, decoys, pylons, rail structures, oil and fuel sites, aircraft industry, V-weapon sites, ports, rural, coastal, civil defence, aviation support, forestry, navigation aids, military depth) are hand-authored from public knowledge, with positions checked against Wikipedia (CC BY-SA 4.0), Historic England, Geograph, the Airfield Research Group, Suffolk Heritage Explorer, Heritage Gateway and the Forestry Commission. Each data file records its sources.
+- Aircraft performance figures are rounded from published specifications (Wikipedia, CC BY-SA 4.0, and battleofbritain1940.com).
+
+MUSIC
+Licensed under the Pixabay Content Licence, https://pixabay.com/service/license-summary/
+- "Freedom" by jeremusic70
+- "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans", "Battle Cry of the Brave" by nocopyrightsound633
+- "Cinematic Action Movie Music", "Epic Orchestral Music with Flute", "Suspenseful Thriller Music" by musicwallah
+
+VOICES
+All radio, briefing, training and crew voices are AI-generated with ElevenLabs text-to-speech, https://elevenlabs.io. No human recordings are used.
+
+IMAGES
+Menu paintings are AI-generated.
+
+FONTS
+Barlow and Barlow Condensed by Jeremy Tribby, SIL Open Font Licence 1.1 (text below). https://github.com/jpt/barlow
+
+HISTORICAL NOTE
+This is a work of fiction inspired by historical events. Aircraft names and designations are used descriptively. All trademarks belong to their respective owners, who have not endorsed this game.

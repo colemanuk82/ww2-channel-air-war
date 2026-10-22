@@ -1,0 +1,30 @@
+PRIVACY POLICY
+WW2 Channel Air War
+
+Last updated: {DATE}
+
+The short version: the Game does not collect personal data, has no accounts, no advertising and no analytics, and does not contact any server unless you ask it to download the optional NVIDIA DLSS components.
+
+1. WHO IS RESPONSIBLE
+{PUBLISHER} ("we") is responsible for this policy. Contact: {CONTACT}.
+
+2. DATA STORED ON YOUR DEVICE
+The Game stores the following on your own computer only, in the Game's user data folder: settings (graphics, audio, controls), your pilot log and career progress, saved campaign state, per-aircraft camera zoom, and a record that you accepted the licence agreement and warnings. We do not receive any of this. Delete the folder to remove it.
+
+3. DATA WE COLLECT
+None. We do not collect your name, email address, location, device identifiers, play statistics or crash reports.
+
+4. NETWORK ACCESS
+The Game works offline. It connects to the internet only if you press "Download DLSS components", in which case it downloads a file from NVIDIA's public GitHub repository (github.com). GitHub, like any web server, will see your IP address and basic request details, under GitHub's own privacy statement. No other connection is made by the Game.
+
+5. STORES AND PLATFORMS
+If you obtain the Game through a store or launcher (for example Steam), that platform processes your data under its own privacy policy. We do not control it.
+
+6. CHILDREN
+The Game is rated for a general audience of older children and adults and does not knowingly collect any data from anyone, including children.
+
+7. YOUR RIGHTS
+Because we hold no personal data about you, there is nothing for us to access, correct or delete. If you contact us we will process your message only to reply to it. Depending on where you live you may have rights under laws such as the UK GDPR or EU GDPR, including the right to complain to your data protection authority.
+
+8. CHANGES
+If we change how the Game handles data we will update this policy and tell you in the Game before the change applies.

@@ -368,7 +368,7 @@ func _process(delta: float) -> void:
 			_line("all")
 
 
-# ------------------------------------------------------------------ scripted air events (the converted Rheinland missions)
+# ------------------------------------------------------------------ scripted air events (the original scripted-event missions)
 ## Each event: {kind: ambush|raid|flyby|escort, hostile, aircraft, count, lat, lon, alt_m, trigger_km (real km), label}.
 ## It fires once, when the player comes within trigger_km of its position.
 var _events_pending: Array = []

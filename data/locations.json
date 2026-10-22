@@ -703,7 +703,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_melsbroek",
+   "id": "af_melsbroek",
    "name": "Melsbroek",
    "side": "RAF",
    "lat": 50.8608,
@@ -713,7 +713,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_mill",
+   "id": "af_mill",
    "name": "Mill",
    "side": "Luftwaffe",
    "lat": 51.6263,
@@ -723,7 +723,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_kluis",
+   "id": "af_kluis",
    "name": "Kluis",
    "side": "Luftwaffe",
    "lat": 51.715,
@@ -733,7 +733,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_hopsten",
+   "id": "af_hopsten",
    "name": "Hopsten",
    "side": "Luftwaffe",
    "lat": 52.2518,
@@ -743,7 +743,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_twente",
+   "id": "af_twente",
    "name": "Twente",
    "side": "Luftwaffe",
    "lat": 52.1739,
@@ -753,7 +753,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_asch",
+   "id": "af_asch",
    "name": "Asch",
    "side": "RAF",
    "lat": 50.8918,
@@ -763,7 +763,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_schijndel",
+   "id": "af_schijndel",
    "name": "Schijndel",
    "side": "RAF",
    "lat": 51.5375,
@@ -773,7 +773,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_deurne",
+   "id": "af_deurne",
    "name": "Deurne",
    "side": "RAF",
    "lat": 51.1481,
@@ -783,7 +783,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_munster_handorf",
+   "id": "af_munster_handorf",
    "name": "Munster-Handorf",
    "side": "Luftwaffe",
    "lat": 51.9063,
@@ -793,7 +793,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_st_trond",
+   "id": "af_st_trond",
    "name": "St. Trond",
    "side": "RAF",
    "lat": 50.7219,
@@ -803,7 +803,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_florennes",
+   "id": "af_florennes",
    "name": "Florennes",
    "side": "RAF",
    "lat": 50.1997,
@@ -813,7 +813,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_le_culot_east",
+   "id": "af_le_culot_east",
    "name": "Le Culot East",
    "side": "RAF",
    "lat": 50.7271,
@@ -823,7 +823,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_petit_brogel",
+   "id": "af_petit_brogel",
    "name": "Petit Brogel",
    "side": "RAF",
    "lat": 51.0956,
@@ -833,7 +833,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_helmond",
+   "id": "af_helmond",
    "name": "Helmond",
    "side": "RAF",
    "lat": 51.398,
@@ -843,7 +843,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_evere",
+   "id": "af_evere",
    "name": "Evere",
    "side": "RAF",
    "lat": 50.8358,
@@ -853,7 +853,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_heesch",
+   "id": "af_heesch",
    "name": "Heesch",
    "side": "RAF",
    "lat": 51.6464,
@@ -863,7 +863,7 @@
    "in_bounds": true
   },
   {
-   "id": "rh_af_grimbergen",
+   "id": "af_grimbergen",
    "name": "Grimbergen",
    "side": "RAF",
    "lat": 50.9105,
@@ -3735,691 +3735,6 @@
    "in_bounds": true
   },
   {
-   "id": "rh_rail_yard_objective_near_seraing",
-   "name": "Objective near Seraing",
-   "type": "rail_yard",
-   "lat": 50.5425,
-   "lon": 5.5864,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_enemy_position_near_julich",
-   "name": "Enemy position near Julich",
-   "type": "battery",
-   "lat": 50.8589,
-   "lon": 6.3766,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_enemy_position_near_dusseldo",
-   "name": "Enemy position near Dusseldorf",
-   "type": "battery",
-   "lat": 51.1333,
-   "lon": 6.8165,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_enemy_position_near_wesel",
-   "name": "Enemy position near Wesel",
-   "type": "battery",
-   "lat": 51.5616,
-   "lon": 6.6437,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_dorsten",
-   "name": "Enemy column near Dorsten",
-   "type": "convoy_route",
-   "lat": 51.5642,
-   "lon": 6.9869,
-   "side_owner": "Allies",
-   "path": [
-    [
-     51.5642,
-     6.9869
-    ],
-    [
-     51.5742,
-     7.0169
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_geleen",
-   "name": "Enemy column near Geleen",
-   "type": "convoy_route",
-   "lat": 50.8339,
-   "lon": 5.8285,
-   "side_owner": "Axis",
-   "path": [
-    [
-     50.8339,
-     5.8285
-    ],
-    [
-     50.8439,
-     5.8585
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_wassenberg",
-   "name": "Enemy column near Wassenberg",
-   "type": "convoy_route",
-   "lat": 51.0146,
-   "lon": 6.1737,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.0146,
-     6.1737
-    ],
-    [
-     51.0246,
-     6.2037
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_barvaux",
-   "name": "Supply train near Barvaux",
-   "type": "convoy_route",
-   "lat": 50.2863,
-   "lon": 5.4967,
-   "side_owner": "Axis",
-   "path": [
-    [
-     50.2863,
-     5.4967
-    ],
-    [
-     50.3063,
-     5.5467
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_auwaille",
-   "name": "Supply train near Auwaille",
-   "type": "convoy_route",
-   "lat": 50.4501,
-   "lon": 5.5651,
-   "side_owner": "Axis",
-   "path": [
-    [
-     50.4501,
-     5.5651
-    ],
-    [
-     50.4701,
-     5.6151
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_spa",
-   "name": "Supply train near Spa",
-   "type": "convoy_route",
-   "lat": 50.4155,
-   "lon": 5.8582,
-   "side_owner": "Axis",
-   "path": [
-    [
-     50.4155,
-     5.8582
-    ],
-    [
-     50.4355,
-     5.9082
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_artillery_park_near_spa",
-   "name": "Artillery park near Spa",
-   "type": "battery",
-   "lat": 50.4168,
-   "lon": 5.8833,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_spa",
-   "name": "Enemy column near Spa",
-   "type": "convoy_route",
-   "lat": 50.413,
-   "lon": 5.8884,
-   "side_owner": "Axis",
-   "path": [
-    [
-     50.413,
-     5.8884
-    ],
-    [
-     50.423,
-     5.9184
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_auwaille",
-   "name": "Enemy column near Auwaille",
-   "type": "convoy_route",
-   "lat": 50.4056,
-   "lon": 5.6674,
-   "side_owner": "Axis",
-   "path": [
-    [
-     50.4056,
-     5.6674
-    ],
-    [
-     50.4156,
-     5.6974
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_aachen",
-   "name": "Supply train near Aachen",
-   "type": "convoy_route",
-   "lat": 50.6884,
-   "lon": 6.0944,
-   "side_owner": "Axis",
-   "path": [
-    [
-     50.6884,
-     6.0944
-    ],
-    [
-     50.7084,
-     6.1444
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_aachen",
-   "name": "Enemy column near Aachen",
-   "type": "convoy_route",
-   "lat": 50.6923,
-   "lon": 6.0884,
-   "side_owner": "Axis",
-   "path": [
-    [
-     50.6923,
-     6.0884
-    ],
-    [
-     50.7023,
-     6.1184
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_vise",
-   "name": "Supply train near Vise",
-   "type": "convoy_route",
-   "lat": 50.6312,
-   "lon": 5.6876,
-   "side_owner": "Axis",
-   "path": [
-    [
-     50.6312,
-     5.6876
-    ],
-    [
-     50.6512,
-     5.7376
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_artillery_park_near_seraing",
-   "name": "Artillery park near Seraing",
-   "type": "battery",
-   "lat": 50.5629,
-   "lon": 5.6198,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_objective_near_seraing",
-   "name": "Objective near Seraing",
-   "type": "battery",
-   "lat": 50.5445,
-   "lon": 5.5866,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_seraing",
-   "name": "Enemy column near Seraing",
-   "type": "convoy_route",
-   "lat": 50.592,
-   "lon": 5.5548,
-   "side_owner": "Axis",
-   "path": [
-    [
-     50.592,
-     5.5548
-    ],
-    [
-     50.602,
-     5.5848
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_eindhoven",
-   "name": "Supply train near Eindhoven",
-   "type": "convoy_route",
-   "lat": 51.381,
-   "lon": 5.6156,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.381,
-     5.6156
-    ],
-    [
-     51.401,
-     5.6656
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_objective_near_helmond",
-   "name": "Objective near Helmond",
-   "type": "battery",
-   "lat": 51.3882,
-   "lon": 5.6525,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_helmond",
-   "name": "Enemy column near Helmond",
-   "type": "convoy_route",
-   "lat": 51.4089,
-   "lon": 5.7022,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.4089,
-     5.7022
-    ],
-    [
-     51.4189,
-     5.7322
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_artillery_park_near_geldern",
-   "name": "Artillery park near Geldern",
-   "type": "battery",
-   "lat": 51.4378,
-   "lon": 6.3744,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_geldern",
-   "name": "Enemy column near Geldern",
-   "type": "convoy_route",
-   "lat": 51.4579,
-   "lon": 6.3692,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.4579,
-     6.3692
-    ],
-    [
-     51.4679,
-     6.3992
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_artillery_park_near_loenhout",
-   "name": "Artillery park near Loenhout",
-   "type": "battery",
-   "lat": 51.3202,
-   "lon": 4.5665,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_loenhout",
-   "name": "Enemy column near Loenhout",
-   "type": "convoy_route",
-   "lat": 51.3209,
-   "lon": 4.5662,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.3209,
-     4.5662
-    ],
-    [
-     51.3309,
-     4.5962
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_venlo",
-   "name": "Supply train near Venlo",
-   "type": "convoy_route",
-   "lat": 51.2828,
-   "lon": 6.2024,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.2828,
-     6.2024
-    ],
-    [
-     51.3028,
-     6.2524
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_objective_near_venlo",
-   "name": "Objective near Venlo",
-   "type": "battery",
-   "lat": 51.2818,
-   "lon": 6.204,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_bergen_op_",
-   "name": "Supply train near Bergen op Zoom",
-   "type": "convoy_route",
-   "lat": 51.4641,
-   "lon": 4.3739,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.4641,
-     4.3739
-    ],
-    [
-     51.4841,
-     4.4239
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_roosendaal",
-   "name": "Supply train near Roosendaal",
-   "type": "convoy_route",
-   "lat": 51.5006,
-   "lon": 4.5365,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.5006,
-     4.5365
-    ],
-    [
-     51.5206,
-     4.5865
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_breda",
-   "name": "Supply train near Breda",
-   "type": "convoy_route",
-   "lat": 51.5416,
-   "lon": 4.8487,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.5416,
-     4.8487
-    ],
-    [
-     51.5616,
-     4.8987
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_rail_yard_objective_near_bergen_op_zoo",
-   "name": "Objective near Bergen op Zoom",
-   "type": "rail_yard",
-   "lat": 51.4725,
-   "lon": 4.4035,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_rail_yard_objective_near_roosendaal",
-   "name": "Objective near Roosendaal",
-   "type": "rail_yard",
-   "lat": 51.4992,
-   "lon": 4.6271,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_rail_yard_objective_near_breda",
-   "name": "Objective near Breda",
-   "type": "rail_yard",
-   "lat": 51.5686,
-   "lon": 4.8091,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_rail_yard_objective_near_tilburg",
-   "name": "Objective near Tilburg",
-   "type": "rail_yard",
-   "lat": 51.4457,
-   "lon": 5.2884,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_rotterdam",
-   "name": "Supply train near Rotterdam",
-   "type": "convoy_route",
-   "lat": 51.9141,
-   "lon": 4.5474,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.9141,
-     4.5474
-    ],
-    [
-     51.9221,
-     4.5139
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_supply_train_near_den_haag",
-   "name": "Supply train near Den Haag",
-   "type": "convoy_route",
-   "lat": 52.0134,
-   "lon": 4.3565,
-   "side_owner": "Axis",
-   "path": [
-    [
-     52.0134,
-     4.3565
-    ],
-    [
-     51.9936,
-     4.3812
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_artillery_park_near_scheveni",
-   "name": "Artillery park near Scheveningen",
-   "type": "battery",
-   "lat": 51.9339,
-   "lon": 4.2332,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_schevening",
-   "name": "Enemy column near Scheveningen",
-   "type": "convoy_route",
-   "lat": 52.0657,
-   "lon": 4.3596,
-   "side_owner": "Axis",
-   "path": [
-    [
-     52.0657,
-     4.3596
-    ],
-    [
-     52.0577,
-     4.326
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_den_haag",
-   "name": "Enemy column near Den Haag",
-   "type": "convoy_route",
-   "lat": 52.0116,
-   "lon": 4.3591,
-   "side_owner": "Axis",
-   "path": [
-    [
-     52.0116,
-     4.3591
-    ],
-    [
-     51.9918,
-     4.3838
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_krefeld",
-   "name": "Enemy column near Krefeld",
-   "type": "convoy_route",
-   "lat": 51.2325,
-   "lon": 6.5651,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.2325,
-     6.5651
-    ],
-    [
-     51.2425,
-     6.5951
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_battery_artillery_park_near_maaseik",
-   "name": "Artillery park near Maaseik",
-   "type": "battery",
-   "lat": 51.1061,
-   "lon": 5.8825,
-   "side_owner": "Axis",
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_maaseik",
-   "name": "Enemy column near Maaseik",
-   "type": "convoy_route",
-   "lat": 51.1118,
-   "lon": 5.9068,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.1118,
-     5.9068
-    ],
-    [
-     51.1218,
-     5.9368
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_weert",
-   "name": "Enemy column near Weert",
-   "type": "convoy_route",
-   "lat": 51.1438,
-   "lon": 5.9119,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.1438,
-     5.9119
-    ],
-    [
-     51.1538,
-     5.9419
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
-   "id": "rh_convoy_route_enemy_column_near_terneuzer",
-   "name": "Enemy column near Terneuzer",
-   "type": "convoy_route",
-   "lat": 51.4784,
-   "lon": 3.7119,
-   "side_owner": "Axis",
-   "path": [
-    [
-     51.4784,
-     3.7119
-    ],
-    [
-     51.4516,
-     3.722
-    ]
-   ],
-   "in_bounds": true
-  },
-  {
    "id": "factory_filton_bristol",
    "name": "Bristol Aeroplane Company, Filton",
    "type": "factory",
@@ -4706,6 +4021,81 @@
     ]
    ],
    "naval": true,
+   "in_bounds": true
+  },
+  {
+   "id": "flak_venlo",
+   "name": "Venlo Flak Belt",
+   "type": "battery",
+   "lat": 51.372,
+   "lon": 6.165,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "supply_spa",
+   "name": "Supply Trains near Spa",
+   "type": "convoy_route",
+   "lat": 50.49,
+   "lon": 5.87,
+   "side_owner": "Axis",
+   "path": [
+    [
+     50.49,
+     5.87
+    ],
+    [
+     50.51,
+     5.93
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "column_geldern",
+   "name": "Enemy Column near Geldern",
+   "type": "convoy_route",
+   "lat": 51.52,
+   "lon": 6.33,
+   "side_owner": "Axis",
+   "path": [
+    [
+     51.52,
+     6.33
+    ],
+    [
+     51.54,
+     6.38
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "column_allied_goch",
+   "name": "Allied Supply Column near Goch",
+   "type": "convoy_route",
+   "lat": 51.68,
+   "lon": 6.17,
+   "side_owner": "Allies",
+   "path": [
+    [
+     51.68,
+     6.17
+    ],
+    [
+     51.7,
+     6.22
+    ]
+   ],
+   "in_bounds": true
+  },
+  {
+   "id": "artillery_maas",
+   "name": "Artillery Park on the Maas",
+   "type": "battery",
+   "lat": 51.14,
+   "lon": 5.88,
+   "side_owner": "Axis",
    "in_bounds": true
   }
  ]

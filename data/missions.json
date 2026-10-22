@@ -542,2046 +542,6 @@
    "_source": "derived from data/missions_seed.json by Stage 3 (roles/modes/protect/time_limit added)"
   },
   {
-   "id": "rh_a_20_bombing_raid_on_liege_railway_junction",
-   "name": "\u2605 A-20 - Bombing raid on Liege railway junction",
-   "year": 1944,
-   "date": "1944-10-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_melsbroek",
-     "aircraft": [
-      "b26"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_rail_yard_objective_near_seraing"
-    ]
-   },
-   "time_of_day": 9.5,
-   "weather": "scattered",
-   "brief": "1944-10-01. Bombing sortie in a b26 from Melsbroek.",
-   "roles": {
-    "Allies": "strike"
-   },
-   "protect": {},
-   "time_limit": 2760,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "bombing"
-   },
-   "events": [
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "bf109",
-     "count": 8,
-     "lat": 50.6005,
-     "lon": 5.2835,
-     "alt_m": 6000,
-     "trigger_km": 25,
-     "label": "random patrol GER"
-    }
-   ]
-  },
-  {
-   "id": "rh_a20_refinery_on_fire",
-   "name": "\u2605 A20 - Refinery on fire",
-   "year": 1944,
-   "date": "1944-10-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "manston",
-     "aircraft": [
-      "b26"
-     ],
-     "spawn": {
-      "lat": 51.927,
-      "lon": 3.9262,
-      "heading": 90,
-      "alt": 1500
-     }
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "port_rotterdam",
-     "bridge_moerdijk",
-     "port_flushing"
-    ]
-   },
-   "time_of_day": 12.5,
-   "weather": "scattered",
-   "brief": "1944-10-01. Bombing sortie in a b26 from Manston.",
-   "roles": {
-    "Allies": "strike"
-   },
-   "protect": {},
-   "time_limit": 3540,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "bombing"
-   },
-   "events": []
-  },
-  {
-   "id": "rh_bf109_g6_late_defense_of_the_reich",
-   "name": "\u2605 Bf109 G6 late - Defense of the Reich",
-   "year": 1944,
-   "date": "1944-08-01",
-   "sides": [
-    {
-     "side": "Axis",
-     "start_airfield": "rh_af_mill",
-     "aircraft": [
-      "bf109"
-     ]
-    }
-   ],
-   "objectives": {
-    "Axis": [
-     "bridge_grave",
-     "bridge_nijmegen"
-    ]
-   },
-   "time_of_day": 7.5,
-   "weather": "overcast",
-   "brief": "1944-08-01. Defensive sortie in a bf109 from Mill.",
-   "roles": {
-    "Axis": "defend"
-   },
-   "protect": {
-    "Axis": [
-     "bridge_grave",
-     "bridge_nijmegen"
-    ]
-   },
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Axis": "defend"
-   },
-   "events": [
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "bf109",
-     "count": 4,
-     "lat": 51.4771,
-     "lon": 5.6045,
-     "alt_m": 2500,
-     "trigger_km": 18,
-     "label": "109 flyby"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "p51",
-     "count": 8,
-     "lat": 51.1642,
-     "lon": 4.9583,
-     "alt_m": 3500,
-     "trigger_km": 25,
-     "label": "P-51 Ambush"
-    },
-    {
-     "kind": "raid",
-     "hostile": true,
-     "aircraft": "b26",
-     "count": 6,
-     "lat": 52.2226,
-     "lon": 4.9304,
-     "alt_m": 4100,
-     "trigger_km": 18,
-     "label": "Bomber and escort RAF"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "p51",
-     "count": 8,
-     "lat": 52.067,
-     "lon": 4.6579,
-     "alt_m": 3500,
-     "trigger_km": 25,
-     "label": "P-51 Ambush"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "p51",
-     "count": 8,
-     "lat": 52.2561,
-     "lon": 4.8163,
-     "alt_m": 3500,
-     "trigger_km": 25,
-     "label": "P-51 Ambush"
-    }
-   ]
-  },
-  {
-   "id": "rh_bf109_k4_dark_clouds",
-   "name": "\u2605 Bf109 K4 - Dark clouds",
-   "year": 1944,
-   "date": "1944-08-01",
-   "sides": [
-    {
-     "side": "Axis",
-     "start_airfield": "rh_af_kluis",
-     "aircraft": [
-      "bf109"
-     ]
-    }
-   ],
-   "objectives": {
-    "Axis": [
-     "bridge_grave",
-     "bridge_nijmegen"
-    ]
-   },
-   "time_of_day": 19.5,
-   "weather": "overcast",
-   "brief": "1944-08-01. Defensive sortie in a bf109 from Kluis.",
-   "roles": {
-    "Axis": "defend"
-   },
-   "protect": {
-    "Axis": [
-     "bridge_grave",
-     "bridge_nijmegen"
-    ]
-   },
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Axis": "defend"
-   },
-   "events": [
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "fw190",
-     "count": 4,
-     "lat": 51.7864,
-     "lon": 5.7904,
-     "alt_m": 1200,
-     "trigger_km": 18,
-     "label": "Fw190 A8 joins"
-    },
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "he111",
-     "count": 3,
-     "lat": 51.7006,
-     "lon": 5.6906,
-     "alt_m": 1200,
-     "trigger_km": 18,
-     "label": "ju42 fly by"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "bf109",
-     "count": 4,
-     "lat": 51.8387,
-     "lon": 5.6572,
-     "alt_m": 800,
-     "trigger_km": 18,
-     "label": "109 flyby"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "p51",
-     "count": 8,
-     "lat": 51.8939,
-     "lon": 4.6942,
-     "alt_m": 3500,
-     "trigger_km": 25,
-     "label": "P-51 Ambush"
-    },
-    {
-     "kind": "raid",
-     "hostile": true,
-     "aircraft": "b26",
-     "count": 6,
-     "lat": 52.2226,
-     "lon": 4.9304,
-     "alt_m": 3100,
-     "trigger_km": 18,
-     "label": "Bomber and escort RAF"
-    }
-   ]
-  },
-  {
-   "id": "rh_bf110_g2_defending_frankfurt",
-   "name": "\u2605 Bf110 G2 - Defending Frankfurt",
-   "year": 1944,
-   "date": "1944-10-01",
-   "sides": [
-    {
-     "side": "Axis",
-     "start_airfield": "frankfurt_rhein_main",
-     "aircraft": [
-      "bf109"
-     ]
-    }
-   ],
-   "objectives": {
-    "Axis": [
-     "factory_opel_russelsheim",
-     "rail_koblenz_lutzel"
-    ]
-   },
-   "time_of_day": 7.5,
-   "weather": "scattered",
-   "brief": "1944-10-01. Defensive sortie in a bf109 from Frankfurt Rhein-Main.",
-   "roles": {
-    "Axis": "defend"
-   },
-   "protect": {
-    "Axis": [
-     "factory_opel_russelsheim",
-     "rail_koblenz_lutzel"
-    ]
-   },
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Axis": "defend"
-   },
-   "events": [
-    {
-     "kind": "raid",
-     "hostile": true,
-     "aircraft": "b26",
-     "count": 6,
-     "lat": 50.2507,
-     "lon": 7.561,
-     "alt_m": 5500,
-     "trigger_km": 18,
-     "label": "B25 and escort RAF"
-    }
-   ]
-  },
-  {
-   "id": "rh_fw190_d9_raid_alarm",
-   "name": "\u2605 Fw190 D9 - Raid Alarm",
-   "year": 1945,
-   "date": "1945-01-01",
-   "sides": [
-    {
-     "side": "Axis",
-     "start_airfield": "koln_butzweilerhof",
-     "aircraft": [
-      "fw190"
-     ],
-     "spawn": {
-      "lat": 50.8884,
-      "lon": 6.91,
-      "heading": 198,
-      "alt": 1500
-     }
-    }
-   ],
-   "objectives": {
-    "Axis": [
-     "bridge_hohenzollern",
-     "rail_cologne_gremberg"
-    ]
-   },
-   "time_of_day": 9.5,
-   "weather": "scattered",
-   "brief": "1945-01-01. Defensive sortie in a fw190 from Koln-Butzweilerhof.",
-   "roles": {
-    "Axis": "defend"
-   },
-   "protect": {
-    "Axis": [
-     "bridge_hohenzollern",
-     "rail_cologne_gremberg"
-    ]
-   },
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Axis": "defend"
-   },
-   "events": [
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "p47",
-     "count": 8,
-     "lat": 50.9257,
-     "lon": 6.8341,
-     "alt_m": 700,
-     "trigger_km": 25,
-     "label": "P38"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "p47",
-     "count": 8,
-     "lat": 50.9195,
-     "lon": 6.7463,
-     "alt_m": 1500,
-     "trigger_km": 25,
-     "label": "P-47"
-    }
-   ]
-  },
-  {
-   "id": "rh_me262_intercept_b25s",
-   "name": "\u2605 Me262 - Intercept B25s",
-   "year": 1944,
-   "date": "1944-08-01",
-   "sides": [
-    {
-     "side": "Axis",
-     "start_airfield": "rh_af_hopsten",
-     "aircraft": [
-      "me262"
-     ]
-    }
-   ],
-   "objectives": {
-    "Axis": [
-     "rail_munster",
-     "rail_osnabruck"
-    ]
-   },
-   "time_of_day": 17.5,
-   "weather": "overcast",
-   "brief": "1944-08-01. Defensive sortie in a me262 from Hopsten.",
-   "roles": {
-    "Axis": "defend"
-   },
-   "protect": {
-    "Axis": [
-     "rail_munster",
-     "rail_osnabruck"
-    ]
-   },
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Axis": "defend"
-   },
-   "events": [
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "he111",
-     "count": 3,
-     "lat": 52.2409,
-     "lon": 7.3117,
-     "alt_m": 1200,
-     "trigger_km": 18,
-     "label": "ju42 fly by"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "bf109",
-     "count": 4,
-     "lat": 52.1886,
-     "lon": 7.1993,
-     "alt_m": 800,
-     "trigger_km": 18,
-     "label": "109 flyby"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "fw190",
-     "count": 4,
-     "lat": 51.9156,
-     "lon": 6.306,
-     "alt_m": 7000,
-     "trigger_km": 18,
-     "label": "GER spawn"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "fw190",
-     "count": 4,
-     "lat": 52.1694,
-     "lon": 6.037,
-     "alt_m": 3600,
-     "trigger_km": 18,
-     "label": "GER spawn"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "fw190",
-     "count": 4,
-     "lat": 51.3917,
-     "lon": 6.7101,
-     "alt_m": 2500,
-     "trigger_km": 18,
-     "label": "GER spawn"
-    }
-   ]
-  },
-  {
-   "id": "rh_me262_night_operations",
-   "name": "\u2605 Me262 - Night operations",
-   "year": 1944,
-   "date": "1944-10-01",
-   "sides": [
-    {
-     "side": "Axis",
-     "start_airfield": "rh_af_twente",
-     "aircraft": [
-      "me262"
-     ]
-    }
-   ],
-   "objectives": {
-    "Axis": [
-     "rail_munster",
-     "factory_huls_marl"
-    ]
-   },
-   "time_of_day": 0.5,
-   "weather": "clear",
-   "brief": "1944-10-01. Defensive sortie in a me262 from Twente.",
-   "roles": {
-    "Axis": "defend"
-   },
-   "protect": {
-    "Axis": [
-     "rail_munster",
-     "factory_huls_marl"
-    ]
-   },
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Axis": "defend"
-   },
-   "events": [
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "p47",
-     "count": 1,
-     "lat": 51.5761,
-     "lon": 5.6428,
-     "alt_m": 1300,
-     "trigger_km": 25,
-     "label": "P38"
-    },
-    {
-     "kind": "raid",
-     "hostile": true,
-     "aircraft": "b26",
-     "count": 6,
-     "lat": 51.905,
-     "lon": 5.1708,
-     "alt_m": 3100,
-     "trigger_km": 18,
-     "label": "Bombers"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "p47",
-     "count": 1,
-     "lat": 51.4991,
-     "lon": 4.8863,
-     "alt_m": 1300,
-     "trigger_km": 25,
-     "label": "P38"
-    }
-   ]
-  },
-  {
-   "id": "rh_p_47_d28_forward_patrol",
-   "name": "\u2605 P-47 D28 - Forward patrol",
-   "year": 1944,
-   "date": "1944-09-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "manston",
-     "aircraft": [
-      "p47"
-     ],
-     "spawn": {
-      "lat": 51.927,
-      "lon": 3.9262,
-      "heading": 90,
-      "alt": 1500
-     }
-    }
-   ],
-   "objectives": {},
-   "time_of_day": 16.5,
-   "weather": "scattered",
-   "brief": "1944-09-01. Fighter sortie in a p47 from Manston.",
-   "roles": {
-    "Allies": "sweep"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "dogfight"
-   },
-   "events": [
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "bf109",
-     "count": 8,
-     "lat": 51.9884,
-     "lon": 4.2707,
-     "alt_m": 8000,
-     "trigger_km": 25,
-     "label": "Group 2"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 52.1103,
-     "lon": 4.4323,
-     "alt_m": 4500,
-     "trigger_km": 25,
-     "label": "Group 1"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 51.9298,
-     "lon": 4.3695,
-     "alt_m": 6000,
-     "trigger_km": 25,
-     "label": "Group 3"
-    }
-   ]
-  },
-  {
-   "id": "rh_p_51d_air_supperiority",
-   "name": "\u2605 P-51D - Air supperiority",
-   "year": 1945,
-   "date": "1945-01-21",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_asch",
-     "aircraft": [
-      "p51"
-     ]
-    }
-   ],
-   "objectives": {},
-   "time_of_day": 15.5,
-   "weather": "overcast",
-   "brief": "1945-01-21. Fighter sortie in a p51 from Asch.",
-   "roles": {
-    "Allies": "sweep"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "dogfight"
-   },
-   "events": [
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 50.7144,
-     "lon": 7.0382,
-     "alt_m": 2000,
-     "trigger_km": 25,
-     "label": "random patrol GER"
-    },
-    {
-     "kind": "raid",
-     "hostile": true,
-     "aircraft": "he111",
-     "count": 3,
-     "lat": 50.7465,
-     "lon": 7.1463,
-     "alt_m": 1000,
-     "trigger_km": 18,
-     "label": "ju42 fly by"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "me262",
-     "count": 1,
-     "lat": 50.9086,
-     "lon": 7.2002,
-     "alt_m": 4500,
-     "trigger_km": 25,
-     "label": "Ambush"
-    }
-   ]
-  },
-  {
-   "id": "rh_p_51d_b25_escort_to_aachen",
-   "name": "\u2605 P-51D - B25 escort to Aachen",
-   "year": 1944,
-   "date": "1944-09-24",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "asch",
-     "aircraft": [
-      "p51"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rail_liege_kinkempois"
-    ]
-   },
-   "time_of_day": 14.5,
-   "weather": "scattered",
-   "brief": "1944-09-24. Escort sortie in a p51 from Asch (Genk).",
-   "roles": {
-    "Allies": "escort"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "escort"
-   },
-   "events": [
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "b26",
-     "count": 6,
-     "lat": 51.0994,
-     "lon": 5.7975,
-     "alt_m": 3500,
-     "trigger_km": 18,
-     "label": "B25"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p47",
-     "count": 6,
-     "lat": 50.7837,
-     "lon": 5.8723,
-     "alt_m": 3500,
-     "trigger_km": 18,
-     "label": "Angus"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 50.7435,
-     "lon": 6.2208,
-     "alt_m": 4500,
-     "trigger_km": 25,
-     "label": "A8 attack"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "bf109",
-     "count": 3,
-     "lat": 50.5819,
-     "lon": 6.3741,
-     "alt_m": 3500,
-     "trigger_km": 25,
-     "label": "109 patrol"
-    }
-   ]
-  },
-  {
-   "id": "rh_p_51d_escort_to_dusseldorf",
-   "name": "\u2605 P-51D - Escort to Dusseldorf",
-   "year": 1945,
-   "date": "1945-04-08",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "asch",
-     "aircraft": [
-      "p51"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "factory_rheinmetall_dusseldorf"
-    ]
-   },
-   "time_of_day": 17.0,
-   "weather": "scattered",
-   "brief": "1945-04-08. Escort sortie in a p51 from Asch (Genk).",
-   "roles": {
-    "Allies": "escort"
-   },
-   "protect": {},
-   "time_limit": 1980,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "escort"
-   },
-   "events": [
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "spitfire",
-     "count": 8,
-     "lat": 50.8648,
-     "lon": 5.8227,
-     "alt_m": 1500,
-     "trigger_km": 18,
-     "label": "P51 flyby"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 51.1402,
-     "lon": 6.5359,
-     "alt_m": 5000,
-     "trigger_km": 25,
-     "label": "Ambush"
-    }
-   ]
-  },
-  {
-   "id": "rh_spitfire_mk_xiv_b_25_escort_in_the_low_countries",
-   "name": "\u2605 Spitfire Mk XIV - B-25 escort in the low countries",
-   "year": 1944,
-   "date": "1944-09-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "manston",
-     "aircraft": [
-      "spitfire"
-     ],
-     "spawn": {
-      "lat": 51.927,
-      "lon": 3.9262,
-      "heading": 90,
-      "alt": 1500
-     }
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "port_ijmuiden"
-    ]
-   },
-   "time_of_day": 16.5,
-   "weather": "scattered",
-   "brief": "1944-09-01. Escort sortie in a spitfire from Manston.",
-   "roles": {
-    "Allies": "escort"
-   },
-   "protect": {},
-   "time_limit": 5340,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "escort"
-   },
-   "events": [
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 52.0682,
-     "lon": 4.7515,
-     "alt_m": 5000,
-     "trigger_km": 25,
-     "label": "Ambush"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "bf109",
-     "count": 6,
-     "lat": 51.9118,
-     "lon": 5.2868,
-     "alt_m": 5000,
-     "trigger_km": 25,
-     "label": "random patrol GER"
-    }
-   ]
-  },
-  {
-   "id": "rh_spitfire_mk_ix_snow_patrol",
-   "name": "\u2605 Spitfire Mk. IX - Snow patrol",
-   "year": 1945,
-   "date": "1945-01-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_schijndel",
-     "aircraft": [
-      "spitfire"
-     ]
-    }
-   ],
-   "objectives": {},
-   "time_of_day": 9.5,
-   "weather": "clear",
-   "brief": "1945-01-01. Fighter sortie in a spitfire from Schijndel.",
-   "roles": {
-    "Allies": "sweep"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "dogfight"
-   },
-   "events": [
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "b26",
-     "count": 1,
-     "lat": 51.5662,
-     "lon": 5.4922,
-     "alt_m": 600,
-     "trigger_km": 18,
-     "label": "Transport"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 51.8509,
-     "lon": 6.072,
-     "alt_m": 6000,
-     "trigger_km": 25,
-     "label": "Group"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p51",
-     "count": 8,
-     "lat": 51.715,
-     "lon": 6.563,
-     "alt_m": 4500,
-     "trigger_km": 18,
-     "label": "P51 flyby"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "me262",
-     "count": 3,
-     "lat": 51.701,
-     "lon": 6.816,
-     "alt_m": 2500,
-     "trigger_km": 25,
-     "label": "Me262"
-    },
-    {
-     "kind": "raid",
-     "hostile": true,
-     "aircraft": "he111",
-     "count": 3,
-     "lat": 51.6492,
-     "lon": 6.9932,
-     "alt_m": 2000,
-     "trigger_km": 18,
-     "label": "ju42 fly by"
-    }
-   ]
-  },
-  {
-   "id": "rh_spitfire_mk_ix_wingman_patrol",
-   "name": "\u2605 Spitfire Mk. IX - Wingman patrol",
-   "year": 1944,
-   "date": "1944-10-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_deurne",
-     "aircraft": [
-      "spitfire"
-     ]
-    }
-   ],
-   "objectives": {},
-   "time_of_day": 16.5,
-   "weather": "overcast",
-   "brief": "1944-10-01. Fighter sortie in a spitfire from Deurne.",
-   "roles": {
-    "Allies": "sweep"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "dogfight"
-   },
-   "events": [
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "spitfire",
-     "count": 3,
-     "lat": 51.193,
-     "lon": 4.9161,
-     "alt_m": 5000,
-     "trigger_km": 18,
-     "label": "Mitor flight"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p47",
-     "count": 8,
-     "lat": 51.4833,
-     "lon": 4.3649,
-     "alt_m": 1500,
-     "trigger_km": 18,
-     "label": "P47 flyby"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "bf109",
-     "count": 4,
-     "lat": 51.6498,
-     "lon": 4.8017,
-     "alt_m": 6500,
-     "trigger_km": 25,
-     "label": "Ambush 3"
-    },
-    {
-     "kind": "raid",
-     "hostile": true,
-     "aircraft": "ju88",
-     "count": 2,
-     "lat": 51.5666,
-     "lon": 5.1389,
-     "alt_m": 9000,
-     "trigger_km": 18,
-     "label": "Ju88 recon"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "bf109",
-     "count": 4,
-     "lat": 51.9298,
-     "lon": 4.4384,
-     "alt_m": 6500,
-     "trigger_km": 25,
-     "label": "Ambush 1"
-    }
-   ]
-  },
-  {
-   "id": "rh_fw190_a8_convoy_attack_in_dorsten",
-   "name": "\u2605 Fw190 A8 - Convoy attack in Dorsten",
-   "year": 1945,
-   "date": "1945-04-08",
-   "sides": [
-    {
-     "side": "Axis",
-     "start_airfield": "rh_af_munster_handorf",
-     "aircraft": [
-      "fw190"
-     ]
-    }
-   ],
-   "objectives": {
-    "Axis": [
-     "rh_convoy_route_enemy_column_near_dorsten"
-    ]
-   },
-   "time_of_day": 10.5,
-   "weather": "scattered",
-   "brief": "1945-04-08. Ground-attack sortie in a fw190 from Munster-Handorf.",
-   "roles": {
-    "Axis": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1620,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Axis": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "ju88",
-     "count": 2,
-     "lat": 51.9016,
-     "lon": 7.7817,
-     "alt_m": 650,
-     "trigger_km": 18,
-     "label": "Ju88 landing"
-    },
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "he111",
-     "count": 3,
-     "lat": 51.7734,
-     "lon": 7.5341,
-     "alt_m": 1200,
-     "trigger_km": 18,
-     "label": "ju42 fly by"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "p47",
-     "count": 8,
-     "lat": 51.5305,
-     "lon": 7.0955,
-     "alt_m": 2000,
-     "trigger_km": 25,
-     "label": "Ambush"
-    }
-   ]
-  },
-  {
-   "id": "rh_p_38_strike_on_radar_station",
-   "name": "\u2605 P-38 - Strike on radar station",
-   "year": 1944,
-   "date": "1944-08-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_st_trond",
-     "aircraft": [
-      "p47"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_enemy_column_near_geleen",
-     "rh_convoy_route_enemy_column_near_wassenberg"
-    ]
-   },
-   "time_of_day": 16.5,
-   "weather": "scattered",
-   "brief": "1944-08-01. Ground-attack sortie in a p47 from St. Trond.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "bf109",
-     "count": 4,
-     "lat": 50.9283,
-     "lon": 5.7603,
-     "alt_m": 2500,
-     "trigger_km": 25,
-     "label": "Ambush"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "me262",
-     "count": 2,
-     "lat": 50.8742,
-     "lon": 6.0825,
-     "alt_m": 2500,
-     "trigger_km": 25,
-     "label": "Me262 random patrol GER"
-    }
-   ]
-  },
-  {
-   "id": "rh_p_38_supressing_artillery_near_spa",
-   "name": "\u2605 P-38 - Supressing artillery near Spa",
-   "year": 1944,
-   "date": "1944-09-28",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_florennes",
-     "aircraft": [
-      "p47"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_supply_train_near_barvaux",
-     "rh_convoy_route_supply_train_near_auwaille",
-     "rh_convoy_route_supply_train_near_spa",
-     "rh_battery_artillery_park_near_spa",
-     "rh_convoy_route_enemy_column_near_spa",
-     "rh_convoy_route_enemy_column_near_auwaille"
-    ]
-   },
-   "time_of_day": 8.5,
-   "weather": "overcast",
-   "brief": "1944-09-28. Ground-attack sortie in a p47 from Florennes.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p47",
-     "count": 8,
-     "lat": 50.3742,
-     "lon": 5.4961,
-     "alt_m": 750,
-     "trigger_km": 18,
-     "label": "Allied ground attack"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p47",
-     "count": 4,
-     "lat": 50.4366,
-     "lon": 5.5896,
-     "alt_m": 800,
-     "trigger_km": 18,
-     "label": "P-47 attack"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p47",
-     "count": 5,
-     "lat": 50.2589,
-     "lon": 5.7902,
-     "alt_m": 1200,
-     "trigger_km": 18,
-     "label": "P-47 flyby"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 3,
-     "lat": 50.2953,
-     "lon": 6.0448,
-     "alt_m": 3500,
-     "trigger_km": 25,
-     "label": "190 patrol"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 50.3426,
-     "lon": 6.1669,
-     "alt_m": 4500,
-     "trigger_km": 25,
-     "label": "A8 attack"
-    }
-   ]
-  },
-  {
-   "id": "rh_p_47_d22_advance_on_aachen",
-   "name": "\u2605 P-47 D22 - Advance on Aachen",
-   "year": 1944,
-   "date": "1944-10-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_le_culot_east",
-     "aircraft": [
-      "p47"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_supply_train_near_aachen",
-     "rh_convoy_route_enemy_column_near_aachen"
-    ]
-   },
-   "time_of_day": 15.5,
-   "weather": "overcast",
-   "brief": "1944-10-01. Ground-attack sortie in a p47 from Le Culot East.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 2040,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p47",
-     "count": 8,
-     "lat": 50.7752,
-     "lon": 5.6364,
-     "alt_m": 4000,
-     "trigger_km": 18,
-     "label": "P38 flyby"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "typhoon",
-     "count": 5,
-     "lat": 50.753,
-     "lon": 6.1487,
-     "alt_m": 1300,
-     "trigger_km": 18,
-     "label": "Typhoon"
-    }
-   ]
-  },
-  {
-   "id": "rh_p_47_d22_attack_on_liege",
-   "name": "\u2605 P-47 D22 - Attack on Liege",
-   "year": 1944,
-   "date": "1944-09-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_asch",
-     "aircraft": [
-      "p47"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_supply_train_near_vise",
-     "rh_battery_artillery_park_near_seraing",
-     "rh_battery_objective_near_seraing",
-     "rh_convoy_route_enemy_column_near_seraing"
-    ]
-   },
-   "time_of_day": 6.5,
-   "weather": "scattered",
-   "brief": "1944-09-01. Ground-attack sortie in a p47 from Asch.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": []
-  },
-  {
-   "id": "rh_p_47_d28_barge_strafing_sortie",
-   "name": "\u2605 P-47 D28 - Barge strafing sortie",
-   "year": 1944,
-   "date": "1944-08-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_petit_brogel",
-     "aircraft": [
-      "p47"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_supply_train_near_eindhoven",
-     "rh_battery_objective_near_helmond",
-     "rh_convoy_route_enemy_column_near_helmond"
-    ]
-   },
-   "time_of_day": 7.5,
-   "weather": "scattered",
-   "brief": "1944-08-01. Ground-attack sortie in a p47 from Petit Brogel.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "b26",
-     "count": 6,
-     "lat": 51.2644,
-     "lon": 5.809,
-     "alt_m": 1500,
-     "trigger_km": 18,
-     "label": "B25 and escort RAF"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "bf109",
-     "count": 8,
-     "lat": 51.2905,
-     "lon": 5.8946,
-     "alt_m": 2000,
-     "trigger_km": 25,
-     "label": "random patrol GER"
-    }
-   ]
-  },
-  {
-   "id": "rh_p_47_d28_knocking_on_enemy_gates_rheinland",
-   "name": "\u2605 P-47 D28 - Knocking on enemy gates (Rheinland)",
-   "year": 1945,
-   "date": "1945-01-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_helmond",
-     "aircraft": [
-      "p47"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_battery_artillery_park_near_geldern",
-     "rh_convoy_route_enemy_column_near_geldern"
-    ]
-   },
-   "time_of_day": 9.5,
-   "weather": "clear",
-   "brief": "1945-01-01. Ground-attack sortie in a p47 from Helmond.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "typhoon",
-     "count": 8,
-     "lat": 51.3403,
-     "lon": 6.0325,
-     "alt_m": 1500,
-     "trigger_km": 18,
-     "label": "dogfight"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "bf109",
-     "count": 8,
-     "lat": 51.5736,
-     "lon": 6.3975,
-     "alt_m": 3500,
-     "trigger_km": 25,
-     "label": "Ambush"
-    }
-   ]
-  },
-  {
-   "id": "rh_spitfire_mk_ix_dive_bombing_from_evere",
-   "name": "\u2605 Spitfire Mk. IX - Dive bombing from Evere",
-   "year": 1944,
-   "date": "1944-10-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_evere",
-     "aircraft": [
-      "spitfire"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_battery_artillery_park_near_loenhout",
-     "rh_convoy_route_enemy_column_near_loenhout"
-    ]
-   },
-   "time_of_day": 15.5,
-   "weather": "clear",
-   "brief": "1944-10-01. Ground-attack sortie in a spitfire from Evere.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1920,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 51.3994,
-     "lon": 4.4503,
-     "alt_m": 3500,
-     "trigger_km": 25,
-     "label": "Ambush"
-    }
-   ]
-  },
-  {
-   "id": "rh_tempest_v_attack_on_venlo",
-   "name": "\u2605 Tempest V - Attack on Venlo",
-   "year": 1944,
-   "date": "1944-10-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_heesch",
-     "aircraft": [
-      "typhoon"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_supply_train_near_venlo",
-     "rh_battery_objective_near_venlo"
-    ]
-   },
-   "time_of_day": 8.5,
-   "weather": "clear",
-   "brief": "1944-10-01. Ground-attack sortie in a typhoon from Heesch.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1680,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "b26",
-     "count": 4,
-     "lat": 51.5617,
-     "lon": 5.8844,
-     "alt_m": 1000,
-     "trigger_km": 18,
-     "label": "B25"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 51.5489,
-     "lon": 6.0836,
-     "alt_m": 2500,
-     "trigger_km": 25,
-     "label": "Ambush"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "me262",
-     "count": 8,
-     "lat": 51.1357,
-     "lon": 6.1826,
-     "alt_m": 2000,
-     "trigger_km": 25,
-     "label": "random patrol GER"
-    }
-   ]
-  },
-  {
-   "id": "rh_tempest_v_last_train_to_eindhoven",
-   "name": "\u2605 Tempest V - Last train to Eindhoven",
-   "year": 1944,
-   "date": "1944-10-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_grimbergen",
-     "aircraft": [
-      "typhoon"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_supply_train_near_bergen_op_",
-     "rh_convoy_route_supply_train_near_roosendaal",
-     "rh_convoy_route_supply_train_near_breda",
-     "rh_rail_yard_objective_near_bergen_op_zoo",
-     "rh_rail_yard_objective_near_roosendaal",
-     "rh_rail_yard_objective_near_breda",
-     "rh_rail_yard_objective_near_tilburg"
-    ]
-   },
-   "time_of_day": 9.5,
-   "weather": "overcast",
-   "brief": "1944-10-01. Ground-attack sortie in a typhoon from Grimbergen.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1800,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p51",
-     "count": 8,
-     "lat": 51.3834,
-     "lon": 4.4492,
-     "alt_m": 3100,
-     "trigger_km": 18,
-     "label": "P51 flyby"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 51.4467,
-     "lon": 4.7572,
-     "alt_m": 2200,
-     "trigger_km": 25,
-     "label": "Ambush"
-    },
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "b26",
-     "count": 6,
-     "lat": 51.4282,
-     "lon": 5.1202,
-     "alt_m": 2400,
-     "trigger_km": 18,
-     "label": "B25 and escort RAF"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "spitfire",
-     "count": 6,
-     "lat": 51.6001,
-     "lon": 4.746,
-     "alt_m": 1500,
-     "trigger_km": 18,
-     "label": "Spitfire flyby"
-    }
-   ]
-  },
-  {
-   "id": "rh_tempest_v_u_boats_in_rotterdam",
-   "name": "\u2605 Tempest V - U-Boats in Rotterdam",
-   "year": 1944,
-   "date": "1944-09-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_deurne",
-     "aircraft": [
-      "typhoon"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_supply_train_near_rotterdam"
-    ]
-   },
-   "time_of_day": 9.55,
-   "weather": "overcast",
-   "brief": "1944-09-01. Ground-attack sortie in a typhoon from Deurne.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 2340,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "raid",
-     "hostile": true,
-     "aircraft": "b26",
-     "count": 3,
-     "lat": 51.2621,
-     "lon": 4.5649,
-     "alt_m": 900,
-     "trigger_km": 18,
-     "label": "C47"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p51",
-     "count": 8,
-     "lat": 51.4616,
-     "lon": 4.3651,
-     "alt_m": 1500,
-     "trigger_km": 18,
-     "label": "P51 flyby"
-    },
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "b26",
-     "count": 6,
-     "lat": 51.9101,
-     "lon": 4.156,
-     "alt_m": 1500,
-     "trigger_km": 18,
-     "label": "B25 attack"
-    },
-    {
-     "kind": "ambush",
-     "hostile": true,
-     "aircraft": "fw190",
-     "count": 8,
-     "lat": 51.9462,
-     "lon": 4.6819,
-     "alt_m": 2500,
-     "trigger_km": 25,
-     "label": "Ambush"
-    }
-   ]
-  },
-  {
-   "id": "rh_typhoon_atlantic_wall",
-   "name": "\u2605 Typhoon - Atlantic wall",
-   "year": 1944,
-   "date": "1944-09-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "manston",
-     "aircraft": [
-      "typhoon"
-     ],
-     "spawn": {
-      "lat": 51.927,
-      "lon": 3.9262,
-      "heading": 90,
-      "alt": 1500
-     }
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_supply_train_near_den_haag",
-     "rh_battery_artillery_park_near_scheveni",
-     "rh_convoy_route_enemy_column_near_schevening",
-     "rh_convoy_route_enemy_column_near_den_haag"
-    ]
-   },
-   "time_of_day": 16.5,
-   "weather": "scattered",
-   "brief": "1944-09-01. Ground-attack sortie in a typhoon from Manston.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 3360,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "b26",
-     "count": 6,
-     "lat": 52.0177,
-     "lon": 3.9178,
-     "alt_m": 3100,
-     "trigger_km": 18,
-     "label": "B25 and escort RAF"
-    }
-   ]
-  },
-  {
-   "id": "rh_typhoon_cab_rank",
-   "name": "\u2605 Typhoon - Cab Rank",
-   "year": 1945,
-   "date": "1945-01-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_petit_brogel",
-     "aircraft": [
-      "typhoon"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_enemy_column_near_krefeld",
-     "rh_convoy_route_enemy_column_near_geldern"
-    ]
-   },
-   "time_of_day": 8.5,
-   "weather": "scattered",
-   "brief": "1945-01-01. Ground-attack sortie in a typhoon from Petit Brogel.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 2160,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "b26",
-     "count": 1,
-     "lat": 51.1652,
-     "lon": 5.3731,
-     "alt_m": 600,
-     "trigger_km": 18,
-     "label": "C47"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "spitfire",
-     "count": 8,
-     "lat": 51.2965,
-     "lon": 5.8957,
-     "alt_m": 3000,
-     "trigger_km": 18,
-     "label": "Spitfire flyby"
-    },
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "b26",
-     "count": 6,
-     "lat": 51.089,
-     "lon": 6.1514,
-     "alt_m": 3100,
-     "trigger_km": 18,
-     "label": "B25 and escort RAF"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p47",
-     "count": 5,
-     "lat": 51.1981,
-     "lon": 6.5545,
-     "alt_m": 1300,
-     "trigger_km": 18,
-     "label": "P47 group"
-    }
-   ]
-  },
-  {
-   "id": "rh_typhoon_supporting_tank_advance",
-   "name": "\u2605 Typhoon - Supporting tank advance",
-   "year": 1944,
-   "date": "1944-08-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_petit_brogel",
-     "aircraft": [
-      "typhoon"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_battery_artillery_park_near_maaseik",
-     "rh_convoy_route_enemy_column_near_maaseik",
-     "rh_convoy_route_enemy_column_near_weert"
-    ]
-   },
-   "time_of_day": 17.5,
-   "weather": "scattered",
-   "brief": "1944-08-01. Ground-attack sortie in a typhoon from Petit Brogel.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1500,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "p47",
-     "count": 1,
-     "lat": 51.1432,
-     "lon": 5.9338,
-     "alt_m": 1500,
-     "trigger_km": 18,
-     "label": "Recon"
-    }
-   ]
-  },
-  {
-   "id": "rh_typhoon_walcheren_causeway",
-   "name": "\u2605 Typhoon - Walcheren Causeway",
-   "year": 1944,
-   "date": "1944-10-01",
-   "sides": [
-    {
-     "side": "Allies",
-     "start_airfield": "rh_af_deurne",
-     "aircraft": [
-      "typhoon"
-     ]
-    }
-   ],
-   "objectives": {
-    "Allies": [
-     "rh_convoy_route_enemy_column_near_terneuzer"
-    ]
-   },
-   "time_of_day": 7.5,
-   "weather": "overcast",
-   "brief": "1944-10-01. Ground-attack sortie in a typhoon from Deurne.",
-   "roles": {
-    "Allies": "strafe"
-   },
-   "protect": {},
-   "time_limit": 1920,
-   "waves": 3,
-   "difficulty_hint": 0.5,
-   "modes": {
-    "Allies": "ground_attack"
-   },
-   "events": [
-    {
-     "kind": "escort",
-     "hostile": false,
-     "aircraft": "b26",
-     "count": 2,
-     "lat": 51.1518,
-     "lon": 4.5338,
-     "alt_m": 600,
-     "trigger_km": 18,
-     "label": "C47"
-    },
-    {
-     "kind": "flyby",
-     "hostile": false,
-     "aircraft": "spitfire",
-     "count": 5,
-     "lat": 51.1584,
-     "lon": 4.4872,
-     "alt_m": 2500,
-     "trigger_km": 18,
-     "label": "Spitfire  flyby"
-    },
-    {
-     "kind": "raid",
-     "hostile": true,
-     "aircraft": "he111",
-     "count": 3,
-     "lat": 51.5419,
-     "lon": 3.7561,
-     "alt_m": 680,
-     "trigger_km": 18,
-     "label": "Ju52 Supplies"
-    }
-   ]
-  },
-  {
    "id": "bmb_lille_locos",
    "name": "Fives-Lille Locomotive Works",
    "year": 1943,
@@ -2776,7 +736,7 @@
    "sides": [
     {
      "side": "Allies",
-     "start_airfield": "rh_af_petit_brogel",
+     "start_airfield": "af_petit_brogel",
      "aircraft": [
       "lancaster"
      ]
@@ -2861,7 +821,7 @@
    "sides": [
     {
      "side": "Allies",
-     "start_airfield": "rh_af_asch",
+     "start_airfield": "af_asch",
      "aircraft": [
       "lancaster"
      ]
@@ -6039,7 +3999,7 @@
    "sides": [
     {
      "side": "Allies",
-     "start_airfield": "rh_af_melsbroek",
+     "start_airfield": "af_melsbroek",
      "aircraft": [
       "b26"
      ]
@@ -6096,7 +4056,7 @@
    "sides": [
     {
      "side": "Allies",
-     "start_airfield": "rh_af_asch",
+     "start_airfield": "af_asch",
      "aircraft": [
       "b25"
      ]
@@ -6153,7 +4113,7 @@
    "sides": [
     {
      "side": "Allies",
-     "start_airfield": "rh_af_florennes",
+     "start_airfield": "af_florennes",
      "aircraft": [
       "b26"
      ]
@@ -6210,7 +4170,7 @@
    "sides": [
     {
      "side": "Allies",
-     "start_airfield": "rh_af_helmond",
+     "start_airfield": "af_helmond",
      "aircraft": [
       "typhoon"
      ]
@@ -6267,7 +4227,7 @@
    "sides": [
     {
      "side": "Allies",
-     "start_airfield": "rh_af_deurne",
+     "start_airfield": "af_deurne",
      "aircraft": [
       "typhoon",
       "tempest"
@@ -6314,7 +4274,7 @@
    "sides": [
     {
      "side": "Allies",
-     "start_airfield": "rh_af_schijndel",
+     "start_airfield": "af_schijndel",
      "aircraft": [
       "p47"
      ]
@@ -6322,7 +4282,7 @@
    ],
    "objectives": {
     "Allies": [
-     "rh_battery_objective_near_venlo"
+     "flak_venlo"
     ]
    },
    "time_of_day": 14.0,
@@ -6360,7 +4320,7 @@
    "sides": [
     {
      "side": "Allies",
-     "start_airfield": "rh_af_evere",
+     "start_airfield": "af_evere",
      "aircraft": [
       "p51",
       "p47"
@@ -6369,7 +4329,7 @@
    ],
    "objectives": {
     "Allies": [
-     "rh_convoy_route_supply_train_near_spa"
+     "supply_spa"
     ]
    },
    "time_of_day": 8.5,
@@ -6407,7 +4367,7 @@
    "sides": [
     {
      "side": "Allies",
-     "start_airfield": "rh_af_grimbergen",
+     "start_airfield": "af_grimbergen",
      "aircraft": [
       "spitfire",
       "tempest"
@@ -6578,7 +4538,7 @@
    "sides": [
     {
      "side": "Axis",
-     "start_airfield": "rh_af_mill",
+     "start_airfield": "af_mill",
      "aircraft": [
       "fw190",
       "bf109"
@@ -6640,7 +4600,7 @@
    "sides": [
     {
      "side": "Axis",
-     "start_airfield": "rh_af_hopsten",
+     "start_airfield": "af_hopsten",
      "aircraft": [
       "me262"
      ]
@@ -6682,6 +4642,439 @@
      "alt_m": 6000,
      "trigger_km": 25,
      "label": "Escort"
+    }
+   ]
+  },
+  {
+   "id": "op_axis_reich_defence",
+   "name": "\u25c6 Defence of the Reich",
+   "year": 1944,
+   "date": "1944-09-11",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "rheine",
+     "aircraft": [
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "factory_scholven_oil",
+     "rail_hamm"
+    ]
+   },
+   "time_of_day": 10.5,
+   "weather": "scattered",
+   "brief": "American medium bombers are heading for the oil plant and the marshalling yard. Get up from Rheine and turn them back.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "factory_scholven_oil",
+     "rail_hamm"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 52.0,
+     "lon": 7.3,
+     "alt_m": 3200,
+     "trigger_km": 20,
+     "label": "Medium bombers"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p47",
+     "count": 8,
+     "lat": 51.9,
+     "lon": 7.2,
+     "alt_m": 4200,
+     "trigger_km": 25,
+     "label": "Escort"
+    }
+   ]
+  },
+  {
+   "id": "op_winter_patrol",
+   "name": "\u25c6 Winter Patrol",
+   "year": 1945,
+   "date": "1945-01-02",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "af_deurne",
+     "aircraft": [
+      "spitfire"
+     ]
+    }
+   ],
+   "objectives": {},
+   "time_of_day": 9.0,
+   "weather": "overcast",
+   "brief": "Low cloud over the Dutch border. Patrol the lines and catch any transports trying to slip through.",
+   "roles": {
+    "Allies": "sweep"
+   },
+   "protect": {},
+   "time_limit": 1300,
+   "waves": 3,
+   "difficulty_hint": 0.5,
+   "modes": {
+    "Allies": "dogfight"
+   },
+   "events": [
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "he111",
+     "count": 2,
+     "lat": 51.7,
+     "lon": 5.7,
+     "alt_m": 1500,
+     "trigger_km": 20,
+     "label": "Transport flight"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 4,
+     "lat": 51.6,
+     "lon": 5.9,
+     "alt_m": 2500,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_p51_free_sweep",
+   "name": "\u25c6 Free Sweep",
+   "year": 1945,
+   "date": "1945-01-21",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "af_asch",
+     "aircraft": [
+      "p51"
+     ]
+    }
+   ],
+   "objectives": {},
+   "time_of_day": 15.5,
+   "weather": "overcast",
+   "brief": "Roam across the Rhineland and clear the sky of fighters ahead of the afternoon bombers.",
+   "roles": {
+    "Allies": "sweep"
+   },
+   "protect": {},
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "dogfight"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 50.8,
+     "lon": 7.0,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "me262",
+     "count": 1,
+     "lat": 50.9,
+     "lon": 7.2,
+     "alt_m": 6000,
+     "trigger_km": 25,
+     "label": "Jet ambush"
+    }
+   ]
+  },
+  {
+   "id": "op_typhoon_column",
+   "name": "\u25c6 Armour on the Road",
+   "year": 1945,
+   "date": "1945-01-14",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "af_helmond",
+     "aircraft": [
+      "typhoon"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "column_geldern"
+    ]
+   },
+   "time_of_day": 11.0,
+   "weather": "scattered",
+   "brief": "A German armoured column is moving along the Geldern road. Rocket the vehicles and keep the road closed.",
+   "roles": {
+    "Allies": "strike"
+   },
+   "protect": {},
+   "time_limit": 1600,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 6,
+     "lat": 51.55,
+     "lon": 6.35,
+     "alt_m": 2200,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_p51_escort_ruhr",
+   "name": "\u25c6 Escort to Dusseldorf",
+   "year": 1945,
+   "date": "1945-04-08",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "af_asch",
+     "aircraft": [
+      "p51"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "factory_rheinmetall_dusseldorf"
+    ]
+   },
+   "time_of_day": 16.5,
+   "weather": "scattered",
+   "brief": "Cover the bomber stream to Dusseldorf and bring it home. Fighters will hit from the north as you turn for the target.",
+   "roles": {
+    "Allies": "escort"
+   },
+   "protect": {},
+   "time_limit": 2100,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "escort"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 8,
+     "lat": 51.15,
+     "lon": 6.5,
+     "alt_m": 5000,
+     "trigger_km": 25,
+     "label": "Fighters from the north"
+    }
+   ]
+  },
+  {
+   "id": "op_axis_cologne_alarm",
+   "name": "\u25c6 Cologne Alarm",
+   "year": 1945,
+   "date": "1945-01-01",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "koln_butzweilerhof",
+     "aircraft": [
+      "fw190"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "bridge_hohenzollern",
+     "rail_cologne_gremberg"
+    ]
+   },
+   "time_of_day": 9.5,
+   "weather": "scattered",
+   "brief": "Fighter-bombers are over the Rhine. Defend the bridge and the marshalling yard.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "bridge_hohenzollern",
+     "rail_cologne_gremberg"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p47",
+     "count": 8,
+     "lat": 50.93,
+     "lon": 6.85,
+     "alt_m": 1200,
+     "trigger_km": 25,
+     "label": "Fighter-bombers"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p47",
+     "count": 8,
+     "lat": 50.92,
+     "lon": 6.75,
+     "alt_m": 1800,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_axis_jet_night",
+   "name": "\u25c6 Night Interception",
+   "year": 1944,
+   "date": "1944-10-01",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "twente",
+     "aircraft": [
+      "me262"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "rail_munster",
+     "factory_huls_marl"
+    ]
+   },
+   "time_of_day": 0.5,
+   "weather": "clear",
+   "brief": "Use the jet's speed against a night bomber stream heading for the rail junction and the chemical works.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "rail_munster",
+     "factory_huls_marl"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "raid",
+     "hostile": true,
+     "aircraft": "b26",
+     "count": 6,
+     "lat": 51.9,
+     "lon": 5.2,
+     "alt_m": 3100,
+     "trigger_km": 20,
+     "label": "Bomber stream"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p47",
+     "count": 2,
+     "lat": 51.5,
+     "lon": 5.6,
+     "alt_m": 1300,
+     "trigger_km": 25,
+     "label": "Interceptors"
+    }
+   ]
+  },
+  {
+   "id": "op_axis_column_strike",
+   "name": "\u25c6 Column Strike",
+   "year": 1945,
+   "date": "1945-04-08",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "af_munster_handorf",
+     "aircraft": [
+      "fw190"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "column_allied_goch"
+    ]
+   },
+   "time_of_day": 10.5,
+   "weather": "scattered",
+   "brief": "An Allied supply column is rolling along the front near Goch. Strafe it, then break for home before the fighters arrive.",
+   "roles": {
+    "Axis": "strafe"
+   },
+   "protect": {},
+   "time_limit": 1700,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Axis": "ground_attack"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "p47",
+     "count": 8,
+     "lat": 51.55,
+     "lon": 7.05,
+     "alt_m": 2000,
+     "trigger_km": 25,
+     "label": "Interceptors"
     }
    ]
   }

@@ -219,6 +219,9 @@ void fragment() {
 	var ob := UIKit.button("Options", func() -> void: add_child(SettingsMenu.new()), 20)
 	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(ob)
+	var crb := UIKit.button("Credits", _open_legal, 20)
+	crb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(crb)
 	var qb := UIKit.button("Quit", func() -> void: quit_requested.emit(), 20)
 	qb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(qb)
@@ -436,6 +439,15 @@ func _open_logbook() -> void:
 	var lm := LogbookMenu.new()
 	lm.closed.connect(func() -> void: layer.queue_free())
 	layer.add_child(lm)
+
+func _open_legal() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 45
+	add_child(layer)
+	var lm := LegalMenu.new()
+	lm.closed.connect(func() -> void: layer.queue_free())
+	layer.add_child(lm)
+
 
 func _open_dam_busters() -> void:
 	# Its own layer above the start menu, like the logbook: added straight into the menu it was drawn behind it

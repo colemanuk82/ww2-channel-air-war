@@ -54,7 +54,7 @@ In-game captures (1280x720):
 - Modes: dogfight, bombing run, ground attack/strafing, bomber escort, defend, historical missions (Battle of Britain, Dieppe 1942, D-Day 1944, Dunkirk 1940, Antwerp, Lille, Le Havre, V-1 sites, Seine bridges) and free flight
 - **Sortie planner:** pick any airfield (runway or airborne) or any point on the map, then a scenario — free flight, bombing run, ground strike, boat strike, bomber escort or fighter sweep — and the enemy strength
 - **Dynamic campaign:** a single-pilot career where every sortie moves the war (air strength, industry, bombed targets, enemy raids), with ranks, daily sortie offers and a saved state
-- **17 original missions** (diamond-marked) plus **30 Rheinland missions** (marked with a star), adapted from a free single-player mission pack by [Jade_Monkey](ATTRIBUTION.md), with scripted ambushes, raids and flybys
+- **25 original missions** (diamond-marked) with scripted ambushes, raids and flybys, alongside the historical set.
 - Destructible airfield buildings and parked aircraft; five airfield layouts; farms and hedgerows that follow the field boundaries
 - Real world: RAF Manston, Biggin Hill, Hawkinge, Tangmere, Calais-Marck, Abbeville, Caen and more — with live traffic (convoys, trains, cars), ports, Atlantic Wall defences, AA guns, searchlights and barrage balloons
 - **Real rivers with water** — the OpenStreetMap waterway network drawn as terrain-hugging water ribbons that stream with the terrain and are carved into the heightmap, so the banks read from the air
@@ -110,3 +110,9 @@ This is a personal project, shared for viewing only. All rights reserved:
 no permission is given to copy, modify, redistribute or use it. Full
 notice in [LICENCE](LICENCE). Third-party data and audio carry their own
 licences as listed above.
+
+## DLSS
+NVIDIA DLSS is optional and is not shipped with the game. On NVIDIA RTX cards the game offers to download NVIDIA's components on first launch (or later in Options > Render); everywhere else it uses the standard renderer with AMD FSR 2 upscaling.
+
+## Legal
+See `docs/legal/` (EULA, privacy policy, credits). Fill in the publisher name and contact in `tools/build_legal.py`, then run it to regenerate `data/legal.json`.

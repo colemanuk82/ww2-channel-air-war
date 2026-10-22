@@ -243,7 +243,58 @@ func _build_render_page() -> VBoxContainer:
 		GameState.set_graphic("frame_gen", i == 1))
 	_ui_scale = _row(page, "UI scale", ["85%", "100%", "125%", "150%"], _ui_index(), func(i: int) -> void:
 		GameState.set_graphic("ui_scale", float(GameState.UI_SCALES[i])))
+	_dlss_section(page)
 	return page
+
+
+## The optional NVIDIA DLSS components are not shipped with the game: offer the download here (or explain why not).
+func _dlss_section(page: VBoxContainer) -> void:
+	page.add_child(UIKit.rule(0.35))
+	page.add_child(UIKit.label("NVIDIA DLSS COMPONENTS", 14, UIKit.TEXT_DIM, true))
+	var status: Label = UIKit.label("", 15, UIKit.TEXT)
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	page.add_child(status)
+	if not DlssInstaller.is_windows() or not DlssInstaller.gpu_is_nvidia():
+		status.text = "DLSS needs an NVIDIA RTX graphics card on Windows. This system uses the standard renderer with AMD FSR 2 upscaling."
+		return
+	if DlssInstaller.is_installed():
+		status.text = "DLSS components are installed." if GameState.dlss_supported() else "DLSS components are installed, but this graphics card or driver does not support DLSS (or the game needs a restart). FSR 2 is used instead."
+		return
+	status.text = "Not installed. DLSS is not included with the game: you can download it (about %d MB) from NVIDIA's public repository, subject to NVIDIA's licence. Without it the game uses FSR 2." % DlssInstaller.SDK_MB
+	var bar := ProgressBar.new()
+	bar.min_value = 0.0
+	bar.max_value = 1.0
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 16)
+	bar.visible = false
+	page.add_child(bar)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	page.add_child(row)
+	var btn: Button = UIKit.button("Download DLSS components", func() -> void: pass, 18, true)
+	row.add_child(btn)
+	var attach := func(inst: DlssInstaller) -> void:
+		btn.disabled = true
+		bar.visible = true
+		inst.progress.connect(func(f: float, text: String) -> void:
+			if is_instance_valid(bar):
+				bar.value = f
+				status.text = text)
+		inst.finished.connect(func(ok: bool, msg: String) -> void:
+			if not is_instance_valid(status):
+				return
+			status.text = msg
+			bar.visible = false
+			btn.disabled = ok
+			if ok:
+				row.add_child(UIKit.button("Restart now", func() -> void: DlssInstaller.restart_game(get_tree()), 18, true)))
+	if DlssInstaller.active != null and DlssInstaller.active.running:
+		attach.call(DlssInstaller.active)
+	btn.pressed.connect(func() -> void:
+		var inst := DlssInstaller.new()
+		get_tree().root.add_child(inst)    # outlives this page if the player switches tabs
+		attach.call(inst)
+		inst.start())
 
 
 # ---------------------------------------------------------------- Audio

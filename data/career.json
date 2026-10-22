@@ -1263,7 +1263,7 @@
               "text": "DEFENSIVE ABGESCHLOSSEN. ZWEI FESTUNGEN ABGESCHOSSEN. ZWEI EIGENE VERLUSTE."
             }
           ],
-          "mission": "rh_bf109_g6_late_defense_of_the_reich"
+          "mission": "op_axis_reich_defence"
         },
         {
           "id": "chapter_end",
@@ -1322,7 +1322,7 @@
               "text": "PATROL COMPLETE. TWO TRANSPORTS DESTROYED. NO LOSSES."
             }
           ],
-          "mission": "rh_spitfire_mk_ix_snow_patrol"
+          "mission": "op_winter_patrol"
         },
         {
           "id": "air_superiority",
@@ -1345,7 +1345,7 @@
               "text": "Allied aircraft have swept the skies over the western front. Enemy fighter activity has fallen sharply."
             }
           ],
-          "mission": "rh_p_51d_air_supperiority"
+          "mission": "op_p51_free_sweep"
         },
         {
           "id": "bodenplatte_news",
@@ -1385,7 +1385,7 @@
               "text": "CAB RANK SUCCESSFUL. TANKS DESTROYED. COLUMN ADVANCING."
             }
           ],
-          "mission": "rh_typhoon_cab_rank"
+          "mission": "op_typhoon_column"
         },
         {
           "id": "dusseldorf_escort",
@@ -1408,7 +1408,7 @@
               "text": "Dear Mrs {name}, your son flew his last escort mission before the end. He brought the bombers home. We are all very grateful. - {squadron}"
             }
           ],
-          "mission": "rh_p_51d_escort_to_dusseldorf"
+          "mission": "op_p51_escort_ruhr"
         },
         {
           "id": "chapter_end",
@@ -1459,10 +1459,10 @@
             {
               "kind": "telegram",
               "title": "Telegramm",
-              "text": "EINSATZ DURCHGEFÜHRT. ZAHLREICHE FEINDFLUGZEUGE AM BODEN ZERSTÖRT. VERLUSTE HOCH."
+              "text": "ANGRIFF ABGEWEHRT. BRÜCKE UND BAHNHOF GEHALTEN. VERLUSTE HOCH."
             }
           ],
-          "mission": "rh_fw190_d9_raid_alarm"
+          "mission": "op_axis_cologne_alarm"
         },
         {
           "id": "night_jets",
@@ -1485,7 +1485,7 @@
               "text": "New fighter aircraft are now in service in the Luftwaffe and are attacking the enemy bomber stream with great success."
             }
           ],
-          "mission": "rh_me262_night_operations"
+          "mission": "op_axis_jet_night"
         },
         {
           "id": "last_letter",
@@ -1525,7 +1525,7 @@
               "text": "KONVOI ANGEGRIFFEN. ZWEI EIGENE VERLUSTE. KEIN FEIND WEITER IN DER LUFT."
             }
           ],
-          "mission": "rh_fw190_a8_convoy_attack_in_dorsten"
+          "mission": "op_axis_column_strike"
         },
         {
           "id": "surrender",

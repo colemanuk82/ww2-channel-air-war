@@ -34,7 +34,7 @@ static func style_for(id: String) -> String:
 		return "cross"
 	if id in PARALLEL_IDS:
 		return "parallel"
-	if id in FORWARD_IDS or id.begins_with("rh_af_"):
+	if id in FORWARD_IDS or id.begins_with("af_"):
 		return "forward"
 	if id == "manston":
 		return "triangle"
