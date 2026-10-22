@@ -141,9 +141,39 @@ func effective_upscaler() -> int:
 	return u
 
 
+## True for GPUs that will struggle with the full-quality renderer: Intel / generic integrated graphics.
+static func is_weak_gpu(adapter: String) -> bool:
+	var n: String = adapter.to_lower().replace("(tm)", "").replace("(r)", "")
+	if n.contains("nvidia") or n.contains("geforce") or n.contains("rtx") or n.contains("gtx") or n.contains("quadro"):
+		return false
+	if n.contains("radeon rx") or n.contains("radeon pro") or n.contains("arc a") or n.contains("arc b"):
+		return false
+	return n.contains("intel") or n.contains("uhd") or n.contains("iris") or n.contains("hd graphics") \
+		or n.contains("vega 8") or n.contains("vega 7") or n.contains("vega 6") or n.contains("radeon graphics") \
+		or n.contains("llvmpipe") or n.contains("software") or n.contains("basic render")
+
+
+## First launch only (no settings file yet): pick the Low preset and FSR 2 upscaling on weak / integrated GPUs.
+func _first_run_autotune() -> void:
+	var name: String = RenderingServer.get_video_adapter_name()
+	print("[gfx] first run, adapter: ", name)
+	if is_weak_gpu(name):
+		quality = 0
+		outlines_enabled = false
+		shadows_enabled = false
+		msaa_level = 0
+		view_distance = 0
+		post_fx = 0
+		cloud_detail = 0
+		upscaler = Upscaler.FSR2
+		upscale_quality = 1
+		print("[gfx] weak GPU detected: Low preset + FSR 2")
+
+
 func _load_settings() -> void:
 	var cf := ConfigFile.new()
 	if cf.load(SETTINGS_PATH) != OK:
+		_first_run_autotune()
 		return
 	outlines_enabled = cf.get_value("gfx", "outlines", outlines_enabled)
 	shadows_enabled = cf.get_value("gfx", "shadows", shadows_enabled)

@@ -972,6 +972,7 @@ func _update_rotation(delta: float) -> void:
 		var ph: float = float(get_instance_id() % 97)
 		var tt: float = Time.get_ticks_msec() * 0.001
 		var kick: float = turbulence * (0.6 + 0.4 * (1.0 - clampf(speed / stats.max_speed, 0.0, 1.0)))
+		kick *= clampf((altitude_agl - 4.0) / 40.0, 0.0, 1.0)     # no gust can roll a wingtip into the runway just after lift-off
 		t_roll += kick * deg_to_rad(26.0) * (sin(tt * 1.7 + ph) * 0.6 + sin(tt * 3.9 + ph * 2.0) * 0.4)
 		t_pitch += kick * deg_to_rad(9.0) * (sin(tt * 2.3 + ph * 0.7) * 0.6 + sin(tt * 5.1 + ph) * 0.4)
 		t_yaw += kick * deg_to_rad(4.0) * sin(tt * 1.3 + ph * 1.3)

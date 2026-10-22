@@ -1050,6 +1050,10 @@ func _run_takeoff(_delta: float) -> bool:
 	# Stay nearly level in ground effect until there is speed in hand, then ease the climb angle in.
 	var margin: float = clampf((ac.speed - stall * 1.25) / (stall * 0.45), 0.0, 1.0)
 	var climb: float = lerpf(0.03, 0.18, margin)
+	# A stall just after lift-off drops a wing into the runway: unload the wing (nose to the horizon) and keep it
+	# straight until the airspeed is back, instead of holding the climb angle that caused it.
+	if ac.stalled or ac.speed < stall * 1.08:
+		climb = -0.04 if ac.stalled else 0.0
 	_dir = (runway_dir + Vector3.UP * climb).normalized()
 	# Gear up as soon as the aircraft is flying: the gear's drag is large and, left down until 35 m, it capped the
 	# speed of the heavy bombers just above the stall so they never got that high.

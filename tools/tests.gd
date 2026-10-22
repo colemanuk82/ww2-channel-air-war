@@ -50,6 +50,7 @@ func _ready() -> void:
 	_test_moon_weather()
 	_test_history()
 	_test_ai_takeoff_all()
+	_test_weak_gpu()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -1317,9 +1318,24 @@ func _test_history() -> void:
 
 ## Every flyable aircraft, flown by the AI pilot from a standing start on flat ground: it must lift off, climb
 ## away and hand over to its next state without crashing, within a sane time. The simulation is stepped by hand.
+func _test_weak_gpu() -> void:
+	var weak: Array = ["Intel(R) UHD Graphics 620", "Intel(R) Iris(R) Xe Graphics", "AMD Radeon(TM) Graphics", "llvmpipe (LLVM 15)", "Microsoft Basic Render Driver"]
+	var strong: Array = ["NVIDIA GeForce RTX 4070", "NVIDIA GeForce GTX 1060", "AMD Radeon RX 6700 XT", "Intel(R) Arc(TM) A770 Graphics", "NVIDIA GeForce RTX 3050 Laptop GPU"]
+	for n in weak:
+		_check(GameState.is_weak_gpu(n), "weak GPU detected: " + n)
+	for n in strong:
+		_check(not GameState.is_weak_gpu(n), "strong GPU kept at full quality: " + n)
+
+
 func _test_ai_takeoff_all() -> void:
-	print("-- AI take-off soak (every aircraft)")
+	print("-- AI take-off soak (every aircraft, worst case: gale-force tailwind and maximum turbulence)")
 	var dt: float = 1.0 / 60.0
+	var wm: Node = get_node_or_null("/root/WeatherManager")
+	var wind_save: Array = []
+	if wm != null:
+		wind_save = [wm.get("wind_speed"), wm.get("wind_dir_deg")]
+		wm.set("wind_speed", 27.0)
+		wm.set("wind_dir_deg", 270.0)       # from the west = a tailwind for the eastbound runway
 	for side in ["Allies", "Axis"]:
 		for id in AircraftCatalog.ids_for_side(side):
 			var sid: String = String(id)
@@ -1363,14 +1379,17 @@ func _test_ai_takeoff_all() -> void:
 				t += dt
 				if t >= next_s:
 					next_s += 1.0 if (lift_t > 0.0 and t < lift_t + 24.0) else 12.0
-					trace += "\n      t=%.1f gnd=%s spd=%.1f agl=%.2f pit=%.1f pathy=%.3f aoa=%.1f g=%.2f st=%d cp=%.2f vy=%.2f" % [t, str(ac.on_ground), ac.speed, ac.altitude_agl, rad_to_deg(ac._pitch_angle()), ac._path_dir.y, rad_to_deg(ac._aoa), ac.g_load, p.state, ac.cmd_pitch, ac.velocity.y]
+					trace += "\n      t=%.1f gnd=%s spd=%.1f agl=%.2f pit=%.1f pathy=%.3f aoa=%.1f g=%.2f st=%d cp=%.2f vy=%.2f hp=%.0f stl=%s" % [t, str(ac.on_ground), ac.speed, ac.altitude_agl, rad_to_deg(ac._pitch_angle()), ac._path_dir.y, rad_to_deg(ac._aoa), ac.g_load, p.state, ac.cmd_pitch, ac.velocity.y, ac.health, str(ac.stalled)]
 				if lift_t < 0.0 and not ac.on_ground:
 					lift_t = t
 					run_m = ac.global_position.length()
 				if lift_t > 0.0 and ac.altitude_agl > 60.0 and p.state != AIPilot.State.TAKEOFF:
 					break
 			var ok: bool = lift_t > 0.0 and not crashed and ac.altitude_agl > 40.0
-			_check(ok, "%s takes off by itself (lift-off %.0f s, %.0f m run, agl %.0f, crashed %s %s)%s" % [sid, lift_t, run_m, ac.altitude_agl, str(crashed), str(crash_info), trace if (not ok and sid in ["lancaster", "defiant", "p38"]) else ""])
+			_check(ok, "%s takes off by itself (lift-off %.0f s, %.0f m run, agl %.0f, crashed %s %s)%s" % [sid, lift_t, run_m, ac.altitude_agl, str(crashed), str(crash_info), trace if not ok else ""])
 			if ok:
 				_check(lift_t < 90.0, "%s lifts off in a sane time (%.0f s)" % [sid, lift_t])
 			ac.free()      # at once: a frozen leftover would trigger the next pilot's collision avoidance
+	if wm != null:
+		wm.set("wind_speed", wind_save[0])
+		wm.set("wind_dir_deg", wind_save[1])
