@@ -52,6 +52,8 @@ var _gear_lbl: Label
 var _compass: Control
 var _minimap: Control
 var _aim: Control
+var _hit_t: float = 0.0     # hit-confirm marker timers
+var _kill_t: float = 0.0
 var _weapon_prev: bool = false
 var _weapon_mode_prev: int = 0
 var _extra_box: VBoxContainer
@@ -78,6 +80,8 @@ func _ready() -> void:
 	add_child(_root)
 	_build()
 	Radio.message.connect(_on_radio)
+	Weapons.player_hit.connect(func(_n: Node, _a: float) -> void: _hit_t = 0.25)
+	Weapons.player_kill.connect(func(_n: Node) -> void: _kill_t = 0.8)
 	_load_color_map()
 	_load_spots()
 	_map_img = Image.create(MAP_RES, MAP_RES, false, Image.FORMAT_RGBA8)
@@ -462,6 +466,8 @@ func _damage_callouts() -> void:
 
 
 func _process(delta: float) -> void:
+	_hit_t = maxf(_hit_t - delta, 0.0)
+	_kill_t = maxf(_kill_t - delta, 0.0)
 	# "Hide HUD" only hides the clutter: gauges, compass, map, ammo, aim and target markers always stay
 	var show: bool = GameState.show_hud
 	_radio.visible = show
@@ -928,6 +934,21 @@ func _draw_aim() -> void:
 		return
 	if GameState.show_pitch_ladder:
 		_draw_ladder()
+	_draw_hit_marker()
+
+
+## White cross when your rounds land, a larger red one when you destroy the target.
+func _draw_hit_marker() -> void:
+	if _hit_t <= 0.0 and _kill_t <= 0.0:
+		return
+	var c: Vector2 = _aim.size * 0.5
+	var killed: bool = _kill_t > 0.0
+	var a: float = clampf((_kill_t / 0.8) if killed else (_hit_t / 0.25), 0.0, 1.0)
+	var col: Color = Color(1.0, 0.25, 0.2, a) if killed else Color(1, 1, 1, a)
+	var r0: float = 10.0 if killed else 7.0
+	var r1: float = 22.0 if killed else 15.0
+	for d in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
+		_aim.draw_line(c + d * r0, c + d * r1, col, 2.5, true)
 
 
 ## Horizon line + pitch ladder, projected from the aircraft's heading so it follows the camera exactly.
