@@ -1422,27 +1422,35 @@ func _show_menu() -> void:
 	water.focus = _menu_anchor
 	TimeOfDay.set_preset("noon")
 	WeatherManager.set_weather("clear", 0.1)
+	_update_menu_cam(0.0)
+	# the start menu (and its music) is only built once the warning / licence screens have been dealt with
+	if _legal_gate_needed():
+		await _run_legal_gate()
 	_menu = (load(MENU_SCENE) as PackedScene).instantiate() as StartMenu
 	add_child(_menu)
 	_menu.start_requested.connect(start_game)
 	_menu.quit_requested.connect(func() -> void: get_tree().quit())
-	_update_menu_cam(0.0)
-	_show_legal_gate()
 	if _args.has("--menu-test"):    # debug: pick missions in the start menu and print the side / aircraft it selects
 		_menu_test.call_deferred()
 
 
-## Photosensitivity warning on every launch, licence agreement on first launch, optional DLSS download offer.
-## Not shown in headless / automated runs (--menu-test, --skip-legal).
-func _show_legal_gate() -> void:
+## Photosensitivity warning once per launch (not again when returning to the menu in the same session), licence
+## agreement only until it has been accepted, optional DLSS download offer. Skipped in headless / automated runs.
+func _legal_gate_needed() -> bool:
 	if DisplayServer.get_name() == "headless" or _args.has("--menu-test") or _args.has("--skip-legal"):
-		return
+		return false
+	return not LegalGate.session_done
+
+
+func _run_legal_gate() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 100
 	add_child(layer)
 	var gate := LegalGate.new()
-	gate.done.connect(func() -> void: layer.queue_free())
 	layer.add_child(gate)
+	await gate.done
+	LegalGate.session_done = true
+	layer.queue_free()
 
 
 func _update_menu_cam(delta: float) -> void:

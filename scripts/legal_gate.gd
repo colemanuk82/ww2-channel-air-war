@@ -10,6 +10,8 @@ const SAVE_PATH := "user://legal.cfg"
 const EULA_VERSION := 1
 const WARNING_SECONDS := 4.0
 
+static var session_done: bool = false     # the warning has been shown this launch: do not repeat it on returning to the menu
+
 var _root: VBoxContainer
 var _installer: DlssInstaller
 var _bar: ProgressBar
