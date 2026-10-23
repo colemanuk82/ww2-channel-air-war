@@ -627,6 +627,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		gmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		canopy_frame(canopy, c, dark)
 	pilot(canopy, spec["eye"] as Vector3)
+	PlaneDetails.cockpit(canopy, spec["eye"] as Vector3, String((spec["fus"] as Dictionary).get("profile", "")) == "bomber")
 
 	# Engines on wings / nacelles
 	var prop_idx: int = 0
@@ -705,6 +706,8 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		var tw: Array = spec["tail_wheel"]
 		var twm: MeshInstance3D = _mi(body, MeshUtil.disc(0.14, 0.09, Vector3.RIGHT, 8), dark, Vector3(0, tw[0], tw[1]))
 		twm.name = "TailWheel"
+
+	_fit_details(body, spec)
 
 	# Markings
 	var mz: float = spec["mark_z"]
@@ -790,6 +793,37 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	eye.position = eye_v * sc
 	model.add_child(eye)
 	return model
+
+
+## Underside racks / bomb-bay seams, the pitot tube and the radio aerial (see PlaneDetails).
+static func _fit_details(body: Node3D, spec: Dictionary) -> void:
+	var f: Dictionary = spec["fus"]
+	var w: Dictionary = spec["wing"]
+	var bomber: bool = String(f.get("profile", "")) == "bomber"
+	var wing_of: Callable = func(t: float) -> Dictionary: return wing_section(w, t)
+	var w0: Dictionary = wing_section(w, 0.0)
+	var rz: float = float(w0["zle"]) + float(w0["chord"]) * 0.45
+	var fd: Array = fus_at(f, rz)
+	PlaneDetails.underside(body, String(spec.get("id", "")), wing_of, float(fd[2]) - float(fd[1]), rz, f)
+	if bomber:
+		var nz: float = float(f["z0"]) + 1.6
+		var nd: Array = fus_at(f, nz)
+		PlaneDetails.pitot(body, Vector3(-float(nd[0]) * 0.97, float(nd[2]) + float(nd[1]) * 0.1, nz), 0.5)
+	else:
+		var wp: Dictionary = wing_section(w, 0.5)
+		PlaneDetails.pitot(body, Vector3(-float(wp["x"]), float(wp["yc"]) - float(wp["t"]) * 0.4, float(wp["zle"]) - 0.02))
+	var eye: Vector3 = spec["eye"] as Vector3
+	var mz: float = clampf(eye.z + (3.4 if bomber else 1.3), float(f["z0"]) + 0.5, float(f["z1"]) - 1.0)
+	var ad: Array = fus_at(f, mz)
+	var base := Vector3(0.0, float(ad[2]) + float(ad[1]) - 0.03, mz)
+	var fin: Dictionary = spec["fin"]
+	var fz: float = float(fin["z"]) + float(fin.get("sweep", 0.9)) + float(fin["ct"]) * 0.4
+	var fy: float = float(fin["y"]) + float(fin["h"])
+	if bool(fin.get("twin", false)):
+		var fx: float = float(fin["x"])
+		PlaneDetails.aerial(body, base, 0.5 if bomber else 0.4, Vector3(-fx, fy, fz), Vector3(fx, fy, fz))
+	else:
+		PlaneDetails.aerial(body, base, 0.5 if bomber else 0.4, Vector3(0.0, fy, fz))
 
 
 static func _color_of(c: Variant, cols: Dictionary) -> Color:

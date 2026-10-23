@@ -181,6 +181,7 @@ static func build(nation: String = "RAF") -> Node3D:
 	canopy.add_child(gmi)
 	PlaneBuilder.canopy_frame(canopy, CANOPY_RINGS, dark)
 	PlaneBuilder.pilot(canopy, Vector3(0.0, 1.12, 0.45))
+	PlaneDetails.cockpit(canopy, Vector3(0.0, 1.12, 0.45))
 
 	# Radiators under the wings
 	for side in [-1.0, 1.0]:
@@ -198,6 +199,12 @@ static func build(nation: String = "RAF") -> Node3D:
 			ex.material_override = dark
 			ex.position = Vector3(side * 0.5, 0.18 - 0.0 * k, -2.3 + 0.38 * k)
 			body.add_child(ex)
+
+	# Underside rack, pitot tube under the port wing, radio mast and aerial wire to the fin tip
+	PlaneDetails.underside(body, "spitfire", _wing_section, -0.52, 0.0)
+	var wp: Dictionary = _wing_section(0.45)
+	PlaneDetails.pitot(body, Vector3(-float(wp["x"]), float(wp["yc"]) - float(wp["t"]) * 0.4, float(wp["zle"]) - 0.02))
+	PlaneDetails.aerial(body, Vector3(0.0, 0.55, 1.9), 0.42, Vector3(0.0, 2.05, 4.55))
 
 	# Navigation lights: red to port, green to starboard at the wingtips
 	var wt: Dictionary = _wing_section(1.0)

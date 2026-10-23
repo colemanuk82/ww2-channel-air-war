@@ -16,6 +16,13 @@ const LW_UNDER := Color(0.58, 0.7, 0.78)
 
 
 static func get_spec(id: String) -> Dictionary:
+	var spec: Dictionary = _spec_for(id)
+	if not spec.is_empty():
+		spec["id"] = id        # lets PlaneBuilder fit the underside gear that belongs to this type
+	return spec
+
+
+static func _spec_for(id: String) -> Dictionary:
 	match id:
 		"hurricane": return hurricane()
 		"typhoon": return typhoon()
