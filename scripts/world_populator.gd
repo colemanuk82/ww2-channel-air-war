@@ -206,7 +206,13 @@ func _register_airfields() -> void:
 		var hdir: Vector3 = WorldCoords.heading_to_dir(float(d["heading_deg"]))
 		zones.append({"pos": pos, "heading": float(d["heading_deg"])})
 		RoadMesh.add_exclusion_box(Vector2(pos.x, pos.z), Vector2(hdir.x, hdir.z), 720.0, 780.0)
-		_add_site("af_" + id, pos, 9500.0, _build_airfield, {"id": id, "data": d, "y": y, "existing": ex})
+		# a large army camp beside some fields: reserve its ground now so trees and buildings keep clear of it
+		var camp: Vector3 = Vector3.INF
+		if ArmyCampKit.wants_camp(id):
+			camp = ArmyCampKit.site_for(id, pos, float(d["heading_deg"]))
+			if camp != Vector3.INF:
+				_exclude.append([camp, ArmyCampKit.CAMP_RADIUS])
+		_add_site("af_" + id, pos, 9500.0, _build_airfield, {"id": id, "data": d, "y": y, "existing": ex, "camp": camp})
 	_apply_airfield_zones(zones)
 
 
@@ -2401,6 +2407,7 @@ func _build_airfield(s: Dictionary) -> Node3D:
 		af = Airfield.create(str(d["name"]), pos, float(d["heading_deg"]), float(s["y"]))
 		af.style = Airfield.style_for(id)
 		container.add_child(af)
+		af.build_layout()      # the layout must exist now: the field is dressed below, before it enters the tree
 		airfields[id] = af
 	s["main"] = af
 	# give every populated field its side and register it, so landing there rearms (main.gd) and the tower calls
@@ -2417,7 +2424,10 @@ func _build_airfield(s: Dictionary) -> Node3D:
 	var y: float = af.surface_y
 	var axf := Transform3D(Basis(Vector3.UP, af.rotation.y), af.position)
 	var k: float = af.layout_scale()
-	if af.style == "grass":
+	var grass_station: bool = af.style in ["raf_grass", "lw_field"]
+	if grass_station:
+		_dress_grass_station(container, af, axf, y, team, rng)
+	elif af.style == "grass":
 		_dress_grass_airfield(container, dress, af, axf, y, team, rng)
 	elif af.style in ["cross", "parallel", "forward"]:
 		_dress_other_airfield(container, af, axf, y, team, rng)
@@ -2480,18 +2490,233 @@ func _build_airfield(s: Dictionary) -> Node3D:
 	AirfieldActivity.populate(container, af, axf, y, team, rng)     # ground crews, bowsers, tugs, bomb cart, fire tender
 	# P8 airfield furniture (all layouts): blast pens/revetments, Nissen camp, T2/T1 hangars, watch office,
 	# fuel + bomb dumps, flare path with Chance lights, dummy aircraft - inside the footprint, clear of the runway.
-	AirfieldFurniture.dress(container, af, axf, y, team, rng)
+	if not grass_station:          # grass stations carry their own period dressing (pens / nets, hangar arc)
+		AirfieldFurniture.dress(container, af, axf, y, team, rng)
 	# defences
 	var is_london: bool = id in ["northolt", "kenley", "biggin_hill", "hornchurch"]
 	var n88: int = 1 if team == "Allies" else 2
 	var nb: int = 3 if team == "Allies" else 2
 	var zone_r: float = af.runway_length * 0.55 + 100.0
 	_runway_zones.append([af.position, zone_r])
-	_defences(container, af.position, team, n88, nb, 2, 4 if (team == "Allies" and is_london) else 0, maxf(260.0 * k, zone_r * 1.8), hash(id) + 5)
+	_airfield_defences(container, af, axf, team, id, 4 if (team == "Allies" and is_london) else 0, maxf(260.0 * k, zone_r * 1.8))
+	var camp_pos: Variant = s.get("camp", Vector3.INF)
+	if camp_pos is Vector3 and camp_pos != Vector3.INF:
+		ArmyCampKit.build(container, camp_pos, float(d["heading_deg"]), team, hash(id) + 77)
 	# Blackout: at night an airfield shows its flare path / runway lamps only when it is an active (own-side)
 	# field; occupied/enemy fields stay dark (see Airfield.set_lights_active).
 	af.set_lights_active(team == "Allies")
 	return container
+
+
+## Dressing for the grass layouts. raf_grass: aircraft in E-type pens and on the apron, an arc of big hangars, the
+## watch office with its landing T, Nissen huts and lorries on the technical site. lw_field: aircraft under camouflage
+## nets round the field edge, tents and lorries, a fuel-drum dump - no permanent buildings.
+func _dress_grass_station(container: Node3D, af: Airfield, axf: Transform3D, y: float, team: String, rng: RandomNumberGenerator) -> void:
+	var L: float = af.runway_length
+	var lw: bool = af.style == "lw_field"
+	var xf: Array = []
+	for pad in af.dispersal_world_points():
+		if rng.randf() < 0.22:
+			continue
+		var to_c: Vector3 = af.position - (pad as Vector3)
+		to_c.y = 0.0
+		var b: Basis = Basis.looking_at(to_c.normalized(), Vector3.UP) if to_c.length() > 1.0 else Basis()
+		b = b.rotated(Vector3.UP, rng.randf_range(-0.2, 0.2))
+		xf.append(Transform3D(b, Vector3(pad.x, y + 0.4, pad.z)))
+	ParkedAircraft.place(container, xf, team, af)
+	if not af.pens_local.is_empty():
+		container.add_child(Scatter.multi(AirfieldAssets.e_pen(), _to_world(axf, af.pens_local), 5000.0))
+	if not af.nets_local.is_empty():
+		container.add_child(Scatter.multi(AirfieldAssets.camo_net(team), _to_world(axf, af.nets_local), 3500.0))
+	if not af.markers_local.is_empty():
+		container.add_child(Scatter.multi(AirfieldAssets.boundary_marker(), _to_world(axf, af.markers_local), 2200.0))
+	if lw:
+		# tents and lorries in the tree line beyond each row of nets, a fuel-drum dump, an ops tent with the T
+		var ex: float = L * 0.34
+		var tents: Array = []
+		for side in [-1.0, 1.0]:
+			for i in 8:
+				tents.append(Transform3D(Basis(Vector3.UP, PI * 0.5 + rng.randf_range(-0.3, 0.3)), Vector3(side * (ex + 70.0 + float(i % 2) * 14.0), 0.0, -L * 0.3 + float(i) * L * 0.08)))
+		_props(container, "tent", AirfieldAssets.tent(team), _to_world(axf, tents), team, 3)
+		var trucks: Array = []
+		for i in 8:
+			var tg: Vector3 = axf * Vector3((1.0 if i % 2 == 0 else -1.0) * (ex + rng.randf_range(40.0, 100.0)), 0, rng.randf_range(-L * 0.4, L * 0.4))
+			trucks.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU), Vector3(tg.x, y + 0.2, tg.z)))
+		_props(container, "truck", _truck_mesh(team), trucks, team, 3)
+		var drums: Array = []
+		for i in 3:
+			drums.append(Transform3D(Basis(), Vector3(-ex - 140.0 - float(i) * 22.0, 0.0, L * 0.35)))
+		_props(container, "ammo", AirfieldAssets.fuel_tank(), _to_world(axf, drums), team, 3)
+		var tcorner: Vector3 = axf * Vector3(-ex - 30.0, 0.0, -L * 0.2)
+		container.add_child(Scatter.multi(AirfieldAssets.landing_t(), [Transform3D(Basis(Vector3.UP, af.rotation.y), Vector3(tcorner.x, y + 0.05, tcorner.z))], 3000.0))
+		return
+	# RAF grass station: hangar arc behind the apron, watch office + landing T, huts, fuel, lorries
+	var rx: float = L * 0.38
+	for i in 4:
+		var hp: Vector3 = axf * Vector3(-rx - 175.0 - absf(float(i) - 1.5) * 18.0, 0, -165.0 + float(i) * 105.0)
+		var h: GroundStructure = GroundStructure.create("hangar", team, hp, af.heading_deg + 90.0)
+		h.is_mission_target = false
+		container.add_child(h)
+		h.position.y = y
+	var tw_l := Vector3(-rx - 95.0, 0, 245.0)
+	var tw: GroundStructure = GroundStructure.create("control_tower", team, axf * tw_l, af.heading_deg)
+	container.add_child(tw)
+	tw.position.y = y
+	var tp: Vector3 = axf * (tw_l + Vector3(45.0, 0, 0))
+	container.add_child(Scatter.multi(AirfieldAssets.landing_t(), [Transform3D(Basis(Vector3.UP, af.rotation.y), Vector3(tp.x, y + 0.05, tp.z))], 3000.0))
+	var huts: Array = []
+	for row in 4:
+		for i in 9:
+			huts.append(Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(-rx - 300.0 - float(row) * 26.0, 0.0, -230.0 + float(i) * 40.0)))
+	_props(container, "hut", AirfieldAssets.nissen(team), _to_world(axf, huts), team, 4)
+	for i in 4:
+		var ft: GroundStructure = GroundStructure.create("fuel_tank", team, axf * Vector3(-rx - 250.0 - float(i) * 22.0, 0, 330.0), 0.0)
+		container.add_child(ft)
+		ft.position.y = y
+	var trucks2: Array = []
+	for i in 10:
+		var tg2: Vector3 = axf * Vector3(rng.randf_range(-rx - 140.0, -rx - 60.0), 0, rng.randf_range(-230.0, 230.0))
+		trucks2.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU), Vector3(tg2.x, y + 0.2, tg2.z)))
+	_props(container, "truck", _truck_mesh(team), trucks2, team, 3)
+
+
+## Airfield defences laid out the way the real ones were (photos and station plans): light AA - Bofors on RAF
+## stations, 2 cm / 3.7 cm Flak on Luftwaffe fields - in sandbagged pits on a ring just outside the paved area,
+## covering both runway approaches; machine-gun pits beside the dispersals; one heavy battery of four guns
+## (3.7-inch / 88 mm) in a square with its command post 1.6-2.4 km out to the side; searchlights and (London
+## sector stations) barrage balloons further out. Every spot is checked against what is already built - runways,
+## taxiways, buildings, parked aircraft, dumps - and against water, so no gun sits on a taxiway or a hut.
+func _airfield_defences(container: Node3D, af: Airfield, axf: Transform3D, team: String, id: String, balloons: int, spread: float) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(id) + 11
+	var occ: Array = _occupied(container)
+	var ext: Vector2 = af.footprint_extent()
+	var axis_yaw: float = af.rotation.y
+	# light AA: 8 pits (Axis fields 9) on an ellipse just outside the paved footprint
+	var n_light: int = 8 if team == "Allies" else 9
+	for i in n_light:
+		var a: float = TAU * (float(i) + rng.randf_range(-0.18, 0.18)) / float(n_light)
+		for tries in 8:
+			var grow: float = 60.0 + 30.0 * float(tries)
+			var lp := Vector3(sin(a) * (ext.x + grow), 0.0, cos(a) * (ext.y + grow))
+			var wp: Vector3 = axf * lp
+			if _spot_free(wp, occ, 34.0) and GroundKit.raw_y(wp.x, wp.z) > 1.0:
+				var g: AAGun = AAGun.create("bofors", team)
+				_place(g, wp)
+				container.add_child(g)
+				occ.append(Vector3(wp.x, 12.0, wp.z))
+				break
+	# machine-gun pits beside the dispersal pads, on the outboard side
+	var pads: Array = af.dispersal_world_points()
+	var n_mg: int = mini(4, pads.size())
+	for i in n_mg:
+		var pad: Vector3 = pads[(i * maxi(pads.size() / maxi(n_mg, 1), 1) + rng.randi_range(0, 2)) % pads.size()]
+		var out_dir: Vector3 = (pad - af.position)
+		out_dir.y = 0.0
+		out_dir = out_dir.normalized() if out_dir.length() > 1.0 else Vector3.RIGHT
+		for tries in 6:
+			var wp2: Vector3 = pad + out_dir * (40.0 + 14.0 * float(tries)) + out_dir.cross(Vector3.UP) * rng.randf_range(-20.0, 20.0)
+			if _spot_free(wp2, occ, 22.0) and GroundKit.raw_y(wp2.x, wp2.z) > 1.0:
+				var mg: AAGun = AAGun.create("mg", team)
+				_place(mg, wp2)
+				container.add_child(mg)
+				occ.append(Vector3(wp2.x, 8.0, wp2.z))
+				break
+	# one heavy battery: four guns on a 44 m square round a sandbagged command post, out to one side of the field
+	var done: bool = false
+	for tries in 12:
+		var side: float = 1.0 if (tries + absi(hash(id))) % 2 == 0 else -1.0
+		var ang: float = axis_yaw + side * PI * 0.5 + rng.randf_range(-0.7, 0.7)
+		var dist: float = rng.randf_range(1600.0, 2400.0)
+		var c: Vector3 = af.position + Vector3(-sin(ang), 0.0, -cos(ang)) * dist
+		var corners: Array = []
+		for k in 4:
+			var ca: float = ang + PI * 0.25 + PI * 0.5 * float(k)
+			corners.append(c + Vector3(sin(ca), 0.0, cos(ca)) * 31.0)
+		var ok: bool = GroundKit.raw_y(c.x, c.z) > 1.0 and not _in_runway_zone(c)
+		for q in corners:
+			ok = ok and GroundKit.raw_y((q as Vector3).x, (q as Vector3).z) > 1.0
+		if not ok:
+			continue
+		for q2 in corners:
+			var hv: AAGun = AAGun.create("88mm", team)
+			_place(hv, q2)
+			container.add_child(hv)
+		var cp := Node3D.new()
+		cp.position = Vector3(c.x, _y(c), c.z)
+		cp.rotation.y = ang
+		container.add_child(cp)
+		GroundKit.box(cp, Vector3(7.0, 2.2, 5.0), Vector3(0.0, 1.1, 0.0), GroundKit.COL_SAND)                     # command post
+		GroundKit.box(cp, Vector3(5.0, 0.6, 3.0), Vector3(0.0, 2.5, 0.0), GroundKit.COL_DARK.lightened(0.2))      # predictor roof
+		GroundKit.box(cp, Vector3(3.0, 1.6, 2.0), Vector3(12.0, 0.8, 0.0), GroundKit.COL_SAND.darkened(0.1))      # ready-use ammo
+		done = true
+		break
+	if not done:
+		for p in _land_ring(af.position, 2, spread * 0.6, spread, rng):
+			var hv2: AAGun = AAGun.create("88mm", team)
+			_place(hv2, p)
+			container.add_child(hv2)
+	# searchlights and balloons further out, as before
+	_defences(container, af.position, team, 0, 0, 2, balloons, spread, hash(id) + 5)
+
+
+## Footprint of what is already built under `root` as [Vector3(x, radius, z)] in world space. Long strips (runways,
+## taxiways, banks) are sampled along their length so they block a narrow band rather than a huge circle.
+func _occupied(root: Node3D) -> Array:
+	var out: Array = []
+	for n in root.find_children("*", "", true, false):
+		var xf: Transform3D = _rel_xf(n as Node, root)
+		if n is MultiMeshInstance3D:
+			var mmi := n as MultiMeshInstance3D
+			var mm: MultiMesh = mmi.multimesh
+			if mm == null or mm.mesh == null:
+				continue
+			var ab: AABB = mm.mesh.get_aabb()
+			var r: float = maxf(ab.size.x, ab.size.z) * 0.5 + 2.0
+			for i in mm.instance_count:
+				var o: Vector3 = xf * mm.get_instance_transform(i).origin
+				out.append(Vector3(o.x, r, o.z))
+		elif n is MeshInstance3D:
+			var mi := n as MeshInstance3D
+			if mi.mesh == null:
+				continue
+			var b: AABB = mi.mesh.get_aabb()
+			var c: Vector3 = xf * b.get_center()
+			var ax: Vector3 = xf.basis.x * b.size.x
+			var az: Vector3 = xf.basis.z * b.size.z
+			ax.y = 0.0
+			az.y = 0.0
+			var lx: float = ax.length()
+			var lz: float = az.length()
+			var long: Vector3 = ax if lx > lz else az
+			var short: float = minf(lx, lz)
+			var ll: float = long.length()
+			if ll > short * 3.0 and ll > 30.0:
+				var steps: int = int(ll / 15.0)
+				for k in steps + 1:
+					var o2: Vector3 = c + long * (float(k) / float(maxi(steps, 1)) - 0.5)
+					out.append(Vector3(o2.x, short * 0.5 + 2.0, o2.z))
+			else:
+				out.append(Vector3(c.x, maxf(lx, lz) * 0.5 + 2.0, c.z))
+	return out
+
+
+static func _rel_xf(n: Node, root: Node) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	var cur: Node = n
+	while cur != null and cur != root:
+		if cur is Node3D:
+			t = (cur as Node3D).transform * t
+		cur = cur.get_parent()
+	return t
+
+
+static func _spot_free(p: Vector3, occ: Array, clear: float) -> bool:
+	for o in occ:
+		var v: Vector3 = o
+		if Vector2(p.x - v.x, p.z - v.z).length() < v.y + clear:
+			return false
+	return true
 
 
 ## Dressing for the "cross", "parallel" and "forward" layouts (airfield.gd). Local frame: -Z along the runway, west = -X.

@@ -921,6 +921,277 @@
    "heading_deg": 130,
    "runway_len_m": 1200,
    "in_bounds": true
+  },
+  {
+   "id": "north_weald",
+   "name": "North Weald",
+   "side": "RAF",
+   "lat": 51.7192,
+   "lon": 0.1542,
+   "heading_deg": 20,
+   "runway_len_m": 1400,
+   "in_bounds": true
+  },
+  {
+   "id": "gravesend",
+   "name": "Gravesend",
+   "side": "RAF",
+   "lat": 51.4097,
+   "lon": 0.3936,
+   "heading_deg": 110,
+   "runway_len_m": 1100,
+   "in_bounds": true
+  },
+  {
+   "id": "rochford",
+   "name": "Rochford",
+   "side": "RAF",
+   "lat": 51.5711,
+   "lon": 0.6956,
+   "heading_deg": 60,
+   "runway_len_m": 1200,
+   "in_bounds": true
+  },
+  {
+   "id": "west_malling",
+   "name": "West Malling",
+   "side": "RAF",
+   "lat": 51.2711,
+   "lon": 0.4028,
+   "heading_deg": 70,
+   "runway_len_m": 1300,
+   "in_bounds": true
+  },
+  {
+   "id": "detling",
+   "name": "Detling",
+   "side": "RAF",
+   "lat": 51.3036,
+   "lon": 0.5972,
+   "heading_deg": 60,
+   "runway_len_m": 1100,
+   "in_bounds": true
+  },
+  {
+   "id": "eastchurch",
+   "name": "Eastchurch",
+   "side": "RAF",
+   "lat": 51.3953,
+   "lon": 0.8364,
+   "heading_deg": 100,
+   "runway_len_m": 1200,
+   "in_bounds": true
+  },
+  {
+   "id": "croydon",
+   "name": "Croydon",
+   "side": "RAF",
+   "lat": 51.3567,
+   "lon": -0.117,
+   "heading_deg": 120,
+   "runway_len_m": 1300,
+   "in_bounds": true
+  },
+  {
+   "id": "redhill",
+   "name": "Redhill",
+   "side": "RAF",
+   "lat": 51.2136,
+   "lon": -0.1386,
+   "heading_deg": 80,
+   "runway_len_m": 900,
+   "in_bounds": true
+  },
+  {
+   "id": "martlesham_heath",
+   "name": "Martlesham Heath",
+   "side": "RAF",
+   "lat": 52.0597,
+   "lon": 1.2733,
+   "heading_deg": 40,
+   "runway_len_m": 1300,
+   "in_bounds": true
+  },
+  {
+   "id": "middle_wallop",
+   "name": "Middle Wallop",
+   "side": "RAF",
+   "lat": 51.1394,
+   "lon": -1.57,
+   "heading_deg": 80,
+   "runway_len_m": 1400,
+   "in_bounds": true
+  },
+  {
+   "id": "warmwell",
+   "name": "Warmwell",
+   "side": "RAF",
+   "lat": 50.6936,
+   "lon": -2.3364,
+   "heading_deg": 60,
+   "runway_len_m": 1200,
+   "in_bounds": true
+  },
+  {
+   "id": "ford",
+   "name": "Ford",
+   "side": "RAF",
+   "lat": 50.8156,
+   "lon": -0.5869,
+   "heading_deg": 50,
+   "runway_len_m": 1100,
+   "in_bounds": true
+  },
+  {
+   "id": "thorney_island",
+   "name": "Thorney Island",
+   "side": "RAF",
+   "lat": 50.8144,
+   "lon": -0.9228,
+   "heading_deg": 70,
+   "runway_len_m": 1500,
+   "in_bounds": true
+  },
+  {
+   "id": "shoreham",
+   "name": "Shoreham",
+   "side": "RAF",
+   "lat": 50.8356,
+   "lon": -0.2972,
+   "heading_deg": 20,
+   "runway_len_m": 900,
+   "in_bounds": true
+  },
+  {
+   "id": "friston",
+   "name": "Friston",
+   "side": "RAF",
+   "lat": 50.7639,
+   "lon": 0.1878,
+   "heading_deg": 80,
+   "runway_len_m": 1000,
+   "in_bounds": true
+  },
+  {
+   "id": "saint_inglevert",
+   "name": "Saint-Inglevert",
+   "side": "Luftwaffe",
+   "lat": 50.8781,
+   "lon": 1.7333,
+   "heading_deg": 90,
+   "runway_len_m": 1100,
+   "in_bounds": true,
+   "liberated": "1944-09-05"
+  },
+  {
+   "id": "guines",
+   "name": "Guines",
+   "side": "Luftwaffe",
+   "lat": 50.8653,
+   "lon": 1.8833,
+   "heading_deg": 70,
+   "runway_len_m": 1100,
+   "in_bounds": true,
+   "liberated": "1944-09-05"
+  },
+  {
+   "id": "coquelles",
+   "name": "Coquelles",
+   "side": "Luftwaffe",
+   "lat": 50.9264,
+   "lon": 1.8044,
+   "heading_deg": 60,
+   "runway_len_m": 1000,
+   "in_bounds": true,
+   "liberated": "1944-09-05"
+  },
+  {
+   "id": "desvres",
+   "name": "Desvres",
+   "side": "Luftwaffe",
+   "lat": 50.67,
+   "lon": 1.85,
+   "heading_deg": 80,
+   "runway_len_m": 1000,
+   "in_bounds": true,
+   "liberated": "1944-09-05"
+  },
+  {
+   "id": "monchy_breton",
+   "name": "Monchy-Breton",
+   "side": "Luftwaffe",
+   "lat": 50.4,
+   "lon": 2.44,
+   "heading_deg": 90,
+   "runway_len_m": 1100,
+   "in_bounds": true,
+   "liberated": "1944-09-02"
+  },
+  {
+   "id": "vitry_en_artois",
+   "name": "Vitry-en-Artois",
+   "side": "Luftwaffe",
+   "lat": 50.3375,
+   "lon": 2.9933,
+   "heading_deg": 70,
+   "runway_len_m": 1300,
+   "in_bounds": true,
+   "liberated": "1944-09-02"
+  },
+  {
+   "id": "beauvais_tille",
+   "name": "Beauvais-Tille",
+   "side": "Luftwaffe",
+   "lat": 49.4544,
+   "lon": 2.1128,
+   "heading_deg": 120,
+   "runway_len_m": 1500,
+   "in_bounds": true,
+   "liberated": "1944-08-30"
+  },
+  {
+   "id": "cormeilles_en_vexin",
+   "name": "Cormeilles-en-Vexin",
+   "side": "Luftwaffe",
+   "lat": 49.0961,
+   "lon": 2.04,
+   "heading_deg": 50,
+   "runway_len_m": 1400,
+   "in_bounds": true,
+   "liberated": "1944-08-30"
+  },
+  {
+   "id": "rouen_boos",
+   "name": "Rouen-Boos",
+   "side": "Luftwaffe",
+   "lat": 49.3842,
+   "lon": 1.1747,
+   "heading_deg": 80,
+   "runway_len_m": 1500,
+   "in_bounds": true,
+   "liberated": "1944-08-31"
+  },
+  {
+   "id": "evreux",
+   "name": "Evreux",
+   "side": "Luftwaffe",
+   "lat": 49.0286,
+   "lon": 1.22,
+   "heading_deg": 90,
+   "runway_len_m": 1600,
+   "in_bounds": true,
+   "liberated": "1944-08-24"
+  },
+  {
+   "id": "lille_vendeville",
+   "name": "Lille-Vendeville",
+   "side": "Luftwaffe",
+   "lat": 50.5639,
+   "lon": 3.0897,
+   "heading_deg": 90,
+   "runway_len_m": 1400,
+   "in_bounds": true,
+   "liberated": "1944-09-03"
   }
  ],
  "cities": [

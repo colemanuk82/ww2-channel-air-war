@@ -14,7 +14,16 @@ var team: String = ""          # "Allies" / "Axis" allegiance of the field
 var lights_active: bool = true # at night the flare path / runway lamps show only while the field is active
 var style: String = "triangle"  # "triangle" (paved three-runway field) or "grass" (dirt strip + big apron, Luftwaffe style)
 
-const GRASS_IDS := ["hawkinge", "marck", "st_omer"]
+const GRASS_IDS := []
+## Pre-war RAF grass stations as they were in 1940: no paved runway, an arc of big hangars behind a concrete apron,
+## E-type blast pens round a perimeter track, boundary markers and the landing T.
+const RAF_GRASS_IDS := ["hawkinge", "hornchurch", "debden", "kenley", "north_weald", "gravesend", "rochford", "west_malling",
+	"detling", "eastchurch", "croydon", "redhill", "martlesham_heath", "middle_wallop", "warmwell", "ford", "thorney_island",
+	"shoreham", "friston", "biggin_hill"]
+## Luftwaffe forward grass fields in the Pas-de-Calais and Normandy, 1940-41: a rolled grass strip, aircraft dispersed
+## round the field edge under camouflage nets, tents and lorries instead of hangars.
+const LW_FIELD_IDS := ["marck", "st_omer", "calais_marck", "saint_omer", "merville", "saint_inglevert", "guines", "coquelles", "audembert",
+	"desvres", "monchy_breton", "vitry_en_artois", "abbeville_drucat", "beauvais_tille", "cormeilles_en_vexin"]
 ## Layouts: "triangle" (three paved runways), "grass" (dirt strip + apron), "cross" (two crossing paved runways),
 ## "parallel" (two parallel runways + terminal apron) and "forward" (steel-mesh strip with tented dispersals).
 const CROSS_IDS := ["eindhoven", "schiphol", "gilze_rijen", "volkel", "venlo", "twente", "hopsten", "rheine", "woensdrecht",
@@ -28,6 +37,10 @@ const FORWARD_IDS := ["brussels_evere", "antwerp_deurne", "le_culot", "diest", "
 
 ## Which layout an airfield gets: real fields use a layout that suits them, others a mix by id hash.
 static func style_for(id: String) -> String:
+	if id in RAF_GRASS_IDS:
+		return "raf_grass"
+	if id in LW_FIELD_IDS:
+		return "lw_field"
 	if id in GRASS_IDS:
 		return "grass"
 	if id in CROSS_IDS:
@@ -47,6 +60,9 @@ var _asphalt: Material
 var _asphalt2: Material
 var _white: Material
 var _dispersal_local: Array = []      # Vector3 local positions of the dispersal pens
+var markers_local: Array = []         # Transform3D: grass-field boundary markers (dressed by the populator)
+var pens_local: Array = []            # Transform3D: E-type blast pens (raf_grass)
+var nets_local: Array = []            # Transform3D: camouflage nets over dispersed aircraft (lw_field)
 
 
 static func create(p_name: String, world_pos: Vector3, p_heading_deg: float, ground_y: float) -> Airfield:
@@ -71,6 +87,19 @@ func layout_scale() -> float:
 
 
 func _ready() -> void:
+	build_layout()
+
+
+var _built: bool = false
+
+
+## Build the runways, taxiways and pads. Called from _ready, but WorldPopulator calls it straight after create()
+## so the layout (dispersal pads, footprint) exists while the field is dressed - streamed fields are dressed
+## before they enter the scene tree.
+func build_layout() -> void:
+	if _built:
+		return
+	_built = true
 	var k: float = layout_scale()
 	name = airfield_name.replace(" ", "")
 	# aged concrete and tarmac (toon detail 6) and worn paint (detail 7): see shaders/toon.gdshader
@@ -92,6 +121,10 @@ func _ready() -> void:
 			_build_parallel(earth)
 		"forward":
 			_build_forward(earth)
+		"raf_grass":
+			_build_raf_grass(earth)
+		"lw_field":
+			_build_lw_field(earth)
 		_:
 			_build_triangle(earth)
 
@@ -249,29 +282,34 @@ func _build_grass(earth: Material) -> void:
 			_dispersal_local.append(Vector3(-150.0 - float(row) * 38.0, 0.0, -190.0 + float(i) * 40.0))
 
 
-## Two crossing paved runways (main = gameplay) with a perimeter taxiway on the west side and a hardstanding apron.
+## Two crossing paved runways (main = gameplay) inside an octagonal perimeter track, frying-pan hardstandings
+## round the track and a hardstanding apron on the west side - the layout of most 1942-44 bomber and fighter bases.
 func _build_cross(earth: Material) -> void:
 	var L: float = runway_length
 	_runway_pivot(0.0, L, runway_width, _asphalt)
 	_runway_pivot(58.0, L * 0.8, runway_width * 0.8, _asphalt2, Vector3(0, 0.15, L * 0.05))
-	var xw: float = -L * 0.13
-	_link(Vector3(xw, 0, -L * 0.5), Vector3(xw, 0, L * 0.5), 14.0, _asphalt2)
-	_link(Vector3(-runway_width * 0.5, 0, -L * 0.5 + 12.0), Vector3(xw, 0, -L * 0.5 + 12.0), 14.0, _asphalt2)
-	_link(Vector3(-runway_width * 0.5, 0, L * 0.5 - 12.0), Vector3(xw, 0, L * 0.5 - 12.0), 14.0, _asphalt2)
-	_link(Vector3(-runway_width * 0.5, 0, 0), Vector3(xw, 0, 0), 14.0, _asphalt2)
+	var hx: float = L * 0.40
+	var hz: float = L * 0.58
+	var loop: Array = _octagon(hx, hz, L * 0.16, 0.0)
+	_track_loop(loop, 13.0, _asphalt2)
+	for end in [-1.0, 1.0]:
+		_link(Vector3(0, 0, end * (L * 0.5 - 10.0)), Vector3(0, 0, end * hz), 14.0, _asphalt2)
+	# the cross runway's ends join the track along its own heading
+	var r2: Vector3 = Vector3(sin(deg_to_rad(58.0)), 0.0, cos(deg_to_rad(58.0)))
+	for end2 in [-1.0, 1.0]:
+		var e: Vector3 = Vector3(0, 0, L * 0.05) + r2 * end2 * (L * 0.4 - 10.0)
+		_link(e, _nearest(loop, e), 14.0, _asphalt2)
 	var pan: Material = ToonUtil.make_toon(Color(0.58, 0.57, 0.54), {"outline": false, "rim": 0.0, "detail": 4})
-	_box(Vector3(190.0, 0.5, 300.0), Vector3(-L * 0.13 - 110.0, 0.0, -90.0), pan)
+	_box(Vector3(190.0, 0.5, 300.0), Vector3(-hx - 110.0, 0.0, -90.0), pan)
+	_link(Vector3(-hx, 0, -90.0), Vector3(-hx - 15.0, 0, -90.0), 30.0, _asphalt2)
 	for i in 5:
 		for r in 2:
-			_dispersal_local.append(Vector3(-L * 0.13 - 60.0 - float(r) * 70.0, 0.0, -210.0 + float(i) * 55.0))
-	for i in 5:
-		var z: float = -L * 0.38 + float(i) * L * 0.17
-		_link(Vector3(runway_width * 0.5, 0, z), Vector3(110.0, 0, z), 9.0, _asphalt2)
-		_clover(Vector3(130.0, 0, z), PI * 0.5, pan, earth)
-		_dispersal_local.append(Vector3(130.0, 0.0, z))
+			_dispersal_local.append(Vector3(-hx - 60.0 - float(r) * 70.0, 0.0, -210.0 + float(i) * 55.0))
+	_frying_pans(loop, pan, 175.0, Vector2(-hx - 20.0, -90.0), 240.0)
 
 
-## Two parallel paved runways joined by cross-taxiways, with a large terminal-style apron on the west side.
+## Two parallel paved runways inside a rectangular perimeter track, cross-taxiways between them, a large terminal
+## apron on the west and frying-pan hardstandings round the track.
 func _build_parallel(earth: Material) -> void:
 	var L: float = runway_length
 	var sep: float = 330.0 + L * 0.05
@@ -281,12 +319,163 @@ func _build_parallel(earth: Material) -> void:
 	_link(Vector3(mid, 0, -L * 0.5), Vector3(mid, 0, L * 0.5), 14.0, _asphalt2)
 	for z in [-L * 0.45, -L * 0.15, L * 0.15, L * 0.45]:
 		_link(Vector3(runway_width * 0.5, 0, z), Vector3(sep - runway_width * 0.5, 0, z), 14.0, _asphalt2)
+	var cx: float = sep * 0.5
+	var loop: Array = _octagon(sep * 0.5 + 150.0, L * 0.58, 120.0, cx)
+	_track_loop(loop, 13.0, _asphalt2)
+	_link(Vector3(0, 0, -L * 0.5 + 8.0), Vector3(0, 0, -L * 0.58), 14.0, _asphalt2)
+	_link(Vector3(0, 0, L * 0.5 - 8.0), Vector3(0, 0, L * 0.58), 14.0, _asphalt2)
 	var pan: Material = ToonUtil.make_toon(Color(0.60, 0.59, 0.56), {"outline": false, "rim": 0.0, "detail": 4})
-	_box(Vector3(240.0, 0.5, 420.0), Vector3(-170.0, 0.0, -L * 0.1), pan)
-	_link(Vector3(-runway_width * 0.5, 0, -L * 0.1), Vector3(-60.0, 0, -L * 0.1), 30.0, _asphalt2)
+	var ax: float = cx - (sep * 0.5 + 150.0)
+	_box(Vector3(240.0, 0.5, 420.0), Vector3(ax - 130.0, 0.0, -L * 0.1), pan)
+	_link(Vector3(ax, 0, -L * 0.1), Vector3(ax - 15.0, 0, -L * 0.1), 30.0, _asphalt2)
 	for r in 3:
 		for i in 7:
-			_dispersal_local.append(Vector3(-110.0 - float(r) * 60.0, 0.0, -L * 0.1 - 170.0 + float(i) * 56.0))
+			_dispersal_local.append(Vector3(ax - 70.0 - float(r) * 60.0, 0.0, -L * 0.1 - 170.0 + float(i) * 56.0))
+	_frying_pans(loop, pan, 190.0, Vector2(ax - 20.0, -L * 0.1), 260.0)
+
+
+## Pre-war RAF grass station (Biggin Hill, Hornchurch, Kenley... in 1940): no paved runway - a mown landing area
+## inside boundary markers - with a concrete apron and an arc of big hangars on the west side, a tarmac perimeter
+## track, and E-type blast pens round it, each pen holding two fighters.
+func _build_raf_grass(earth: Material) -> void:
+	var L: float = runway_length
+	var mown: Material = ToonUtil.make_toon(Color(0.27, 0.32, 0.18), {"outline": false, "tex": "grass"})
+	var mown2: Material = ToonUtil.make_toon(Color(0.25, 0.30, 0.17), {"outline": false, "tex": "grass"})
+	# mown landing area: the main direction and a cross direction, in slightly different stripes of grass
+	_box(Vector3(runway_width * 2.4, 0.3, L), Vector3(0, -0.12, 0), mown)
+	_box(Vector3(runway_width * 2.0, 0.3, L * 0.75), Vector3(0, -0.14, 0), mown2, deg_to_rad(65.0))
+	# perimeter track: an ellipse of tarmac round the landing ground
+	# sized so the track and pens stay inside the terrain's flattened zone (~1 km radius)
+	var rx: float = L * 0.38
+	var rz: float = L * 0.5 + 45.0
+	var loop: Array = []
+	for i in 24:
+		var a: float = TAU * float(i) / 24.0
+		loop.append(Vector3(sin(a) * rx, 0.0, cos(a) * rz))
+	_track_loop(loop, 11.0, _asphalt2)
+	# concrete apron in front of the hangar arc (west)
+	var pan: Material = ToonUtil.make_toon(Color(0.42, 0.42, 0.40), {"outline": false, "rim": 0.0, "detail": 4})
+	_box(Vector3(110.0, 0.5, 400.0), Vector3(-rx - 60.0, 0.0, -40.0), pan)
+	_link(Vector3(-rx, 0, -40.0), Vector3(-rx - 10.0, 0, -40.0), 40.0, _asphalt2)
+	for i in 6:
+		_dispersal_local.append(Vector3(-rx - 45.0 - float(i % 2) * 36.0, 0.0, -200.0 + float(i) * 68.0))
+	# E-type pens round the north, east and south of the track, opening onto it
+	for i in 24:
+		if i % 2 == 1:
+			continue
+		var a2: float = TAU * (float(i) + 0.5) / 24.0
+		var pt := Vector3(sin(a2) * rx, 0.0, cos(a2) * rz)
+		if pt.x < -rx * 0.55:
+			continue                       # the west side is the apron and technical site
+		var outv: Vector3 = Vector3(sin(a2) / rx, 0.0, cos(a2) / rz).normalized()
+		var c: Vector3 = pt + outv * 40.0
+		var yaw: float = atan2(outv.x, outv.z) + PI
+		pens_local.append(Transform3D(Basis(Vector3.UP, yaw), c))
+		_link(pt, pt + outv * 26.0, 8.0, _asphalt2)
+		for bay in [-7.0, 7.0]:
+			_dispersal_local.append(c + Basis(Vector3.UP, yaw) * Vector3(bay, 0.0, 2.0))
+	# boundary markers round the landing ground
+	for j in 28:
+		var a3: float = TAU * float(j) / 28.0
+		markers_local.append(Transform3D(Basis(Vector3.UP, a3), Vector3(sin(a3) * (rx - 30.0), 0.0, cos(a3) * (rz - 30.0))))
+
+
+## Luftwaffe forward grass field (Pas-de-Calais / Normandy, 1940-41): a rolled grass strip with worn wheel tracks,
+## aircraft dispersed round the field edge under camouflage nets on worn earth pads, joined by dirt tracks.
+func _build_lw_field(earth: Material) -> void:
+	var L: float = runway_length
+	var rolled: Material = ToonUtil.make_toon(Color(0.28, 0.32, 0.18), {"outline": false, "tex": "grass"})
+	var worn: Material = ToonUtil.make_toon(Color(0.42, 0.38, 0.27), {"outline": false, "tex": "gravel"})
+	var rut: Material = ToonUtil.make_toon(Color(0.40, 0.37, 0.26), {"outline": false, "rim": 0.0, "detail": 3})
+	_box(Vector3(runway_width * 2.0, 0.3, L), Vector3(0, -0.12, 0), rolled)
+	for rx2 in [-runway_width * 0.35, runway_width * 0.3]:
+		_box(Vector3(3.0, 0.32, L * 0.85), Vector3(rx2, -0.1, 0), rut)
+	# dispersal pads along both long edges and across the far end, each a worn earth patch under a net
+	var ex: float = L * 0.34
+	var n: int = int(L / 120.0)
+	for side in [-1.0, 1.0]:
+		for i in n:
+			var z: float = -L * 0.44 + float(i) * (L * 0.88 / float(maxi(n - 1, 1)))
+			var pp := Vector3(side * (ex + float(i % 3) * 12.0), 0.0, z)
+			_pad(pp, 15.0, worn)
+			_dispersal_local.append(pp)
+			nets_local.append(Transform3D(Basis(Vector3.UP, side * PI * 0.5), pp))
+			if i % 2 == 0:
+				_link(pp - Vector3(side * 14.0, 0, 0), Vector3(side * runway_width, 0, z), 6.0, worn)
+	for k in 4:
+		var pe := Vector3(-ex * 0.6 + float(k) * ex * 0.4, 0.0, L * 0.5 + 60.0)
+		_pad(pe, 15.0, worn)
+		_dispersal_local.append(pe)
+		nets_local.append(Transform3D(Basis(), pe))
+	for j in 24:
+		var t: float = float(j) / 24.0
+		var zz: float = -L * 0.5 + L * t
+		for sx in [-1.0, 1.0]:
+			if j % 3 == 0:
+				markers_local.append(Transform3D(Basis(), Vector3(sx * runway_width * 1.1, 0.0, zz)))
+
+
+func _pad(at: Vector3, r: float, mat: Material) -> void:
+	var pad := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = r
+	cm.bottom_radius = r
+	cm.height = 0.5
+	cm.radial_segments = 12
+	cm.rings = 1
+	pad.mesh = cm
+	pad.material_override = mat
+	pad.position = at
+	add_child(pad)
+
+
+## Octagon of track corners (local), half sizes hx/hz, corners cut by ch, centred on x = cx.
+func _octagon(hx: float, hz: float, ch: float, cx: float) -> Array:
+	return [Vector3(cx - hx + ch, 0, -hz), Vector3(cx + hx - ch, 0, -hz), Vector3(cx + hx, 0, -hz + ch), Vector3(cx + hx, 0, hz - ch),
+		Vector3(cx + hx - ch, 0, hz), Vector3(cx - hx + ch, 0, hz), Vector3(cx - hx, 0, hz - ch), Vector3(cx - hx, 0, -hz + ch)]
+
+
+## Closed perimeter track through the points, with a round pad at every bend so the joints read as curves.
+func _track_loop(pts: Array, w: float, mat: Material) -> void:
+	for i in pts.size():
+		var a: Vector3 = pts[i]
+		var b: Vector3 = pts[(i + 1) % pts.size()]
+		_link(a, b, w, mat)
+		_pad(Vector3(a.x, -0.05, a.z), w * 0.62, mat)
+
+
+func _nearest(pts: Array, p: Vector3) -> Vector3:
+	var best: Vector3 = pts[0]
+	for q in pts:
+		if (q as Vector3).distance_to(p) < best.distance_to(p):
+			best = q
+	return best
+
+
+## Frying-pan hardstandings (circular pads on short stems) every `spacing` m round the track, facing outward,
+## except within `skip_r` of the apron at `skip_at`.
+func _frying_pans(loop: Array, mat: Material, spacing: float, skip_at: Vector2, skip_r: float) -> void:
+	var c := Vector3.ZERO
+	for q in loop:
+		c += q
+	c /= float(loop.size())
+	for i in loop.size():
+		var a: Vector3 = loop[i]
+		var b: Vector3 = loop[(i + 1) % loop.size()]
+		var seg: float = a.distance_to(b)
+		var n: int = int(seg / spacing)
+		for k in n:
+			var p: Vector3 = a.lerp(b, (float(k) + 0.5) / float(n))
+			if Vector2(p.x - skip_at.x, p.z - skip_at.y).length() < skip_r:
+				continue
+			var dirv: Vector3 = (b - a).normalized()
+			var outv := Vector3(-dirv.z, 0.0, dirv.x)
+			if outv.dot(p - c) < 0.0:
+				outv = -outv
+			var hub: Vector3 = p + outv * 46.0
+			_link(p, hub, 8.0, mat)
+			_pad(hub, 17.0, mat)
+			_dispersal_local.append(hub)
 
 
 ## Advanced landing ground: one steel-mesh strip, a taxi track along it and small dispersal pads in the grass.
@@ -402,10 +591,41 @@ func _dispersal(pos: Vector3, ang: float, mat: Material, earth: Material) -> voi
 
 ## World positions of the dispersal pens (for parking aircraft off the pavement).
 func dispersal_world_points() -> Array:
+	# works before the field is in the scene tree too (its parent container sits at the world origin)
+	var xf: Transform3D = global_transform if is_inside_tree() else transform
 	var out: Array = []
 	for p in _dispersal_local:
-		out.append(to_global(p))
+		out.append(xf * p)
 	return out
+
+
+var _extent: Vector2 = Vector2.ZERO
+
+
+## Half-extents (local x across, z along the runway) of everything paved, so defences and scenery can sit just
+## outside it. Computed once from the built layout.
+func footprint_extent() -> Vector2:
+	if _extent != Vector2.ZERO:
+		return _extent
+	build_layout()
+	var ex := Vector2(runway_width, runway_length * 0.5)
+	for n in find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		if mi.mesh == null:
+			continue
+		var t := Transform3D.IDENTITY
+		var cur: Node = mi
+		while cur != null and cur != self:
+			if cur is Node3D:
+				t = (cur as Node3D).transform * t
+			cur = cur.get_parent()
+		var b: AABB = mi.mesh.get_aabb()
+		for i in 8:
+			var c: Vector3 = t * b.get_endpoint(i)
+			ex.x = maxf(ex.x, absf(c.x))
+			ex.y = maxf(ex.y, absf(c.z))
+	_extent = Vector2(minf(ex.x, runway_length * 0.9), minf(ex.y, runway_length * 0.75))
+	return _extent
 
 
 func _box(size: Vector3, pos: Vector3, mat: Material, yaw: float = 0.0) -> void:

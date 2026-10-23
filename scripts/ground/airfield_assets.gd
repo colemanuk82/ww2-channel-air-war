@@ -266,3 +266,160 @@ static func dummy_aircraft(team: String) -> ArrayMesh:
 	var m: ArrayMesh = _build(parts)
 	Scatter._meshes[key] = m
 	return m
+
+
+## Camouflage net on poles over a dispersed aircraft (Luftwaffe forward fields, 1940): a sagging net with scrim
+## patches and draped sides. Base at y = 0, about 20 x 16 m.
+static func camo_net(team: String) -> ArrayMesh:
+	var key: String = "camo_net_" + team
+	if _cached(key) != null:
+		return _cached(key)
+	var net: Color = Color(0.22, 0.25, 0.15) if team == "Axis" else Color(0.25, 0.27, 0.17)
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(20.0, 0.15, 16.0), Vector3(0, 4.4, 0), net, Vector3.ZERO, false))
+	for i in 7:
+		var px: float = -7.5 + float(i) * 2.5
+		var pz: float = -5.0 + float((i * 5) % 7) * 1.6
+		parts.append(GroundKit.box_part(Vector3(3.4, 0.25, 2.6), Vector3(px, 4.55, pz), net.lightened(0.08 if i % 2 == 0 else -0.04), Vector3(0, float(i) * 23.0, 0), false))
+	for sx in [-1.0, 1.0]:
+		parts.append(GroundKit.box_part(Vector3(0.12, 3.6, 16.0), Vector3(sx * 11.0, 2.6, 0), net.darkened(0.1), Vector3(0, 0, sx * 28.0), false))
+	for sz in [-1.0, 1.0]:
+		parts.append(GroundKit.box_part(Vector3(20.0, 3.2, 0.12), Vector3(0, 2.9, sz * 8.6), net.darkened(0.06), Vector3(sz * -26.0, 0, 0), false))
+	for c in [Vector2(-9.0, -7.0), Vector2(9.0, -7.0), Vector2(-9.0, 7.0), Vector2(9.0, 7.0), Vector2(0.0, 0.0)]:
+		parts.append(GroundKit.cyl_part(0.1, 0.12, 4.4, Vector3(c.x, 2.2, c.y), Color(0.32, 0.26, 0.18), Vector3.ZERO, 5, false))
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes[key] = m
+	return m
+
+
+## E-type blast pen (RAF fighter stations, 1940): earth banks in an E plan making two open bays, each holding one
+## fighter. Opening toward -Z. About 32 x 26 m.
+static func e_pen() -> ArrayMesh:
+	if _cached("e_pen") != null:
+		return _cached("e_pen")
+	var earth: Color = Color(0.33, 0.30, 0.19)
+	var grass: Color = Color(0.30, 0.37, 0.18)
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(32.0, 3.2, 4.0), Vector3(0, 1.6, 11.0), earth))
+	for x in [-14.0, 0.0, 14.0]:
+		parts.append(GroundKit.box_part(Vector3(4.0 if x != 0.0 else 3.0, 3.2, 20.0 if x != 0.0 else 14.0), Vector3(x, 1.6, 3.0 if x != 0.0 else 6.0), earth))
+	parts.append(GroundKit.box_part(Vector3(32.6, 0.4, 4.6), Vector3(0, 3.3, 11.0), grass, Vector3.ZERO, false))
+	for x2 in [-14.0, 14.0]:
+		parts.append(GroundKit.box_part(Vector3(4.6, 0.4, 20.6), Vector3(x2, 3.3, 3.0), grass, Vector3.ZERO, false))
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes["e_pen"] = m
+	return m
+
+
+## Grass-field boundary marker: a low painted board in white with an orange band.
+static func boundary_marker() -> ArrayMesh:
+	if _cached("boundary_marker") != null:
+		return _cached("boundary_marker")
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(2.4, 0.9, 0.25), Vector3(0, 0.45, 0), Color(0.88, 0.88, 0.84), Vector3(-25, 0, 0), false))
+	parts.append(GroundKit.box_part(Vector3(2.45, 0.3, 0.27), Vector3(0, 0.45, 0), Color(0.86, 0.42, 0.10), Vector3(-25, 0, 0), false))
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes["boundary_marker"] = m
+	return m
+
+
+## Signals area by the watch office: the white landing "T" laid on the grass and a square signals panel.
+static func landing_t() -> ArrayMesh:
+	if _cached("landing_t") != null:
+		return _cached("landing_t")
+	var white: Color = Color(0.9, 0.9, 0.86)
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(14.0, 0.12, 2.6), Vector3(0, 0.06, -5.0), white, Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(2.6, 0.12, 12.0), Vector3(0, 0.06, 2.0), white, Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(9.0, 0.1, 9.0), Vector3(18.0, 0.05, 0.0), Color(0.12, 0.12, 0.12), Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(7.0, 0.14, 1.4), Vector3(18.0, 0.07, 0.0), Color(0.86, 0.72, 0.12), Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(1.4, 0.14, 7.0), Vector3(18.0, 0.07, 0.0), Color(0.86, 0.72, 0.12), Vector3.ZERO, false))
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes["landing_t"] = m
+	return m
+
+
+## Medium tank parked in an army camp. Allies: a Sherman-style hull (sloped glacis, rounded cast turret, olive
+## drab, white star); Axis: a Panzer IV-style hull (boxy, side skirts, long 7.5 cm gun, dark yellow). Nose at -Z.
+static func tank(team: String) -> ArrayMesh:
+	var key: String = "camp_tank_" + team
+	if _cached(key) != null:
+		return _cached(key)
+	var allied: bool = team == "Allies"
+	var paint: Color = Color(0.27, 0.29, 0.19) if allied else Color(0.50, 0.45, 0.29)
+	var dark: Color = Color(0.11, 0.11, 0.10)
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(2.7, 1.2, 5.9), Vector3(0, 1.35, 0.1), paint))                   # hull
+	for sx in [-1.0, 1.0]:
+		parts.append(GroundKit.box_part(Vector3(0.62, 1.05, 6.2), Vector3(sx * 1.45, 0.6, 0.0), dark))         # tracks
+		for k in 5:
+			parts.append(GroundKit.cyl_part(0.36, 0.36, 0.2, Vector3(sx * 1.78, 0.5, -2.2 + float(k) * 1.1), dark.lightened(0.08), Vector3(0, 0, 90), 8, false))
+		if not allied:
+			parts.append(GroundKit.box_part(Vector3(0.08, 0.9, 5.0), Vector3(sx * 1.85, 1.3, 0.2), paint.darkened(0.1), Vector3.ZERO, false))   # skirts
+	if allied:
+		parts.append(GroundKit.box_part(Vector3(2.6, 0.9, 1.6), Vector3(0, 1.45, -3.0), paint, Vector3(28, 0, 0)))   # sloped glacis
+		parts.append(GroundKit.cyl_part(1.05, 1.2, 1.1, Vector3(0, 2.45, 0.4), paint.lightened(0.04), Vector3.ZERO, 12))  # cast turret
+		parts.append(GroundKit.cyl_part(0.12, 0.14, 2.8, Vector3(0, 2.5, -1.9), dark, Vector3(90, 0, 0), 6, false))
+		parts.append(GroundKit.cyl_part(0.42, 0.42, 0.02, Vector3(1.37, 1.45, 0.4), Color(0.88, 0.88, 0.84), Vector3(0, 0, 90), 10, false))  # star disc
+		parts.append(GroundKit.cyl_part(0.42, 0.42, 0.02, Vector3(-1.37, 1.45, 0.4), Color(0.88, 0.88, 0.84), Vector3(0, 0, 90), 10, false))
+	else:
+		parts.append(GroundKit.box_part(Vector3(2.6, 0.7, 1.2), Vector3(0, 1.6, -2.9), paint, Vector3(12, 0, 0)))
+		parts.append(GroundKit.box_part(Vector3(2.0, 0.9, 2.6), Vector3(0, 2.4, 0.3), paint.lightened(0.04)))      # boxy turret
+		parts.append(GroundKit.box_part(Vector3(2.5, 0.85, 0.08), Vector3(0, 2.4, 1.65), paint.darkened(0.08), Vector3.ZERO, false))   # turret skirt
+		parts.append(GroundKit.cyl_part(0.1, 0.12, 3.8, Vector3(0, 2.45, -2.6), dark, Vector3(90, 0, 0), 6, false))
+		parts.append(GroundKit.box_part(Vector3(0.12, 0.7, 0.7), Vector3(1.34, 1.55, -0.6), Color(0.08, 0.08, 0.08), Vector3.ZERO, false))   # cross (dark)
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes[key] = m
+	return m
+
+
+## Half-track personnel carrier (M3 for the Allies, Sd.Kfz. 251 for the Axis). Nose at -Z.
+static func halftrack(team: String) -> ArrayMesh:
+	var key: String = "camp_halftrack_" + team
+	if _cached(key) != null:
+		return _cached(key)
+	var allied: bool = team == "Allies"
+	var paint: Color = Color(0.28, 0.30, 0.20) if allied else Color(0.49, 0.44, 0.29)
+	var dark: Color = Color(0.11, 0.11, 0.10)
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(2.2, 1.3, 4.0), Vector3(0, 1.45, 0.8), paint))                     # body
+	parts.append(GroundKit.box_part(Vector3(1.9, 0.9, 1.8), Vector3(0, 1.25, -2.1), paint.darkened(0.05)))     # bonnet
+	for sx in [-1.0, 1.0]:
+		parts.append(GroundKit.box_part(Vector3(0.45, 0.85, 3.2), Vector3(sx * 0.95, 0.45, 1.1), dark))       # track units
+		parts.append(GroundKit.cyl_part(0.45, 0.45, 0.3, Vector3(sx * 0.95, 0.45, -2.2), dark, Vector3(0, 0, 90), 8, false))   # front wheels
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes[key] = m
+	return m
+
+
+## Field gun with its limber (25-pounder / 10.5 cm leFH). Muzzle at -Z.
+static func field_gun(team: String) -> ArrayMesh:
+	var key: String = "camp_gun_" + team
+	if _cached(key) != null:
+		return _cached(key)
+	var paint: Color = Color(0.29, 0.31, 0.21) if team == "Allies" else Color(0.40, 0.40, 0.33)
+	var dark: Color = Color(0.11, 0.11, 0.10)
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(1.6, 0.9, 0.2), Vector3(0, 1.0, -0.2), paint))                   # shield
+	parts.append(GroundKit.cyl_part(0.1, 0.13, 3.0, Vector3(0, 1.05, -1.6), dark, Vector3(80, 0, 0), 6, false))
+	parts.append(GroundKit.box_part(Vector3(0.35, 0.3, 3.0), Vector3(0, 0.45, 1.4), paint, Vector3(-6, 0, 0)))    # trail
+	for sx in [-1.0, 1.0]:
+		parts.append(GroundKit.cyl_part(0.55, 0.55, 0.2, Vector3(sx * 0.95, 0.55, 0.0), dark, Vector3(0, 0, 90), 10, false))
+	parts.append(GroundKit.box_part(Vector3(1.4, 1.0, 1.4), Vector3(0, 0.95, 4.2), paint.darkened(0.08)))     # limber
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes[key] = m
+	return m
+
+
+## Marquee (big ridge tent: mess, stores, field hospital). Long axis along X.
+static func marquee(team: String) -> ArrayMesh:
+	var key: String = "camp_marquee_" + team
+	if _cached(key) != null:
+		return _cached(key)
+	var canvas: Color = Color(0.44, 0.42, 0.32) if team == "Allies" else Color(0.40, 0.40, 0.31)
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(16.0, 2.2, 8.0), Vector3(0, 1.1, 0), canvas))
+	parts.append([GroundKit.prism_mesh(8.6, 16.4, 2.6), Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0, 2.2, 0)), GroundKit.mat(canvas.darkened(0.08), true)])
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes[key] = m
+	return m

@@ -193,6 +193,13 @@ func _build_intact(root: Node3D) -> void:
 	_tip.add_child(_flash)
 	_vis.scale = Vector3.ONE * 1.4
 	hit_radius = hit_radius * 1.0
+	# the gun and its pit fade out with distance (a light gun is a speck beyond ~3 km); the muzzle flash and the
+	# tracers are not range-limited, so a firing gun still shows where it is
+	var vr: float = 4500.0 if big else (3500.0 if gtype == "bofors" else 2500.0)
+	for mi in [stat, yaw, pitch]:
+		(mi as MeshInstance3D).visibility_range_end = vr
+		(mi as MeshInstance3D).visibility_range_end_margin = vr * 0.12
+		(mi as MeshInstance3D).visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 
 
 func _build_wreck(root: Node3D) -> void:

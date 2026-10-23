@@ -18,9 +18,11 @@ const AIRCRAFT_SCENE := "res://scenes/aircraft/aircraft_base.tscn"
 const CFG_META := "ww2_cfg"
 const MENU_META := "ww2_force_menu"
 
+## Core fields built up front. Positions match data/locations.json, so the world populator dresses the same field
+## instead of building a second one beside it (Hawkinge, Calais-Marck and Saint-Omer were each doubled up).
 const AIRFIELDS := {
 	"manston": {"name": "RAF Manston", "lat": 51.3419, "lon": 1.3464, "heading": 100.0},
-	"hawkinge": {"name": "RAF Hawkinge", "lat": 51.10, "lon": 1.17, "heading": 250.0},
+	"hawkinge": {"name": "RAF Hawkinge", "lat": 51.115, "lon": 1.1494, "heading": 100.0},
 	"biggin_hill": {"name": "Biggin Hill", "lat": 51.3308, "lon": 0.0325, "heading": 30.0},
 	"tangmere": {"name": "Tangmere", "lat": 50.8472, "lon": -0.7061, "heading": 100.0},
 	"kenley": {"name": "Kenley", "lat": 51.3042, "lon": -0.0903, "heading": 70.0},
@@ -28,8 +30,8 @@ const AIRFIELDS := {
 	"duxford": {"name": "Duxford", "lat": 52.0908, "lon": 0.1319, "heading": 60.0},
 	"westhampnett": {"name": "Westhampnett", "lat": 50.8586, "lon": -0.7503, "heading": 60.0},
 	"hornchurch": {"name": "Hornchurch", "lat": 51.5030, "lon": 0.2078, "heading": 70.0},
-	"marck": {"name": "Calais-Marck", "lat": 50.955, "lon": 1.96, "heading": 285.0},
-	"st_omer": {"name": "Saint-Omer", "lat": 50.73, "lon": 2.22, "heading": 300.0},
+	"marck": {"name": "Calais-Marck", "lat": 50.9622, "lon": 1.954, "heading": 60.0},
+	"st_omer": {"name": "Saint-Omer", "lat": 50.7284, "lon": 2.2556, "heading": 90.0},
 	"abbeville_drucat": {"name": "Abbeville-Drucat", "lat": 50.1420, "lon": 1.8320, "heading": 60.0},
 	"caen_carpiquet": {"name": "Caen-Carpiquet", "lat": 49.1733, "lon": -0.4505, "heading": 130.0},
 	"lille_nord": {"name": "Lille-Nord", "lat": 50.6560, "lon": 3.1000, "heading": 90.0},

@@ -46,7 +46,7 @@ static func _pens(container: Node3D, af: Airfield, y: float, team: String, rng: 
 			var bp := Vector3(pad.x + cos(a) * 25.0, y, pad.z + sin(a) * 25.0)
 			banks.append(Transform3D(Basis(Vector3.UP, -a), bp))
 	if not banks.is_empty():
-		container.add_child(Scatter.multi(AirfieldAssets.revetment(team), banks, 0.0))
+		container.add_child(Scatter.multi(AirfieldAssets.revetment(team), banks, 5000.0))
 
 
 ## A low revetment line screening the paved area from the grass, on the east flank.
@@ -59,7 +59,7 @@ static func _revetments(container: Node3D, axf: Transform3D, y: float, team: Str
 			continue
 		banks.append(_world(axf, Vector3(150.0 + rng.randf_range(-8.0, 8.0), 0.0, z), 0.0))
 	if not banks.is_empty():
-		container.add_child(Scatter.multi(AirfieldAssets.revetment(team), banks, 0.0))
+		container.add_child(Scatter.multi(AirfieldAssets.revetment(team), banks, 5000.0))
 
 
 ## A Nissen-hut camp (communal site) in the grass east of the track: rows of huts plus a water tower.
@@ -131,7 +131,7 @@ static func _flare_path(container: Node3D, axf: Transform3D, y: float, L: float)
 		var z: float = -L * 0.45 + float(i) * (L * 0.9 / float(maxi(n, 1)))
 		lights.append(_world(axf, Vector3(112.0, 0.0, z), 0.0))
 	if not lights.is_empty():
-		container.add_child(Scatter.multi(AirfieldAssets.chance_light(), lights, 0.0))
+		container.add_child(Scatter.multi(AirfieldAssets.chance_light(), lights, 2500.0))
 
 
 ## A few dummy aircraft on the far grass (the plywood silhouettes that drew strafing runs).
@@ -141,7 +141,7 @@ static func _dummies(container: Node3D, axf: Transform3D, y: float, team: String
 		var z: float = -60.0 + float(i) * 40.0 + rng.randf_range(-6.0, 6.0)
 		xf.append(_world(axf, Vector3(210.0 + rng.randf_range(-10.0, 10.0), 0.0, z), rng.randf_range(-0.4, 0.4)))
 	if not xf.is_empty():
-		container.add_child(Scatter.multi(AirfieldAssets.dummy_aircraft(team), xf, 0.0))
+		container.add_child(Scatter.multi(AirfieldAssets.dummy_aircraft(team), xf, 4200.0))
 
 
 ## Greedy clusters of up to `per` props within 30 m of the cluster's first one into one destructible AirfieldProp.

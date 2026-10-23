@@ -357,13 +357,15 @@ void fragment() {
 		// but still clearly grass, and blended at 0.85 so a trace of the local ground keeps it from reading
 		// as a flat decal. Deliberately not darker than this: an airfield should settle into the fields, not
 		// punch a hole in them.
-		vec3 airfield_grass = mix(grass_a, soil_col, 0.26) * 0.99;
+		// v2.2: darker, the shade of the deeper pasture fields around it (pasture pulled toward hedgerow green),
+		// so from the air the field blends into the patchwork instead of showing as a pale disc
+		vec3 airfield_grass = mix(mix(grass_a, hedge_col, 0.38), soil_col, 0.08) * 0.9;
 		float mow = 0.97 + 0.04 * step(0.5, fract(dot(xz, vec2(0.7, 0.7)) / 44.0));
 		// a slow mottle keeps the interior from reading as one flat decal: the field LATTICE is suppressed,
 		// but real aerodrome grass still varies patch to patch
 		float mottle = 0.94 + 0.12 * t_vnoise2(xz * 0.006 + 17.0);
 		airfield_grass *= mow * mottle;
-		col = mix(col, airfield_grass, afw * 0.78);
+		col = mix(col, airfield_grass, afw * 0.85);
 	}
 	// steep faces -> rock (roughness-broken so faces are not a flat fill), then chalk / limestone by zone
 	float rockness = smoothstep(rock_slope - 0.14, rock_slope + 0.14, slope);

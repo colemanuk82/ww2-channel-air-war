@@ -11,6 +11,8 @@ const CONFIG := {
 	"tent": {"hp": 35.0, "pts": 30, "mult": 0.8, "expl": 0.9, "pad": 4.0},
 	"truck": {"hp": 30.0, "pts": 40, "mult": 0.9, "expl": 1.1, "pad": 3.0},
 	"ammo": {"hp": 80.0, "pts": 120, "mult": 0.3, "expl": 3.4, "pad": 6.0},
+	"tank": {"hp": 90.0, "pts": 120, "mult": 0.35, "expl": 1.5, "pad": 3.5},
+	"gun": {"hp": 40.0, "pts": 60, "mult": 0.7, "expl": 1.0, "pad": 3.0},
 }
 
 var pkind: String = "hut"
@@ -80,14 +82,20 @@ func _engine_start_tick(tm: Timer) -> void:
 				FX.engine_start_puff(nose, 1.2))
 
 
+const VIS_RANGE := {"tank": 3500.0, "gun": 2600.0, "parked": 4200.0, "truck": 2600.0, "tent": 3200.0, "hut": 6000.0, "ammo": 4500.0, "blister": 7000.0}
+
+
 func _build_intact(root: Node3D) -> void:
 	for t in _xf:
 		var mi := MeshInstance3D.new()
 		mi.mesh = _mesh
 		mi.transform = t
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		mi.visibility_range_end = 7000.0
-		mi.visibility_range_end_margin = 600.0
+		# fade by size: a truck or tent is a speck beyond ~3 km, a parked fighter beyond ~4 km, while hangars and
+		# hut rows still read from much further out (they shape the field from altitude)
+		var vr: float = float(VIS_RANGE.get(pkind, 7000.0))
+		mi.visibility_range_end = vr
+		mi.visibility_range_end_margin = vr * 0.12
 		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		root.add_child(mi)
 
