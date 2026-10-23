@@ -1,20 +1,25 @@
 shader_type spatial;
 render_mode specular_schlick_ggx, cull_back, depth_draw_opaque;
 global uniform float wetness;
-// Realistic painted-metal aircraft skin: triplanar camouflage, panel lines, wear and grime.
-// No toon ramp and no inverted-hull outline - the aircraft are painted, not cel-shaded, so the models read
-// like real machines against the terrain. Textures come from tools/make_aircraft_camo.py (procedural, so
-// nothing is ripped from anywhere); no UVs are needed because everything is projected in object space.
+// Painted-metal aircraft skin, matched to photographs of the real aircraft: matt camouflage projected in object
+// space (no UVs), a hard-edged underside demarcation, structured panel seams (fuselage frames and stringer laps,
+// wing ribs and spar lines) with rivet rows only along the seams, the odd access hatch, and light weathering.
+// Object space: +X span (starboard), +Y up, -Z forward (nose). Textures come from tools/make_aircraft_camo.py.
 uniform sampler2D camo_tex : source_color, filter_linear_mipmap, repeat_enable;
 uniform float camo_scale = 0.30;                 // object-metres -> texture tiles
 uniform vec4 underside_color : source_color = vec4(0.58, 0.63, 0.66, 1.0);
 uniform float under_amount : hint_range(0.0, 1.0) = 0.85;
-uniform float base_roughness : hint_range(0.0, 1.0) = 0.52;
-uniform float metallic : hint_range(0.0, 1.0) = 0.22;
-uniform float wear : hint_range(0.0, 1.0) = 0.6;          // panel lines, paint chipping, oil
-uniform float gloss : hint_range(0.0, 1.0) = 0.0;          // extra sheen on the sunward side
-uniform vec4 tint : source_color = vec4(1, 1, 1, 1);       // per-aircraft paint tweak
+uniform float base_roughness : hint_range(0.0, 1.0) = 0.66;
+uniform float metallic : hint_range(0.0, 1.0) = 0.06;
+uniform float wear : hint_range(0.0, 1.0) = 0.6;          // seams, grime, chipping
+uniform float gloss : hint_range(0.0, 1.0) = 0.0;          // extra sheen (bare metal)
+uniform vec4 tint : source_color = vec4(1, 1, 1, 1);
 uniform float night_amount = 0.0;
+// 0 = camouflage over the top and sides down to a low demarcation (RAF, USAAF, Luftwaffe bombers)
+// 1 = Luftwaffe fighter 1940-41: splinter on the top surfaces only, pale sides with soft dark mottling
+uniform int scheme_mode = 0;
+uniform vec4 mottle_a : source_color = vec4(0.43, 0.43, 0.36, 1.0);   // RLM 02
+uniform vec4 mottle_b : source_color = vec4(0.25, 0.29, 0.21, 1.0);   // RLM 71
 
 varying vec3 o_p;
 varying vec3 o_n;
@@ -37,69 +42,103 @@ float vnoise2(vec2 p) {
 	           mix(hash12(i + vec2(0, 1)), hash12(i + vec2(1, 1)), f.x), f.y);
 }
 
+// 1 on a seam line of half-width w (metres) repeating every `spacing` along coordinate c, anti-aliased with
+// the screen-space derivative so seams thin out instead of shimmering at a distance.
+float seam_line(float c, float spacing, float w) {
+	float d = abs(fract(c / spacing + 0.5) - 0.5) * spacing;
+	float aa = max(fwidth(c), 1e-5);
+	return (1.0 - smoothstep(w, w + aa * 1.2, d)) * clamp(w * 3.0 / aa, 0.0, 1.0);
+}
+
+// rivet heads along a seam: a row offset `off` from the line, one every `pitch` metres along coordinate a
+float rivet_row(float a, float c, float spacing, float off, float pitch) {
+	float d = abs(fract(c / spacing + 0.5) - 0.5) * spacing;
+	vec2 q = vec2((fract(a / pitch) - 0.5) * pitch, d - off);
+	float r = 1.0 - smoothstep(0.0035, 0.0065, length(q));
+	float aa = max(fwidth(a), 1e-5);
+	return r * clamp(0.004 / aa - 0.5, 0.0, 1.0);   // fade out once a rivet is smaller than a pixel
+}
+
 void fragment() {
 	vec3 n = o_n;
 	vec3 an = abs(n);
-	// triplanar camo: no UV unwrap needed, and the pattern never stretches over a wing
+	// triplanar camouflage with sharp blend weights so patches stay crisp over curved skin
+	vec3 w3 = pow(an, vec3(4.0));
+	w3 /= max(w3.x + w3.y + w3.z, 1e-4);
 	float s = camo_scale;
 	vec3 cx = texture(camo_tex, o_p.zy * s).rgb;
 	vec3 cy = texture(camo_tex, o_p.xz * s).rgb;
 	vec3 cz = texture(camo_tex, o_p.xy * s).rgb;
-	vec3 col = (cx * an.x + cy * an.y + cz * an.z) / max(an.x + an.y + an.z, 1e-3);
+	vec3 col = cx * w3.x + cy * w3.y + cz * w3.z;
+
+	if (scheme_mode == 1) {
+		// top surfaces carry the splinter; the sides are the pale underside blue with soft dark mottles
+		float top = smoothstep(0.30, 0.48, n.y);
+		// soft-edged spray mottles about 15-30 cm across, denser near the spine (photos of Bf 109 E)
+		float hi = smoothstep(-0.3, 0.4, n.y);
+		float m1 = smoothstep(0.60 - hi * 0.08, 0.74 - hi * 0.08, vnoise2(o_p.zy * 5.5) * 0.65 + vnoise2(o_p.zy * 13.0) * 0.35);
+		float m2 = smoothstep(0.64 - hi * 0.08, 0.78 - hi * 0.08, vnoise2(o_p.zy * 4.6 + 17.0) * 0.65 + vnoise2(o_p.zy * 11.0 + 5.0) * 0.35);
+		vec3 side = underside_color.rgb;
+		side = mix(side, mottle_a.rgb, m1 * 0.85);
+		side = mix(side, mottle_b.rgb, m2 * 0.8);
+		float side_zone = smoothstep(-0.45, -0.2, n.y);
+		col = mix(mix(underside_color.rgb, side, side_zone), col, top);
+	} else {
+		// hard-edged (sprayed) demarcation low on the fuselage side; wing undersides fully painted
+		float down = 1.0 - smoothstep(-0.40, -0.30, n.y);
+		col = mix(col, underside_color.rgb, down * under_amount);
+	}
 	col *= tint.rgb;
 
-	// underside paint on everything facing down (the `under` tone used by the toon shader)
-	float down = smoothstep(0.05, 0.75, -n.y);
-	col = mix(col, underside_color.rgb * tint.rgb, down * under_amount);
+	// ---- structured panel seams
+	float side_w = smoothstep(0.55, 0.75, an.x) * (1.0 - smoothstep(0.75, 0.9, an.y));
+	float flat_w = smoothstep(0.55, 0.8, an.y);
+	// fuselage / fin sides: frames every 0.48 m along the length, stringer laps every 0.36 m in height
+	float s_frame = seam_line(o_p.z, 0.48, 0.0045);
+	float s_lap = seam_line(o_p.y + 0.11, 0.36, 0.0035);
+	// wings / tailplanes / spine: ribs every 0.6 m of span, spar and panel lines every 0.52 m of chord
+	float s_rib = seam_line(o_p.x + 0.17, 0.60, 0.0045);
+	float s_spar = seam_line(o_p.z + 0.21, 0.52, 0.0040);
+	// nose-on surfaces (cowling front, spinner sides): rings every 0.4 m
+	float s_ring = seam_line(o_p.z, 0.40, 0.004) * smoothstep(0.6, 0.85, an.z);
+	float seam = max(max(s_frame, s_lap * 0.8) * side_w, max(s_rib, s_spar) * flat_w);
+	seam = max(seam, s_ring);
+	// access hatches: an inset rectangle in roughly one panel in six
+	vec2 hp = (side_w > flat_w) ? vec2(o_p.z / 0.48, (o_p.y + 0.11) / 0.36) : vec2((o_p.x + 0.17) / 0.60, (o_p.z + 0.21) / 0.52);
+	vec2 cell = floor(hp + 0.5);
+	float hatch_on = step(0.83, hash12(cell + 3.7));
+	vec2 hf = abs(fract(hp + 0.5) - 0.5);
+	float hatch = (1.0 - smoothstep(0.0, 0.025, abs(max(hf.x, hf.y) - 0.30))) * hatch_on;
+	float panel_tone = (hash12(cell) - 0.5) * 0.05;
+	// rivet rows either side of each seam
+	float riv = 0.0;
+	riv = max(riv, rivet_row(o_p.y, o_p.z, 0.48, 0.016, 0.042) * side_w);
+	riv = max(riv, rivet_row(o_p.z, o_p.y + 0.11, 0.36, 0.014, 0.05) * side_w * 0.8);
+	riv = max(riv, rivet_row(o_p.z, o_p.x + 0.17, 0.60, 0.016, 0.045) * flat_w);
+	riv = max(riv, rivet_row(o_p.x, o_p.z + 0.21, 0.52, 0.014, 0.05) * flat_w);
+	col *= 1.0 + panel_tone * wear;
+	col *= 1.0 - (seam * 0.42 + hatch * 0.30) * wear;
+	col *= 1.0 + riv * 0.10 * wear;
 
-	// panel lines and rivet rows: object space, so they stay the same size on every aircraft
-	float pl = abs(fract(o_p.y * 1.45 + o_p.x * 0.06) - 0.5) * 2.0;
-	float rib = abs(fract(o_p.x * 2.1 + o_p.z * 0.5) - 0.5) * 2.0;
-	float line = smoothstep(0.90, 0.99, pl) + smoothstep(0.94, 1.0, rib) * 0.6;
-	line = clamp(line, 0.0, 1.0);
-	col *= 1.0 - line * 0.30 * wear;
+	// ---- weathering: grime under the belly and streaked aft, light chipping on leading edges, sun fade
+	float grime = vnoise2(vec2(o_p.y * 2.6, o_p.z * 0.6)) * 0.6 + vnoise2(vec2(o_p.x * 7.0, o_p.z * 0.5)) * 0.4;
+	float belly = smoothstep(0.0, 1.0, -n.y) * 0.8;
+	col *= 1.0 - clamp(grime * belly, 0.0, 1.0) * 0.18 * wear;
+	float lead = smoothstep(0.6, 0.95, -n.z) * smoothstep(0.55, 0.85, vnoise2(o_p.xy * 11.0 + o_p.z));
+	col = mix(col, vec3(0.50, 0.51, 0.50), lead * 0.30 * wear);
+	float chip = smoothstep(0.80, 0.95, vnoise2(o_p.xz * 6.0 + o_p.y * 3.0)) * max(seam, hatch);
+	col = mix(col, vec3(0.50, 0.51, 0.50), chip * 0.18 * wear);
+	float up = smoothstep(0.5, 0.95, n.y);
+	col = mix(col, col * 1.06 + vec3(0.006), up * 0.25 * wear);
+	float streak = vnoise2(vec2(o_p.x * 14.0 + o_p.y * 9.0, o_p.z * 0.8)) * smoothstep(0.35, 0.9, vnoise2(vec2(o_p.x * 3.0, o_p.z * 0.35)));
+	col *= 1.0 - streak * 0.08 * wear * (1.0 - up * 0.5);
 
-	// grime: heavy under the belly and aft of the exhausts, streaked along the airflow
-	float grime = vnoise2(vec2(o_p.y * 2.6, o_p.x * 9.0)) * 0.6 + vnoise2(vec2(o_p.y * 0.7, o_p.z * 7.0)) * 0.4;
-	float belly = smoothstep(0.0, 1.0, -n.y) * 0.7 + smoothstep(1.0, 4.5, o_p.x) * 0.5;
-	col *= 1.0 - clamp(grime * belly, 0.0, 1.0) * 0.22 * wear;
-
-	// paint chipping to bare metal: broad worn patches (a high-frequency noise here reads as white speckle
-	// all over the airframe, which looks like a corrupted texture)
-	float chip = smoothstep(0.72, 0.92, vnoise2(o_p.xz * 1.7 + o_p.y * 0.9));
-	chip *= smoothstep(0.15, 0.85, line) * wear;
-	col = mix(col, vec3(0.52, 0.53, 0.51), clamp(chip, 0.0, 1.0) * 0.30);
-
-	// riveted skin: a grid of rivet heads on whichever plane the surface faces (about 12 cm apart), sunk panel
-	// seams between sheets of varying size, and slightly lighter sheets here and there where panels were
-	// replaced or repainted. All in object metres so every aircraft gets the same scale of detail.
-	vec2 rp = (an.y > an.x && an.y > an.z) ? o_p.xz : ((an.x > an.z) ? o_p.zy : o_p.xy);
-	vec2 rc = fract(rp / 0.12) - 0.5;
-	float rivet = 1.0 - smoothstep(0.07, 0.15, length(rc));
-	vec2 sheet = floor(rp / vec2(0.9, 0.55));
-	float sheet_h = hash12(sheet);
-	vec2 sf = abs(fract(rp / vec2(0.9, 0.55)) - 0.5);
-	float seam = smoothstep(0.485, 0.5, max(sf.x, sf.y));
-	col *= 1.0 - seam * 0.20 * wear;
-	col *= 1.0 + (sheet_h - 0.5) * 0.10 * wear;
-	col *= 1.0 - rivet * 0.07 * wear;
-	// sun-bleached upper surfaces, worn bare metal on forward-facing edges, oily streaks running aft
-	float up = smoothstep(0.35, 0.95, n.y);
-	col = mix(col, col * 1.16 + vec3(0.015), up * 0.35 * wear);
-	float lead = smoothstep(0.55, 0.95, -n.z) * smoothstep(0.35, 0.8, vnoise2(o_p.xy * 9.0 + o_p.z));
-	col = mix(col, vec3(0.55, 0.56, 0.54), lead * 0.38 * wear);
-	float streak = vnoise2(vec2(o_p.x * 14.0, o_p.z * 0.9)) * smoothstep(0.3, 0.9, vnoise2(vec2(o_p.x * 3.0, o_p.z * 0.4)));
-	col *= 1.0 - streak * 0.14 * wear * (1.0 - up * 0.5);
-
-	// micro-relief: rivets, seams and dents break the specular up so the skin stops looking like painted
-	// plastic under a flat light
 	float micro = (vnoise2(o_p.xy * 6.0) - 0.5) + (vnoise2(o_p.zy * 6.0) - 0.5);
-	NORMAL = normalize(NORMAL + vec3(micro * 0.022 * wear) + n * (rivet * 0.10 - seam * 0.16) * wear);
+	NORMAL = normalize(NORMAL + vec3(micro * 0.015 * wear));
 
-	// rain: a water film darkens the paint a touch and makes it glossy (wetness from WeatherManager)
 	col *= 1.0 - 0.18 * wetness;
 	ALBEDO = col;
-	ROUGHNESS = clamp(base_roughness + grime * 0.30 - gloss * 0.15 + line * 0.10 - 0.45 * wetness, 0.05, 1.0);
-	METALLIC = metallic * (1.0 - chip * 0.5);
-	SPECULAR = 0.5 + gloss * 0.3;
+	ROUGHNESS = clamp(base_roughness + grime * 0.12 + seam * 0.1 - gloss * 0.25 - 0.4 * wetness, 0.05, 1.0);
+	METALLIC = clamp(metallic + chip * 0.4 * wear, 0.0, 1.0);
+	SPECULAR = 0.42 + gloss * 0.3;
 }

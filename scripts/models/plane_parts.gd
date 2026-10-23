@@ -19,6 +19,37 @@ const ENGINE_KIND := {
 	"lancaster": "inline", "he111": "inline", "bf110": "inline", "mosquito": "inline", "p38": "inline",
 }
 
+## Fuselage codes painted either side of the national marking: [forward group, aft group, colour, outline colour
+## or null, letter-height factor]. RAF/USAAF: squadron letters forward, aircraft letter aft (on both sides, as on
+## most wartime photos); Luftwaffe fighters: a staffel number ahead of the cross; Luftwaffe bombers: Geschwader
+## code ahead of the cross, aircraft and staffel letters behind it.
+const CODES := {
+	"spitfire": ["RF", "D", Color(0.70, 0.75, 0.62), null, 1.0],
+	"hurricane": ["US", "K", Color(0.70, 0.75, 0.62), null, 0.9],
+	"typhoon": ["XP", "R", Color(0.70, 0.75, 0.62), null, 0.9],
+	"tempest": ["JF", "E", Color(0.70, 0.75, 0.62), null, 0.9],
+	"mosquito": ["SB", "V", Color(0.70, 0.75, 0.62), null, 0.8],
+	"blenheim": ["XD", "G", Color(0.70, 0.75, 0.62), null, 0.8],
+	"defiant": ["PS", "A", Color(0.55, 0.12, 0.10), null, 0.9],
+	"lancaster": ["AR", "L", Color(0.55, 0.12, 0.10), null, 0.7],
+	"p51": ["WZ", "I", Color(0.86, 0.86, 0.84), null, 0.95],
+	"p47": ["MX", "D", Color(0.86, 0.86, 0.84), null, 0.85],
+	"b25": ["KS", "T", Color(0.86, 0.86, 0.84), null, 0.7],
+	"b26": ["FW", "K", Color(0.86, 0.86, 0.84), null, 0.7],
+	"a20": ["5C", "N", Color(0.86, 0.86, 0.84), null, 0.7],
+	"c47": ["X5", "N", Color(0.86, 0.86, 0.84), null, 0.7],
+	"bf109": ["12", "", Color(0.06, 0.06, 0.06), Color(0.92, 0.92, 0.9), 1.05],
+	"fw190": ["7", "", Color(0.92, 0.92, 0.9), Color(0.06, 0.06, 0.06), 1.05],
+	"me262": ["9", "", Color(0.92, 0.92, 0.9), Color(0.06, 0.06, 0.06), 1.0],
+	"bf110": ["M8", "BK", Color(0.06, 0.06, 0.06), null, 0.75],
+	"he111": ["A1", "HK", Color(0.06, 0.06, 0.06), null, 0.65],
+	"ju88": ["4D", "DH", Color(0.06, 0.06, 0.06), null, 0.65],
+	"do17": ["U5", "KS", Color(0.06, 0.06, 0.06), null, 0.65],
+	"ju87": ["S2", "AK", Color(0.06, 0.06, 0.06), null, 0.7],
+	"ju52": ["1Z", "AR", Color(0.06, 0.06, 0.06), null, 0.65],
+	"fw200": ["F8", "BA", Color(0.06, 0.06, 0.06), null, 0.65],
+}
+
 static var _cache: Dictionary = {}
 
 
@@ -505,3 +536,116 @@ static func gondola(body: Node3D, pos: Vector3, size: Vector3, skin: Color, glas
 		win.rings = 6
 		_mi(body, win, glass, Vector3(pos.x, top - hh * 1.0, z), "GondolaGlass")
 	cyl(body, 0.022, 0.02, 0.7, Vector3(pos.x, top - hh, zb + 0.2), mat(DARKMETAL, 0.5), Vector3(90, 0, 0), 6, "GondolaGun")
+
+
+# ---------------------------------------------------------------- fuselage codes
+
+static func _font(_bold: float) -> Font:
+	# a solid sans for stencil-style codes (synthetic emboldening makes self-intersecting glyphs TextMesh can't mesh)
+	var f: Font = load("res://assets/fonts/Barlow-SemiBold.ttf") as Font
+	return f if f != null else ThemeDB.fallback_font
+
+
+static func _code_text(body: Node3D, txt: String, h: float, col: Color, side: float, z: float, dims: Callable, outline: Variant, nm: String) -> void:
+	## One painted code group on the fuselage side, centred on z, letter height h (a flat textured label, so any
+	## font works and the Luftwaffe numbers get a true outline).
+	var lb := Label3D.new()
+	lb.name = nm
+	lb.text = txt
+	var f: Font = load("res://assets/fonts/BarlowCondensed-Bold.ttf") as Font
+	if f != null:
+		lb.font = f
+	lb.font_size = 128
+	lb.pixel_size = h / 92.0
+	lb.modulate = col
+	lb.shaded = true
+	lb.double_sided = false
+	lb.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	lb.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS
+	lb.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	lb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if outline != null:
+		lb.outline_size = 22
+		lb.outline_modulate = outline
+	else:
+		lb.outline_size = 0
+	var d0: Array = dims.call(z)
+	var hw: float = float(d0[0])
+	var hh: float = float(d0[1])
+	var cy: float = float(d0[2])
+	var y: float = cy - hh * 0.05
+	var fy: float = clampf((y - cy) / maxf(hh, 0.01), -0.95, 0.95)
+	var x: float = hw * sqrt(1.0 - fy * fy) + 0.01
+	# follow the fuselage taper in plan so a long code group neither floats nor sinks at its ends
+	var da: Array = dims.call(z - 0.3)
+	var db: Array = dims.call(z + 0.3)
+	var taper: float = atan2(float(db[0]) - float(da[0]), 0.6)
+	lb.position = Vector3(side * x, y, z)
+	# the label faces +Z: turn it to face outboard, then lean it with the taper so it lies on the skin
+	lb.rotation.y = (PI * 0.5 + taper) if side > 0.0 else (-PI * 0.5 + taper)
+	body.add_child(lb)
+
+
+static func fuselage_codes(body: Node3D, id: String, dims: Callable, mz: float, mark_r: float) -> void:
+	## Squadron/aircraft codes or Luftwaffe numbers either side of the fuselage marking at mz (radius mark_r).
+	if not CODES.has(id):
+		return
+	var c: Array = CODES[id]
+	var dm: Array = dims.call(mz)
+	var h: float = clampf(float(dm[1]) * 0.85 * float(c[4]), 0.28, 0.8)
+	var gap: float = mark_r + h * 0.28
+	for side in [-1.0, 1.0]:
+		for gi in 2:
+			var txt: String = String(c[gi])
+			if txt == "":
+				continue
+			var est: float = h * 0.5 * float(txt.length())
+			var zc: float = (mz - gap - est * 0.5) if gi == 0 else (mz + gap + est * 0.5)
+			_code_text(body, txt, h, c[2], side, zc, dims, c[3], "DecalCode")
+
+
+# ---------------------------------------------------------------- canopies
+
+static func flat_canopy(canopy: Node3D, rings: Array, glass: Material, frame: Material) -> void:
+	## Bf 109 style hood: flat panes (flat roof, sloped upper sides, vertical lower sides) in heavy frames, built
+	## from the same [z, half_w, half_h, centre_y] stations as the round canopies.
+	var secs: Array = []
+	for r in rings:
+		secs.append(_flat_ring(float(r[0]), float(r[1]), float(r[2]), float(r[3]), 1.0))
+	var g := _mi(canopy, MeshUtil.loft(secs), glass, Vector3.ZERO, "FlatGlass")
+	g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	# hoop frames at every station and longitudinal frames along the roof edges and the sills
+	for r in rings:
+		var a: PackedVector3Array = _flat_ring(float(r[0]) - 0.02, float(r[1]) * 1.03 + 0.006, float(r[2]) * 1.03 + 0.006, float(r[3]), 1.0)
+		var b: PackedVector3Array = _flat_ring(float(r[0]) + 0.02, float(r[1]) * 1.03 + 0.006, float(r[2]) * 1.03 + 0.006, float(r[3]), 1.0)
+		_mi(canopy, MeshUtil.loft([a, b], false, false), frame, Vector3.ZERO, "CanopyFrame")
+	for k in [0, 1, 2, 5]:
+		var pts: Array = []
+		for r in rings:
+			var ring: PackedVector3Array = _flat_ring(float(r[0]), float(r[1]) * 1.03 + 0.008, float(r[2]) * 1.03 + 0.008, float(r[3]), 1.0)
+			pts.append(ring[k])
+		_mi(canopy, _strip(pts, 0.016, 0.016), frame, Vector3.ZERO, "CanopyFrame")
+
+
+static func _flat_ring(z: float, hw: float, hh: float, cy: float, _k: float) -> PackedVector3Array:
+	# 0 top-left, 1 top-right, 2 upper-right, 3 lower-right, 4 lower-left, 5 upper-left
+	return PackedVector3Array([
+		Vector3(-hw * 0.62, cy + hh, z), Vector3(hw * 0.62, cy + hh, z), Vector3(hw, cy + hh * 0.3, z),
+		Vector3(hw, cy - hh * 0.6, z), Vector3(-hw, cy - hh * 0.6, z), Vector3(-hw, cy + hh * 0.3, z)])
+
+
+static func mirror(canopy: Node3D, pos: Vector3) -> void:
+	## Rear-view mirror on top of the windscreen frame (RAF fighters).
+	var st := BoxMesh.new()
+	st.size = Vector3(0.02, 0.06, 0.02)
+	_mi(canopy, st, mat(DARKMETAL, 0.4), pos + Vector3(0, 0.03, 0))
+	var mm := BoxMesh.new()
+	mm.size = Vector3(0.16, 0.06, 0.02)
+	_mi(canopy, mm, mat(DARKMETAL, 0.4), pos + Vector3(0, 0.08, 0.0), "Mirror")
+
+
+static func le_strip(body: Node3D, wing_of: Callable, t0: float, t1: float, color: Color) -> void:
+	## Yellow leading-edge identification strip on the outer wings (RAF day fighters, 1941-45).
+	for side in [-1.0, 1.0]:
+		for surf in [1.0, -1.0]:
+			skin_patch(body, wing_of, side, t0, t1, 0.0, 0.07, surf, color, "DecalLEStrip")

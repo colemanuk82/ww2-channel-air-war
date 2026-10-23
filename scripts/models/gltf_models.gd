@@ -31,21 +31,25 @@ const CAMO := {
 	"defiant": "raf_night", "mosquito": "raf_day", "blenheim": "raf_day", "lancaster": "raf_night",
 	"p51": "usaaf_od", "p47": "usaaf_od", "p38": "bare_metal", "b25": "usaaf_od", "b26": "usaaf_od",
 	"a20": "usaaf_od", "c47": "usaaf_od",
-	"bf109": "lw_splinter", "bf110": "lw_splinter", "fw190": "lw_splinter", "me262": "lw_splinter",
+	"bf109": "lw_fighter", "bf110": "lw_fighter", "fw190": "lw_fighter", "me262": "lw_fighter",
 	"he111": "lw_splinter", "ju88": "lw_splinter", "ju87": "lw_splinter", "do17": "lw_splinter",
 	"ju52": "lw_splinter", "fw200": "lw_splinter",
 }
 const CAMO_BY_NATION := {"Luftwaffe": "lw_splinter", "USAAF": "usaaf_od", "USN": "usaaf_od", "RAF": "raf_day"}
 
-## Paint tweaks per scheme: [underside tone, roughness, metallic, sheen]
+## Paint tweaks per scheme: [underside tone, roughness, metallic, sheen]. Wartime camouflage paint is matt, so the
+## painted schemes are rough and barely metallic (photos show almost no sheen); bare metal is the exception.
 const FINISH := {
-	"raf_day": [Color(0.60, 0.64, 0.66), 0.55, 0.18, 0.0],
-	"raf_night": [Color(0.20, 0.22, 0.23), 0.62, 0.10, 0.0],
-	"lw_splinter": [Color(0.55, 0.62, 0.68), 0.55, 0.18, 0.0],
-	"lw_desert": [Color(0.62, 0.66, 0.70), 0.60, 0.12, 0.0],
-	"usaaf_od": [Color(0.58, 0.60, 0.58), 0.58, 0.15, 0.0],
+	"raf_day": [Color(0.55, 0.58, 0.60), 0.70, 0.05, 0.0],       # Medium Sea Grey under
+	"raf_night": [Color(0.12, 0.13, 0.14), 0.78, 0.03, 0.0],     # night black
+	"lw_splinter": [Color(0.53, 0.62, 0.70), 0.68, 0.05, 0.0],   # RLM 65 Hellblau under
+	"lw_fighter": [Color(0.56, 0.64, 0.71), 0.66, 0.05, 0.0],    # RLM 65 sides and under, mottled
+	"lw_desert": [Color(0.62, 0.66, 0.70), 0.70, 0.04, 0.0],
+	"usaaf_od": [Color(0.50, 0.52, 0.52), 0.70, 0.05, 0.0],      # Neutral Grey under
 	"bare_metal": [Color(0.62, 0.63, 0.62), 0.30, 0.75, 0.35],
 }
+## Schemes that reuse another scheme's texture with a different paint layout (see scheme_mode in the shader).
+const TEXTURE_OF := {}
 
 const COL_METAL := Color(0.10, 0.10, 0.11)
 const COL_TIP := Color(0.86, 0.72, 0.16)
@@ -96,7 +100,8 @@ static func make_skin(scheme: String, tint: Color = Color(1, 1, 1)) -> ShaderMat
 	var m := ShaderMaterial.new()
 	m.shader = shader()
 	var fin: Array = FINISH.get(scheme, FINISH["raf_day"])
-	m.set_shader_parameter("camo_tex", load(CAMO_DIR + scheme + ".png") as Texture2D)
+	m.set_shader_parameter("camo_tex", load(CAMO_DIR + String(TEXTURE_OF.get(scheme, scheme)) + ".png") as Texture2D)
+	m.set_shader_parameter("scheme_mode", 1 if scheme == "lw_fighter" else 0)
 	m.set_shader_parameter("underside_color", fin[0])
 	m.set_shader_parameter("base_roughness", fin[1])
 	m.set_shader_parameter("metallic", fin[2])

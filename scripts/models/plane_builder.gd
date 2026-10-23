@@ -263,14 +263,13 @@ static func marking(parent: Node3D, nation: String, pos: Vector3, normal: Vector
 				_mi(m, _box(size * 0.7, size * 0.14, 0.02), _flat(blue), Vector3(s * size * 1.55, 0, 0.008))
 		_:
 			if fuselage:
-				_disc_z(m, size, Color(0.95, 0.8, 0.1), 0.0)
-				_disc_z(m, size * 0.8, Color(0.08, 0.14, 0.5), 0.012)
-				_disc_z(m, size * 0.52, Color(0.95, 0.95, 0.95), 0.024)
-				_disc_z(m, size * 0.26, Color(0.8, 0.1, 0.1), 0.036)
+				var c1: Array = raf_fuselage_layers()
+				for li in c1.size():
+					_disc_z(m, size * float(c1[li][0]), c1[li][1], 0.012 * float(li))
 			else:
-				_disc_z(m, size, Color(0.08, 0.14, 0.5), 0.0)
-				_disc_z(m, size * 0.66, Color(0.95, 0.95, 0.95), 0.012)
-				_disc_z(m, size * 0.34, Color(0.8, 0.1, 0.1), 0.024)
+				# upper-wing roundel: type B, blue and red only (no white or yellow on top of the wing)
+				_disc_z(m, size, Color(0.10, 0.15, 0.40), 0.0)
+				_disc_z(m, size * 0.4, Color(0.62, 0.12, 0.10), 0.012)
 
 
 # ---------------------------------------------------------------- main build
@@ -284,6 +283,8 @@ static func gear_height(spec: Dictionary) -> float:
 ## `rings` is a list of [z, half_w, half_h, cy] sections (the same ones lofted for the glass).
 ## Aircraft whose canopy is a clear blown hood: frames only at the windscreen arch and the rear of the hood (a
 ## greenhouse of hoops on every station is right for the Bf 109 / Hurricane / bombers, wrong for these).
+## Bf 109: a boxy hood of flat panes in heavy frames.
+const FLAT_CANOPY := ["bf109"]
 const BUBBLE_CANOPY := ["spitfire", "p51", "tempest", "typhoon", "fw190", "p47", "me262"]
 
 
@@ -395,18 +396,26 @@ static func skin_roundel(parent: Node3D, st: Array, mz: float, side: float, size
 		var stt := SurfaceTool.new()
 		stt.begin(Mesh.PRIMITIVE_TRIANGLES)
 		stt.set_normal(Vector3(side, 0.0, 0.0))
-		var c: Vector3 = skin_point(st, mz, 0.0, side, off)
+		# concentric rings of vertices, every one projected onto the curve, so a big roundel on a narrow fuselage
+		# hugs the skin all over instead of sinking between its rim and centre
+		var rings: int = 6
 		for i in segs:
 			var a0: float = TAU * float(i) / float(segs)
 			var a1: float = TAU * float(i + 1) / float(segs)
-			var p0: Vector3 = skin_point(st, mz + cos(a0) * r, sin(a0) * r, side, off)
-			var p1: Vector3 = skin_point(st, mz + cos(a1) * r, sin(a1) * r, side, off)
-			stt.add_vertex(c)
-			stt.add_vertex(p0)
-			stt.add_vertex(p1)
-			stt.add_vertex(c)          # both windings, so the fan shows whichever way it is viewed
-			stt.add_vertex(p1)
-			stt.add_vertex(c)
+			for k in rings:
+				var r0: float = r * float(k) / float(rings)
+				var r1: float = r * float(k + 1) / float(rings)
+				var q00: Vector3 = skin_point(st, mz + cos(a0) * r0, sin(a0) * r0, side, off)
+				var q01: Vector3 = skin_point(st, mz + cos(a1) * r0, sin(a1) * r0, side, off)
+				var q10: Vector3 = skin_point(st, mz + cos(a0) * r1, sin(a0) * r1, side, off)
+				var q11: Vector3 = skin_point(st, mz + cos(a1) * r1, sin(a1) * r1, side, off)
+				for tri in [[q00, q10, q11], [q00, q11, q01]]:
+					stt.add_vertex(tri[0])
+					stt.add_vertex(tri[1])
+					stt.add_vertex(tri[2])
+					stt.add_vertex(tri[2])     # both windings, so it shows whichever way it is viewed
+					stt.add_vertex(tri[1])
+					stt.add_vertex(tri[0])
 		var mi := _mi(parent, stt.commit(), _flat(layers[li][1]), Vector3.ZERO)
 		mi.name = "DecalFus"
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -449,16 +458,35 @@ static func skin_shapes(parent: Node3D, st: Array, mz: float, side: float, off: 
 					pts.append(Vector2(cos(a2), sin(a2)) * r * (1.0 if i % 2 == 0 else 0.4))
 			for i in pts.size():
 				tris.append([Vector2.ZERO, pts[i], pts[(i + 1) % pts.size()]])
-		for tr in tris:
-			for k in 3:
-				var q: Vector2 = tr[k]
-				stt.add_vertex(skin_point(st, mz + q.x, q.y, side, off))
-			for k in [0, 2, 1]:      # reverse winding too, so it shows from either side
-				var q2: Vector2 = tr[k]
-				stt.add_vertex(skin_point(st, mz + q2.x, q2.y, side, off))
+		for tr0 in tris:
+			# split each triangle on a barycentric grid so its inside follows the curve, not just its corners
+			for tr in _subdivide_tri(tr0, 4):
+				for k in 3:
+					var q: Vector2 = tr[k]
+					stt.add_vertex(skin_point(st, mz + q.x, q.y, side, off))
+				for k in [0, 2, 1]:      # reverse winding too, so it shows from either side
+					var q2: Vector2 = tr[k]
+					stt.add_vertex(skin_point(st, mz + q2.x, q2.y, side, off))
 	var mi := _mi(parent, stt.commit(), _flat(color), Vector3.ZERO)
 	mi.name = nm
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+static func _subdivide_tri(tr: Array, n: int) -> Array:
+	var a: Vector2 = tr[0]
+	var b: Vector2 = tr[1]
+	var c: Vector2 = tr[2]
+	var out: Array = []
+	for i in n:
+		for j in n - i:
+			var p00: Vector2 = a + (b - a) * (float(i) / n) + (c - a) * (float(j) / n)
+			var p10: Vector2 = a + (b - a) * (float(i + 1) / n) + (c - a) * (float(j) / n)
+			var p01: Vector2 = a + (b - a) * (float(i) / n) + (c - a) * (float(j + 1) / n)
+			out.append([p00, p10, p01])
+			if i + j < n - 1:
+				var p11: Vector2 = a + (b - a) * (float(i + 1) / n) + (c - a) * (float(j + 1) / n)
+				out.append([p10, p11, p01])
+	return out
 
 
 ## Fuselage national marking (Luftwaffe cross, USAAF star and bars) conformed to the skin.
@@ -492,11 +520,12 @@ static func fin_sec(fn: Dictionary, t: float) -> Dictionary:
 
 ## RAF fin flash: a rectangle with vertical edges (fixed z, as painted on the real aircraft) laid on the fin skin.
 static func fin_flash(parent: Node3D, fn: Dictionary, x: float) -> void:
-	var cols: Array = [Color(0.1, 0.17, 0.5), Color(0.95, 0.95, 0.95), Color(0.8, 0.1, 0.1)]
+	# C-type flash: red leading, a narrow white band, blue aft (photos of 1942-45 aircraft)
+	var cols: Array = [Color(0.62, 0.12, 0.10), Color(0.90, 0.90, 0.88), Color(0.10, 0.15, 0.40)]
 	var mid: Dictionary = fin_sec(fn, 0.45)
 	var z0: float = float(mid["zle"]) + float(mid["chord"]) * 0.3
 	var z1: float = float(mid["zle"]) + float(mid["chord"]) * 0.74
-	var zb: Array = [z0, lerpf(z0, z1, 1.0 / 3.0), lerpf(z0, z1, 2.0 / 3.0), z1]
+	var zb: Array = [z0, lerpf(z0, z1, 0.45), lerpf(z0, z1, 0.55), z1]
 	for i in 3:
 		for sx in [-1.0, 1.0]:
 			var secs: Array = []
@@ -513,6 +542,23 @@ static func fin_flash(parent: Node3D, fn: Dictionary, x: float) -> void:
 			var mi := _mi(parent, MeshUtil.loft(secs), _flat(cols[i]))
 			mi.name = "DecalFin"
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+## Paint the rudder (fin chord aft of fraction f0) both sides, laid on the fin skin like the fin flash.
+static func fin_paint(parent: Node3D, fn: Dictionary, x: float, f0: float, col: Color) -> void:
+	for sx in [-1.0, 1.0]:
+		var secs: Array = []
+		for t in [0.02, 0.2, 0.4, 0.6, 0.78, 0.9, 0.97]:
+			var d: Dictionary = fin_sec(fn, t)
+			var ring := PackedVector3Array()
+			for f in [f0, 0.83, 0.995]:
+				ring.append(Vector3(x + sx * (_fin_half(float(d["w"]), f) + 0.003), float(d["y"]), float(d["zle"]) + float(d["chord"]) * f))
+			for f in [0.995, 0.83, f0]:
+				ring.append(Vector3(x + sx * (_fin_half(float(d["w"]), f) - 0.01), float(d["y"]), float(d["zle"]) + float(d["chord"]) * f))
+			secs.append(ring)
+		var mi := _mi(parent, MeshUtil.loft(secs), _flat(col))
+		mi.name = "DecalRudder"
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 ## Luftwaffe fin emblem: a black Hakenkreuz on a white disc, flat on both faces of the fin (twin fins: each one).
@@ -597,8 +643,9 @@ static func _fin_half(w: float, f: float) -> float:
 
 ## RAF fuselage roundel layers: yellow outer, blue, white, red centre.
 static func raf_fuselage_layers() -> Array:
-	return [[1.0, Color(0.95, 0.8, 0.1)], [0.8, Color(0.08, 0.14, 0.5)],
-		[0.52, Color(0.95, 0.95, 0.95)], [0.26, Color(0.8, 0.1, 0.1)]]
+	# type C1 (1942-45): thin yellow outer ring, broad dark blue, thin white ring, red centre (36/32/16/12 in)
+	return [[1.0, Color(0.86, 0.68, 0.12)], [0.889, Color(0.10, 0.15, 0.40)],
+		[0.444, Color(0.90, 0.90, 0.88)], [0.333, Color(0.62, 0.12, 0.10)]]
 
 
 static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
@@ -641,13 +688,21 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	canopy.name = "Canopy"
 	body.add_child(canopy)
 	var glass := ToonUtil.make_glass({"opacity": 0.2, "rim": 0.9, "tint": Color(0.58, 0.70, 0.76)})
+	# frames are painted in the airframe colours on the outside (photos), so they use the camouflage skin
+	var cid: String = String(spec.get("id", ""))
 	for c in spec.get("canopies", []):
+		if cid in FLAT_CANOPY:
+			PlaneParts.flat_canopy(canopy, c, glass, camo)
+			continue
 		var secs: Array = []
 		for r in c:
 			secs.append(MeshUtil.ring_xy(r[0], r[1], r[2], r[3], 12))
 		var gmi := _mi(canopy, MeshUtil.loft_smooth(secs, 3, 1), glass)
 		gmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		canopy_frame(canopy, c, dark, "bubble" if String(spec.get("id", "")) in BUBBLE_CANOPY else "framed")
+		canopy_frame(canopy, c, camo, "bubble" if cid in BUBBLE_CANOPY else "framed")
+	if cid in ["hurricane", "typhoon", "tempest"] and spec.get("canopies", []).size() > 0:
+		var r1: Array = (spec["canopies"][0] as Array)[1]
+		PlaneParts.mirror(canopy, Vector3(0.0, float(r1[3]) + float(r1[2]) + 0.01, float(r1[0]) + 0.05))
 	pilot(canopy, spec["eye"] as Vector3)
 	if spec.has("turret"):
 		var tu: Dictionary = spec["turret"]
@@ -763,7 +818,8 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	# Markings
 	var mz: float = spec["mark_z"]
 	var fd: Array = fus_at(f, mz)
-	var msz: float = minf(float(spec.get("mark_size", 0.55)), minf(float(fd[0]), float(fd[1])) * 0.85)
+	# fuselage markings are sized by the fuselage depth (photos: roundels and crosses fill most of the side)
+	var msz: float = minf(float(spec.get("mark_size", 0.55)) * 1.25, float(fd[1]) * 0.78)
 	if nation == "RAF":
 		var st: Array = stations(f)          # roundels follow the fuselage curve instead of floating flat
 		skin_roundel(body, st, mz, 1.0, msz, raf_fuselage_layers())
@@ -772,6 +828,9 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		var st2: Array = stations(f)
 		skin_marking(body, st2, nation, mz, 1.0, msz)
 		skin_marking(body, st2, nation, mz, -1.0, msz)
+	var fdims: Callable = func(z: float) -> Array: return fus_at(f, z)
+	var code_gap: float = msz * (1.95 if nation == "USAAF" else (1.3 if nation == "Luftwaffe" else 1.0))
+	PlaneParts.fuselage_codes(body, String(spec.get("id", "")), fdims, mz, code_gap)
 	var ws: Dictionary = wing_section(w, spec.get("mark_t", 0.55))
 	# The airfoil (MeshUtil.airfoil) rises to 0.6 t at 25% chord then falls in a straight line to 0.35 t at 70%:
 	# lay the marking on that flat slope (centre 47.5% chord, kept inside it) and pitch it to match, so it sits flush.
@@ -802,6 +861,13 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 			fin_swastika(body, fin, float(fin["x"]))
 		else:
 			fin_swastika(body, fin, 0.0)
+
+	# yellow outer-wing leading-edge strips (RAF day fighters); Battle of Britain yellow rudder (Bf 109 E)
+	var wing_le: Callable = func(t: float) -> Dictionary: return wing_section(w, t)
+	if cid in ["hurricane", "typhoon", "tempest"]:
+		PlaneParts.le_strip(body, wing_le, 0.55, 0.96, Color(0.82, 0.66, 0.12))
+	if cid == "bf109":
+		fin_paint(body, fin, 0.0, 0.66, Color(0.84, 0.66, 0.10))
 
 	# D-Day invasion stripes
 	if spec.get("stripes", false):

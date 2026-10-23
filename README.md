@@ -56,7 +56,7 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.0.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.1.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
@@ -64,7 +64,7 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 
 ## ✈️ The aircraft
 
-All 25 aircraft were rebuilt for v2.0 and checked against photographs and the published dimensions of the real machines. They have real wingspans and fuselage shapes, rounded fins, spinners, twisted prop blades, exhaust stubs, radiators, oleo gear legs with tyres and hubs, cannon barrels, aileron gaps, glazed turrets, and D-Day stripes painted onto the skin.
+All 25 aircraft were rebuilt for v2.0 and checked against photographs and the published dimensions of the real machines. The paintwork follows wartime photos too: matt period camouflage colours (RAF Dark Green and Ocean Grey, Luftwaffe splinter over mottled sides, Olive Drab), the right roundel types and fin flashes, squadron codes and Luftwaffe numbers, yellow leading-edge strips, and panel seams with rivet rows. They have real wingspans and fuselage shapes, rounded fins, spinners, twisted prop blades, exhaust stubs, radiators, oleo gear legs with tyres and hubs, cannon barrels, aileron gaps, glazed turrets, and D-Day stripes painted onto the skin.
 
 | | |
 |---|---|
@@ -76,6 +76,8 @@ All 25 aircraft were rebuilt for v2.0 and checked against photographs and the pu
 | **Messerschmitt Bf 109** | **Messerschmitt Me 262** |
 | ![Avro Lancaster](docs/promo/aircraft/lancaster_three.jpg) | ![North American B-25 Mitchell](docs/promo/aircraft/b25_three.jpg) |
 | **Avro Lancaster** | **North American B-25 Mitchell** |
+| ![Spitfire close-up: C1 roundel, codes and panel seams](docs/promo/aircraft/spitfire_skin.jpg) | ![Bf 109 close-up: mottled sides and outlined number](docs/promo/aircraft/bf109_skin.jpg) |
+| **Close up: C1 roundel, squadron codes, panel seams** | **Close up: Bf 109 mottled sides and outlined number** |
 
 <details>
 <summary><b>See all 25 aircraft</b></summary>

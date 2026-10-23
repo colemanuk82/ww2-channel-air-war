@@ -125,8 +125,9 @@ static func _roundel(parent: Node3D, pos: Vector3, axis: Vector3, r: float, nati
 			cols = [Color(0.05, 0.05, 0.05), Color(0.95, 0.95, 0.95), Color(0.05, 0.05, 0.05)]
 			radii = [1.0, 0.8, 0.6]
 		_:
-			cols = [Color(0.1, 0.17, 0.5), Color(0.95, 0.95, 0.95), Color(0.8, 0.1, 0.1)]
-			radii = [1.0, 0.66, 0.34]
+			# upper-wing type B roundel: blue and red only
+			cols = [Color(0.10, 0.15, 0.40), Color(0.62, 0.12, 0.10)]
+			radii = [1.0, 0.4]
 	for i in cols.size():
 		var m: ArrayMesh = MeshUtil.disc(r * radii[i], 0.02, Vector3.RIGHT if absf(axis.x) > 0.5 else Vector3.UP, 20)
 		var off: Vector3 = axis * 0.012 * float(i)
@@ -192,7 +193,8 @@ static func build(nation: String = "RAF") -> Node3D:
 	gmi.material_override = ToonUtil.make_glass({"opacity": 0.2, "rim": 0.9, "tint": Color(0.58, 0.70, 0.76)})
 	gmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	canopy.add_child(gmi)
-	PlaneBuilder.canopy_frame(canopy, CANOPY_RINGS, dark, "bubble")
+	PlaneBuilder.canopy_frame(canopy, CANOPY_RINGS, camo, "bubble")
+	PlaneParts.mirror(canopy, Vector3(0.0, float(CANOPY_RINGS[1][3]) + float(CANOPY_RINGS[1][2]) + 0.01, float(CANOPY_RINGS[1][0]) + 0.05))
 	PlaneBuilder.pilot(canopy, Vector3(0.0, 1.12, 0.45))
 	PlaneDetails.cockpit(canopy, Vector3(0.0, 1.12, 0.45), false, CANOPY_RINGS)
 
@@ -222,6 +224,7 @@ static func build(nation: String = "RAF") -> Node3D:
 	PlaneDetails.underside(body, "spitfire", _wing_section, -0.52, 0.0)
 	for sd in [-1.0, 1.0]:
 		PlaneParts.aileron_lines(body, _wing_section, sd, 0.55, 0.9)
+	PlaneParts.le_strip(body, _wing_section, 0.5, 0.92, Color(0.82, 0.66, 0.12))
 	var wp: Dictionary = _wing_section(0.45)
 	PlaneDetails.pitot(body, Vector3(-float(wp["x"]), float(wp["yc"]) - float(wp["t"]) * 0.4, float(wp["zle"]) - 0.02))
 	PlaneDetails.aerial(body, Vector3(0.0, 0.55, 1.9), 0.42, Vector3(0.0, 1.83, 4.66))
@@ -250,9 +253,11 @@ static func build(nation: String = "RAF") -> Node3D:
 		# the real fuselage roundel is big - about 4/5 of the fuselage depth - and sits between cockpit and fin
 		var sd: Array = PlaneBuilder.station_at(FUS_RINGS, 1.4)
 		var r: float = minf(0.42, float(sd[1]) * 0.8)
-		var layers: Array = [[1.0, Color(0.1, 0.17, 0.5)], [0.66, Color(0.95, 0.95, 0.95)], [0.34, Color(0.8, 0.1, 0.1)]]
+		var layers: Array = PlaneBuilder.raf_fuselage_layers()
 		PlaneBuilder.skin_roundel(body, FUS_RINGS, 1.4, 1.0, r, layers)
 		PlaneBuilder.skin_roundel(body, FUS_RINGS, 1.4, -1.0, r, layers)
+		var sdims: Callable = func(z: float) -> Array: return PlaneBuilder.station_at(FUS_RINGS, z)
+		PlaneParts.fuselage_codes(body, "spitfire", sdims, 1.4, r)
 	# Wing top roundels: inboard of the aileron, tilted with the dihedral and kept inside the chord
 	for side in [-1.0, 1.0]:
 		var ws: Dictionary = _wing_section(0.5)
@@ -265,9 +270,9 @@ static func build(nation: String = "RAF") -> Node3D:
 		_roundel(piv, Vector3.ZERO, Vector3.UP, 0.46, nation)
 	# Fin flash (RAF): bands lofted along the fin skin so they follow its sweep and thickness
 	if nation != "Luftwaffe":
-		var stripe_cols: Array = [Color(0.1, 0.17, 0.5), Color(0.95, 0.95, 0.95), Color(0.8, 0.1, 0.1)]
+		var stripe_cols: Array = [Color(0.62, 0.12, 0.10), Color(0.90, 0.90, 0.88), Color(0.10, 0.15, 0.40)]
 		# a rectangle with vertical edges (fixed z), like the real flash, laid on the fin skin
-		var zb: Array = [3.86, 4.09, 4.32, 4.55]
+		var zb: Array = [3.86, 4.175, 4.235, 4.55]
 		for i in 3:
 			for sx in [-1.0, 1.0]:
 				var secs: Array = []

@@ -89,11 +89,19 @@ def sstep(e0, e1, x):
 
 # name: base colour, patch colour, optional third colour, style
 SCHEMES = {
-    "raf_day": {"base": (0.17, 0.23, 0.11), "patch": (0.34, 0.38, 0.41), "freq": 3, "edge": 0.018, "seed": 1, "style": "soft"},
-    "raf_night": {"base": (0.13, 0.16, 0.10), "patch": (0.19, 0.22, 0.14), "freq": 3, "edge": 0.05, "seed": 2, "style": "soft"},
-    "lw_splinter": {"base": (0.13, 0.17, 0.12), "patch": (0.22, 0.27, 0.16), "third": (0.30, 0.36, 0.42), "cells": 46, "seed": 3, "style": "splinter"},
+    # RAF temperate day scheme (1941-45): Dark Green / Ocean Grey, sprayed soft edges (colours as sRGB 0..1)
+    "raf_day": {"base": (0.27, 0.30, 0.20), "patch": (0.37, 0.39, 0.40), "freq": 3, "edge": 0.016, "seed": 1, "style": "soft"},
+    # RAF night: overall black with a faint sheen variation
+    "raf_night": {"base": (0.10, 0.11, 0.11), "patch": (0.13, 0.14, 0.14), "freq": 3, "edge": 0.05, "seed": 2, "style": "soft"},
+    # Luftwaffe bombers: RLM 70 Schwarzgruen / 71 Dunkelgruen angular splinter
+    "lw_splinter": {"base": (0.17, 0.20, 0.16), "patch": (0.25, 0.29, 0.21), "cells": 46, "seed": 3, "style": "splinter"},
+    # Luftwaffe fighters 1940-41: RLM 71 Dunkelgruen / 02 Grau splinter on the top surfaces
+    "lw_fighter": {"base": (0.25, 0.29, 0.21), "patch": (0.43, 0.43, 0.36), "cells": 40, "seed": 7, "style": "splinter"},
+    # Luftwaffe desert / Mediterranean
     "lw_desert": {"base": (0.55, 0.46, 0.29), "patch": (0.38, 0.33, 0.22), "freq": 3, "edge": 0.03, "seed": 4, "style": "soft"},
-    "usaaf_od": {"base": (0.24, 0.25, 0.16), "patch": (0.30, 0.31, 0.21), "freq": 4, "edge": 0.08, "seed": 5, "style": "soft"},
+    # USAAF: Olive Drab 41 overall, faded unevenly
+    "usaaf_od": {"base": (0.31, 0.31, 0.21), "patch": (0.35, 0.35, 0.24), "freq": 4, "edge": 0.08, "seed": 5, "style": "soft"},
+    # bare metal / silver
     "bare_metal": {"base": (0.63, 0.64, 0.63), "patch": (0.55, 0.56, 0.57), "freq": 4, "edge": 0.10, "seed": 6, "style": "panels"},
 }
 
@@ -104,7 +112,7 @@ def build(name, sp):
         ids = voronoi_ids(sp["cells"], seed, 0.04)
         r = np.random.RandomState(seed + 11).rand(sp["cells"])
         sel = r[ids]
-        base = np.array(sp["base"]); patch = np.array(sp["patch"]); third = np.array(sp["third"])
+        base = np.array(sp["base"]); patch = np.array(sp["patch"]); third = np.array(sp.get("third", sp["patch"]))
         col = np.where((sel < 0.5)[..., None], base, np.where((sel < 0.82)[..., None], patch, third))
         # soften only the cell border by one pixel so mips stay clean
         col = col.astype(np.float64)

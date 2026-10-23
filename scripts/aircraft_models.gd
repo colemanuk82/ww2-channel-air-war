@@ -38,12 +38,15 @@ static func _make_realistic(root: Node3D, model_id: String, nation: String) -> v
 		var alb: Variant = m.get_shader_parameter("albedo")
 		var col: Color = alb if alb != null else Color(0.5, 0.5, 0.5)
 		var em: Variant = m.get_shader_parameter("emission_color")
-		var key: String = "%s|%s" % [col.to_html(), str(em)]
+		# markings are matt paint like the camouflage under them, not shiny plastic
+		var dpar: Node = mi.get_parent()
+		var decal: bool = String(mi.name).contains("Decal") or (dpar != null and String(dpar.name).contains("Decal"))
+		var key: String = "%s|%s|%s" % [col.to_html(), str(em), str(decal)]
 		if not plain.has(key):
 			var sm := StandardMaterial3D.new()
 			sm.albedo_color = col
-			sm.roughness = 0.5
-			sm.metallic = 0.25
+			sm.roughness = 0.78 if decal else 0.5
+			sm.metallic = 0.02 if decal else 0.25
 			if em != null and Color(em) != Color(0, 0, 0, 1) and Color(em) != Color(0, 0, 0, 0):
 				sm.emission_enabled = true
 				sm.emission = Color(em)

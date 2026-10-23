@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cagwqt68kc3i6"
-path="res://.godot/imported/spitfire_three.jpg-3a3b0708829d9975ac1b2feb92598c48.ctex"
+uid="uid://cnndfq2wuwny3"
+path="res://.godot/imported/lw_fighter.png-43eeeccff2293581a3b71c90ca4409b3.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://docs/promo/aircraft/spitfire_three.jpg"
-dest_files=["res://.godot/imported/spitfire_three.jpg-3a3b0708829d9975ac1b2feb92598c48.ctex"]
+source_file="res://assets/models/camo/lw_fighter.png"
+dest_files=["res://.godot/imported/lw_fighter.png-43eeeccff2293581a3b71c90ca4409b3.ctex"]
 
 [params]
 
