@@ -339,6 +339,10 @@ var _blackout_mat: StandardMaterial3D
 func _ensure_blackout() -> void:
 	if not _blackout.is_empty() or _model == null:
 		return
+	# Heavy bombers: the pilot sits above the nose deck, so the hull's black inside faces would only fill the view.
+	var bspec: Dictionary = ModelSpecs.get_spec(stats.model_id)
+	if not bspec.is_empty() and String((bspec.get("fus", {}) as Dictionary).get("profile", "")) == "bomber":
+		return
 	if _blackout_mat == null:
 		_blackout_mat = StandardMaterial3D.new()
 		_blackout_mat.albedo_color = Color(0.0, 0.0, 0.0)

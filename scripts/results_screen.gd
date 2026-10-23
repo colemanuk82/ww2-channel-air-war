@@ -39,16 +39,29 @@ func _build(success: bool, stats: Dictionary) -> void:
 		var v: Variant = stats[k]
 		if v is int or v is float or v is String:
 			lines.append([String(k).capitalize().replace("_", " "), str(v)])
+	# stats and the bomb-damage maps scroll on their own, so the buttons below stay on screen however many targets
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vb.add_child(scroll)
+	var body := VBoxContainer.new()
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 6)
+	scroll.add_child(body)
 	for ln in lines:
 		var hb := HBoxContainer.new()
-		vb.add_child(hb)
+		body.add_child(hb)
 		var a := UIKit.label(ln[0], 20, UIKit.ACCENT)
 		a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hb.add_child(a)
 		hb.add_child(UIKit.label(ln[1], 20))
 	var bda: Variant = stats.get("bda", null)
 	if bda is Dictionary and not (bda as Dictionary).get("targets", []).is_empty():
-		vb.add_child(BDAMap.panel((bda as Dictionary)["targets"]))
+		body.add_child(BDAMap.panel((bda as Dictionary)["targets"]))
+	var fit := func() -> void:
+		var avail: float = get_viewport().get_visible_rect().size.y - 330.0
+		scroll.custom_minimum_size.y = clampf(body.get_combined_minimum_size().y, 120.0, maxf(avail, 120.0))
+	fit.call_deferred()
 	var b1 := UIKit.button("Restart", func() -> void: restart_requested.emit(), 22, true)
 	vb.add_child(b1)
 	vb.add_child(UIKit.button("Back to menu", func() -> void: menu_requested.emit()))

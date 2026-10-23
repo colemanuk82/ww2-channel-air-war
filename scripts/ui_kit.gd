@@ -137,9 +137,21 @@ static func panel(parent: Control) -> VBoxContainer:
 	for k in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
 		m.add_theme_constant_override(k, 22)
 	pc.add_child(m)
+	# a tall panel scrolls instead of running off the screen (focus and the mouse wheel both scroll it)
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	m.add_child(sc)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)
-	m.add_child(vb)
+	vb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc.add_child(vb)
+	var fit := func() -> void:
+		if not is_instance_valid(sc) or not sc.is_inside_tree():
+			return
+		var avail: float = sc.get_viewport().get_visible_rect().size.y - 90.0
+		sc.custom_minimum_size.y = minf(vb.get_combined_minimum_size().y, maxf(avail, 160.0))
+	vb.minimum_size_changed.connect(fit)
+	fit.call_deferred()
 	return vb
 
 

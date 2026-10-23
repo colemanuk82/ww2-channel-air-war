@@ -777,7 +777,13 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		model.add_child(mk)
 	var eye := Marker3D.new()
 	eye.name = "CockpitEye"
-	eye.position = (spec["eye"] as Vector3) * sc
+	var eye_v: Vector3 = spec["eye"] as Vector3
+	# Bombers sit in a hull whose nose deck rises above a pilot's eye: lift the eye to just over the deck so the
+	# view forward is clear (the glazing is hidden in the cockpit view anyway).
+	var fus_d: Dictionary = spec.get("fus", {})
+	if String(fus_d.get("profile", "")) == "bomber":
+		eye_v.y = maxf(eye_v.y, float(fus_d.get("cy", 0.0)) + float(fus_d.get("hh", 1.0)) + 0.25)
+	eye.position = eye_v * sc
 	model.add_child(eye)
 	return model
 
