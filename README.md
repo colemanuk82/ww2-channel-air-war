@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # ✈️ WW2 Channel Air War
 
@@ -13,7 +13,7 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 
 **▶ [Watch the full promo with music](docs/promo/channel-air-war-promo.mp4)**
 
-[![WW2 Channel Air War in-game highlights](docs/promo/highlights.jpg)](docs/promo/highlights.mp4)
+[![WW2 Channel Air War in-game highlights](docs/promo/highlights.gif)](docs/promo/highlights.mp4)
 
 **▶ [Watch the in-game highlights reel](docs/promo/highlights.mp4)** (real gameplay: day, sunset and night flying, combat, G effects and bailing out)
 
