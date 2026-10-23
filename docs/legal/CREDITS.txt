@@ -2,7 +2,7 @@ CREDITS AND LICENCES
 WW2 Channel Air War
 
 DESIGN, CODE, PROCEDURAL ART AND MISSIONS
-{PUBLISHER}. Aircraft, terrain, sea, sky, clouds, HUD and all 25 original missions are generated or written for this game.
+{PUBLISHER}. Aircraft, terrain, sea, sky, clouds, HUD and all 30 original missions are generated or written for this game.
 
 ENGINE
 Godot Engine, built from the Godot source with NVIDIA RTX/Streamline integration. Copyright (c) 2014-present Godot Engine contributors; Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur. Licensed under the MIT licence. The full list of engine third-party components and licences is shown under "Engine licences" on this screen. Includes AMD FidelityFX Super Resolution 2 (MIT).

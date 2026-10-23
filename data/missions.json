@@ -5077,6 +5077,311 @@
      "label": "Interceptors"
     }
    ]
+  },
+  {
+   "id": "op_solent_dusk_raid",
+   "name": "\u25c6 Solent Dusk Raid",
+   "year": 1940,
+   "date": "1940-09-02",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_portsmouth"
+    ]
+   },
+   "time_of_day": 18.6,
+   "weather": "overcast",
+   "brief": "Heinkels are coming in over the Solent at dusk with an escort above. Get up from Tangmere, break up the bombers before they reach Portsmouth and watch the light fade.",
+   "roles": {
+    "Allies": "defend"
+   },
+   "protect": {
+    "Allies": [
+     "port_portsmouth"
+    ]
+   },
+   "time_limit": 1400,
+   "waves": 3,
+   "difficulty_hint": 0.6,
+   "modes": {
+    "Allies": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "he111",
+     "count": 8,
+     "lat": 50.68,
+     "lon": -1.1,
+     "alt_m": 3200,
+     "trigger_km": 25,
+     "label": "Heinkel formation"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 8,
+     "lat": 50.6,
+     "lon": -1.0,
+     "alt_m": 5200,
+     "trigger_km": 25,
+     "label": "Escort"
+    }
+   ]
+  },
+  {
+   "id": "op_solent_rain_stukas",
+   "name": "\u25c6 Stukas in the Rain",
+   "year": 1940,
+   "date": "1940-08-25",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "tangmere",
+     "aircraft": [
+      "spitfire",
+      "hurricane"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "port_portsmouth"
+    ]
+   },
+   "time_of_day": 9.5,
+   "weather": "rain",
+   "brief": "Low cloud and rain over the Solent, and the Stukas are using it. Stay under the overcast with the Hurricanes and catch them before the dive.",
+   "roles": {
+    "Allies": "defend"
+   },
+   "protect": {
+    "Allies": [
+     "port_portsmouth"
+    ]
+   },
+   "time_limit": 1300,
+   "waves": 3,
+   "difficulty_hint": 0.55,
+   "modes": {
+    "Allies": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "ju87",
+     "count": 8,
+     "lat": 50.72,
+     "lon": -1.1,
+     "alt_m": 1500,
+     "trigger_km": 20,
+     "label": "Stukas in the murk"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "bf109",
+     "count": 5,
+     "lat": 50.6,
+     "lon": -1.0,
+     "alt_m": 3000,
+     "trigger_km": 20,
+     "label": "Escort"
+    }
+   ]
+  },
+  {
+   "id": "op_axis_bridge_dusk",
+   "name": "\u25c6 Bridges at Dusk",
+   "year": 1944,
+   "date": "1944-09-22",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "af_mill",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "bridge_grave"
+    ]
+   },
+   "time_of_day": 18.0,
+   "weather": "overcast",
+   "brief": "A second day over the Maas crossings. Typhoons come in low at dusk with Spitfires stacked above. Keep them off the bridges.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "bridge_grave"
+    ]
+   },
+   "time_limit": 1500,
+   "waves": 3,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "typhoon",
+     "count": 8,
+     "lat": 51.75,
+     "lon": 5.8,
+     "alt_m": 1800,
+     "trigger_km": 25,
+     "label": "Fighter-bombers"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 8,
+     "lat": 51.85,
+     "lon": 5.7,
+     "alt_m": 4500,
+     "trigger_km": 25,
+     "label": "Top cover"
+    }
+   ]
+  },
+  {
+   "id": "op_axis_bridge_storm",
+   "name": "\u25c6 Storm over the Maas",
+   "year": 1944,
+   "date": "1944-10-02",
+   "sides": [
+    {
+     "side": "Axis",
+     "start_airfield": "af_mill",
+     "aircraft": [
+      "fw190",
+      "bf109"
+     ]
+    }
+   ],
+   "objectives": {
+    "Axis": [
+     "bridge_grave"
+    ]
+   },
+   "time_of_day": 13.0,
+   "weather": "storm",
+   "brief": "A storm is rolling over the Maas and the Allied fighter-bombers are coming anyway. Rough air makes every pass harder; keep your nerve.",
+   "roles": {
+    "Axis": "defend"
+   },
+   "protect": {
+    "Axis": [
+     "bridge_grave"
+    ]
+   },
+   "time_limit": 1200,
+   "waves": 3,
+   "difficulty_hint": 0.65,
+   "modes": {
+    "Axis": "defend"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "typhoon",
+     "count": 6,
+     "lat": 51.75,
+     "lon": 5.8,
+     "alt_m": 1500,
+     "trigger_km": 20,
+     "label": "Fighter-bombers"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "spitfire",
+     "count": 4,
+     "lat": 51.85,
+     "lon": 5.7,
+     "alt_m": 3500,
+     "trigger_km": 20,
+     "label": "Top cover"
+    }
+   ]
+  },
+  {
+   "id": "op_p51_escort_jets",
+   "name": "\u25c6 Escort: Jets Over the Ruhr",
+   "year": 1945,
+   "date": "1945-03-18",
+   "sides": [
+    {
+     "side": "Allies",
+     "start_airfield": "af_asch",
+     "aircraft": [
+      "p51"
+     ]
+    }
+   ],
+   "objectives": {
+    "Allies": [
+     "factory_rheinmetall_dusseldorf"
+    ]
+   },
+   "time_of_day": 11.0,
+   "weather": "clear",
+   "brief": "The Dusseldorf stream again, and this time the Reich is sending jets. Hold station on the bombers and break the Me 262 attack before it reaches them.",
+   "roles": {
+    "Allies": "escort"
+   },
+   "protect": {},
+   "time_limit": 2100,
+   "waves": 3,
+   "difficulty_hint": 0.7,
+   "modes": {
+    "Allies": "escort"
+   },
+   "events": [
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "me262",
+     "count": 5,
+     "lat": 51.2,
+     "lon": 6.4,
+     "alt_m": 6500,
+     "trigger_km": 30,
+     "label": "Jet interceptors"
+    },
+    {
+     "kind": "ambush",
+     "hostile": true,
+     "aircraft": "fw190",
+     "count": 6,
+     "lat": 51.15,
+     "lon": 6.5,
+     "alt_m": 5000,
+     "trigger_km": 25,
+     "label": "Fighters from the north"
+    }
+   ]
   }
  ]
 }
