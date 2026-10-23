@@ -70,10 +70,31 @@ void fragment() {
 	chip *= smoothstep(0.15, 0.85, line) * wear;
 	col = mix(col, vec3(0.52, 0.53, 0.51), clamp(chip, 0.0, 1.0) * 0.30);
 
-	// micro-relief: rivets, dents and paint edges break the specular up so the skin stops looking
-	// like painted plastic under a flat light
+	// riveted skin: a grid of rivet heads on whichever plane the surface faces (about 12 cm apart), sunk panel
+	// seams between sheets of varying size, and slightly lighter sheets here and there where panels were
+	// replaced or repainted. All in object metres so every aircraft gets the same scale of detail.
+	vec2 rp = (an.y > an.x && an.y > an.z) ? o_p.xz : ((an.x > an.z) ? o_p.zy : o_p.xy);
+	vec2 rc = fract(rp / 0.12) - 0.5;
+	float rivet = 1.0 - smoothstep(0.07, 0.15, length(rc));
+	vec2 sheet = floor(rp / vec2(0.9, 0.55));
+	float sheet_h = hash12(sheet);
+	vec2 sf = abs(fract(rp / vec2(0.9, 0.55)) - 0.5);
+	float seam = smoothstep(0.485, 0.5, max(sf.x, sf.y));
+	col *= 1.0 - seam * 0.20 * wear;
+	col *= 1.0 + (sheet_h - 0.5) * 0.10 * wear;
+	col *= 1.0 - rivet * 0.07 * wear;
+	// sun-bleached upper surfaces, worn bare metal on forward-facing edges, oily streaks running aft
+	float up = smoothstep(0.35, 0.95, n.y);
+	col = mix(col, col * 1.16 + vec3(0.015), up * 0.35 * wear);
+	float lead = smoothstep(0.55, 0.95, -n.z) * smoothstep(0.35, 0.8, vnoise2(o_p.xy * 9.0 + o_p.z));
+	col = mix(col, vec3(0.55, 0.56, 0.54), lead * 0.38 * wear);
+	float streak = vnoise2(vec2(o_p.x * 14.0, o_p.z * 0.9)) * smoothstep(0.3, 0.9, vnoise2(vec2(o_p.x * 3.0, o_p.z * 0.4)));
+	col *= 1.0 - streak * 0.14 * wear * (1.0 - up * 0.5);
+
+	// micro-relief: rivets, seams and dents break the specular up so the skin stops looking like painted
+	// plastic under a flat light
 	float micro = (vnoise2(o_p.xy * 6.0) - 0.5) + (vnoise2(o_p.zy * 6.0) - 0.5);
-	NORMAL = normalize(NORMAL + vec3(micro * 0.022 * wear));
+	NORMAL = normalize(NORMAL + vec3(micro * 0.022 * wear) + n * (rivet * 0.10 - seam * 0.16) * wear);
 
 	// rain: a water film darkens the paint a touch and makes it glossy (wetness from WeatherManager)
 	col *= 1.0 - 0.18 * wetness;
