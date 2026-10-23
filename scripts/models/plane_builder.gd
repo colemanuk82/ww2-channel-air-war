@@ -125,24 +125,11 @@ static func _wing_mesh(w: Dictionary, side: float) -> ArrayMesh:
 
 
 static func _tailplane_mesh(tp: Dictionary, side: float) -> ArrayMesh:
-	var secs: Array = []
-	for t in [0.0, 0.35, 0.7, 1.0]:
-		var chord: float = lerpf(float(tp["cr"]), float(tp["ct"]), t)
-		secs.append(MeshUtil.airfoil(side * (0.15 + float(tp["span"]) * t), float(tp["y"]) + 0.1 * t, float(tp["z"]) + 0.5 * t, chord, 0.1 * chord * (1.0 - 0.5 * t)))
-	return MeshUtil.loft_smooth(secs, 2, 1)
+	return PlaneParts.tailplane_mesh(tp, side)
 
 
 static func _fin_mesh(fn: Dictionary, x: float) -> ArrayMesh:
-	var secs: Array = []
-	for t in [0.0, 0.25, 0.5, 0.75, 1.0]:
-		var chord: float = lerpf(float(fn["cr"]), float(fn["ct"]), t)
-		var zle: float = float(fn["z"]) + float(fn.get("sweep", 0.9)) * t
-		var y: float = float(fn["y"]) + float(fn["h"]) * t
-		var w: float = 0.09 * (1.0 - 0.5 * t) * maxf(1.0, float(fn["cr"]) * 0.5)
-		secs.append(PackedVector3Array([
-			Vector3(x, y, zle), Vector3(x + w, y, zle + chord * 0.3), Vector3(x + w * 0.6, y, zle + chord * 0.8),
-			Vector3(x, y, zle + chord), Vector3(x - w * 0.6, y, zle + chord * 0.8), Vector3(x - w, y, zle + chord * 0.3)]))
-	return MeshUtil.loft(secs)
+	return PlaneParts.fin_mesh(fn, x)
 
 
 # ---------------------------------------------------------------- engines / props
@@ -168,10 +155,8 @@ static func _make_prop(radius: float, blades: int, spinner_r: float, tip: Color,
 		prop = ps
 		prop.name = "Propeller%d" % idx
 	var k: float = spinner_r / 0.3
-	var sp_secs: Array = [
-		MeshUtil.ring_xy(-0.7 * k, 0.02, 0.02, 0.0, 8), MeshUtil.ring_xy(-0.5 * k, 0.17 * k, 0.17 * k, 0.0, 8),
-		MeshUtil.ring_xy(-0.1 * k, spinner_r, spinner_r, 0.0, 8), MeshUtil.ring_xy(0.1 * k, spinner_r, spinner_r, 0.0, 8)]
-	_mi(prop, MeshUtil.loft(sp_secs), ToonUtil.make_toon(Color(0.12, 0.12, 0.13), {"outline_thickness": 0.012}))
+	_mi(prop, PlaneParts.spinner_mesh(spinner_r), ToonUtil.make_toon(Color(0.12, 0.12, 0.13), {"outline_thickness": 0.012, "gloss": 0.8}))
+	PlaneParts.hub_plate(prop, spinner_r)
 	var blade_mat := ToonUtil.make_toon(Color(0.07, 0.07, 0.07), {"outline": false})
 	var rs: float = radius / 1.75
 	# The blades hang off one node so a fast-spinning prop can swap them for the PropDisc blur (see
@@ -184,12 +169,9 @@ static func _make_prop(radius: float, blades: int, spinner_r: float, tip: Color,
 		var pivot := Node3D.new()
 		pivot.rotation.z = TAU * float(i) / float(blades)
 		blades_root.add_child(pivot)
-		var bsecs: Array = [
-			PackedVector3Array([Vector3(-0.09, 0.2, -0.04), Vector3(0.09, 0.2, 0.04), Vector3(0.09, 0.2, 0.0), Vector3(-0.09, 0.2, 0.0)]),
-			PackedVector3Array([Vector3(-0.15, 1.1 * rs, -0.06), Vector3(0.15, 1.1 * rs, 0.06), Vector3(0.15, 1.1 * rs, 0.0), Vector3(-0.15, 1.1 * rs, 0.0)]),
-			PackedVector3Array([Vector3(-0.08, radius, -0.03), Vector3(0.08, radius, 0.03), Vector3(0.08, radius, 0.0), Vector3(-0.08, radius, 0.0)])]
-		_mi(pivot, MeshUtil.loft(bsecs), blade_mat)
-		_mi(pivot, _box(0.17, 0.25, 0.07), _flat(tip), Vector3(0, radius - 0.13, 0))
+		_mi(pivot, PlaneParts.blade_mesh(radius, spinner_r), blade_mat)
+		var tipm := _mi(pivot, _box(0.13 * rs, 0.2 * rs, 0.03), _flat(tip), Vector3(0, radius - 0.12 * rs, 0))
+		tipm.rotation.y = deg_to_rad(-12.0)
 	var disc := MeshInstance3D.new()
 	disc.name = "PropDisc" if primary else "PropDisc%d" % idx
 	var dm := CylinderMesh.new()
@@ -648,6 +630,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 			(intake.mesh as CylinderMesh).height = 0.1
 			intake.rotation.x = deg_to_rad(90.0)
 		else:
+			PlaneParts.nacelle_fittings(body, String(spec.get("id", "")), e, col["top"], col["under"])
 			var prop: Node3D = _make_prop(e["prop_r"], int(e.get("blades", 3)), float(e["r"]) * 0.32, tip, prop_idx == 0 and not spec.has("nose_prop"), prop_idx)
 			prop.position = Vector3(x, e["y"], float(e["z0"]) - 0.08)
 			body.add_child(prop)
@@ -677,6 +660,12 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 			"slice":
 				_mi(body, _fus_slice(f, ex["z0"], ex["z1"]), mat)
 
+	if spec.has("nose_prop") and String(f.get("profile", "")) == "radial":
+		PlaneParts.radial_cowl(body, f, col["top"])
+	if String(f.get("profile", "")) != "bomber" and spec.has("guns"):
+		var gn: Array = spec["guns"]
+		PlaneParts.cannons(body, absf(float(gn[0])), float(gn[1]), float(gn[2]), 2, 0.9, 0.032)
+
 	# Navigation lights: red to port, green to starboard at the wingtips (visible at dusk / night)
 	var wtip: Dictionary = wing_section(w, 1.0)
 	for side in [-1.0, 1.0]:
@@ -690,11 +679,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 
 	# Exhaust stacks down the nose of inline (liquid-cooled) engines
 	if spec.has("nose_prop") and String(f.get("profile", "inline")) == "inline":
-		for side in [-1.0, 1.0]:
-			for k in 4:
-				var ez: float = float(f["z0"]) + 0.6 + 0.3 * float(k)
-				var ed: Array = fus_at(f, ez)
-				_mi(body, _box(0.09, 0.09, 0.18), dark, Vector3(side * float(ed[0]) * 0.98, float(ed[2]) + float(ed[1]) * 0.35, ez))
+		PlaneParts.exhaust_stacks(body, f, float(f["z0"]) + 0.55, 5, 0.27)
 
 	# Landing gear
 	var g: Dictionary = spec["gear"]
@@ -704,13 +689,13 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		pivot.name = "GearR" if side > 0.0 else "GearL"
 		pivot.position = Vector3(side * float(g["x"]), g["y"], g["z"])
 		body.add_child(pivot)
-		_mi(pivot, _box(leg_w, g["len"], leg_w + 0.02), dark, Vector3(0, -float(g["len"]) * 0.5, 0))
-		var wheel := _mi(pivot, MeshUtil.disc(g["r"], 0.14 + float(g["r"]) * 0.3, Vector3.RIGHT, 12), dark, Vector3(0, -float(g["len"]) - 0.02, 0))
-		wheel.name = "Wheel"
+		var wr: float = float(g["r"])
+		var ww: float = 0.14 + wr * 0.3
+		PlaneParts.gear_leg(pivot, side, float(g["len"]), leg_w, wr, ww, String(spec.get("id", "")) != "ju87")
+		PlaneParts.wheel(pivot, wr, ww, Vector3(0, -float(g["len"]) - 0.02, 0))
 	if spec.has("tail_wheel"):
 		var tw: Array = spec["tail_wheel"]
-		var twm: MeshInstance3D = _mi(body, MeshUtil.disc(0.14, 0.09, Vector3.RIGHT, 8), dark, Vector3(0, tw[0], tw[1]))
-		twm.name = "TailWheel"
+		PlaneParts.tail_wheel(body, float(tw[0]), float(tw[1]))
 
 	_fit_details(body, spec)
 
@@ -817,6 +802,22 @@ static func _fit_details(body: Node3D, spec: Dictionary) -> void:
 	else:
 		var wp: Dictionary = wing_section(w, 0.5)
 		PlaneDetails.pitot(body, Vector3(-float(wp["x"]), float(wp["yc"]) - float(wp["t"]) * 0.4, float(wp["zle"]) - 0.02))
+	var cam: Color = ((spec["colors"] as Dictionary)["under"] as Color).darkened(0.3)
+	var zf: float = float(f["z0"])
+	match String(spec.get("id", "")):
+		"bf109":
+			PlaneParts.underwing_radiators(body, wing_of, 0.3, Vector3(0.5, 0.17, 0.85), cam)
+		"hurricane":
+			PlaneParts.intake_scoop(body, Vector3(0.0, float(fd[2]) - float(fd[1]) - 0.1, rz + float(w0["chord"]) * 0.55), Vector3(0.7, 0.34, 1.1), cam)
+		"typhoon", "tempest":
+			var cd: Array = fus_at(f, zf + 1.5)
+			PlaneParts.intake_scoop(body, Vector3(0.0, float(cd[2]) - float(cd[1]) * 0.78, zf + 1.5), Vector3(float(cd[0]) * 1.25, float(cd[1]) * 0.7, 1.7), cam)
+		"p51":
+			PlaneParts.intake_scoop(body, Vector3(0.0, float(fd[2]) - float(fd[1]) - 0.12, rz + float(w0["chord"]) * 0.7), Vector3(0.55, 0.36, 1.3), cam)
+		"p47":
+			PlaneParts.intake_scoop(body, Vector3(0.0, float(fd[2]) - float(fd[1]) - 0.08, rz + float(w0["chord"]) * 0.3), Vector3(0.45, 0.3, 1.4), cam)
+		"fw190":
+			PlaneParts.intake_scoop(body, Vector3(0.0, float(fd[2]) + float(fd[1]) * 0.9, zf + 1.1), Vector3(0.5, 0.12, 0.9), cam)
 	var eye: Vector3 = spec["eye"] as Vector3
 	var mz: float = clampf(eye.z + (3.4 if bomber else 1.3), float(f["z0"]) + 0.5, float(f["z1"]) - 1.0)
 	var ad: Array = fus_at(f, mz)

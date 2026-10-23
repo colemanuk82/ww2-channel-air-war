@@ -32,11 +32,13 @@ static func _wing_mesh(side: float) -> ArrayMesh:
 
 
 static func _tailplane_mesh(side: float) -> ArrayMesh:
+	# elliptical planform with a rounded tip, like the real Spitfire tailplane
 	var secs: Array = []
-	for t in [0.0, 0.5, 1.0]:
-		var chord: float = 1.35 - 0.8 * t
-		secs.append(MeshUtil.airfoil(side * (0.15 + 1.7 * t), 0.18 + 0.1 * t, 3.75 + 0.55 * t, chord, 0.1 * (1.0 - 0.5 * t)))
-	return MeshUtil.loft(secs)
+	for t in [0.0, 0.25, 0.5, 0.72, 0.87, 0.95, 1.0]:
+		var chord: float = (1.35 - 0.8 * t) * sqrt(maxf(1.0 - pow(t, 3.0) * 0.8, 0.0))
+		chord = maxf(chord, 0.1)
+		secs.append(MeshUtil.airfoil(side * (0.15 + 1.7 * t), 0.18 + 0.1 * t, 3.75 + 0.55 * t, chord, 0.12 * chord * (1.0 - 0.4 * t)))
+	return MeshUtil.loft_smooth(secs, 2, 1)
 
 
 ## Half thickness of the fin section at chord fraction f (matches the polygon in _fin_mesh).
@@ -183,22 +185,27 @@ static func build(nation: String = "RAF") -> Node3D:
 	PlaneBuilder.pilot(canopy, Vector3(0.0, 1.12, 0.45))
 	PlaneDetails.cockpit(canopy, Vector3(0.0, 1.12, 0.45), false, CANOPY_RINGS)
 
-	# Radiators under the wings
+	# Radiators under the wings: boxed housings with a bright lip and dark mouth (oil cooler port, radiator starboard)
 	for side in [-1.0, 1.0]:
-		var rad := MeshInstance3D.new()
-		rad.mesh = _box(0.5, 0.32, 0.9)
-		rad.material_override = dark
-		rad.position = Vector3(side * 2.1, -0.62, 0.0)
-		body.add_child(rad)
+		var rsz := Vector3(0.52 if side > 0.0 else 0.42, 0.24, 0.8)
+		PlaneParts.intake_scoop(body, Vector3(side * 2.1, -0.54, 0.0), rsz, COL_UNDER.darkened(0.3))
 
-	# Exhaust stubs
+	# Exhaust stubs: six ejector pipes a side
 	for side in [-1.0, 1.0]:
-		for k in 3:
-			var ex := MeshInstance3D.new()
-			ex.mesh = _box(0.1, 0.1, 0.35)
-			ex.material_override = dark
-			ex.position = Vector3(side * 0.5, 0.18 - 0.0 * k, -2.3 + 0.38 * k)
-			body.add_child(ex)
+		for k in 6:
+			var ez: float = -2.55 + 0.27 * float(k)
+			var ed: Array = PlaneBuilder.station_at(FUS_RINGS, ez)
+			var ey: float = float(ed[2]) + float(ed[1]) * 0.3
+			var stub := PlaneParts.cyl(body, 0.034, 0.05, 0.2, Vector3(side * (float(ed[0]) * 0.97 + 0.02), ey, ez), PlaneParts.mat(PlaneParts.RUST if k % 2 == 0 else Color(0.2, 0.12, 0.08), 0.3), Vector3.ZERO, 8, "Exhaust")
+			stub.rotation_degrees = Vector3(90, 0, -side * 14.0)
+			var ft := BoxMesh.new()
+			ft.size = Vector3(0.018, 0.08, 0.11)
+			PlaneParts._mi(body, ft, PlaneParts.mat(PlaneParts.SOOT, 0.2), Vector3(side * (float(ed[0]) + 0.1), ey, ez + 0.1))
+			var sk := BoxMesh.new()
+			sk.size = Vector3(0.006, 0.05, 0.22)
+			PlaneParts._mi(body, sk, PlaneParts.mat(PlaneParts.SOOT, 0.1), Vector3(side * (float(ed[0]) * 0.995 + 0.004), ey, ez + 0.15))
+	# Hispano cannons and Brownings poking out of the leading edge
+	PlaneParts.cannons(body, 1.9, -0.22, -1.9, 2, 0.9, 0.032)
 
 	# Underside rack, pitot tube under the port wing, radio mast and aerial wire to the fin tip
 	PlaneDetails.underside(body, "spitfire", _wing_section, -0.52, 0.0)
@@ -270,22 +277,9 @@ static func build(nation: String = "RAF") -> Node3D:
 		pivot.name = "GearR" if side > 0.0 else "GearL"
 		pivot.position = Vector3(side * 1.35, WING_Y + WING_DIHEDRAL * 0.17 - 0.05, -0.5)
 		body.add_child(pivot)
-		var leg := MeshInstance3D.new()
-		leg.mesh = _box(0.12, 0.8, 0.14)
-		leg.material_override = dark
-		leg.position = Vector3(0, -0.4, 0)
-		pivot.add_child(leg)
-		var wheel := MeshInstance3D.new()
-		wheel.mesh = MeshUtil.disc(0.3, 0.14, Vector3.RIGHT, 12)
-		wheel.material_override = dark
-		wheel.position = Vector3(0, -0.82, 0)
-		pivot.add_child(wheel)
-	var tail_wheel := MeshInstance3D.new()
-	tail_wheel.mesh = MeshUtil.disc(0.12, 0.08, Vector3.RIGHT, 8)
-	tail_wheel.material_override = dark
-	tail_wheel.position = Vector3(0, -0.12, 4.5)
-	tail_wheel.name = "TailWheel"
-	body.add_child(tail_wheel)
+		PlaneParts.gear_leg(pivot, side, 0.8, 0.14, 0.3, 0.14)
+		PlaneParts.wheel(pivot, 0.3, 0.14, Vector3(0, -0.82, 0))
+	PlaneParts.tail_wheel(body, -0.12, 4.5, 0.12)
 
 	# Propeller group
 	var prop := Node3D.new()
@@ -293,14 +287,10 @@ static func build(nation: String = "RAF") -> Node3D:
 	prop.position = Vector3(0, 0, -3.8)
 	body.add_child(prop)
 	var spinner := MeshInstance3D.new()
-	var sp_secs: Array = []
-	sp_secs.append(MeshUtil.ring_xy(-0.7, 0.02, 0.02, 0.0, 20))
-	sp_secs.append(MeshUtil.ring_xy(-0.5, 0.17, 0.17, 0.0, 20))
-	sp_secs.append(MeshUtil.ring_xy(-0.1, 0.30, 0.30, 0.0, 20))
-	sp_secs.append(MeshUtil.ring_xy(0.1, 0.30, 0.30, 0.0, 20))
-	spinner.mesh = MeshUtil.loft(sp_secs)
-	spinner.material_override = ToonUtil.make_toon(Color(0.12, 0.12, 0.13), {"outline_thickness": 0.012})
+	spinner.mesh = PlaneParts.spinner_mesh(0.30)
+	spinner.material_override = ToonUtil.make_toon(Color(0.12, 0.12, 0.13), {"outline_thickness": 0.012, "gloss": 0.8})
 	prop.add_child(spinner)
+	PlaneParts.hub_plate(prop, 0.30)
 	var blade_mat := ToonUtil.make_toon(Color(0.07, 0.07, 0.07), {"outline": false})
 	# The blades hang off one node so a fast-spinning prop can swap them for the PropDisc blur (see
 	# AircraftModels.prop_blur): blades sampled a few times per turn strobe, which reads as the aircraft
@@ -313,18 +303,15 @@ static func build(nation: String = "RAF") -> Node3D:
 		pivot.rotation.z = TAU * float(i) / 3.0
 		blades.add_child(pivot)
 		var blade := MeshInstance3D.new()
-		var bsecs: Array = [
-			PackedVector3Array([Vector3(-0.09, 0.2, -0.04), Vector3(0.09, 0.2, 0.04), Vector3(0.09, 0.2, 0.0), Vector3(-0.09, 0.2, 0.0)]),
-			PackedVector3Array([Vector3(-0.15, 1.1, -0.06), Vector3(0.15, 1.1, 0.06), Vector3(0.15, 1.1, 0.0), Vector3(-0.15, 1.1, 0.0)]),
-			PackedVector3Array([Vector3(-0.08, 1.75, -0.03), Vector3(0.08, 1.75, 0.03), Vector3(0.08, 1.75, 0.0), Vector3(-0.08, 1.75, 0.0)])]
-		blade.mesh = MeshUtil.loft(bsecs)
+		blade.mesh = PlaneParts.blade_mesh(1.75, 0.30)
 		blade.material_override = blade_mat
 		pivot.add_child(blade)
 		# yellow tip
 		var tip := MeshInstance3D.new()
-		tip.mesh = _box(0.17, 0.25, 0.07)
+		tip.mesh = _box(0.13, 0.2, 0.03)
 		tip.material_override = ToonUtil.make_toon(Color(0.9, 0.75, 0.15), {"outline": false})
-		tip.position = Vector3(0, 1.62, 0)
+		tip.position = Vector3(0, 1.65, 0)
+		tip.rotation.y = deg_to_rad(-12.0)
 		pivot.add_child(tip)
 	var disc := MeshInstance3D.new()
 	disc.name = "PropDisc"
