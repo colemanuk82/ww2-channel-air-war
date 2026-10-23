@@ -2089,7 +2089,8 @@ func _reset_sim_warp() -> void:
 ## WARP_CONTACT_RANGE. Never compress time during combat.
 func _update_sim_warp(delta: float) -> void:
 	var pl: Aircraft = player as Aircraft
-	var can_warp: bool = pl != null and pl.state == Aircraft.State.ALIVE and not pl.on_ground and not GameState.paused
+	var bailing: bool = _bail != null and _bail.active       # floating down on the parachute: warp allowed
+	var can_warp: bool = bailing or (pl != null and pl.state == Aircraft.State.ALIVE and not pl.on_ground and not GameState.paused)
 	if _warp_forced:
 		_log_warp_state(delta)
 		return
@@ -2110,6 +2111,8 @@ func _update_sim_warp(delta: float) -> void:
 	_tc_check = 0.5
 	if not can_warp:
 		_set_sim_warp(1, "Normal time")
+		return
+	if pl == null or not is_instance_valid(pl):
 		return
 	for n in get_tree().get_nodes_in_group("aircraft"):
 		if n is Aircraft and (n as Aircraft).team != GameState.player_side and (n as Aircraft).state == Aircraft.State.ALIVE and (n as Node3D).global_position.distance_to(pl.global_position) < WARP_CONTACT_RANGE:

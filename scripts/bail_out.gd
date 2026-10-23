@@ -11,7 +11,7 @@ signal resolved(fate: String, pos: Vector3)
 
 const HOLD_TIME := 0.9         # seconds J must be held (no accidental bail-outs)
 const MIN_AGL := 70.0          # metres: lower than this the parachute cannot open
-const SKIP_AFTER := 4.0        # seconds into the descent before Enter / J skips to the landing
+const SKIP_AFTER := 1.5        # seconds into the descent before Enter / J skips to the landing
 
 var active: bool = false       # the pilot is on the parachute (or just landed, before resolution)
 var pending_respawn: bool = false
@@ -21,6 +21,10 @@ var _cam: Camera3D
 var _t: float = 0.0
 var _land_t: float = -1.0
 var _yaw: float = 0.0
+var _look_yaw: float = 0.0     # right-stick orbit around the pilot
+var _look_pitch: float = 0.15
+var _hint_layer: CanvasLayer
+var _hint: Label
 var _hud: Node
 var _aircraft: Aircraft
 var _done: bool = false
@@ -87,6 +91,9 @@ func _jump(player: Aircraft) -> void:
 	player.player_controlled = false
 	player.set_meta("bailed", true)       # the pilot is already out: no second parachute from the wreck
 	player.take_damage(1.0e6, null)
+	_look_yaw = 0.0
+	_look_pitch = 0.15
+	_make_hint()
 	_cam = Camera3D.new()
 	_cam.fov = 60.0
 	_cam.far = 60000.0
@@ -103,8 +110,13 @@ func _follow(delta: float) -> void:
 		_resolve()
 		return
 	var cp: Vector3 = _chute.global_position
+	var rdt: float = delta / maxf(Engine.time_scale, 0.1)       # real-time delta: the stick must not speed up with the warp
 	_yaw += delta * 0.12
-	var want: Vector3 = cp + Vector3(sin(_yaw) * 26.0, 7.0, cos(_yaw) * 26.0)
+	_look_yaw += Input.get_axis("look_left", "look_right") * 2.2 * rdt
+	_look_pitch = clampf(_look_pitch + Input.get_axis("look_up", "look_down") * 1.4 * rdt, -0.25, 1.2)
+	var ang: float = _yaw + _look_yaw
+	var want: Vector3 = cp + Vector3(sin(ang) * 26.0 * cos(_look_pitch), 7.0 + sin(_look_pitch) * 26.0, cos(ang) * 26.0 * cos(_look_pitch))
+	_update_hint()
 	var gh: float = FX.ground_height(want)
 	want.y = maxf(want.y, gh + 3.0)
 	if _cam != null and is_instance_valid(_cam):
@@ -126,6 +138,7 @@ func _resolve() -> void:
 	if _done:
 		return
 	_done = true
+	_end_ui()
 	var pos: Vector3 = _chute.global_position if _chute != null and is_instance_valid(_chute) else (_cam.global_position if _cam != null else Vector3.ZERO)
 	var team: String = GameState.player_side
 	var fate: String = "safe"
@@ -142,6 +155,7 @@ func _resolve() -> void:
 
 ## Main calls this when it respawns / rebinds the player so the chute camera never lingers.
 func cancel() -> void:
+	_end_ui()
 	if _cam != null and is_instance_valid(_cam):
 		_cam.queue_free()
 	_cam = null
@@ -160,3 +174,41 @@ static func fate_text(fate: String, side: String) -> String:
 			return "Landed behind enemy lines - the farmer's dog found you first. You are a prisoner of war." if side == "Allies" \
 				else "Landed in England - the Home Guard were waiting. You are a prisoner of war."
 	return ""
+
+
+# ---------------------------------------------------------------- descent hint + time warp
+
+func _make_hint() -> void:
+	_end_ui()
+	_hint_layer = CanvasLayer.new()
+	_hint_layer.layer = 60
+	add_child(_hint_layer)
+	_hint = Label.new()
+	_hint.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_hint.offset_top = -86.0
+	_hint.offset_bottom = -20.0
+	_hint.offset_left = -520.0
+	_hint.offset_right = 520.0
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_hint.add_theme_font_size_override("font_size", 20)
+	_hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.95))
+	_hint.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	_hint.add_theme_constant_override("outline_size", 6)
+	_hint_layer.add_child(_hint)
+
+
+func _update_hint() -> void:
+	if _hint == null or not is_instance_valid(_hint):
+		return
+	var warp: String = "x%d" % GameState.sim_warp
+	var skip: String = "ENTER / A / J : skip to respawn" if _t > SKIP_AFTER else "(skip available in a moment)"
+	_hint.text = "%s\n] [ : time warp (%s)     Right stick : look around" % [skip, warp]
+
+
+func _end_ui() -> void:
+	if _hint_layer != null and is_instance_valid(_hint_layer):
+		_hint_layer.queue_free()
+	_hint_layer = null
+	_hint = null
+	GameState.reset_sim_warp()
+	Engine.time_scale = 1.0
