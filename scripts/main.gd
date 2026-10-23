@@ -2024,6 +2024,9 @@ func _career_lost(fate: String) -> void:
 
 
 ## The pilot is down (landed, or the descent skipped): the fate line, a dinghy and rescue flight at sea, then respawn.
+const BAIL_COOL_OFF := 5.0       # seconds between the pilot landing and the replacement aircraft
+
+
 func _on_bail_resolved(fate: String, pos: Vector3) -> void:
 	var txt: String = BailOut.fate_text(fate, GameState.player_side)
 	if hud != null and txt != "":
@@ -2033,11 +2036,16 @@ func _on_bail_resolved(fate: String, pos: Vector3) -> void:
 		return
 	if fate == "sea":
 		DitchRescue.start(self, pos, hud)
+	# 5 s cool-off between landing (or skipping the descent) and being back in an aircraft
 	if _bail.pending_respawn:
 		_bail.pending_respawn = false
-		_spawn_player()
+		_respawn_timer = BAIL_COOL_OFF
+		if hud != null:
+			hud.show_message("Back in the air in %d seconds..." % int(BAIL_COOL_OFF), BAIL_COOL_OFF)
 	elif not _manages_respawn():
-		_respawn_timer = 3.0
+		_respawn_timer = BAIL_COOL_OFF
+		if hud != null:
+			hud.show_message("Back in the air in %d seconds..." % int(BAIL_COOL_OFF), BAIL_COOL_OFF)
 
 
 # --- simulation time warp (] / [ in flight, F5 still steps the same ladder): the map is real-scale, so a
