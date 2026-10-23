@@ -465,8 +465,8 @@ static func _staithes(root: Node3D, size: int, chimneys: Array) -> void:
 ## with an inclined conveyor, a lime-kiln stack and a couple of timber huts. Reuses the terrain shader's
 ## existing chalk / limestone / soil / olive palette entries - no new hues.
 static func _quarry(root: Node3D, size: int, rng: RandomNumberGenerator, chimneys: Array) -> void:
-	var chalk: Color = Color(0.93, 0.92, 0.86)          # terrain chalk_col
-	var lime: Color = Color(0.80, 0.79, 0.72)           # terrain limestone_col
+	var chalk: Color = Color(0.62, 0.60, 0.53)          # chalk, toned down so the pit does not glare from the air
+	var lime: Color = Color(0.50, 0.48, 0.42)           # limestone rubble, darkened
 	var soil: Color = Color(0.30, 0.22, 0.14)           # terrain soil_col
 	var grey: Color = GroundKit.COL_GREY
 	var wood: Color = GroundKit.COL_WOOD

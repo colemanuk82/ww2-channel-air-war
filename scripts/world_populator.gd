@@ -29,6 +29,8 @@ var terrain: Node
 var world_root: Node3D
 var focus: Node3D
 var existing_airfields: Dictionary = {}
+## Keep-out discs [centre, radius] around every airfield's runways: no AA guns / lights / balloons inside.
+var _runway_zones: Array = []
 var airfields: Dictionary = {}                 # id -> Airfield
 var loc: Dictionary = {}
 var enable_countryside: bool = true
@@ -2183,6 +2185,14 @@ func _place(n: Node3D, p: Vector3) -> void:
 	n.position = Vector3(p.x, _y(p), p.z)
 
 
+func _in_runway_zone(p: Vector3) -> bool:
+	for z in _runway_zones:
+		var c: Vector3 = z[0]
+		if Vector2(p.x - c.x, p.z - c.z).length() < float(z[1]):
+			return true
+	return false
+
+
 func _land_ring(center: Vector3, count: int, r_min: float, r_max: float, rng: RandomNumberGenerator) -> Array:
 	var out: Array = []
 	var tries: int = 0
@@ -2191,6 +2201,8 @@ func _land_ring(center: Vector3, count: int, r_min: float, r_max: float, rng: Ra
 		var a: float = rng.randf() * TAU
 		var r: float = rng.randf_range(r_min, r_max)
 		var p: Vector3 = center + Vector3(cos(a) * r, 0, sin(a) * r)
+		if _in_runway_zone(p):
+			continue
 		if GroundKit.raw_y(p.x, p.z) > 1.0:
 			out.append(p)
 	return out
@@ -2473,7 +2485,9 @@ func _build_airfield(s: Dictionary) -> Node3D:
 	var is_london: bool = id in ["northolt", "kenley", "biggin_hill", "hornchurch"]
 	var n88: int = 1 if team == "Allies" else 2
 	var nb: int = 3 if team == "Allies" else 2
-	_defences(container, af.position, team, n88, nb, 2, 4 if (team == "Allies" and is_london) else 0, 260.0 * k, hash(id) + 5)
+	var zone_r: float = af.runway_length * 0.55 + 100.0
+	_runway_zones.append([af.position, zone_r])
+	_defences(container, af.position, team, n88, nb, 2, 4 if (team == "Allies" and is_london) else 0, maxf(260.0 * k, zone_r * 1.8), hash(id) + 5)
 	# Blackout: at night an airfield shows its flare path / runway lamps only when it is an active (own-side)
 	# field; occupied/enemy fields stay dark (see Airfield.set_lights_active).
 	af.set_lights_active(team == "Allies")

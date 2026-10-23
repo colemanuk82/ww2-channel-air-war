@@ -1398,9 +1398,12 @@ func _test_ai_takeoff_all() -> void:
 					for dg in [0.0, 5.0, 10.0, 15.0]:
 						var pt: float = deg_to_rad(dg)
 						var prop_low: float = ac.ground_offset(pt) + (ac._gg_py - ac._gg_pr) * cos(pt) - ac._gg_pz * sin(pt)
-						_check(prop_low >= 0.1, "%s: propeller clears the runway at %.0f deg (%.2f m)" % [sid, dg, prop_low])
+						_check(prop_low >= 0.4, "%s: propeller clears the runway at %.0f deg (%.2f m)" % [sid, dg, prop_low])
 				print("   stance %s: rest %.1f deg, origin %.2f m (gear stat %.2f), prop r %.2f" % [sid, rad_to_deg(rest), ac.ground_offset(rest), st.gear_height, ac._gg_pr])
 			p.begin_takeoff(dir, AIPilot.State.PATROL)
+			_check(ac.invulnerable, "%s: protected during the take-off roll" % sid)
+			ac.take_damage(500.0)
+			_check(ac.state == Aircraft.State.ALIVE and ac.health >= ac.stats.max_health - 0.01, "%s: ignores damage while taking off" % sid)
 			var t: float = 0.0
 			var lift_t: float = -1.0
 			var run_m: float = 0.0

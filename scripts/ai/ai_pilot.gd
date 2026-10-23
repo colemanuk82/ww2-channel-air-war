@@ -215,6 +215,8 @@ func get_target() -> Aircraft:
 
 func _set_state(s: int) -> void:
 	if s != state:
+		if state == State.TAKEOFF and ac != null:
+			ac.invulnerable = false
 		state = s
 		state_changed.emit(s)
 
@@ -969,6 +971,7 @@ func _shallow(d: Vector3) -> Vector3:
 func begin_takeoff(rdir: Vector3, next_state: int) -> void:
 	runway_dir = Vector3(rdir.x, 0.0, rdir.z).normalized()
 	_airborne_t = 0.0
+	ac.invulnerable = true
 	after_takeoff = next_state
 	_set_state(State.TAKEOFF)
 
@@ -1044,6 +1047,8 @@ func _run_takeoff(_delta: float) -> bool:
 	# command while still below flying speed just lets the aircraft mush back down onto the runway, which is
 	# why bombers appeared not to climb out after lifting off.
 	var agl: float = ac.altitude_agl
+	if ac.invulnerable and not ac.on_ground and agl > 50.0:
+		ac.invulnerable = false
 	_thr = 1.0
 	# Just after lift-off the wings need a high angle of attack, so a nose pointed 10 degrees up does not climb at
 	# all: the aircraft hovered a few metres off the runway at ~1.25x stall (heavy bombers, the Defiant, the P-38).

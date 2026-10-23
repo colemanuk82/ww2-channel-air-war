@@ -64,6 +64,8 @@ var state: int = State.ALIVE
 var speed: float = 0.0
 var throttle: float = 0.0
 var health: float = 100.0
+## Set for AI aircraft from the start of the take-off roll until they have climbed to 50 m: no damage, no crash.
+var invulnerable: bool = false
 var _dmg_side: float = 0.0          # which way a damaged aircraft pulls (fixed per aircraft once it is hit)
 var boost_energy: float = 1.0
 var boosting: bool = false
@@ -281,7 +283,7 @@ func ground_offset(pit: float) -> float:
 	if _gg_tail:
 		h = maxf(h, -(_gg_yt * c - _gg_zt * s))
 	if _gg_pr > 0.0:
-		h = maxf(h, (_gg_pr - _gg_py) * c + _gg_pz * s + 0.12)
+		h = maxf(h, (_gg_pr - _gg_py) * c + _gg_pz * s + 0.45)
 	return h
 
 
@@ -471,7 +473,7 @@ func _check_collisions(delta: float) -> void:
 
 
 func take_damage(amount: float, source: Node = null) -> void:
-	if state != State.ALIVE:
+	if state != State.ALIVE or invulnerable:
 		return
 	health = maxf(health - amount, 0.0)
 	_regen_cd = 8.0        # pause the player's slow self-repair while under fire
@@ -1190,6 +1192,11 @@ func _move_and_ground(delta: float) -> void:
 
 func _ground_contact(floor_y: float) -> void:
 	var vy: float = velocity.y
+	if invulnerable and state == State.ALIVE:
+		position.y = floor_y
+		velocity.y = maxf(vy, 0.0)
+		on_ground = true
+		return
 	var bank: float = absf(_bank_angle())
 	var pit: float = _pitch_angle()
 	if state == State.DYING:
@@ -1228,7 +1235,7 @@ func _ground_contact(floor_y: float) -> void:
 
 
 func _crash(reason: String) -> void:
-	if state == State.DEAD:
+	if state == State.DEAD or (invulnerable and state == State.ALIVE):
 		return
 	var was_dying: bool = state == State.DYING
 	state = State.DEAD
