@@ -35,7 +35,8 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 | 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, rain squalls, searchlights and flak at night. |
 | 🧑‍✈️ **Bail out and live** | Hold `J` to jump. A detailed pilot (RAF or Luftwaffe kit, cloth and leather textures) swings under the canopy with rag-doll motion, and every man aboard gets his own parachute. Look around with the right stick, warp time with `]` / `[`, and skip to respawn when you've seen enough. Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
 | 🌡️ **Realism options** | Engine overheating with its own HEAT gauge, and G-forces that grey out your vision and can knock you out. Enemy pilots suffer too. On by default, switch off any time in Options > Realism. |
-| 🎵 **Bring your own soundtrack** | Import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
+| 🏕️ **A living wartime map** | 116 real airfields in RAF and Luftwaffe styles, with gun pits, blast pens and dispersals. Wired army camps packed with tanks under camouflage nets, tent lines, ammo bays and fuel dumps. Prisoner-of-war camps at their real sites, from Dulag Luft and the Rhineland Stalags to Kempton Park and Island Farm, plus the Organisation Todt labour camps on Alderney. Corn ricks in the fields, and the odd crashed fighter on its scorched scar. |
+| 🎵 **Soundtrack** | 15 royalty-free orchestral and big-band tracks, separate Allied and Axis victory music, or import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
 | 💸 **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
 
 <div align="center">
@@ -54,9 +55,15 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 <sub>Dawn over Kent · Storm · Spitfire cockpit · Dogfight · Night raid · Main menu</sub>
 </div>
 
+<div align="center">
+<img src="docs/promo/map/army_camp.jpg" alt="Army camp beside a south-coast airfield" width="640"><br>
+<img src="docs/promo/map/pow_camp.jpg" alt="Stalag VI-A, Hemer" width="640"><br>
+<sub>A wired army camp beside a south-coast fighter station · Stalag VI-A at Hemer</sub>
+</div>
+
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.2.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.3.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
@@ -163,7 +170,7 @@ Terrain uses `data/heightmap/region_height.png` + `region_meta.json`; the Python
 Full credits and licences are in the game (**Credits** button on the main menu) and in
 [ATTRIBUTION.md](ATTRIBUTION.md).
 
-- **Music** (Pixabay Content Licence): "Freedom" by [jeremusic70](https://pixabay.com/users/jeremusic70-25199461/) · "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans" and "Battle Cry of the Brave" by [nocopyrightsound633](https://pixabay.com/users/nocopyrightsound633-47610058/) · "Cinematic Action Movie Music", "Epic Orchestral Music with Flute" and "Suspenseful Thriller Music" by [musicwallah](https://pixabay.com/users/musicwallah-51797968/)
+- **Music** (Pixabay Content Licence): "Freedom" by [jeremusic70](https://pixabay.com/users/jeremusic70-25199461/) · "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans" and "Battle Cry of the Brave" by [nocopyrightsound633](https://pixabay.com/users/nocopyrightsound633-47610058/) · "Cinematic Action Movie Music", "Epic Orchestral Music with Flute" and "Suspenseful Thriller Music" by [musicwallah](https://pixabay.com/users/musicwallah-51797968/) · "Cinematic War" and "Trailer War" by [The_Mountain](https://pixabay.com/users/the_mountain-3616498/) · "Military - War Military" and "Epic - Epic Battle" by [YevhenAstafiev](https://pixabay.com/users/yevhenastafiev-52618283/) · "Hero Heroic Patriotic" by [NastelBom](https://pixabay.com/users/nastelbom-48128234/) · "Danger and Resolution" by [MUPHFI](https://pixabay.com/users/muphfi-36181755/) · "Remembering Our Veterans" by [Luis_Humanoide](https://pixabay.com/users/luis_humanoide-12661853/) · "Swing That Jazz - 1940s Big Band Dance Music" by [kaazoom](https://pixabay.com/users/kaazoom-448850/) · "Epic Military March – Heroic Snare Drum Theme" by [DesiFreeMusic](https://pixabay.com/users/desifreemusic-28163210/)
 - **Terrain imagery:** [Sentinel-2 cloudless 2020](https://s2maps.eu) by EOX IT Services GmbH (CC BY 4.0), containing modified Copernicus Sentinel data 2020
 - **Land cover:** [ESA WorldCover 10 m 2021](https://esa-worldcover.org) (CC BY 4.0)
 - **Elevation:** [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/)

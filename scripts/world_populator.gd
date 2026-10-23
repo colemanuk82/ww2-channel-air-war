@@ -42,6 +42,7 @@ var _target_info: Dictionary = {}
 var _target_main: Dictionary = {}               # id -> Node (live)
 var _destroyed: Dictionary = {}                 # site key / target id -> true
 var _tiles: Dictionary = {}                     # Vector2i -> Node3D
+var _ground_zones: Array = []                   # terrain tint zones for camps (see TerrainChunkManager.add_ground_zones)
 var _exclude: Array = []                        # [[Vector3, radius]]
 var _timer: float = 0.0
 var _tile_timer: float = 0.0
@@ -125,6 +126,9 @@ func _ready() -> void:
 	_register_docks()
 	_register_port_clutter()
 	_register_camps()
+	_register_pow_camps()
+	if terrain != null and terrain.has_method("add_ground_zones"):
+		terrain.call("add_ground_zones", _ground_zones)
 	_register_osm_extras()
 	GroundKit.lp("  register coast..osm extras")
 	if enable_traffic:
@@ -212,6 +216,8 @@ func _register_airfields() -> void:
 			camp = ArmyCampKit.site_for(id, pos, float(d["heading_deg"]))
 			if camp != Vector3.INF:
 				_exclude.append([camp, ArmyCampKit.CAMP_RADIUS])
+				RoadMesh.add_exclusion_disc(Vector2(camp.x, camp.z), ArmyCampKit.CAMP_RADIUS * 0.85)
+				_ground_zones.append(ArmyCampKit.zone_for(camp, float(d["heading_deg"])))
 		_add_site("af_" + id, pos, 9500.0, _build_airfield, {"id": id, "data": d, "y": y, "existing": ex, "camp": camp})
 	_apply_airfield_zones(zones)
 
@@ -719,6 +725,30 @@ func _register_camps() -> void:
 		_exclude.append([pos, 190.0 + 55.0 * float(size)])
 		RoadMesh.add_exclusion_disc(Vector2(pos.x, pos.z), 200.0 + 60.0 * float(size))
 		_add_site("camp_" + str(c[0]), pos, 7500.0, _build_camp, {"name": str(c[1]), "team": str(c[4]), "kind": str(c[5]), "size": size, "id": str(c[0])})
+		if str(c[5]) == "camp":
+			var cr: float = 200.0 + 60.0 * float(size)
+			_ground_zones.append({"pos": pos, "heading": 0.0, "half": Vector2(cr * 0.75, cr * 0.75), "feather": cr * 0.45, "kind": 2})
+
+
+## Prisoner-of-war and labour camps (PowCampKit.CAMPS) at their real locations.
+func _register_pow_camps() -> void:
+	for c in PowCampKit.CAMPS:
+		var pos: Vector3 = WorldCoords.latlon_to_world(float(c[2]), float(c[3]))
+		var style: String = str(c[5])
+		var size: int = int(c[6])
+		var r: float = PowCampKit.radius(style, size)
+		_exclude.append([pos, r])
+		RoadMesh.add_exclusion_disc(Vector2(pos.x, pos.z), r * 0.8)
+		_ground_zones.append(PowCampKit.zone_for(str(c[0]), pos, style, size))
+		_add_site("pow_" + str(c[0]), pos, 8000.0, _build_pow_camp, {"name": str(c[1]), "team": str(c[4]), "style": style, "size": size, "id": str(c[0])})
+	GroundKit.lp("  _register_pow_camps (%d)" % PowCampKit.CAMPS.size())
+
+
+func _build_pow_camp(s: Dictionary) -> Node3D:
+	var pos: Vector3 = s["pos"]
+	if GroundKit.raw_y(pos.x, pos.z) < 1.5:
+		return Node3D.new()
+	return PowCampKit.build(pos, str(s["id"]), str(s["style"]), int(s["size"]), str(s["team"]))
 
 
 ## Pick the nearest shoreline point to `pos` (used by both ports and docks) - the DEM coast can sit some way off.

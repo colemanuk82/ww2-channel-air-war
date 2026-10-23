@@ -64,19 +64,48 @@ func _make_material() -> void:
 	_apply_imagery()
 
 
-## Airfield grass tint zones. zones: Array of {"pos": Vector3, "heading": float (deg)}; at most 24.
+## Ground tint zones (airfield grass, army-camp mud, POW-compound sand). zones: Array of {"pos": Vector3,
+## "heading": float (deg), optional "half": Vector2 half-extents, "feather": float, "kind": 1/2/3}. The shader has 24
+## slots, so all zones are kept here and the 24 nearest the focus are uploaded (refreshed as the player flies).
+var _zones_all: Array = []
+var _zone_at: Vector3 = Vector3(INF, 0, INF)
+
+
 func set_airfield_zones(zones: Array) -> void:
+	_zones_all = _zones_all.filter(func(z): return int(z.get("kind", 1)) != 1)
+	_zones_all.append_array(zones)
+	_upload_zones(true)
+
+
+## Extra non-airfield zones (camps); appended to the airfield ones.
+func add_ground_zones(zones: Array) -> void:
+	_zones_all.append_array(zones)
+	_upload_zones(true)
+
+
+func _upload_zones(force: bool = false) -> void:
+	if material == null:
+		return
+	var fp: Vector3 = focus.global_position if focus else Vector3.ZERO
+	fp.y = 0.0
+	if not force and fp.distance_to(_zone_at) < 3000.0:
+		return
+	_zone_at = fp
+	var order: Array = _zones_all.duplicate()
+	if order.size() > 24:
+		order.sort_custom(func(p, q): return (p["pos"] as Vector3).distance_squared_to(fp) < (q["pos"] as Vector3).distance_squared_to(fp))
 	var a := PackedVector4Array()
 	var b := PackedVector4Array()
 	for i in 24:
-		if i < zones.size():
-			var z: Dictionary = zones[i]
+		if i < order.size():
+			var z: Dictionary = order[i]
 			var p: Vector3 = z["pos"]
-			var dir: Vector3 = WorldCoords.heading_to_dir(float(z["heading"]))
+			var dir: Vector3 = WorldCoords.heading_to_dir(float(z.get("heading", 0.0)))
 			a.append(Vector4(p.x, p.z, dir.x, dir.z))
-			# 650x700 m half-extents with a 330 m feather: the edge has to fade into the surrounding fields,
-			# not end on a line the player can see from the air
-			b.append(Vector4(650.0, 700.0, 330.0, 1.0))
+			# airfields: 650x700 m half-extents with a 330 m feather, so the edge fades into the surrounding
+			# fields rather than ending on a line the player can see from the air
+			var half: Vector2 = z.get("half", Vector2(650.0, 700.0))
+			b.append(Vector4(half.x, half.y, float(z.get("feather", 330.0)), float(z.get("kind", 1))))
 		else:
 			a.append(Vector4(0, 0, 1, 0))
 			b.append(Vector4(0, 0, 1, 0))
@@ -228,6 +257,8 @@ func _process(delta: float) -> void:
 	if _timer <= 0.0:
 		_timer = 0.1
 		_update_streaming()
+		if _zones_all.size() > 24:
+			_upload_zones()
 
 
 ## True once every chunk wanted around the focus has been built (used by the load screen).

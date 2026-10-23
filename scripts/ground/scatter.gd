@@ -1193,6 +1193,9 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 	var trees_c: Array = []
 	var trees_r: Array = []
 	var hedges: Array = []
+	var ricks: Array = []
+	var stooks: Array = []
+	var wrecks: Array = []
 	var house_yaw: float = rng.randf() * PI
 	var farms_n: int = 0
 	var step: float = 22.0
@@ -1214,12 +1217,28 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 						farms_n += 1
 					if trees_c.size() + trees_r.size() < 9000 and rng.randf() < 0.008 and _ok_tree(p, exclude):
 						_add_tree(trees_c, trees_r, p, rng, 0.9, 1.3)
+					# harvest: a group of corn ricks, or rows of stooks drying in the field
+					if ricks.size() < 24 and rng.randf() < 0.0011 and _ok(p, exclude, 1.5):
+						var ry: float = rng.randf() * TAU
+						var rdir := Vector2(cos(ry), sin(ry))
+						if rng.randf() < 0.5:
+							for k in rng.randi_range(2, 5):
+								var q: Vector2 = p + rdir * (float(k) * 9.0) + Vector2(-rdir.y, rdir.x) * rng.randf_range(-1.5, 1.5)
+								ricks.append(_xf(Vector3(q.x, GroundKit.ground_y(q.x, q.y) - 0.2, q.y), rng.randf() * TAU, Vector3.ONE * rng.randf_range(0.85, 1.1)))
+						else:
+							for k in rng.randi_range(4, 8):
+								var q2: Vector2 = p + Vector2(-rdir.y, rdir.x) * (float(k) * 7.0)
+								stooks.append(_xf(Vector3(q2.x, GroundKit.ground_y(q2.x, q2.y), q2.y), ry, Vector3.ONE))
+					if wrecks.size() < 1 and rng.randf() < 0.00005 and _ok(p, exclude, 1.5):
+						wrecks.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * TAU, Vector3.ONE))
 				30:                                   # grassland
 					_field_edge_props(p, exclude, hedges, trees_c, trees_r, rng, 0.6)
 					if farms_n < 3 and rng.randf() < 0.0004 and _add_farmstead(p, exclude, houses, trees_c, trees_r, rng):
 						farms_n += 1
 					if trees_c.size() + trees_r.size() < 9000 and rng.randf() < 0.035 and _ok_tree(p, exclude):
 						_add_tree(trees_c, trees_r, p, rng, 0.85, 1.25)
+					if wrecks.size() < 1 and rng.randf() < 0.00004 and _ok(p, exclude, 1.5):
+						wrecks.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * TAU, Vector3.ONE))
 					if rng.randf() < 0.012 and _ok(p, exclude, 1.5):
 						cows.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * TAU, Vector3.ONE * 1.8))
 				50:                                   # built-up: terraced rows along the local street grid
@@ -1267,6 +1286,12 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 		out["multis"].append(["hedge", multi_data(hedges), VIS_HEDGE])
 	if LIVESTOCK and not cows.is_empty():
 		out["multis"].append(["cow", multi_data(cows), VIS_COW])
+	if not ricks.is_empty():
+		out["multis"].append(["rick", multi_data(ricks), RuralProps.VIS_RICK])
+	if not stooks.is_empty():
+		out["multis"].append(["stooks", multi_data(stooks), RuralProps.VIS_RICK * 0.6])
+	if not wrecks.is_empty():
+		out["multis"].append(["field_wreck", multi_data(wrecks), RuralProps.VIS_WRECK])
 	var tsp: Array = _split_trees(trees_c, trees_r)
 	for tv3 in tsp.size():
 		if not (tsp[tv3] as Array).is_empty():
@@ -1299,6 +1324,12 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 				mesh = hedge_mesh()
 			"cow":
 				mesh = cow_mesh()
+			"rick":
+				mesh = RuralProps.rick_mesh()
+			"stooks":
+				mesh = RuralProps.stook_mesh()
+			"field_wreck":
+				mesh = RuralProps.wreck_mesh()
 			"tree_c":
 				mesh = tree_mesh(false)
 			"tree_r":

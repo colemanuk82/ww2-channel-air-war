@@ -338,7 +338,11 @@ void fragment() {
 		col *= 1.0 + detail * near_k * 1.5 * (0.6 + 0.4 * detail_strength);
 	}
 	// Airfield grass: a gently lightened, mown version of the surrounding colour, fading out over `softness` metres.
+	// af_b.w is the zone kind: 1 = aerodrome grass, 2 = army camp (trampled grass and mud), 3 = POW / labour
+	// camp (bare sandy compound). Only the nearest 24 zones are uploaded (terrain_chunk_manager.gd).
 	float afw = 0.0;
+	float cw = 0.0;
+	float pw = 0.0;
 	for (int i = 0; i < 24; i++) {
 		vec4 b = af_b[i];
 		if (b.w < 0.5) { continue; }
@@ -348,7 +352,31 @@ void fragment() {
 		float across = dot(d, vec2(-a.w, a.z));
 		vec2 q = abs(vec2(along, across)) - b.xy;
 		float sd = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
-		afw = max(afw, 1.0 - smoothstep(0.0, b.z, sd));
+		if (b.w > 1.5) {
+			// camps: a ragged worn edge, not a ruled rectangle
+			sd += (t_vnoise2(xz * 0.018 + a.xy * 0.001) - 0.5) * b.z * 1.4;
+		}
+		float w = 1.0 - smoothstep(0.0, b.z, sd);
+		if (b.w < 1.5) { afw = max(afw, w); }
+		else if (b.w < 2.5) { cw = max(cw, w); }
+		else { pw = max(pw, w); }
+	}
+	if (cw > 0.0) {
+		// Army camp: the field lattice and hedge lines stop; worn pasture churned to mud in patches by tracks
+		// and boots, as in the 1944 marshalling-area photographs.
+		vec3 worn = mix(mix(grass_a, hedge_col, 0.30), mud_col, 0.22) * 0.92;
+		float churn = smoothstep(0.55, 0.80, t_vnoise2(xz * 0.022 + 5.0));
+		worn = mix(worn, mud_col * 0.95, churn * 0.65);
+		worn *= 0.94 + 0.12 * t_vnoise2(xz * 0.09 + 3.0);
+		col = mix(col, worn, cw * 0.9);
+	}
+	if (pw > 0.0) {
+		// POW compound: the ground inside the wire is beaten bare - pale sandy earth with a little grass at the
+		// edges (Stalag Luft III and the Rhineland Stalags stood on sandy heath).
+		vec3 bare = mix(mix(sand_col, soil_col, 0.55), grass_a, 0.12) * 0.86;
+		bare = mix(bare, mix(grass_a, hedge_col, 0.3), smoothstep(0.62, 0.85, t_vnoise2(xz * 0.03 + 9.0)) * 0.5);
+		bare *= 0.93 + 0.14 * t_vnoise2(xz * 0.12 + 1.0);
+		col = mix(col, bare, pw * 0.92);
 	}
 	if (afw > 0.0) {
 		// Aerodrome grass. The field patchwork stops inside the perimeter - no crop colour, no drill lines,

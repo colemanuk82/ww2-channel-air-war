@@ -36,9 +36,15 @@ Imported assets (CC0 / CC-BY) must be listed here as: name, author, licence, sou
   - "Freedom" by jeremusic70 — https://pixabay.com/users/jeremusic70-25199461/
   - "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans", "Battle Cry of the Brave" by nocopyrightsound633 — https://pixabay.com/users/nocopyrightsound633-47610058/
   - "Cinematic Action Movie Music", "Epic Orchestral Music with Flute", "Suspenseful Thriller Music" by musicwallah — https://pixabay.com/users/musicwallah-51797968/
+  - "Cinematic War" and "Trailer War" by The_Mountain — https://pixabay.com/users/the_mountain-3616498/
+  - "Military - War Military" and "Epic - Epic Battle" by YevhenAstafiev — https://pixabay.com/users/yevhenastafiev-52618283/
+  - "Hero Heroic Patriotic" by NastelBom — https://pixabay.com/users/nastelbom-48128234/
+  - "Danger and Resolution" by MUPHFI — https://pixabay.com/users/muphfi-36181755/
   - All tracks downloaded as royalty-free from https://pixabay.com.
 - Menu paintings (`assets/menu/`) are AI-generated; no photographic content.
-- Menu music (`assets/music/freedom.mp3`, `assets/music/cinematic_violin_tribal.mp3`) and victory music (`assets/music/victory/allies.mp3`, a copy of "Battle Cry of the Brave") are copies of the Pixabay tracks listed above, under the same licence.
+- Menu music (`assets/music/freedom.mp3`, `assets/music/cinematic_violin_tribal.mp3`) and Allied victory music (`assets/music/victory/allies.mp3`, a copy of "Battle Cry of the Brave") are copies of the Pixabay tracks listed above, under the same licence.
+- Menu music (Pixabay Content License): "Remembering Our Veterans - Heroic Cinematic Music" by Luis_Humanoide — https://pixabay.com/users/luis_humanoide-12661853/ ; "Swing That Jazz - 1940s Big Band Dance Music" by kaazoom — https://pixabay.com/users/kaazoom-448850/
+- Axis victory music (`assets/music/victory/axis.mp3`, Pixabay Content License): "Epic Military March – Heroic Snare Drum Theme" by DesiFreeMusic — https://pixabay.com/users/desifreemusic-28163210/
 
 ## Voices
 - Radio, briefing, training and crew voices (`assets/voice/`): generated with ElevenLabs (paid plan) from `assets/voice/voice_lines.csv` and `voice_story.csv`.

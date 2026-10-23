@@ -69,7 +69,7 @@ func _build(success: bool, stats: Dictionary) -> void:
 	b1.grab_focus()
 	for gm in get_tree().get_nodes_in_group("game_music"):
 		gm.call("fade_out_and_stop")
-	# victory music for a successful mission (assets/music/victory/<allies|axis>.mp3, Allies only for now)
+	# victory music for a successful mission (assets/music/victory/<allies|axis>.mp3)
 	if success:
 		var path: String = "res://assets/music/victory/%s.mp3" % ("axis" if GameState.player_side == "Axis" else "allies")
 		if ResourceLoader.exists(path) and not AudioManager.muted:

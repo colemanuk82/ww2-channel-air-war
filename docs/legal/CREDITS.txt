@@ -26,6 +26,13 @@ Licensed under the Pixabay Content Licence, https://pixabay.com/service/license-
 - "Freedom" by jeremusic70
 - "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans", "Battle Cry of the Brave" by nocopyrightsound633
 - "Cinematic Action Movie Music", "Epic Orchestral Music with Flute", "Suspenseful Thriller Music" by musicwallah
+- "Cinematic War" and "Trailer War" by The_Mountain
+- "Military - War Military" and "Epic - Epic Battle" by YevhenAstafiev
+- "Hero Heroic Patriotic" by NastelBom
+- "Danger and Resolution" by MUPHFI
+- "Remembering Our Veterans - Heroic Cinematic Music" by Luis_Humanoide
+- "Swing That Jazz - 1940s Big Band Dance Music" by kaazoom
+- "Epic Military March - Heroic Snare Drum Theme" by DesiFreeMusic
 
 VOICES
 All radio, briefing, training and crew voices are AI-generated with ElevenLabs text-to-speech, https://elevenlabs.io. No human recordings are used.
