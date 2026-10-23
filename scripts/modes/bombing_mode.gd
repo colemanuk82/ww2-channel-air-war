@@ -32,6 +32,7 @@ var _wave_t: float = 30.0
 var _waves_spawned: int = 0
 var _destroyed_count: int = 0
 var _player_dead: bool = false
+var _death_note: String = ""        # how the player was lost, shown on the results screen
 var _near_msg: bool = false
 var _debug_t: float = 5.0
 var _kills: int = 0
@@ -128,7 +129,9 @@ func start() -> void:
 	if player and is_instance_valid(player):
 		var p: Aircraft = player as Aircraft
 		p.destroyed.connect(_on_player_destroyed)
-		p.crashed.connect(func(_a: Aircraft, _r: String) -> void: _on_player_destroyed(p, null))
+		p.crashed.connect(func(_a: Aircraft, r: String) -> void:
+			_death_note = "killed - crashed (%s)" % r
+			_on_player_destroyed(p, null))
 		if p.bombs <= 0:
 			p.bombs = 2
 		if teleport:
@@ -297,7 +300,7 @@ func _on_player_destroyed(_a: Node, _k: Node) -> void:
 		return
 	_player_dead = true
 	print("BombingMode: player destroyed t=%.1f" % elapsed)
-	finish(false, _stats("killed"))
+	finish(false, _stats(_death_note if _death_note != "" else "killed - shot down"))
 
 
 func _stats(reason: String = "") -> Dictionary:

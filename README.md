@@ -1,4 +1,4 @@
-﻿<div align="center">
+<div align="center">
 
 # ✈️ WW2 Channel Air War
 
@@ -56,7 +56,7 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v1.24.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v1.25.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 

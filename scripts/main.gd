@@ -115,6 +115,8 @@ func _ready() -> void:
 			get_tree().reload_current_scene())
 
 	var cfg: Dictionary = _initial_config()
+	if _args.has("--mission-audit"):     # debug: every mission's objectives / start airfields must resolve and build
+		get_tree().create_timer(4.0).timeout.connect(_mission_audit)
 	if _args.has("--wingmen-test"):      # debug: report wingmen 5 s after start (use with --plan=...airborne... --wingmen=N)
 		get_tree().create_timer(16.0).timeout.connect(func() -> void: print("[wingmen] wanted %d, spawned %d, alive %d" % [mode.wingmen_wanted, mode.wingmen_list.size(), mode.wingmen_list.filter(func(w: Variant) -> bool: return is_instance_valid(w) and (w as Aircraft).state == Aircraft.State.ALIVE).size()]))
 	if _args.has("--audio-test"):
@@ -1388,6 +1390,47 @@ func _initial_config() -> Dictionary:
 	if String(cfg["aircraft"]) == "" and String(cfg["mode"]) != "historical":     # historical: start_game picks the mission's own aircraft
 		cfg["aircraft"] = AircraftCatalog.default_fighter(cfg["side"])
 	return cfg
+
+
+func _mission_audit() -> void:
+	var pop: WorldPopulator = WorldPopulator.ensure(self)
+	var bad: int = 0
+	var checked: int = 0
+	for m in HistoricalMissions.list():
+		var mid: String = str((m as Dictionary).get("id", "?"))
+		for sd in (m as Dictionary).get("sides", []):
+			var sname: String = str(sd["side"])
+			var af: String = str(sd.get("start_airfield", ""))
+			if af != "" and pop.get_airfield(af) == null:
+				print("[audit] %s/%s: start airfield '%s' does not resolve" % [mid, sname, af])
+				bad += 1
+			if sd.has("aircraft") and (sd["aircraft"] as Array).is_empty():
+				print("[audit] %s/%s: no aircraft listed" % [mid, sname])
+				bad += 1
+			for aid in sd.get("aircraft", []):
+				if not AircraftCatalog.ids_for_side(sname).has(str(aid)):
+					print("[audit] %s/%s: aircraft '%s' is not a %s aircraft" % [mid, sname, str(aid), sname])
+					bad += 1
+		var role_by: Dictionary = (m as Dictionary).get("roles", {})
+		for sname in ["Allies", "Axis"]:
+			var ids: Array = ((m as Dictionary).get("objectives", {}) as Dictionary).get(sname, [])
+			if (m as Dictionary).get("sides", []).filter(func(x: Variant) -> bool: return str(x["side"]) == sname).is_empty():
+				continue
+			if ids.is_empty() and str(role_by.get(sname, "strike")) in ["strike", "strafe", "escort"]:
+				print("[audit] %s/%s: role %s but no objectives" % [mid, sname, str(role_by.get(sname, "strike"))])
+				bad += 1
+			for id in ids:
+				checked += 1
+				if pop.get_target_info(str(id)).is_empty():
+					print("[audit] %s/%s: objective '%s' has no target info" % [mid, sname, str(id)])
+					bad += 1
+					continue
+				var n: Node = pop.spawn_target(str(id))
+				if n == null or not n.has_signal("destroyed"):
+					print("[audit] %s/%s: objective '%s' did not spawn a destroyable target" % [mid, sname, str(id)])
+					bad += 1
+	print("[audit] %d missions, %d objectives checked, %d problems" % [HistoricalMissions.list().size(), checked, bad])
+	get_tree().quit()
 
 
 func _ui_shot() -> void:

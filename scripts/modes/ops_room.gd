@@ -40,7 +40,8 @@ const AIR_KINDS := ["intercept", "cover", "sweep", "escort"]
 const MIN_RANGE: float = 12000.0       # world units (= metres horizontally)
 const MAX_RANGE: float = 90000.0       # preferred band; beyond it the nearest candidate (up to FAR_LIMIT) is used
 const FAR_LIMIT: float = 180000.0
-const STALE_AFTER: float = 900.0       # at the next call, a tasking older than 15 minutes is replaced
+const STALE_AFTER: float = 900.0       # at the next call, a tasking older than 15 minutes (plus the transit time to it) is replaced
+const TRANSIT_SPEED: float = 70.0      # u/s, slow cruise: the transit allowance added to a far tasking's stale time
 
 var interval: float = 600.0
 var side: String = "Allies"
@@ -172,9 +173,9 @@ func _process(delta: float) -> void:
 			_next_t = 20.0          # nothing new until they've been home for more ammunition
 		elif active.is_empty():
 			_issue()
-		elif float(active["age"]) > STALE_AFTER:
+		elif float(active["age"]) > float(active.get("stale_after", STALE_AFTER)):
 			_say("Cancel the last tasking. Something more urgent has come up.")
-			_end_active(false, true)
+			_end_active(false, true, true)      # a dispatcher cancellation is a scrub, not a miss
 			_issue()
 	if not active.is_empty():
 		active["age"] = float(active["age"]) + delta
@@ -337,6 +338,9 @@ func _issue_inner(scramble: bool, followup: bool) -> void:
 			continue
 		info["kind"] = kind
 		info["age"] = 0.0
+		# a far job is not stale before the pilot has had time to fly there (game time, so time warp cannot time it out)
+		var _far: float = _dist(info["pos"]) if info.get("pos") is Vector3 else 0.0
+		info["stale_after"] = STALE_AFTER + (_far / TRANSIT_SPEED) * 1.5
 		if not info.has("hit"):
 			info["hit"] = info.get("nodes", []).duplicate()
 		if not from_intel.is_empty() and attempt == 0:

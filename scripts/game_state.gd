@@ -62,8 +62,8 @@ var paused: bool = false
 # simulation fast-forwards the long empty transits. It is NOT the day/night clock (time_speed / TIME_SPEEDS is
 # separate and stays independent) and it is deliberately not persisted: every session starts at 1x and main.gd
 # resets it on pause, on the results screen and when leaving to the menu.
-const SIM_WARPS := [1, 2, 4, 8, 16, 32]
-const SIM_WARP_NAMES := ["1x", "2x", "4x", "8x", "16x", "32x"]
+const SIM_WARPS := [1, 2, 4]      # the simulation does not hold together above 4x, so that is the top of the ladder
+const SIM_WARP_NAMES := ["1x", "2x", "4x"]
 var sim_warp: int = 1        # current multiplier from SIM_WARPS; main.gd applies it as Engine.time_scale
 
 
@@ -72,7 +72,7 @@ func sim_warp_index() -> int:
 	return maxi(SIM_WARPS.find(sim_warp), 0)
 
 
-## Step the warp one notch up (dir = 1) or down (dir = -1), clamped to SIM_WARPS (so it can never exceed 32x).
+## Step the warp one notch up (dir = 1) or down (dir = -1), clamped to SIM_WARPS (so it can never exceed 4x).
 func step_sim_warp(dir: int) -> int:
 	sim_warp = int(SIM_WARPS[clampi(sim_warp_index() + dir, 0, SIM_WARPS.size() - 1)])
 	return sim_warp

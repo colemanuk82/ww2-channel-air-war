@@ -39,6 +39,7 @@ var _scan_t: float = 0.0
 var _counted: Dictionary = {}
 var _target_nodes: Array = []
 var _player_dead: bool = false
+var _death_note: String = ""
 var _debug_t: float = 8.0
 var _spawned: Array = []
 
@@ -100,7 +101,9 @@ func start() -> void:
 	if player and is_instance_valid(player):
 		var p: Aircraft = player as Aircraft
 		p.destroyed.connect(_on_player_destroyed)
-		p.crashed.connect(func(_a: Aircraft, _r: String) -> void: _on_player_destroyed(p, null))
+		p.crashed.connect(func(_a: Aircraft, r: String) -> void:
+			_death_note = "killed - crashed (%s)" % r
+			_on_player_destroyed(p, null))
 		if teleport:
 			var dir: Vector3 = Vector3(0, 0, 1) if enemy_side == "Axis" else Vector3(0, 0, -1)
 			var pos: Vector3 = _center - dir * 2200.0
@@ -242,7 +245,9 @@ func _on_player_destroyed(_a: Node, _k: Node) -> void:
 	if _player_dead or not running:
 		return
 	_player_dead = true
-	finish(false, _stats())
+	var st: Dictionary = _stats()
+	st["reason"] = _death_note if _death_note != "" else "killed - shot down"
+	finish(false, st)
 
 
 func _process(delta: float) -> void:

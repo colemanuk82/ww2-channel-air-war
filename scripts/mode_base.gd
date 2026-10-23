@@ -579,6 +579,7 @@ func finish(success: bool, extra: Dictionary = {}) -> void:
 	running = false
 	var stats := {"score": score, "time": elapsed, "success": success}
 	stats.merge(extra, true)
+	print("[mission] finish success=%s reason='%s' t=%.0f score=%d mode=%s" % [success, str(extra.get("reason", "")), elapsed, score, str(get_meta("mode_id", name))])
 	_merge_kills(stats)
 	var mid: String = str(get_meta("mode_id", ""))
 	var label: String = ModeRegistry.display_name(mid) if mid != "" and ModeRegistry.MODES.has(mid) else "Sortie"
