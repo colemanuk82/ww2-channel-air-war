@@ -502,7 +502,7 @@ func take_damage(amount: float, source: Node = null) -> void:
 		state = State.DYING
 		_dying_spin = randf_range(-1.5, 1.5)
 		# sometimes a kill detonates in the air rather than gliding down (fuel / ammo going up)
-		if randf() < 0.35:
+		if randf() < 0.35 and not has_meta("bailed"):     # an abandoned aircraft flies on and crashes, it never airbursts
 			_explode_t = randf_range(0.4, 2.2)
 		destroyed.emit(self, source)
 		if not player_controlled and WeaponWorld.is_player_source(source):
