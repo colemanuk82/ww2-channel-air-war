@@ -253,7 +253,7 @@ func _build_grass(earth: Material) -> void:
 func _build_cross(earth: Material) -> void:
 	var L: float = runway_length
 	_runway_pivot(0.0, L, runway_width, _asphalt)
-	_runway_pivot(58.0, L * 0.8, runway_width * 0.8, _asphalt2, Vector3(0, 0, L * 0.05))
+	_runway_pivot(58.0, L * 0.8, runway_width * 0.8, _asphalt2, Vector3(0, 0.15, L * 0.05))
 	var xw: float = -L * 0.13
 	_link(Vector3(xw, 0, -L * 0.5), Vector3(xw, 0, L * 0.5), 14.0, _asphalt2)
 	_link(Vector3(-runway_width * 0.5, 0, -L * 0.5 + 12.0), Vector3(xw, 0, -L * 0.5 + 12.0), 14.0, _asphalt2)
@@ -276,7 +276,7 @@ func _build_parallel(earth: Material) -> void:
 	var L: float = runway_length
 	var sep: float = 330.0 + L * 0.05
 	_runway_pivot(0.0, L, runway_width, _asphalt)
-	_runway_pivot(0.0, L * 0.85, runway_width * 0.9, _asphalt2, Vector3(sep, 0, L * 0.06))
+	_runway_pivot(0.0, L * 0.85, runway_width * 0.9, _asphalt2, Vector3(sep, 0.15, L * 0.06))
 	var mid: float = sep * 0.5
 	_link(Vector3(mid, 0, -L * 0.5), Vector3(mid, 0, L * 0.5), 14.0, _asphalt2)
 	for z in [-L * 0.45, -L * 0.15, L * 0.15, L * 0.45]:
@@ -315,7 +315,7 @@ func _build_forward(earth: Material) -> void:
 func _runway_seg(from: Vector3, to: Vector3, width: float, mat: Material) -> void:
 	var d: Vector3 = to - from
 	var rw := Node3D.new()
-	rw.position = (from + to) * 0.5
+	rw.position = (from + to) * 0.5 + Vector3(0.0, 0.15, 0.0)     # raised so it never z-fights with the main runway
 	rw.rotation.y = atan2(d.x, d.z)
 	add_child(rw)
 	var length: float = d.length()
@@ -364,10 +364,15 @@ func _perimeter_track(mat: Material) -> void:
 
 
 ## Straight taxiway link between two local points.
+var _link_n: int = 0
+
+
 func _link(from: Vector3, to: Vector3, width: float, mat: Material) -> void:
 	var mid := (from + to) * 0.5
 	var d := to - from
-	_box(Vector3(width, 0.5, d.length()), Vector3(mid.x, 0.0, mid.z), mat, atan2(d.x, d.z))
+	_link_n += 1
+	# each taxiway sits a hair below the runways and at its own height, so overlaps never shimmer
+	_box(Vector3(width, 0.5, d.length()), Vector3(mid.x, -0.04 - 0.03 * float(_link_n % 3), mid.z), mat, atan2(d.x, d.z))
 
 
 ## Circular tarmac dispersal pen with a low earth revetment around the outboard side.
