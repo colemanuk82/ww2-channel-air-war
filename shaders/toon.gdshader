@@ -233,6 +233,32 @@ vec3 detail_aircraft(vec3 col, inout float wear) {
 	return col;
 }
 
+// Flying kit (detail_mode 8 cloth, 9 leather, 10 skin): a handful of cheap noise taps on a few small meshes.
+// Cloth: twill weave (faded with range so it never shimmers), soft folds, grime and seam darkening.
+// Leather: fine grain, creases and scuffed, lighter worn edges. Skin: faint ruddy mottling.
+vec3 detail_kit(vec3 col, int mode, float dist) {
+	vec3 p = obj_p;
+	float near_k = 1.0 - smoothstep(25.0, 70.0, dist);
+	float folds = t_vnoise3(p * vec3(7.0, 16.0, 7.0));
+	float fine = t_vnoise3(p * 55.0);
+	if (mode == 8) {
+		float twill = 0.5 + 0.5 * sin((p.x + p.y) * 210.0) * sin((p.y - p.z) * 190.0);
+		col *= 1.0 - 0.10 * near_k * twill;
+		col *= 0.86 + 0.28 * folds;
+		col *= 1.0 - 0.18 * smoothstep(0.62, 0.9, t_vnoise3(p * 4.0 + 7.0));          // grease / grime patches
+		col = mix(col, col * vec3(1.06, 1.02, 0.94), smoothstep(0.3, 0.9, obj_n.y) * 0.4);   // sun-faded shoulders
+	} else if (mode == 9) {
+		col *= 0.88 + 0.24 * fine * near_k + 0.10 * (1.0 - near_k);
+		col *= 0.80 + 0.40 * smoothstep(0.35, 0.8, folds);                            // creases
+		float scuff = smoothstep(0.70, 0.84, t_vnoise3(p * 11.0 + 3.0));
+		col = mix(col, col * 1.55 + 0.04, scuff * 0.5);                               // rubbed-through, paler leather
+	} else {
+		col *= 0.93 + 0.14 * t_vnoise3(p * 14.0);
+		col = mix(col, col * vec3(1.08, 0.92, 0.9), smoothstep(0.55, 0.85, t_vnoise3(p * 5.0)) * 0.5);
+	}
+	return col;
+}
+
 vec3 detail_grass(vec3 col) {
 	vec2 p = w_pos.xz;
 	float mow = step(0.5, fract(dot(p, vec2(0.7, 0.7)) / 38.0));
@@ -257,6 +283,7 @@ void fragment() {
 	else if (detail_mode == 4) { col = detail_grass(col); }
 	else if (detail_mode == 5) { float wr = 0.0; col = detail_aircraft(col, wr); }
 	else if (detail_mode == 6) { col = detail_runway(col, length(w_pos - CAMERA_POSITION_WORLD)); }
+	else if (detail_mode >= 8) { col = detail_kit(col, detail_mode, length(w_pos - CAMERA_POSITION_WORLD)); }
 	else if (detail_mode == 7) {
 		// hand-painted and worn: ragged edges and flaked-off patches show the concrete underneath
 		vec2 pq = obj_p.xz * strip_wl;

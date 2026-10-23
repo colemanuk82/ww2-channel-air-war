@@ -2299,6 +2299,17 @@ func _parse_debug_args() -> void:
 		elif a.begins_with("--orbit="):   # debug: hold a free-look orbit offset in degrees, e.g. --orbit=85,6 (side view)
 			var oq: PackedStringArray = a.substr(8).split(",")
 			camera_rig.set_orbit(float(oq[0]), float(oq[1]) if oq.size() > 1 else 0.0)
+		elif a.begins_with("--chute="):   # debug: close-up of a parachuting pilot of the given side, e.g. --chute=Axis
+			var cside: String = a.substr(8)
+			get_tree().create_timer(0.3).timeout.connect(func() -> void:
+				var ch: Parachute = FX.parachute(player.global_position + Vector3(0, 40, 0), "", cside)
+				if ch != null:
+					var cc := Camera3D.new()
+					cc.fov = 50.0
+					ch.add_child(cc)
+					cc.position = Vector3(2.6, 1.2, 4.6)
+					cc.look_at(ch.global_position + Vector3(0, 0.8, 0), Vector3.UP)
+					cc.make_current())
 		elif a == "--noout":
 			GameState.outlines_enabled = false
 		elif a == "--nohud":      # debug: clean screenshots with the HUD and hints hidden

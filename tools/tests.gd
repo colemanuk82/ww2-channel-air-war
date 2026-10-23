@@ -1401,6 +1401,7 @@ func _test_ai_takeoff_all() -> void:
 						_check(prop_low >= 0.4, "%s: propeller clears the runway at %.0f deg (%.2f m)" % [sid, dg, prop_low])
 				print("   stance %s: rest %.1f deg, origin %.2f m (gear stat %.2f), prop r %.2f" % [sid, rad_to_deg(rest), ac.ground_offset(rest), st.gear_height, ac._gg_pr])
 			p.begin_takeoff(dir, AIPilot.State.PATROL)
+			_check(ac.crew_count() >= 1 and (not bomber or ac.crew_count() >= 2), "%s: crew count sensible (%d)" % [sid, ac.crew_count()])
 			_check(ac.invulnerable, "%s: protected during the take-off roll" % sid)
 			ac.take_damage(500.0)
 			_check(ac.state == Aircraft.State.ALIVE and ac.health >= ac.stats.max_health - 0.01, "%s: ignores damage while taking off" % sid)

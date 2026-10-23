@@ -472,6 +472,17 @@ func _check_collisions(delta: float) -> void:
 		return
 
 
+## Number of men aboard (one parachute each when they bail out or the aircraft is shot down intact).
+func crew_count() -> int:
+	var key: String = String(stats.id) if stats != null else ""
+	var table: Dictionary = {"defiant": 2, "bf110": 2, "ju87": 2, "mosquito": 2, "blenheim": 3, "a20": 3, "ju52": 3,
+		"c47": 4, "do17": 4, "ju88": 4, "he111": 5, "b25": 6, "b26": 6, "fw200": 6, "lancaster": 7}
+	for k in table:
+		if key.begins_with(k):
+			return int(table[k])
+	return 1
+
+
 func take_damage(amount: float, source: Node = null) -> void:
 	if state != State.ALIVE or invulnerable:
 		return

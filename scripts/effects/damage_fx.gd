@@ -76,11 +76,18 @@ func _on_destroyed(a: Aircraft, _killer: Node) -> void:
 	FX.explosion(a.global_position, 4.0)   # in-air hit flash
 	if randf() < 0.45:
 		_lose_wing(a)
-	if a.altitude_agl > 50.0 and not a.on_ground and randf() < 0.7:
+	# a kill that blows up in mid-air leaves nobody alive; otherwise each man aboard may get out
+	if a.altitude_agl > 50.0 and not a.on_ground and not a.has_meta("bailed") and a._explode_t <= 0.0:
 		var pos: Vector3 = a.global_position
 		var side: String = a.team
-		get_tree().create_timer(0.7).timeout.connect(func() -> void:
-			FX.parachute(pos + Vector3(0, -2, 0), side))
+		var fwd: Vector3 = -a.global_transform.basis.z
+		var out: int = 0
+		for i in a.crew_count():
+			if randf() < (0.7 if i == 0 else 0.65):
+				var off: Vector3 = Vector3(randf_range(-3.0, 3.0), -2.0, randf_range(-3.0, 3.0)) + fwd * float(i) * -9.0
+				get_tree().create_timer(0.7 + 0.45 * float(out)).timeout.connect(func() -> void:
+					FX.parachute(pos + off, side))
+				out += 1
 
 
 func _lose_wing(a: Aircraft) -> void:

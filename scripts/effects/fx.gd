@@ -552,7 +552,7 @@ func crater(pos: Vector3, radius: float = 6.0) -> void:
 	c.visible = true
 
 
-func parachute(pos: Vector3, team: String = "") -> Parachute:
+func parachute(pos: Vector3, team: String = "", look: String = "") -> Parachute:
 	var p: Parachute = null
 	for c in _chutes:
 		if not c.active:
@@ -564,7 +564,7 @@ func parachute(pos: Vector3, team: String = "") -> Parachute:
 		p = Parachute.new()
 		add_child(p)
 		_chutes.append(p)
-	p.launch(pos, team)
+	p.launch(pos, team, look)
 	return p
 
 

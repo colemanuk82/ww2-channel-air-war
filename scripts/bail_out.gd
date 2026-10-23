@@ -63,10 +63,15 @@ func tick(delta: float, player: Aircraft) -> void:
 func _jump(player: Aircraft) -> void:
 	_aircraft = player
 	var pos: Vector3 = player.global_position + player.global_transform.basis.y * 2.0 - player.global_transform.basis.z * 1.0
-	_chute = FX.parachute(pos, "")
+	_chute = FX.parachute(pos, "", player.team)
 	if _chute == null:
 		_msg("Cannot bail out now", 2.0)
 		return
+	# the rest of the crew follow him out, one parachute each (staggered, a little behind)
+	for i in range(1, player.crew_count()):
+		var off: Vector3 = player.global_transform.basis.z * float(i) * 9.0 + Vector3(randf_range(-3.0, 3.0), 0.0, randf_range(-3.0, 3.0))
+		get_tree().create_timer(0.5 * float(i)).timeout.connect(func() -> void:
+			FX.parachute(pos + off, "", player.team))
 	active = true
 	_done = false
 	_t = 0.0
@@ -80,6 +85,7 @@ func _jump(player: Aircraft) -> void:
 	player.cmd_fire = false
 	player.throttle_target = 0.0
 	player.player_controlled = false
+	player.set_meta("bailed", true)       # the pilot is already out: no second parachute from the wreck
 	player.take_damage(1.0e6, null)
 	_cam = Camera3D.new()
 	_cam.fov = 60.0
