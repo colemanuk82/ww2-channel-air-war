@@ -8,6 +8,7 @@ var active: bool = false
 var _t: float = 0.0
 var _landed_t: float = -1.0
 var _land_pose: float = 0.0
+var _fast: bool = false        # the player's own chute: twice the descent rate above 50 m, normal below
 var _canopy: MeshInstance3D
 var _sway: float = 0.0
 var _drift: Vector3 = Vector3.ZERO
@@ -159,6 +160,7 @@ func _build_pilot(side: String) -> void:
 
 func launch(pos: Vector3, p_team: String = "", p_look: String = "") -> void:
 	team = p_team
+	_fast = p_team == ""
 	var look: String = p_look if p_look != "" else (p_team if p_team != "" else "Allies")
 	if look != _look and _rig != null:
 		_build_pilot(look)
@@ -203,6 +205,8 @@ func _process(delta: float) -> void:
 		return
 	var open: float = clampf((_t - 0.6) / 1.0, 0.0, 1.0)
 	var fall: float = lerpf(35.0, FALL_SPEED, open)
+	if _fast and open >= 1.0 and global_position.y - FX.ground_height(global_position) > 50.0:
+		fall = FALL_SPEED * 2.0
 	if _canopy:
 		_canopy.scale = Vector3(lerpf(0.2, 1.0, open), lerpf(0.1, 0.55, open), lerpf(0.2, 1.0, open))
 	var p: Vector3 = global_position + (Vector3.DOWN * fall + _drift * open) * delta

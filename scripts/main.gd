@@ -2112,8 +2112,8 @@ func _update_sim_warp(delta: float) -> void:
 	if not can_warp:
 		_set_sim_warp(1, "Normal time")
 		return
-	if pl == null or not is_instance_valid(pl):
-		return
+	if bailing or pl == null or not is_instance_valid(pl):
+		return          # on the parachute the warp is never cancelled by contact
 	for n in get_tree().get_nodes_in_group("aircraft"):
 		if n is Aircraft and (n as Aircraft).team != GameState.player_side and (n as Aircraft).state == Aircraft.State.ALIVE and (n as Node3D).global_position.distance_to(pl.global_position) < WARP_CONTACT_RANGE:
 			_set_sim_warp(1, "Contact - normal time")
