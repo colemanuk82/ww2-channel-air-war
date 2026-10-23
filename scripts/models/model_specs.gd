@@ -209,9 +209,9 @@ static func lancaster() -> Dictionary:
 			{"x": 9.2, "y": 0.05, "z0": -3.6, "z1": 1.4, "r": 0.75, "prop_r": 1.9, "blades": 3}],
 		"canopies": [[[-5.0, 0.2, 0.2, 0.9], [-4.2, 0.7, 0.5, 1.35], [-2.8, 0.8, 0.5, 1.5], [-1.6, 0.3, 0.25, 1.4]]],
 		"extras": [
-			{"t": "sphere", "pos": Vector3(0, 0.3, -6.9), "size": Vector3(0.7, 0, 0), "col": "grey"},
-			{"t": "sphere", "pos": Vector3(0, 1.5, 3.0), "size": Vector3(0.75, 0, 0), "col": "grey"},
-			{"t": "sphere", "pos": Vector3(0, 0.3, 11.1), "size": Vector3(0.65, 0, 0), "col": "grey"}],
+			{"t": "sphere", "pos": Vector3(0, 0.3, -6.9), "size": Vector3(0.45, 0, 0), "col": "grey"},
+			{"t": "sphere", "pos": Vector3(0, 1.45, 3.0), "size": Vector3(0.5, 0, 0), "col": "grey"},
+			{"t": "sphere", "pos": Vector3(0, 0.3, 11.1), "size": Vector3(0.45, 0, 0), "col": "grey"}],
 		"gear": {"x": 4.8, "y": -0.5, "z": -0.2, "len": 1.5, "r": 0.65},
 		"tail_wheel": [-1.0, 9.8],
 		"guns": [0.5, 0.0, -6.6], "eye": Vector3(0, 1.4, -4.4),

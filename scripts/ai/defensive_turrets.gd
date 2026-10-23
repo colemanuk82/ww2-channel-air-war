@@ -235,7 +235,7 @@ static func attach(a: Aircraft, p_hud: Node = null, p_skill: float = 0.6) -> Def
 
 func _build(layout: Array) -> void:
 	var r: float = aircraft.stats.radius
-	var dome_r: float = clampf(r * 0.07, 0.6, 1.3)
+	var dome_r: float = clampf(r * 0.04, 0.35, 0.72)
 	var skin: ShaderMaterial = ToonUtil.make_toon(Color(0.2, 0.22, 0.2))
 	var glass := StandardMaterial3D.new()
 	glass.albedo_color = Color(0.45, 0.6, 0.65, 0.5)
@@ -253,8 +253,8 @@ func _build(layout: Array) -> void:
 		var sm := SphereMesh.new()
 		sm.radius = dome_r
 		sm.height = dome_r * 2.0
-		sm.radial_segments = 12
-		sm.rings = 6
+		sm.radial_segments = 20
+		sm.rings = 10
 		dome.mesh = sm
 		dome.material_override = glass if key in ["nose", "tail"] else skin
 		dome.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -262,8 +262,8 @@ func _build(layout: Array) -> void:
 		for sx in [-1.0, 1.0]:
 			var b := MeshInstance3D.new()
 			var cm := CylinderMesh.new()
-			cm.top_radius = 0.035
-			cm.bottom_radius = 0.05
+			cm.top_radius = 0.025
+			cm.bottom_radius = 0.035
 			cm.height = dome_r * 1.5
 			cm.radial_segments = 5
 			b.mesh = cm

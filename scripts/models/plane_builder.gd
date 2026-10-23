@@ -782,7 +782,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	# view forward is clear (the glazing is hidden in the cockpit view anyway).
 	var fus_d: Dictionary = spec.get("fus", {})
 	if String(fus_d.get("profile", "")) == "bomber":
-		eye_v.y = maxf(eye_v.y, float(fus_d.get("cy", 0.0)) + float(fus_d.get("hh", 1.0)) + 0.25)
+		eye_v.y = maxf(eye_v.y, float(fus_d.get("cy", 0.0)) + float(fus_d.get("hh", 1.0)) + 0.5)
 	eye.position = eye_v * sc
 	model.add_child(eye)
 	return model
