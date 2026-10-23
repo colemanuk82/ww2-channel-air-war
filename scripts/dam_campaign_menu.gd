@@ -36,7 +36,7 @@ func _ready() -> void:
 	box.custom_minimum_size = Vector2(620, 0)
 	box.add_theme_constant_override("separation", 10)
 	center.add_child(box)
-	box.add_child(UIKit.label("DAM BUSTERS", 34, UIKit.TEXT, true))
+	box.add_child(UIKit.label("DAM BUSTERS  [WORK IN PROGRESS]", 34, UIKit.TEXT, true))
 	box.add_child(UIKit.label("Training, then Operation Chastise. One mission a day.", 16, UIKit.TEXT_DIM))
 	_list = VBoxContainer.new()
 	_list.add_theme_constant_override("separation", 6)

@@ -16,8 +16,8 @@ const MODES := {
 	"training": {"name": "Training", "script": "res://scripts/modes/training_mode.gd", "desc": "Flying school: basics, take-off, landing, gunnery, rockets and bombs, formation flying, stalls and dogfighting. Pick a lesson from the Mission list."},
 	"defend": {"name": "Defend Targets", "script": "res://scripts/ground/defend_mode.gd", "desc": "Intercept enemy bomber raids before they hit your installations."},
 	"escort": {"name": "Bomber Escort", "script": "res://scripts/modes/escort_mode.gd", "desc": "Escort a bomber formation to a real target and back. Keep the bombers alive through the interceptors."},
-	"dambuster": {"name": "Dam Busters", "script": "res://scripts/modes/dam_run_mode.gd", "desc": "Training, then Operation Chastise: low flying, skipping bombs, release timing and the attack on the Möhne, Eder and Sorpe dams. One mission a day."},
-	"historical": {"name": "Historical Missions", "script": "res://scripts/modes/historical_missions.gd", "desc": "Battle of Britain, Dieppe, D-Day, Dunkirk and the bomber raids. Pick a mission from the Mission list."},
+	"dambuster": {"name": "Dam Busters [WIP]", "script": "res://scripts/modes/dam_run_mode.gd", "desc": "Training, then Operation Chastise: low flying, skipping bombs, release timing and the attack on the Möhne, Eder and Sorpe dams. One mission a day."},
+	"historical": {"name": "Historical Missions [WIP]", "script": "res://scripts/modes/historical_missions.gd", "desc": "Battle of Britain, Dieppe, D-Day, Dunkirk and the bomber raids. Pick a mission from the Mission list."},
 }
 
 

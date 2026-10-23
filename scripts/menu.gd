@@ -215,7 +215,7 @@ void fragment() {
 	var pl := UIKit.button("Pilot's Life", _open_career, 20)
 	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(pl)
-	var db := UIKit.button("Dam Busters", _open_dam_busters, 20)
+	var db := UIKit.button("Dam Busters [WIP]", _open_dam_busters, 20)
 	db.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(db)
 	var lb := UIKit.button("Logbook", _open_logbook, 20)
@@ -402,7 +402,7 @@ func _fill_missions(mode_id: String) -> void:
 		for i in DamCampaign.count():
 			_mission_ids.append(str(i))
 			var tag: String = "" if (DamCampaign.is_passed(i) or DamCampaign.is_open(i)) else "  (locked)"
-			_mission.add_item(str(DamCampaign.DAYS[i]["title"]) + tag)
+			_mission.add_item(str(DamCampaign.DAYS[i]["title"]) + "  [WIP]" + tag)
 	elif want == "training":
 		for l in TrainingMode.LESSONS:
 			_mission_ids.append(String(l["id"]))
@@ -410,7 +410,9 @@ func _fill_missions(mode_id: String) -> void:
 	else:
 		for m in HistoricalMissions.list():
 			_mission_ids.append(str(m.get("id", "")))
-			_mission.add_item(GameState.mission_label(str(m.get("id", "")), str(m.get("name", m.get("id", "")))))
+			var lbl: String = GameState.mission_label(str(m.get("id", "")), str(m.get("name", m.get("id", ""))))
+			# the historical missions are still being worked on; the original missions (marked with a diamond) are finished
+			_mission.add_item(lbl if str(m.get("name", "")).begins_with("\u25c6") else "[WIP] " + lbl)
 		if _mission_ids.is_empty():
 			_mission.add_item("(none)")
 	_mission.select(0)
