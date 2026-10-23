@@ -6,9 +6,9 @@ extends RefCounted
 
 # [t along fuselage 0..1 (nose->tail), width frac, height frac, centre-y offset (x hh)]
 const PROFILES := {
-	"inline": [[0.0, 0.28, 0.25, 0.0], [0.05, 0.72, 0.68, 0.0], [0.17, 1.0, 0.95, 0.0], [0.33, 0.96, 1.0, 0.1], [0.5, 0.78, 0.85, 0.1], [0.7, 0.5, 0.6, 0.12], [0.88, 0.26, 0.38, 0.16], [1.0, 0.1, 0.2, 0.2]],
+	"inline": [[0.0, 0.10, 0.09, 0.0], [0.015, 0.34, 0.31, 0.0], [0.035, 0.56, 0.52, 0.0], [0.06, 0.74, 0.70, 0.0], [0.10, 0.90, 0.86, 0.0], [0.17, 1.0, 0.95, 0.0], [0.33, 0.96, 1.0, 0.1], [0.5, 0.78, 0.85, 0.1], [0.7, 0.5, 0.6, 0.12], [0.88, 0.26, 0.38, 0.16], [1.0, 0.1, 0.2, 0.2]],
 	"radial": [[0.0, 0.8, 0.8, 0.0], [0.05, 1.0, 1.0, 0.0], [0.2, 0.98, 1.0, 0.02], [0.4, 0.8, 0.9, 0.04], [0.6, 0.6, 0.72, 0.08], [0.8, 0.36, 0.5, 0.12], [0.93, 0.2, 0.3, 0.16], [1.0, 0.1, 0.18, 0.2]],
-	"bomber": [[0.0, 0.3, 0.3, 0.0], [0.04, 0.68, 0.68, 0.0], [0.12, 0.9, 0.9, 0.0], [0.3, 1.0, 1.0, 0.0], [0.55, 0.88, 0.9, 0.04], [0.75, 0.56, 0.62, 0.1], [0.9, 0.28, 0.34, 0.14], [1.0, 0.1, 0.12, 0.16]],
+	"bomber": [[0.0, 0.10, 0.10, 0.0], [0.012, 0.34, 0.34, 0.0], [0.03, 0.52, 0.52, 0.0], [0.06, 0.72, 0.72, 0.0], [0.10, 0.86, 0.86, 0.0], [0.16, 0.94, 0.94, 0.0], [0.3, 1.0, 1.0, 0.0], [0.55, 0.88, 0.9, 0.04], [0.75, 0.56, 0.62, 0.1], [0.9, 0.28, 0.34, 0.14], [1.0, 0.1, 0.12, 0.16]],
 }
 
 const COL_DARK := Color(0.10, 0.10, 0.11)
@@ -59,8 +59,8 @@ static func _fuselage_mesh(f: Dictionary) -> ArrayMesh:
 	for r in PROFILES[f.get("profile", "inline")]:
 		var z: float = lerpf(float(f["z0"]), float(f["z1"]), float(r[0]))
 		var d: Array = fus_at(f, z)
-		secs.append(MeshUtil.ring_xy(z, d[0], d[1], d[2], 14))
-	return MeshUtil.loft(secs)
+		secs.append(MeshUtil.ring_xy(z, d[0], d[1], d[2], 16))
+	return MeshUtil.loft_smooth(secs, 4, 1)
 
 
 static func _fus_slice(f: Dictionary, za: float, zb: float, grow: float = 1.03) -> ArrayMesh:
@@ -121,7 +121,7 @@ static func _wing_mesh(w: Dictionary, side: float) -> ArrayMesh:
 			var seg: ArrayMesh = MeshUtil.loft([secs[i], secs[i + 1]], i == 0, i == secs.size() - 2)
 			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, seg.surface_get_arrays(0))
 		return out
-	return MeshUtil.loft(secs)
+	return MeshUtil.loft_smooth(secs, 2, 1)
 
 
 static func _tailplane_mesh(tp: Dictionary, side: float) -> ArrayMesh:
@@ -129,7 +129,7 @@ static func _tailplane_mesh(tp: Dictionary, side: float) -> ArrayMesh:
 	for t in [0.0, 0.35, 0.7, 1.0]:
 		var chord: float = lerpf(float(tp["cr"]), float(tp["ct"]), t)
 		secs.append(MeshUtil.airfoil(side * (0.15 + float(tp["span"]) * t), float(tp["y"]) + 0.1 * t, float(tp["z"]) + 0.5 * t, chord, 0.1 * chord * (1.0 - 0.5 * t)))
-	return MeshUtil.loft(secs)
+	return MeshUtil.loft_smooth(secs, 2, 1)
 
 
 static func _fin_mesh(fn: Dictionary, x: float) -> ArrayMesh:
@@ -155,7 +155,7 @@ static func _nacelle_mesh(z0: float, z1: float, r: float, jet: bool) -> ArrayMes
 	for p in prof:
 		var z: float = lerpf(z0, z1, float(p[0]))
 		secs.append(MeshUtil.ring_xy(z, r * float(p[1]), r * float(p[1]) * 0.95, 0.0, 10))
-	return MeshUtil.loft(secs)
+	return MeshUtil.loft_smooth(secs, 3, 1)
 
 
 static func _make_prop(radius: float, blades: int, spinner_r: float, tip: Color, primary: bool, idx: int) -> Node3D:
@@ -623,7 +623,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		var secs: Array = []
 		for r in c:
 			secs.append(MeshUtil.ring_xy(r[0], r[1], r[2], r[3], 12))
-		var gmi := _mi(canopy, MeshUtil.loft(secs), glass)
+		var gmi := _mi(canopy, MeshUtil.loft_smooth(secs, 3, 1), glass)
 		gmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		canopy_frame(canopy, c, dark)
 	pilot(canopy, spec["eye"] as Vector3)

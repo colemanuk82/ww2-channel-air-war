@@ -103,3 +103,59 @@ static func disc(radius: float, thickness: float, axis: Vector3 = Vector3.UP, se
 		arrays[Mesh.ARRAY_NORMAL] = nrms
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh
+
+## Cubic Hermite point between a and b with tangents ta, tb at u in 0..1 (parameter = section index).
+static func _hermite(a: Vector3, b: Vector3, ta: Vector3, tb: Vector3, u: float) -> Vector3:
+	var u2: float = u * u
+	var u3: float = u2 * u
+	return a * (2.0 * u3 - 3.0 * u2 + 1.0) + ta * (u3 - 2.0 * u2 + u) + b * (-2.0 * u3 + 3.0 * u2) + tb * (u3 - u2)
+
+
+## Insert `sub - 1` smoothly interpolated sections between every pair (Catmull-Rom through the originals).
+## All sections must have the same point count. The original sections are kept exactly.
+static func smooth_sections(sections: Array, sub: int) -> Array:
+	if sub <= 1 or sections.size() < 3:
+		return sections
+	var out: Array = []
+	var n: int = sections.size()
+	for i in range(n - 1):
+		var a: PackedVector3Array = sections[i]
+		var b: PackedVector3Array = sections[i + 1]
+		var pa: PackedVector3Array = sections[maxi(i - 1, 0)]
+		var nb: PackedVector3Array = sections[mini(i + 2, n - 1)]
+		out.append(a)
+		for k in range(1, sub):
+			var u: float = float(k) / float(sub)
+			var r := PackedVector3Array()
+			for j in a.size():
+				var ta: Vector3 = (b[j] - pa[j]) * (0.5 if i > 0 else 1.0)
+				var tb: Vector3 = (nb[j] - a[j]) * (0.5 if i + 2 < n else 1.0)
+				r.append(_hermite(a[j], b[j], ta, tb, u))
+			out.append(r)
+	out.append(sections[n - 1])
+	return out
+
+
+## Double the points of a closed ring, the new ones lying on the Catmull-Rom curve through the old ones (rounder cross-sections).
+static func refine_ring(ring: PackedVector3Array) -> PackedVector3Array:
+	var n: int = ring.size()
+	var out := PackedVector3Array()
+	for i in n:
+		var p0: Vector3 = ring[(i - 1 + n) % n]
+		var p1: Vector3 = ring[i]
+		var p2: Vector3 = ring[(i + 1) % n]
+		var p3: Vector3 = ring[(i + 2) % n]
+		out.append(p1)
+		out.append((-p0 + 9.0 * p1 + 9.0 * p2 - p3) / 16.0)
+	return out
+
+
+## Smooth loft: more sections along the length and rounder rings (ring_passes = how many times the ring is doubled).
+static func loft_smooth(sections: Array, sub: int = 3, ring_passes: int = 1, cap_start: bool = true, cap_end: bool = true) -> ArrayMesh:
+	var secs: Array = []
+	for r in sections:
+		var ring: PackedVector3Array = r
+		for _k in ring_passes:
+			ring = refine_ring(ring)
+		secs.append(ring)
+	return loft(smooth_sections(secs, sub), cap_start, cap_end)

@@ -28,7 +28,7 @@ static func _wing_mesh(side: float) -> ArrayMesh:
 	for t in [0.0, 0.12, 0.28, 0.45, 0.58, 0.7, 0.8, 0.88, 0.94, 1.0]:
 		var s: Dictionary = _wing_section(t)
 		secs.append(MeshUtil.airfoil(side * s["x"], s["yc"], s["zle"], s["chord"], s["t"]))
-	return MeshUtil.loft(secs)
+	return MeshUtil.loft_smooth(secs, 2, 1)
 
 
 static func _tailplane_mesh(side: float) -> ArrayMesh:
@@ -64,7 +64,7 @@ static func _fin_mesh() -> ArrayMesh:
 
 ## z, half width, half height, centre y (also used to lay the roundels on the skin curve)
 const FUS_RINGS: Array = [
-	[-3.75, 0.16, 0.16, 0.0], [-3.3, 0.40, 0.44, 0.0], [-2.2, 0.56, 0.62, 0.02],
+	[-3.75, 0.07, 0.07, 0.0], [-3.68, 0.20, 0.22, 0.0], [-3.5, 0.33, 0.37, 0.0], [-3.3, 0.42, 0.46, 0.0], [-2.2, 0.56, 0.62, 0.02],
 	[-0.8, 0.54, 0.68, 0.10], [0.8, 0.44, 0.56, 0.10], [2.5, 0.29, 0.40, 0.11],
 	[4.0, 0.15, 0.25, 0.14], [4.85, 0.06, 0.13, 0.17]]
 
@@ -72,8 +72,8 @@ const FUS_RINGS: Array = [
 static func _fuselage_mesh() -> ArrayMesh:
 	var secs: Array = []
 	for r in FUS_RINGS:
-		secs.append(MeshUtil.ring_xy(r[0], r[1], r[2], r[3], 14))
-	return MeshUtil.loft(secs)
+		secs.append(MeshUtil.ring_xy(r[0], r[1], r[2], r[3], 16))
+	return MeshUtil.loft_smooth(secs, 5, 1)
 
 
 const CANOPY_RINGS: Array = [
@@ -85,7 +85,7 @@ static func _canopy_mesh() -> ArrayMesh:
 	var secs: Array = []
 	for r in CANOPY_RINGS:
 		secs.append(MeshUtil.ring_xy(r[0], r[1], r[2], r[3], 12))
-	return MeshUtil.loft(secs)
+	return MeshUtil.loft_smooth(secs, 4, 1)
 
 
 static func _box(sx: float, sy: float, sz: float) -> ArrayMesh:
