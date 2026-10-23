@@ -181,6 +181,10 @@ func _next_wave() -> void:
 	var base_heading: float = 300.0 if side == "Axis" else 115.0
 	var center: Vector3 = _player_pos()
 	var jets: int = 0
+	# not every wave comes straight at you: some are patrols loitering well away from the airfield that have not seen
+	# you yet - find them on the radar and sneak up (from above, out of the sun, from behind) for the first strike.
+	var sneak: bool = randf() < (0.3 if wave == 1 else 0.45)
+	var patrol_c: Vector3 = center + WorldCoords.heading_to_dir(randf() * 360.0) * randf_range(8000.0, 12000.0)
 	for i in n:
 		var id: String = pool[randi() % pool.size()]
 		if id == "me262":
@@ -192,14 +196,20 @@ func _next_wave() -> void:
 		var pos: Vector3 = center + WorldCoords.heading_to_dir(h) * dist + Vector3(randf_range(-250, 250), 0, randf_range(-250, 250))
 		pos.y = _safe_alt(pos, center.y + randf_range(-150.0, 350.0))
 		var face: float = WorldCoords.dir_to_heading(center - pos)
+		if sneak:
+			pos = patrol_c + Vector3(randf_range(-400, 400), 0, randf_range(-400, 400))
+			pos.y = _safe_alt(pos, center.y + randf_range(300.0, 900.0))
+			face = WorldCoords.dir_to_heading(patrol_c - center) + 90.0 + randf_range(-30.0, 30.0)
 		var ac: Aircraft = AIFactory.spawn(world, id, enemy_side, pos, face, -1.0, clampf(difficulty * 0.6 + randf_range(-0.08, 0.08), 0.0, 1.0))
-		_register_enemy(ac, Color(1.0, 0.25, 0.2))
+		_register_enemy(ac, Color(1.0, 0.25, 0.2), patrol_c if sneak else Vector3.ZERO)
 	var wave_bombers: bool = wave in [3, 5, 7]
 	if wave_bombers:
 		_spawn_bombers(center, base_heading, 3 + (1 if difficulty > 0.7 else 0))
 	var msg: String = "WAVE %d  -  %d enemy aircraft" % [wave, n]
 	if wave_bombers:
 		msg += " + bombers"
+	if sneak:
+		msg += " - a patrol that has not seen you"
 	_announce(msg, "Wave %d of %d: destroy all enemy aircraft" % [wave, total_waves])
 	if wave >= total_waves:
 		radio_call("dog_final")
@@ -244,15 +254,19 @@ func _spawn_bombers(center: Vector3, base_heading: float, count: int) -> void:
 		_register_enemy(m, Color(1.0, 0.6, 0.15))
 
 
-func _register_enemy(ac: Aircraft, col: Color) -> void:
+func _register_enemy(ac: Aircraft, col: Color, loiter: Vector3 = Vector3.ZERO) -> void:
 	enemies.append(ac)
 	ac.destroyed.connect(_on_enemy_destroyed)
 	ac.crashed.connect(func(a: Aircraft, _r: String) -> void: _free_later(a, 2.5))
 	AIFactory.add_marker(hud, ac, col)
 	var pilot: AIPilot = AIFactory.pilot_of(ac)
 	if pilot and pilot.role == AIPilot.Role.FIGHTER:
-		pilot.detect_range = 4500.0
-		pilot.patrol_center = _player_pos()
+		if loiter != Vector3.ZERO:
+			pilot.detect_range = 2600.0          # a patrol that has not noticed you: it only reacts when you get close
+			pilot.patrol_center = loiter
+		else:
+			pilot.detect_range = 4500.0
+			pilot.patrol_center = _player_pos()
 
 
 func _free_later(a: Aircraft, t: float) -> void:
