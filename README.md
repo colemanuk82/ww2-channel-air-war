@@ -1,6 +1,6 @@
 <div align="center">
 
-# Ã¢Å“Ë†Ã¯Â¸Â WW2 Channel Air War
+# ÃƒÂ¢Ã…â€œÃ‹â€ ÃƒÂ¯Ã‚Â¸Ã‚Â WW2 Channel Air War
 
 ### *"Scramble! Bandits over Dover, angels fifteen!"*
 
@@ -11,26 +11,26 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 
 [![WW2 Channel Air War promo](docs/promo/channel-air-war-promo.gif)](docs/promo/channel-air-war-promo.mp4)
 
-**Ã¢â€“Â¶ [Watch the full promo with music](docs/promo/channel-air-war-promo.mp4)**
+**ÃƒÂ¢Ã¢â‚¬â€œÃ‚Â¶ [Watch the full promo with music](docs/promo/channel-air-war-promo.mp4)**
 
-### [Ã¢Â¬â€¡Ã¯Â¸Â Download the free installer](../../releases/latest)
+### [ÃƒÂ¢Ã‚Â¬Ã¢â‚¬Â¡ÃƒÂ¯Ã‚Â¸Ã‚Â Download the free installer](../../releases/latest)
 
 </div>
 
 ---
 
-## Ã°Å¸â€Â¥ Why you'll want to play
+## ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â¥ Why you'll want to play
 
 |  |  |
 |---|---|
-| Ã°Å¸Å’Â **Real-scale Europe** | **954 Ãƒâ€” 453 km** of England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports. Fly from Kent to the Ruhr and it actually takes a while. |
-| Ã¢Å“Ë†Ã¯Â¸Â **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
-| Ã¢Å¡â€Ã¯Â¸Â **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and free flight. Or just go sightseeing over the white cliffs. |
-| Ã°Å¸Å’Å  **Dam Busters** | A seven-day campaign. Skim low, hit your marks, put the bomb on the dam. |
-| Ã°Å¸Å½â€“Ã¯Â¸Â **A war that moves** | Dynamic campaign and Pilot's Life: ranks, medals, telegrams, newsreels, and the occasional letter home you hope you never have to send. |
-| Ã°Å¸Å’Â¦Ã¯Â¸Â **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, rain squalls, searchlights and flak at night. |
-| Ã°Å¸Å½Âµ **Bring your own soundtrack** | Import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
-| Ã°Å¸â€™Â¸ **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
+| ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â **Real-scale Europe** | **954 ÃƒÆ’Ã¢â‚¬â€ 453 km** of England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports. Fly from Kent to the Ruhr and it actually takes a while. |
+| ÃƒÂ¢Ã…â€œÃ‹â€ ÃƒÂ¯Ã‚Â¸Ã‚Â **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
+| ÃƒÂ¢Ã…Â¡Ã¢â‚¬ÂÃƒÂ¯Ã‚Â¸Ã‚Â **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and free flight. Or just go sightseeing over the white cliffs. |
+| ÃƒÂ°Ã…Â¸Ã…â€™Ã…Â  **Dam Busters** | A seven-day campaign. Skim low, hit your marks, put the bomb on the dam. |
+| ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬â€œÃƒÂ¯Ã‚Â¸Ã‚Â **A war that moves** | Dynamic campaign and Pilot's Life: ranks, medals, telegrams, newsreels, and the occasional letter home you hope you never have to send. |
+| ÃƒÂ°Ã…Â¸Ã…â€™Ã‚Â¦ÃƒÂ¯Ã‚Â¸Ã‚Â **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, rain squalls, searchlights and flak at night. |
+| ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âµ **Bring your own soundtrack** | Import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
+| ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â¸ **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
 
 <div align="center">
 <table>
@@ -45,28 +45,28 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 <td><img src="screenshots/g_menu.jpg" alt="Main menu" width="320"></td>
 </tr>
 </table>
-<sub>Dawn over Kent Ã‚Â· Storm Ã‚Â· Spitfire cockpit Ã‚Â· Dogfight Ã‚Â· Night raid Ã‚Â· Main menu</sub>
+<sub>Dawn over Kent Ãƒâ€šÃ‚Â· Storm Ãƒâ€šÃ‚Â· Spitfire cockpit Ãƒâ€šÃ‚Â· Dogfight Ãƒâ€šÃ‚Â· Night raid Ãƒâ€šÃ‚Â· Main menu</sub>
 </div>
 
-## Ã°Å¸Å½Â® Play it in 3 steps
+## ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â® Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v1.2.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v1.3.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
 **Got an NVIDIA RTX card?** The game offers to download **DLSS** (about 213 MB, straight from NVIDIA's own GitHub repo, checksum-verified). It's optional and makes everything faster and sharper. No NVIDIA card? You get the standard renderer with AMD FSR 2 upscaling.
 
-## Ã°Å¸â€ºÂ©Ã¯Â¸Â In the hangar
+## ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â©ÃƒÂ¯Ã‚Â¸Ã‚Â In the hangar
 
 - **Modes:** dogfight, bombing run, ground attack, bomber escort, defend, fighter sweep, free flight, plus training lessons for the nervous.
-- **69 missions:** historical ones (Battle of Britain, Dieppe, D-Day, Dunkirk, Antwerp, Lille, Le Havre, V-1 sites, the Seine bridges) glow green once you've completed them, and **25 originals** (marked Ã¢â€”â€ ) cover dawn patrols, convoy cover, night interceptions, steel for the Ruhr, jet hunts and armour on the road.
+- **69 missions:** historical ones (Battle of Britain, Dieppe, D-Day, Dunkirk, Antwerp, Lille, Le Havre, V-1 sites, the Seine bridges) glow green once you've completed them, and **25 originals** (marked ÃƒÂ¢Ã¢â‚¬â€Ã¢â‚¬Â ) cover dawn patrols, convoy cover, night interceptions, steel for the Ruhr, jet hunts and armour on the road.
 - **Sortie planner:** start from any airfield (runway or airborne) or any point on the map, choose a scenario, set the enemy strength.
 - **A living world:** barrage balloons, searchlights, Atlantic Wall guns, convoys and trains. Landmarks include Battersea Power Station, the Tower of London and Rochester Castle.
 - **Radio chatter:** AI-voiced controllers, wingmen and bomber crews, with subtitles and static.
 - **Cockpit, chase, orbit and overhead cameras,** and a clean no-HUD view (`H`) for screenshots.
-- **Full gamepad support.** Ã°Å¸â€¢Â¹Ã¯Â¸Â
+- **Full gamepad support.** ÃƒÂ°Ã…Â¸Ã¢â‚¬Â¢Ã‚Â¹ÃƒÂ¯Ã‚Â¸Ã‚Â
 
-## Ã¢Å’Â¨Ã¯Â¸Â Controls
+## ÃƒÂ¢Ã…â€™Ã‚Â¨ÃƒÂ¯Ã‚Â¸Ã‚Â Controls
 
 | | Keyboard | Gamepad |
 |---|---|---|
@@ -81,16 +81,17 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 | Auto-level | `R` | `LB` (assist) |
 | Time of day / weather | `T` / `Y` | D-pad |
 | Outlines / HUD / hints | `O` / `H` / `F1` | D-pad |
+| Photo (clean screenshot, saved to Pictures) | `F12` | |
 | Pause / respawn | | `Start` / `Back` |
 
-## Ã¢Ââ€œ Quick answers
+## ÃƒÂ¢Ã‚ÂÃ¢â‚¬Å“ Quick answers
 
 - **Is it really free?** Yes, completely. Donations are optional.
 - **Will it run on my PC?** It needs 64-bit Windows and a reasonably modern graphics card. RTX owners get optional DLSS.
 - **Is there multiplayer?** No, it's single player.
 - **Is it safe?** The source is right here. The game has a photosensitivity warning, a licence screen and a privacy policy.
 
-## Ã°Å¸Â¤â€“ Honest disclosure
+## ÃƒÂ°Ã…Â¸Ã‚Â¤Ã¢â‚¬â€œ Honest disclosure
 
 This project was **vibecoded**: all of the code was written by AI. The art is generated procedurally
 inside the engine (no hand-drawn assets, no photographed textures), the menu paintings are AI-generated,
@@ -98,7 +99,7 @@ and the radio voices are AI text-to-speech from [ElevenLabs](https://elevenlabs.
 voice recordings in the game. The music is royalty-free from [Pixabay](https://pixabay.com), and the world
 comes from open data (see below). It's a work of fiction inspired by real history.
 
-## Ã°Å¸â€Â§ Under the bonnet
+## ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ‚Â§ Under the bonnet
 
 Built on a custom **NVIDIA RTX Godot fork (4.8-dev, GDScript)** with DLSS, Streamline and frame generation.
 Terrain uses `data/heightmap/region_height.png` + `region_meta.json`; the Python tools in `tools/`
@@ -110,26 +111,26 @@ Terrain uses `data/heightmap/region_height.png` + `region_meta.json`; the Python
 - Legal texts live in `docs/legal/`; fill in the publisher and contact in `tools/build_legal.py` and run it to refresh `data/legal.json`
 - More notes for developers: [HANDOFF.md](HANDOFF.md), [SPEC.md](SPEC.md)
 
-## Ã°Å¸Å½Âµ Credits
+## ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Âµ Credits
 
 Full credits and licences are in the game (**Credits** button on the main menu) and in
 [ATTRIBUTION.md](ATTRIBUTION.md).
 
-- **Music** (Pixabay Content Licence): "Freedom" by [jeremusic70](https://pixabay.com/users/jeremusic70-25199461/) Ã‚Â· "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans" and "Battle Cry of the Brave" by [nocopyrightsound633](https://pixabay.com/users/nocopyrightsound633-47610058/) Ã‚Â· "Cinematic Action Movie Music", "Epic Orchestral Music with Flute" and "Suspenseful Thriller Music" by [musicwallah](https://pixabay.com/users/musicwallah-51797968/)
+- **Music** (Pixabay Content Licence): "Freedom" by [jeremusic70](https://pixabay.com/users/jeremusic70-25199461/) Ãƒâ€šÃ‚Â· "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans" and "Battle Cry of the Brave" by [nocopyrightsound633](https://pixabay.com/users/nocopyrightsound633-47610058/) Ãƒâ€šÃ‚Â· "Cinematic Action Movie Music", "Epic Orchestral Music with Flute" and "Suspenseful Thriller Music" by [musicwallah](https://pixabay.com/users/musicwallah-51797968/)
 - **Terrain imagery:** [Sentinel-2 cloudless 2020](https://s2maps.eu) by EOX IT Services GmbH (CC BY 4.0), containing modified Copernicus Sentinel data 2020
 - **Land cover:** [ESA WorldCover 10 m 2021](https://esa-worldcover.org) (CC BY 4.0)
 - **Elevation:** [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/)
-- **Roads, rail, rivers, woods, towns:** Ã‚Â© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL)
-- **Water:** Ocean3D Lite by Justin Schroeder (MIT) Ã‚Â· **Fonts:** Barlow by Jeremy Tribby (SIL OFL 1.1)
+- **Roads, rail, rivers, woods, towns:** Ãƒâ€šÃ‚Â© [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL)
+- **Water:** Ocean3D Lite by Justin Schroeder (MIT) Ãƒâ€šÃ‚Â· **Fonts:** Barlow by Jeremy Tribby (SIL OFL 1.1)
 - **Engine:** Godot (MIT). NVIDIA DLSS and Streamline belong to NVIDIA and are downloaded by the player, never bundled.
 
-## Ã¢Ëœâ€¢ Support
+## ÃƒÂ¢Ã‹Å“Ã¢â‚¬Â¢ Support
 
 Enjoying it? There's a **Support me on PayPal** button in the top-right of the main menu. Totally optional, always appreciated.
 
-## Ã°Å¸â€œÅ“ Licence
+## ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…â€œ Licence
 
 This is a personal project. All rights reserved: see [LICENCE](LICENCE), and the in-game licence agreement
 and privacy policy (`docs/legal/`). Third-party data and audio carry their own licences, listed above.
 
-*Chocks away!* Ã°Å¸â€ºÂ«
+*Chocks away!* ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂºÃ‚Â«

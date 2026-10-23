@@ -1839,6 +1839,11 @@ func _respawn_player_with_support() -> void:
 
 ## Bomber gunner view: L steps through the defensive gun positions (the aircraft flies itself while gunning).
 func _unhandled_input(event: InputEvent) -> void:
+	# F12 = photo: the HUD is hidden for a moment and a clean screenshot is saved to Pictures.
+	if in_game and event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_F12:
+		get_viewport().set_input_as_handled()
+		_take_photo()
+		return
 	if not in_game or event.is_echo() or not event.is_action_pressed("gunner_view"):
 		return
 	get_viewport().set_input_as_handled()
@@ -2875,3 +2880,30 @@ func _look_log(tag: String) -> void:
 	var f: Vector3 = player.get_forward()
 	var behind_az: float = rad_to_deg(Vector2(-f.x, -f.z).angle_to(Vector2(rel.x, rel.z)))
 	print("[look] %-12s az=%7.1f el=%6.1f dist=%6.1f" % [tag, behind_az, rad_to_deg(asin(rel.y / maxf(rel.length(), 0.001))), rel.length()])
+
+
+var _photo_busy: bool = false
+
+
+## Clean screenshot (no HUD) saved as PNG into Pictures/WW2 Channel Air War (or the game's user folder).
+func _take_photo() -> void:
+	if _photo_busy or hud == null:
+		return
+	_photo_busy = true
+	var was_visible: bool = hud.visible
+	hud.visible = false
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	var img: Image = get_viewport().get_texture().get_image()
+	hud.visible = was_visible
+	var dir: String = OS.get_system_dir(OS.SYSTEM_DIR_PICTURES)
+	dir = dir.path_join("WW2 Channel Air War") if dir != "" else ProjectSettings.globalize_path("user://screenshots")
+	if DirAccess.make_dir_recursive_absolute(dir) != OK and not DirAccess.dir_exists_absolute(dir):
+		dir = ProjectSettings.globalize_path("user://screenshots")
+		DirAccess.make_dir_recursive_absolute(dir)
+	var t: Dictionary = Time.get_datetime_dict_from_system()
+	var path: String = dir.path_join("ww2_%04d%02d%02d_%02d%02d%02d.png" % [t.year, t.month, t.day, t.hour, t.minute, t.second])
+	var err: int = img.save_png(path)
+	if hud != null and hud.has_method("show_message"):
+		hud.show_message(("Photo saved: " + path) if err == OK else "Could not save the photo", 3.5)
+	_photo_busy = false
