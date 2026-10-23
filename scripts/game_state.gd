@@ -16,6 +16,8 @@ var spawn_point: Dictionary = {}          # free-flight airborne spawn (SpawnPoi
 var auto_level: bool = false
 var invert_pitch: bool = false
 var show_hud: bool = true
+var reduce_shake: bool = false   # calmer camera: gust, engine and hit shake cut to a quarter (Options > Camera shake)
+var colorblind: bool = false     # red/green friend-foe colours swapped for blue/yellow (Options > Colour-blind colours)
 var radio_subtitles: bool = false  # radio call log on screen (Options > Radio subtitles)
 var radio_static: bool = true   # background radio hiss / crackle between calls
 const TIME_SPEEDS := [0.0, 1.0, 6.0, 12.0, 30.0, 120.0]
@@ -194,6 +196,8 @@ func _load_settings() -> void:
 	time_speed = clampi(int(cf.get_value("ui", "time_speed", time_speed)), 0, TIME_SPEEDS.size() - 1)
 	radio_static = bool(cf.get_value("ui", "radio_static", radio_static))
 	radio_subtitles = bool(cf.get_value("ui", "radio_subtitles", radio_subtitles))
+	reduce_shake = bool(cf.get_value("ui", "reduce_shake", reduce_shake))
+	colorblind = bool(cf.get_value("ui", "colorblind", colorblind))
 	vol_master = clampf(float(cf.get_value("audio", "master", vol_master)), 0.0, 1.0)
 	vol_fx = clampf(float(cf.get_value("audio", "fx", vol_fx)), 0.0, 1.0)
 	vol_engine = clampf(float(cf.get_value("audio", "engine", vol_engine)), 0.0, 1.0)
@@ -253,6 +257,8 @@ func save_settings() -> void:
 	cf.set_value("ui", "time_speed", time_speed)
 	cf.set_value("ui", "radio_static", radio_static)
 	cf.set_value("ui", "radio_subtitles", radio_subtitles)
+	cf.set_value("ui", "reduce_shake", reduce_shake)
+	cf.set_value("ui", "colorblind", colorblind)
 	cf.set_value("audio", "master", vol_master)
 	cf.set_value("audio", "fx", vol_fx)
 	cf.set_value("audio", "engine", vol_engine)
@@ -384,9 +390,24 @@ func set_graphic(key: String, value: Variant) -> void:
 			radio_static = bool(value)
 		"radio_subtitles":
 			radio_subtitles = bool(value)
+		"reduce_shake":
+			reduce_shake = bool(value)
+		"colorblind":
+			colorblind = bool(value)
 	apply_graphics()
 	save_settings()
 	settings_changed.emit()
+
+
+## Friend / foe colours for people who confuse red and green: red becomes blue, green becomes yellow.
+func accessible_color(c: Color) -> Color:
+	if not colorblind:
+		return c
+	if c.r > 0.7 and c.g < 0.5 and c.b < 0.5:
+		return Color(0.2, 0.62, 1.0, c.a)
+	if c.g > c.r and c.g > c.b:
+		return Color(1.0, 0.9, 0.25, c.a)
+	return c
 
 
 ## Apply a quality preset (also used to apply the loaded settings at startup).

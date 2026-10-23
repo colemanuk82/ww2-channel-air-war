@@ -324,6 +324,10 @@ func _build_gameplay_page() -> VBoxContainer:
 		GameState.set_graphic("pitch_ladder", i == 1))
 	_row(page, "Control hints", ["Off", "On"], 1 if GameState.show_hints else 0, func(i: int) -> void:
 		GameState.set_graphic("show_hints", i == 1))
+	_row(page, "Camera shake", ["Normal", "Reduced"], 1 if GameState.reduce_shake else 0, func(i: int) -> void:
+		GameState.set_graphic("reduce_shake", i == 1))
+	_row(page, "Colour-blind colours", ["Off", "On"], 1 if GameState.colorblind else 0, func(i: int) -> void:
+		GameState.set_graphic("colorblind", i == 1))
 	_row(page, "Radio subtitles", ["Off", "On"], 1 if GameState.radio_subtitles else 0, func(i: int) -> void:
 		GameState.set_graphic("radio_subtitles", i == 1))
 	_row(page, "Radio static", ["Off", "On"], 1 if GameState.radio_static else 0, func(i: int) -> void:

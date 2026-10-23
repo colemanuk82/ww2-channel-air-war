@@ -268,7 +268,7 @@ func _process(delta: float) -> void:
 	_cockpit_fov = lerpf(_cockpit_fov, _cockpit_fov_t, 1.0 - exp(-VIEW_SMOOTH_RATE * delta))
 
 	_shake = move_toward(_shake, 0.0, delta * 2.0)
-	var sh: float = clampf(target.shake_intensity + _shake, 0.0, 1.5)
+	var sh: float = clampf(target.shake_intensity + _shake, 0.0, 1.5) * (0.25 if GameState.reduce_shake else 1.0)
 
 	# Gamepad right-stick free look: integrates while held and holds its offset when released.
 	var rx: float = _look_axis("look_left", "look_right")
@@ -362,8 +362,8 @@ func _process(delta: float) -> void:
 			cam_basis = Basis.looking_at((p - pos).normalized(), up_v)
 		chase_cam.global_transform = Transform3D(cam_basis, pos)
 		chase_cam.fov = _fov
-		chase_cam.h_offset = sin(_t * 47.0) * clampf(_shake, 0.0, 1.5) * 0.25
-		chase_cam.v_offset = cos(_t * 39.0) * clampf(_shake, 0.0, 1.5) * 0.25
+		chase_cam.h_offset = sin(_t * 47.0) * clampf(_shake, 0.0, 1.5) * 0.25 * (0.25 if GameState.reduce_shake else 1.0)
+		chase_cam.v_offset = cos(_t * 39.0) * clampf(_shake, 0.0, 1.5) * 0.25 * (0.25 if GameState.reduce_shake else 1.0)
 	elif cockpit_cam:
 		cockpit_cam.fov = clampf(_cockpit_fov + speed_ratio * 6.0, COCKPIT_FOV_MIN, COCKPIT_FOV_MAX)
 		var look: Vector3 = Vector3(_look_pitch, _look_yaw, 0.0)

@@ -944,7 +944,7 @@ func _draw_hit_marker() -> void:
 	var c: Vector2 = _aim.size * 0.5
 	var killed: bool = _kill_t > 0.0
 	var a: float = clampf((_kill_t / 0.8) if killed else (_hit_t / 0.25), 0.0, 1.0)
-	var col: Color = Color(1.0, 0.25, 0.2, a) if killed else Color(1, 1, 1, a)
+	var col: Color = GameState.accessible_color(Color(1.0, 0.25, 0.2, a)) if killed else Color(1, 1, 1, a)
 	var r0: float = 10.0 if killed else 7.0
 	var r1: float = 22.0 if killed else 15.0
 	for d in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
@@ -1193,9 +1193,9 @@ func _draw_minimap() -> void:
 				if n is Aircraft:
 					# little plane silhouette in the aircraft's colour, pointing the way it flies (bombers: bigger wings)
 					var af3: Vector3 = (n as Aircraft).get_forward()
-					_plane_icon(_minimap, mpp, Vector2(af3.x, af3.z).normalized(), 1.0, m[1], (n as Node3D).is_in_group("bomber"))
+					_plane_icon(_minimap, mpp, Vector2(af3.x, af3.z).normalized(), 1.0, GameState.accessible_color(m[1]), (n as Node3D).is_in_group("bomber"))
 				else:
-					_minimap.draw_circle(mpp, 3.0, m[1])
+					_minimap.draw_circle(mpp, 3.0, GameState.accessible_color(m[1]))
 	# the current objective (mode nav_point): a pulsing diamond, or an arrow on the frame edge with the
 	# distance when it lies off the chart (Ops Room taskings are often 20-50 km out)
 	var gm: Node = get_tree().get_first_node_in_group("game_mode")
@@ -1248,7 +1248,7 @@ func _draw_minimap() -> void:
 		var sf: Vector3 = -sn.global_transform.basis.z
 		var sd := Vector2(sf.x, sf.z).normalized()
 		var sp := Vector2(-sd.y, sd.x)
-		var scol: Color = FRIEND_COL if str(sh.get("team")) == GameState.player_side else ENEMY_COL
+		var scol: Color = GameState.accessible_color(FRIEND_COL if str(sh.get("team")) == GameState.player_side else ENEMY_COL)
 		var hullp := PackedVector2Array([smp + sd * 5.0, smp + sd * 1.0 + sp * 1.8, smp - sd * 4.0 + sp * 1.6, smp - sd * 4.0 - sp * 1.6, smp + sd * 1.0 - sp * 1.8])
 		var outline := PackedVector2Array()
 		for q in hullp:

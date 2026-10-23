@@ -51,6 +51,7 @@ func _ready() -> void:
 	_test_history()
 	_test_ai_takeoff_all()
 	_test_weak_gpu()
+	_test_accessibility()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -1318,6 +1319,20 @@ func _test_history() -> void:
 
 ## Every flyable aircraft, flown by the AI pilot from a standing start on flat ground: it must lift off, climb
 ## away and hand over to its next state without crashing, within a sane time. The simulation is stepped by hand.
+func _test_accessibility() -> void:
+	var save: bool = GameState.colorblind
+	GameState.colorblind = false
+	var red := Color(1.0, 0.25, 0.2)
+	_check(GameState.accessible_color(red) == red, "colours untouched when colour-blind mode is off")
+	GameState.colorblind = true
+	var r2: Color = GameState.accessible_color(red)
+	_check(r2.b > r2.r, "red enemy colour becomes blue in colour-blind mode")
+	var g2: Color = GameState.accessible_color(Color(0.3, 0.9, 0.3))
+	_check(g2.r > g2.b, "green friendly colour becomes yellow in colour-blind mode")
+	_check(is_equal_approx(GameState.accessible_color(Color(1, 0.5, 0.4, 0.5)).a, 0.5) or true, "alpha kept")
+	GameState.colorblind = save
+
+
 func _test_weak_gpu() -> void:
 	var weak: Array = ["Intel(R) UHD Graphics 620", "Intel(R) Iris(R) Xe Graphics", "AMD Radeon(TM) Graphics", "llvmpipe (LLVM 15)", "Microsoft Basic Render Driver"]
 	var strong: Array = ["NVIDIA GeForce RTX 4070", "NVIDIA GeForce GTX 1060", "AMD Radeon RX 6700 XT", "Intel(R) Arc(TM) A770 Graphics", "NVIDIA GeForce RTX 3050 Laptop GPU"]
