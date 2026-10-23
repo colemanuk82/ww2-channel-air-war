@@ -252,12 +252,12 @@ static func _star_mesh(r: float) -> ArrayMesh:
 
 
 ## Flat national marking node facing `normal`. kind: "roundel" | "star" | "cross".
-static func marking(parent: Node3D, nation: String, pos: Vector3, normal: Vector3, size: float, fuselage: bool, tilt: float = 0.0) -> void:
+static func marking(parent: Node3D, nation: String, pos: Vector3, normal: Vector3, size: float, fuselage: bool, tilt: float = 0.0, pitch: float = 0.0) -> void:
 	var m := Node3D.new()
 	m.name = "DecalFus" if fuselage else "DecalWing"
 	m.position = pos
 	var up: Vector3 = Vector3.FORWARD if absf(normal.y) > 0.9 else Vector3.UP
-	m.basis = Basis(Vector3(0, 0, 1), tilt) * Basis.looking_at(-normal, up)
+	m.basis = Basis(Vector3(1, 0, 0), pitch) * Basis(Vector3(0, 0, 1), tilt) * Basis.looking_at(-normal, up)
 	parent.add_child(m)
 	match nation:
 		"Luftwaffe":
@@ -719,17 +719,21 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		skin_marking(body, st2, nation, mz, 1.0, msz)
 		skin_marking(body, st2, nation, mz, -1.0, msz)
 	var ws: Dictionary = wing_section(w, spec.get("mark_t", 0.55))
-	var top_y: float = float(ws["yc"]) + float(ws["t"]) * 0.5 + 0.008
-	var bot_y: float = float(ws["yc"]) - float(ws["t"]) * 0.4 - 0.02
-	var wz: float = float(ws["zle"]) + float(ws["chord"]) * 0.45
-	var wsz: float = minf(float(spec.get("wing_mark_size", 0.7)), float(ws["chord"]) * 0.42)
+	# The airfoil (MeshUtil.airfoil) rises to 0.6 t at 25% chord then falls in a straight line to 0.35 t at 70%:
+	# lay the marking on that flat slope (centre 47.5% chord, kept inside it) and pitch it to match, so it sits flush.
+	var top_y: float = float(ws["yc"]) + float(ws["t"]) * 0.475 + 0.006
+	var bot_y: float = float(ws["yc"]) - float(ws["t"]) * 0.36 - 0.006
+	var wz: float = float(ws["zle"]) + float(ws["chord"]) * 0.475
+	var wsz: float = minf(float(spec.get("wing_mark_size", 0.7)), float(ws["chord"]) * 0.21)
+	var slope_top: float = atan(0.25 * float(ws["t"]) / (0.45 * float(ws["chord"])))
+	var slope_bot: float = atan(0.25 * float(ws["t"]) / (0.40 * float(ws["chord"])))
 	var wa: Dictionary = wing_section(w, maxf(spec.get("mark_t", 0.55) - 0.08, 0.0))
 	var wb: Dictionary = wing_section(w, minf(spec.get("mark_t", 0.55) + 0.08, 1.0))
 	var wtilt: float = atan2(float(wb["yc"]) - float(wa["yc"]), maxf(absf(float(wb["x"]) - float(wa["x"])), 0.001))
 	for side in [-1.0, 1.0]:
-		marking(body, nation, Vector3(side * float(ws["x"]), top_y, wz), Vector3.UP, wsz, false, side * wtilt)
+		marking(body, nation, Vector3(side * float(ws["x"]), top_y, wz), Vector3.UP, wsz, false, side * wtilt, slope_top)
 		if nation == "Luftwaffe":
-			marking(body, nation, Vector3(side * float(ws["x"]), bot_y, wz), Vector3.DOWN, wsz, false, side * wtilt)
+			marking(body, nation, Vector3(side * float(ws["x"]), bot_y, wz), Vector3.DOWN, wsz, false, side * wtilt, slope_bot)
 	if nation == "RAF":
 		# fin flash lofted along the fin skin
 		if fin.get("twin", false):
