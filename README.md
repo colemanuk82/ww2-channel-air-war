@@ -56,11 +56,33 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v1.30.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.0.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
 **Got an NVIDIA RTX card?** The game offers to download **DLSS** (about 213 MB, straight from NVIDIA's own GitHub repo, checksum-verified). It's optional and makes everything faster and sharper. No NVIDIA card? You get the standard renderer with AMD FSR 2 upscaling.
+
+## ✈️ The aircraft
+
+All 25 aircraft were rebuilt for v2.0 and checked against photographs and the published dimensions of the real machines. They have real wingspans and fuselage shapes, rounded fins, spinners, twisted prop blades, exhaust stubs, radiators, oleo gear legs with tyres and hubs, cannon barrels, aileron gaps, glazed turrets, and D-Day stripes painted onto the skin.
+
+| | |
+|---|---|
+| ![Supermarine Spitfire](docs/promo/aircraft/spitfire_three.jpg) | ![Hawker Hurricane](docs/promo/aircraft/hurricane_three.jpg) |
+| **Supermarine Spitfire** | **Hawker Hurricane** |
+| ![Hawker Typhoon](docs/promo/aircraft/typhoon_three.jpg) | ![North American P-51 Mustang](docs/promo/aircraft/p51_three.jpg) |
+| **Hawker Typhoon** | **North American P-51 Mustang** |
+| ![Messerschmitt Bf 109](docs/promo/aircraft/bf109_front.jpg) | ![Messerschmitt Me 262](docs/promo/aircraft/me262_front.jpg) |
+| **Messerschmitt Bf 109** | **Messerschmitt Me 262** |
+| ![Avro Lancaster](docs/promo/aircraft/lancaster_three.jpg) | ![North American B-25 Mitchell](docs/promo/aircraft/b25_three.jpg) |
+| **Avro Lancaster** | **North American B-25 Mitchell** |
+
+<details>
+<summary><b>See all 25 aircraft</b></summary>
+
+![All 25 aircraft](docs/promo/aircraft/all_aircraft.jpg)
+
+</details>
 
 ## 🛩️ In the hangar
 

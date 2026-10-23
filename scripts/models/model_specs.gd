@@ -55,13 +55,13 @@ static func hurricane() -> Dictionary:
 	return {
 		"scale": 1.1, "nation": "RAF",
 		"colors": {"top": RAF_TOP, "under": RAF_UNDER, "patch": RAF_PATCH},
-		"fus": {"z0": -3.9, "z1": 5.0, "hw": 0.55, "hh": 0.8, "cy": 0.05, "profile": "inline"},
-		"wing": {"root_x": 0.4, "half": 6.0, "y": -0.5, "dihedral": 0.3, "cr": 3.3, "ct": 1.6, "le_z": -1.6, "sweep": 0.3, "thick": 0.15},
+		"fus": {"z0": -3.9, "z1": 5.0, "hw": 0.55, "hh": 0.8, "cy": 0.0, "profile": "hump"},
+		"wing": {"root_x": 0.45, "half": 5.65, "y": -0.5, "dihedral": 0.3, "cr": 3.3, "ct": 1.6, "le_z": -1.6, "sweep": 0.3, "thick": 0.15},
 		"tail": {"z": 4.0, "span": 1.8, "cr": 1.5, "ct": 0.9, "y": 0.3},
 		"fin": {"z": 3.4, "y": 0.3, "h": 2.1, "cr": 2.0, "ct": 1.1},
 		"nose_prop": {"z": -3.95, "r": 1.7, "blades": 3, "spinner": 0.3},
 		"canopies": [[[-1.4, 0.1, 0.1, 0.9], [-0.9, 0.4, 0.36, 0.98], [-0.2, 0.42, 0.4, 1.02], [0.7, 0.34, 0.3, 0.96], [1.6, 0.1, 0.12, 0.8]]],
-		"extras": [{"t": "box", "pos": Vector3(0, -0.75, 0.5), "size": Vector3(0.6, 0.3, 1.1), "col": "dark"}],
+		"extras": [],
 		"gear": {"x": 1.6, "y": -0.45, "z": -0.6, "len": 0.9, "r": 0.33},
 		"tail_wheel": [-0.1, 4.8],
 		"guns": [2.3, -0.3, -2.1], "eye": Vector3(0, 1.3, 0.2),
@@ -74,12 +74,12 @@ static func typhoon() -> Dictionary:
 		"scale": 1.1, "nation": "RAF", "stripes": true,
 		"colors": {"top": RAF_TOP, "under": RAF_UNDER, "patch": RAF_PATCH},
 		"fus": {"z0": -3.9, "z1": 5.2, "hw": 0.65, "hh": 0.8, "cy": 0.05, "profile": "inline"},
-		"wing": {"root_x": 0.45, "half": 6.35, "y": -0.45, "dihedral": 0.25, "cr": 3.7, "ct": 1.9, "le_z": -1.7, "sweep": 0.3, "thick": 0.16},
+		"wing": {"root_x": 0.5, "half": 5.83, "y": -0.45, "dihedral": 0.25, "cr": 3.7, "ct": 1.9, "le_z": -1.7, "sweep": 0.3, "thick": 0.16},
 		"tail": {"z": 4.2, "span": 2.1, "cr": 1.7, "ct": 1.0, "y": 0.3},
 		"fin": {"z": 3.5, "y": 0.3, "h": 2.2, "cr": 2.2, "ct": 1.2},
 		"nose_prop": {"z": -4.0, "r": 2.0, "blades": 4, "spinner": 0.34},
 		"canopies": [[[-1.5, 0.12, 0.1, 0.9], [-1.0, 0.4, 0.38, 1.0], [-0.1, 0.44, 0.44, 1.05], [0.9, 0.4, 0.4, 1.0], [1.9, 0.1, 0.14, 0.85]]],
-		"extras": [{"t": "box", "pos": Vector3(0, -0.85, -2.6), "size": Vector3(1.1, 0.6, 1.5), "col": "dark"}],
+		"extras": [],
 		"gear": {"x": 1.7, "y": -0.45, "z": -0.6, "len": 0.95, "r": 0.36},
 		"tail_wheel": [-0.1, 5.0],
 		"guns": [2.6, -0.3, -2.2], "eye": Vector3(0, 1.35, 0.3),
@@ -111,13 +111,12 @@ static func p51() -> Dictionary:
 		"scale": 1.1, "nation": "USAAF", "stripes": true,
 		"colors": {"top": Color(0.72, 0.74, 0.76), "under": Color(0.7, 0.72, 0.74), "patch": Color(0.62, 0.64, 0.66)},
 		"fus": {"z0": -3.8, "z1": 5.0, "hw": 0.5, "hh": 0.65, "cy": 0.05, "profile": "inline"},
-		"wing": {"root_x": 0.4, "half": 5.6, "y": -0.4, "dihedral": 0.3, "cr": 2.6, "ct": 1.2, "le_z": -1.4, "sweep": 0.3, "thick": 0.12},
+		"wing": {"root_x": 0.45, "half": 5.19, "y": -0.4, "dihedral": 0.3, "cr": 2.6, "ct": 1.2, "le_z": -1.4, "sweep": 0.3, "thick": 0.12},
 		"tail": {"z": 4.0, "span": 1.9, "cr": 1.4, "ct": 0.8, "y": 0.25},
-		"fin": {"z": 3.5, "y": 0.25, "h": 1.9, "cr": 1.9, "ct": 1.0},
+		"fin": {"z": 3.5, "y": 0.25, "h": 1.75, "cr": 1.9, "ct": 1.0, "fillet": 1.1},
 		"nose_prop": {"z": -3.9, "r": 1.7, "blades": 4, "spinner": 0.3},
 		"canopies": [[[-0.9, 0.1, 0.1, 0.78], [-0.5, 0.38, 0.34, 0.84], [0.5, 0.4, 0.4, 0.88], [1.5, 0.3, 0.3, 0.8], [2.3, 0.08, 0.1, 0.6]]],
 		"extras": [
-			{"t": "box", "pos": Vector3(0, -0.78, 0.9), "size": Vector3(0.55, 0.4, 1.2), "col": "dark"},
 			{"t": "slice", "z0": -3.0, "z1": -1.6, "col": "olive"}],
 		"gear": {"x": 1.6, "y": -0.4, "z": -0.5, "len": 0.8, "r": 0.3},
 		"tail_wheel": [-0.1, 4.7],
@@ -130,13 +129,13 @@ static func p47() -> Dictionary:
 	return {
 		"scale": 1.1, "nation": "USAAF", "stripes": true,
 		"colors": {"top": OD_TOP, "under": OD_UNDER, "patch": OD_PATCH},
-		"fus": {"z0": -4.3, "z1": 5.8, "hw": 0.85, "hh": 0.95, "cy": 0.05, "profile": "radial"},
-		"wing": {"root_x": 0.7, "half": 6.2, "y": -0.5, "dihedral": 0.3, "cr": 3.6, "ct": 1.8, "le_z": -1.8, "sweep": 0.3, "thick": 0.15},
+		"fus": {"z0": -4.3, "z1": 5.8, "hw": 0.72, "hh": 0.98, "cy": 0.05, "profile": "radial"},
+		"wing": {"root_x": 0.7, "half": 5.51, "y": -0.5, "dihedral": 0.3, "cr": 3.6, "ct": 1.8, "le_z": -1.8, "sweep": 0.3, "thick": 0.15},
 		"tail": {"z": 4.7, "span": 2.4, "cr": 1.8, "ct": 1.0, "y": 0.3},
-		"fin": {"z": 4.1, "y": 0.4, "h": 2.4, "cr": 2.4, "ct": 1.3},
+		"fin": {"z": 4.1, "y": 0.4, "h": 2.2, "cr": 2.4, "ct": 1.3, "fillet": 0.8},
 		"nose_prop": {"z": -4.4, "r": 2.1, "blades": 4, "spinner": 0.4},
 		"canopies": [[[-0.8, 0.1, 0.1, 0.95], [-0.3, 0.45, 0.42, 1.05], [0.8, 0.46, 0.44, 1.1], [2.0, 0.35, 0.3, 0.95], [2.8, 0.08, 0.1, 0.8]]],
-		"extras": [{"t": "box", "pos": Vector3(0, -1.05, 2.2), "size": Vector3(0.7, 0.45, 2.2), "col": "dark"}],
+		"extras": [],
 		"gear": {"x": 1.9, "y": -0.5, "z": -0.6, "len": 1.1, "r": 0.4},
 		"tail_wheel": [-0.1, 5.6],
 		"guns": [2.5, -0.3, -2.3], "eye": Vector3(0, 1.4, 0.4),
@@ -149,13 +148,13 @@ static func bf109() -> Dictionary:
 		"scale": 1.1, "nation": "Luftwaffe",
 		"colors": {"top": LW_TOP, "under": LW_UNDER, "patch": LW_PATCH},
 		"fus": {"z0": -3.5, "z1": 4.6, "hw": 0.45, "hh": 0.6, "cy": 0.05, "profile": "inline"},
-		"wing": {"root_x": 0.35, "half": 4.95, "y": -0.4, "dihedral": 0.25, "cr": 2.1, "ct": 1.1, "le_z": -1.1, "sweep": 0.1, "thick": 0.12, "round_tip": false},
-		"tail": {"z": 3.7, "span": 1.5, "cr": 1.0, "ct": 0.7, "y": 0.4},
-		"fin": {"z": 3.4, "y": 0.2, "h": 1.7, "cr": 1.5, "ct": 0.9},
+		"wing": {"root_x": 0.4, "half": 4.53, "y": -0.4, "dihedral": 0.25, "cr": 2.1, "ct": 1.1, "le_z": -1.1, "sweep": 0.1, "thick": 0.12, "round_tip": false},
+		"tail": {"z": 3.75, "span": 1.35, "cr": 1.0, "ct": 0.7, "y": 0.62},
+		"fin": {"z": 3.45, "y": 0.2, "h": 1.32, "cr": 1.45, "ct": 0.85, "sweep": 0.55},
 		"nose_prop": {"z": -3.6, "r": 1.5, "blades": 3, "spinner": 0.3},
 		"canopies": [[[-1.0, 0.1, 0.1, 0.72], [-0.6, 0.3, 0.28, 0.78], [0.2, 0.32, 0.32, 0.82], [1.0, 0.2, 0.2, 0.72], [1.4, 0.06, 0.08, 0.6]]],
 		"extras": [{"t": "slice", "z0": -3.45, "z1": -2.7, "col": "yellow"}],
-		"gear": {"x": 1.0, "y": -0.35, "z": -0.4, "len": 0.7, "r": 0.27},
+		"gear": {"x": 1.0, "y": -0.35, "z": -0.4, "len": 0.78, "r": 0.29, "splay": 12.0},
 		"tail_wheel": [-0.1, 4.4],
 		"guns": [0.5, -0.1, -2.8], "eye": Vector3(0, 1.0, 0.2),
 		"mark_z": 2.6, "mark_t": 0.55, "mark_size": 0.5, "wing_mark_size": 0.6,
@@ -168,7 +167,7 @@ static func fw190() -> Dictionary:
 		"scale": 1.1, "nation": "Luftwaffe",
 		"colors": {"top": Color(0.36, 0.38, 0.34), "under": LW_UNDER, "patch": Color(0.22, 0.28, 0.22)},
 		"fus": {"z0": -3.4, "z1": 4.7, "hw": 0.62, "hh": 0.7, "cy": 0.05, "profile": "radial"},
-		"wing": {"root_x": 0.5, "half": 5.26, "y": -0.45, "dihedral": 0.2, "cr": 2.4, "ct": 1.1, "le_z": -1.1, "sweep": 0.2, "thick": 0.13},
+		"wing": {"root_x": 0.55, "half": 4.7, "y": -0.45, "dihedral": 0.2, "cr": 2.4, "ct": 1.1, "le_z": -1.1, "sweep": 0.2, "thick": 0.13},
 		"tail": {"z": 3.9, "span": 1.6, "cr": 1.2, "ct": 0.7, "y": 0.3},
 		"fin": {"z": 3.4, "y": 0.3, "h": 1.8, "cr": 1.7, "ct": 0.9},
 		"nose_prop": {"z": -3.5, "r": 1.7, "blades": 3, "spinner": 0.33},
@@ -187,16 +186,16 @@ static func me262() -> Dictionary:
 		"scale": 1.1, "nation": "Luftwaffe",
 		"colors": {"top": Color(0.27, 0.3, 0.28), "under": Color(0.55, 0.62, 0.68), "patch": Color(0.2, 0.25, 0.2)},
 		"fus": {"z0": -4.9, "z1": 5.7, "hw": 0.6, "hh": 0.62, "cy": 0.05, "profile": "bomber"},
-		"wing": {"root_x": 0.5, "half": 6.2, "y": -0.35, "dihedral": 0.2, "cr": 3.0, "ct": 1.4, "le_z": -1.3, "sweep": 1.6, "thick": 0.11, "round_tip": false},
+		"wing": {"root_x": 0.55, "half": 5.75, "y": -0.35, "dihedral": 0.2, "cr": 3.0, "ct": 1.4, "le_z": -1.3, "sweep": 1.6, "thick": 0.11, "round_tip": false},
 		"tail": {"z": 4.7, "span": 1.9, "cr": 1.4, "ct": 0.8, "y": 0.3},
 		"fin": {"z": 4.4, "y": 0.2, "h": 1.8, "cr": 1.9, "ct": 1.0},
 		"engines": [
-			{"x": -2.4, "y": -0.62, "z0": -1.6, "z1": 1.7, "r": 0.5, "jet": true},
-			{"x": 2.4, "y": -0.62, "z0": -1.6, "z1": 1.7, "r": 0.5, "jet": true}],
-		"canopies": [[[-2.9, 0.1, 0.1, 0.55], [-2.3, 0.38, 0.32, 0.7], [-1.2, 0.42, 0.38, 0.75], [-0.2, 0.2, 0.2, 0.65], [0.6, 0.05, 0.08, 0.5]]],
+			{"x": -2.4, "y": -0.62, "z0": -2.3, "z1": 1.75, "r": 0.48, "jet": true},
+			{"x": 2.4, "y": -0.62, "z0": -2.3, "z1": 1.75, "r": 0.48, "jet": true}],
+		"canopies": [[[-2.4, 0.1, 0.1, 0.55], [-1.9, 0.38, 0.32, 0.7], [-0.9, 0.42, 0.38, 0.75], [0.1, 0.24, 0.22, 0.66], [0.9, 0.05, 0.08, 0.5]]],
 		"gear": {"x": 1.5, "y": -0.35, "z": -0.3, "len": 0.8, "r": 0.28},
 		"tail_wheel": [-0.1, 5.5],
-		"guns": [0.5, -0.2, -4.6], "eye": Vector3(0, 0.95, -1.8),
+		"guns": [0.5, -0.2, -4.6], "eye": Vector3(0, 0.95, -1.35),
 		"mark_z": 3.6, "mark_t": 0.4, "mark_size": 0.55, "wing_mark_size": 0.7,
 	}
 
@@ -425,12 +424,15 @@ static func blenheim() -> Dictionary:
 
 static func tempest() -> Dictionary:
 	var d: Dictionary = typhoon()
-	d["wing"] = {"root_x": 0.7, "half": 6.25, "y": -0.45, "dihedral": 0.25, "cr": 2.9, "ct": 1.0, "le_z": -1.4, "sweep": 0.2, "thick": 0.11, "round_tip": true}
-	d["fus"] = {"z0": -4.4, "z1": 5.8, "hw": 0.6, "hh": 0.8, "cy": 0.05, "profile": "inline"}
+	d["wing"] = {"root_x": 0.6, "half": 5.65, "y": -0.45, "dihedral": 0.25, "cr": 2.9, "ct": 1.0, "le_z": -1.4, "sweep": 0.2, "thick": 0.11, "round_tip": true}
+	d["fus"] = {"z0": -4.15, "z1": 5.3, "hw": 0.6, "hh": 0.8, "cy": 0.05, "profile": "inline"}
 	d["tail"] = {"z": 4.8, "span": 2.6, "cr": 1.6, "ct": 0.8, "y": 0.3}
-	d["fin"] = {"z": 4.3, "y": 0.35, "h": 2.2, "cr": 2.4, "ct": 1.2}
+	d["fin"] = {"z": 4.3, "y": 0.35, "h": 2.1, "cr": 2.4, "ct": 1.2, "fillet": 1.2}
 	d["gear"] = {"x": 1.9, "y": -0.5, "z": -0.6, "len": 1.0, "r": 0.4}
 	d["mark_z"] = 3.4
+	d["nose_prop"] = {"z": -4.25, "r": 2.1, "blades": 4, "spinner": 0.34}
+	d["tail_wheel"] = [-0.1, 5.1]
+	d["extras"] = []
 	return d
 
 
@@ -457,8 +459,8 @@ static func p38() -> Dictionary:
 
 static func defiant() -> Dictionary:
 	var d: Dictionary = hurricane()
-	d["extras"] = [{"t": "box", "pos": Vector3(0, 0.85, 1.3), "size": Vector3(0.9, 0.7, 1.3), "col": "dark"},
-		{"t": "sphere", "pos": Vector3(0, 1.2, 1.3), "size": Vector3(0.5, 0, 0), "col": "grey"}]
+	d["extras"] = []
+	d["turret"] = {"pos": Vector3(0, 0.92, 1.45), "r": 0.55}
 	return d
 
 

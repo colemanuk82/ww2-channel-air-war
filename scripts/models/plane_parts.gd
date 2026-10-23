@@ -130,7 +130,7 @@ static func gear_leg(pivot: Node3D, side: float, length: float, leg_w: float, wh
 		_mi(pivot, fk, dm, Vector3(fs * (wheel_w * 0.5 + leg_w * 0.14), -length - wheel_r * 0.1, 0))
 	if with_door:
 		var door := BoxMesh.new()
-		door.size = Vector3(0.035, length * 0.92, maxf(wheel_r * 1.7, 0.4))
+		door.size = Vector3(0.03, length * 0.8, maxf(wheel_r * 1.1, 0.26))
 		var dmi := _mi(pivot, door, mat(Color(0.2, 0.22, 0.17), 0.3), Vector3(side * (wheel_w * 0.5 + leg_w * 0.6), -length * 0.46, 0.0), "GearDoor")
 		dmi.rotation_degrees = Vector3(0, 0, side * 4.0)
 
@@ -193,16 +193,31 @@ static func radial_cowl(body: Node3D, f: Dictionary, color: Color) -> void:
 
 
 static func intake_scoop(body: Node3D, pos: Vector3, size: Vector3, color: Color) -> void:
-	## Boxy under-nose / belly scoop with a dark mouth and a bright lip (chin radiators, carburettor intakes).
-	var b := BoxMesh.new()
-	b.size = size
-	_mi(body, b, mat(color, 0.5), pos, "Scoop", true)
-	var mouth := BoxMesh.new()
-	mouth.size = Vector3(size.x * 0.84, size.y * 0.7, 0.03)
-	_mi(body, mouth, mat(Color(0.03, 0.03, 0.035), 0.2), pos + Vector3(0, 0, -size.z * 0.5 - 0.005))
-	var lip := BoxMesh.new()
-	lip.size = Vector3(size.x * 1.04, size.y * 1.06, 0.04)
-	_mi(body, lip, mat(ALLOY, 0.7), pos + Vector3(0, 0, -size.z * 0.5 + 0.02))
+	## Radiator / intake fairing (chin radiators, belly scoops, underwing coolers): a rounded duct that is full size at
+	## the mouth and tapers into the skin at the back, with a dark mouth, a polished lip and a cooling-flap line.
+	var hw: float = size.x * 0.5
+	var hh: float = size.y * 0.5
+	var zf: float = pos.z - size.z * 0.5
+	var zb: float = pos.z + size.z * 0.5
+	var top: float = pos.y + hh
+	var rings: Array = []
+	for st in [[0.0, 0.92, 0.92], [0.06, 1.0, 1.0], [0.45, 1.0, 1.0], [0.75, 0.9, 0.7], [1.0, 0.7, 0.18]]:
+		var z: float = lerpf(zf, zb, float(st[0]))
+		var h2: float = hh * float(st[2])
+		rings.append(MeshUtil.ring_xy(z, hw * float(st[1]), h2, top - h2, 14))
+	_mi(body, MeshUtil.loft_smooth(rings, 2, 1), mat(color, 0.5), Vector3.ZERO, "Scoop", true)
+	var mouth: Array = [
+		MeshUtil.ring_xy(zf - 0.004, hw * 0.8, hh * 0.72, top - hh * 0.92, 14),
+		MeshUtil.ring_xy(zf + 0.02, hw * 0.8, hh * 0.72, top - hh * 0.92, 14)]
+	_mi(body, MeshUtil.loft(mouth), mat(Color(0.025, 0.025, 0.03), 0.2), Vector3.ZERO, "ScoopMouth")
+	var lip: Array = [
+		MeshUtil.ring_xy(zf - 0.01, hw * 0.95, hh * 0.9, top - hh * 0.92, 14),
+		MeshUtil.ring_xy(zf + 0.03, hw * 0.95, hh * 0.9, top - hh * 0.92, 14)]
+	_mi(body, MeshUtil.loft(lip, false, false), mat(ALLOY, 0.7), Vector3.ZERO, "ScoopLip")
+	# cooling flap line at the back of the duct
+	var fl := BoxMesh.new()
+	fl.size = Vector3(size.x * 0.8, 0.012, 0.02)
+	_mi(body, fl, mat(Color(0.05, 0.05, 0.05), 0.2), Vector3(pos.x, top - hh * 1.55 * 0.9, lerpf(zf, zb, 0.72)))
 
 
 static func cannons(body: Node3D, side_x: float, y: float, z_muzzle: float, count: int, barrel_len: float, r: float) -> void:
@@ -240,21 +255,14 @@ static func tailplane_mesh(tp: Dictionary, side: float, base_x: float = 0.15) ->
 
 
 static func fin_mesh(fn: Dictionary, x: float) -> ArrayMesh:
-	## Fin with a thick root, rounded tip and a proper aerofoil section (previously a flat, square sheet).
-	# Sections up to t = 0.75 are exactly the original ones (the RAF fin flash and the fin emblem are lofted along
-	# them); only the tip beyond is rounded off instead of ending in a square edge.
+	## Fin + rudder lofted through PlaneBuilder.fin_sec (curved leading edge, rounded top, optional dorsal fillet).
 	var secs: Array = []
-	for t in [0.0, 0.25, 0.5, 0.75, 0.88, 0.96, 1.0]:
-		var chord: float = lerpf(float(fn["cr"]), float(fn["ct"]), t)
-		var rnd: float = 1.0
-		if t > 0.75:
-			var u: float = (t - 0.75) / 0.25
-			rnd = sqrt(maxf(1.0 - u * u * 0.85, 0.0))
-			rnd = maxf(rnd, 0.22)
-		chord *= rnd
-		var zle: float = float(fn["z"]) + float(fn.get("sweep", 0.9)) * t
-		var y: float = float(fn["y"]) + float(fn["h"]) * t
-		var w: float = 0.09 * (1.0 - 0.5 * t) * maxf(1.0, float(fn["cr"]) * 0.5) * (0.5 + 0.5 * rnd)
+	for t in [0.0, 0.08, 0.18, 0.3, 0.45, 0.6, 0.72, 0.82, 0.9, 0.95, 0.985, 1.0]:
+		var d: Dictionary = PlaneBuilder.fin_sec(fn, t)
+		var chord: float = d["chord"]
+		var zle: float = d["zle"]
+		var y: float = d["y"]
+		var w: float = d["w"]
 		secs.append(PackedVector3Array([
 			Vector3(x, y, zle), Vector3(x + w, y, zle + chord * 0.3), Vector3(x + w * 0.6, y, zle + chord * 0.8),
 			Vector3(x, y, zle + chord), Vector3(x - w * 0.6, y, zle + chord * 0.8), Vector3(x - w, y, zle + chord * 0.3)]))
@@ -315,3 +323,185 @@ static func nacelle_fittings(body: Node3D, id: String, e: Dictionary, color: Col
 				st.size = Vector3(0.006, 0.07, sp * float(n) + 0.6)
 				_mi(body, st, mat(SOOT, 0.1), Vector3(x + side * r * 0.955, y + r * 0.25, z0 + r * 0.55 + sp * float(n) * 0.5 + 0.3))
 			intake_scoop(body, Vector3(x, y - r * 0.9, z0 + r * 0.9), Vector3(r * 0.9, r * 0.45, r * 1.4), under.darkened(0.3))
+
+
+static func gun_turret(body: Node3D, pos: Vector3, r: float, glass: Material, skin: Material) -> void:
+	## Boulton Paul style power turret: metal base ring, faired collar, glazed dome and four guns trained aft.
+	cyl(body, r * 1.05, r * 1.1, 0.12, pos + Vector3(0, -0.02, 0), mat(DARKMETAL, 0.5), Vector3.ZERO, 20, "TurretRing")
+	var dm := SphereMesh.new()
+	dm.radius = r
+	dm.height = r * 1.6
+	dm.radial_segments = 20
+	dm.rings = 8
+	dm.is_hemisphere = true
+	var dome := _mi(body, dm, glass, pos + Vector3(0, 0.04, 0), "TurretDome")
+	dome.scale = Vector3(1.0, 1.0, 1.15)
+	# dome framing: two hoops
+	for k in 2:
+		var tm := TorusMesh.new()
+		tm.inner_radius = r * (0.98 - 0.3 * float(k))
+		tm.outer_radius = r * (1.02 - 0.3 * float(k))
+		tm.rings = 20
+		var t := _mi(body, tm, mat(DARKMETAL, 0.5), pos + Vector3(0, 0.06 + r * 0.55 * float(k), 0))
+		t.scale = Vector3(1.0, 1.0, 1.15)
+	for gx in [-0.17, -0.06, 0.06, 0.17]:
+		var b := cyl(body, 0.022, 0.02, 0.9, pos + Vector3(gx, r * 0.45, 0.55), mat(DARKMETAL, 0.5), Vector3(80, 0, 0), 6, "TurretGun")
+		b.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+
+
+# ---------------------------------------------------------------- control-surface gaps
+
+static func _strip(pts: Array, half_h: float, half_w: float) -> ArrayMesh:
+	## Thin dark strip through the points (Body space), each cross-section a small rect normal to the run.
+	var secs: Array = []
+	for i in pts.size():
+		var p: Vector3 = pts[i]
+		var dir: Vector3 = ((pts[mini(i + 1, pts.size() - 1)] as Vector3) - (pts[maxi(i - 1, 0)] as Vector3)).normalized()
+		var side: Vector3 = dir.cross(Vector3.UP).normalized() * half_w
+		if side.length() < 0.0001:
+			side = Vector3(0, 0, half_w)
+		var up := Vector3(0, half_h, 0)
+		secs.append(PackedVector3Array([p + up - side, p + up + side, p - up + side, p - up - side]))
+	return MeshUtil.loft(secs)
+
+
+static func aileron_lines(body: Node3D, wing_of: Callable, side: float, t0: float = 0.6, t1: float = 0.95, hinge: float = 0.74) -> void:
+	## Aileron hinge line and its two chordwise ends, on the top and bottom skin (the airfoil of MeshUtil.airfoil).
+	var m := mat(Color(0.04, 0.04, 0.045), 0.15)
+	for surf in [1.0, -1.0]:
+		var run: Array = []
+		for k in 7:
+			var t: float = lerpf(t0, t1, float(k) / 6.0)
+			run.append(_skin_pt(wing_of.call(t), side, hinge, surf))
+		_mi(body, _strip(run, 0.006, 0.011), m, Vector3.ZERO, "HingeLine")
+		for t in [t0, t1]:
+			var ends: Array = []
+			for f in [hinge, lerpf(hinge, 1.0, 0.5), 0.985]:
+				ends.append(_skin_pt(wing_of.call(t), side, f, surf))
+			_mi(body, _strip(ends, 0.006, 0.009), m, Vector3.ZERO, "HingeLine")
+
+
+static func _skin_pt(s: Dictionary, side: float, f: float, surf: float) -> Vector3:
+	## Point on the wing skin at chord fraction f (top surf = 1, bottom = -1). Follows the exact surface the wing is
+	## lofted through: MeshUtil.airfoil refined once by MeshUtil.refine_ring (loft_smooth ring_passes = 1).
+	var ring: PackedVector3Array = MeshUtil.refine_ring(MeshUtil.airfoil(0.0, float(s["yc"]), float(s["zle"]), float(s["chord"]), float(s["t"])))
+	# refined order: 0 LE, upper 1..5, 6 TE, lower 7..11 back to the LE
+	var idx: Array = [0, 1, 2, 3, 4, 5, 6] if surf > 0.0 else [6, 7, 8, 9, 10, 11, 0]
+	var z: float = float(s["zle"]) + float(s["chord"]) * clampf(f, 0.0, 1.0)
+	var y: float = ring[idx[0]].y
+	for k in idx.size() - 1:
+		var pa: Vector3 = ring[idx[k]]
+		var pb: Vector3 = ring[idx[k + 1]]
+		var lo: float = minf(pa.z, pb.z)
+		var hi: float = maxf(pa.z, pb.z)
+		if z >= lo and z <= hi and hi > lo:
+			y = lerpf(pa.y, pb.y, (z - pa.z) / (pb.z - pa.z))
+			break
+	return Vector3(side * float(s["x"]), y + surf * 0.004, z)
+
+
+static func skin_patch(body: Node3D, wing_of: Callable, side: float, t0: float, t1: float, f0: float, f1: float, surf: float, color: Color, nm: String = "DecalStripe") -> void:
+	## A paint patch laid on the wing skin between span fractions t0..t1 and chord fractions f0..f1 (top surf = 1,
+	## bottom = -1). Used for D-Day stripes, which wrap the real wing chord rather than float above it.
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var nt: int = 3
+	var nf: int = 10
+	var grid: Array = []
+	for i in nt + 1:
+		var row: Array = []
+		var s: Dictionary = wing_of.call(lerpf(t0, t1, float(i) / float(nt)))
+		for j in nf + 1:
+			var p: Vector3 = _skin_pt(s, side, lerpf(f0, f1, float(j) / float(nf)), surf)
+			p.y += surf * 0.002
+			row.append(p)
+		grid.append(row)
+	st.set_normal(Vector3(0, surf, 0))
+	for i in nt:
+		for j in nf:
+			var a: Vector3 = grid[i][j]
+			var b: Vector3 = grid[i + 1][j]
+			var c: Vector3 = grid[i + 1][j + 1]
+			var d: Vector3 = grid[i][j + 1]
+			for tri in [[a, b, c], [a, c, d]]:
+				st.add_vertex(tri[0])
+				st.add_vertex(tri[1])
+				st.add_vertex(tri[2])
+				st.add_vertex(tri[2])
+				st.add_vertex(tri[1])
+				st.add_vertex(tri[0])
+	var mi := _mi(body, st.commit(), mat(color, 0.3), Vector3.ZERO, nm)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+static func jet_fittings(body: Node3D, front: Vector3, z1: float, r: float) -> void:
+	## Axial-flow jet details: the starter-housing bullet in the intake and the exhaust cone in the tailpipe.
+	var bullet: Array = [
+		MeshUtil.ring_xy(front.z - 0.08, 0.02, 0.02, front.y, 12),
+		MeshUtil.ring_xy(front.z + 0.02, r * 0.3, r * 0.3, front.y, 12),
+		MeshUtil.ring_xy(front.z + 0.2, r * 0.38, r * 0.38, front.y, 12)]
+	var b := _mi(body, MeshUtil.loft_smooth(bullet, 2, 0), mat(Color(0.45, 0.46, 0.47), 0.7), Vector3.ZERO, "IntakeBullet")
+	b.position.x = front.x
+	var tail_r: float = r * 0.56
+	var cone: Array = [
+		MeshUtil.ring_xy(z1 - 0.25, tail_r * 0.7, tail_r * 0.7, front.y, 12),
+		MeshUtil.ring_xy(z1 + 0.05, tail_r * 0.45, tail_r * 0.45, front.y, 12),
+		MeshUtil.ring_xy(z1 + 0.3, 0.02, 0.02, front.y, 12)]
+	var c := _mi(body, MeshUtil.loft_smooth(cone, 2, 0), mat(Color(0.2, 0.17, 0.14), 0.5), Vector3.ZERO, "ExhaustCone")
+	c.position.x = front.x
+	cyl(body, tail_r * 0.98, tail_r * 0.98, 0.03, Vector3(front.x, front.y, z1 - 0.005), mat(Color(0.03, 0.03, 0.03), 0.2), Vector3(90, 0, 0), 14, "Tailpipe")
+
+
+static func bomber_turret(body: Node3D, pos: Vector3, r: float, glass: Material, forward: bool, hemi: bool) -> void:
+	## Glazed gun turret (nose / tail / dorsal): perspex dome or ball over a dark frame, with twin barrels.
+	var dm := SphereMesh.new()
+	dm.radius = r
+	dm.height = r * (1.0 if hemi else 2.0)
+	dm.radial_segments = 18
+	dm.rings = 8
+	dm.is_hemisphere = hemi
+	_mi(body, dm, glass, pos, "TurretGlass")
+	# frame: base ring and one meridian hoop, so the dome reads as framed perspex not a ball
+	var ring := TorusMesh.new()
+	ring.inner_radius = r * 0.96
+	ring.outer_radius = r * 1.04
+	ring.rings = 18
+	_mi(body, ring, mat(DARKMETAL, 0.5), pos + Vector3(0, 0.01 if hemi else 0.0, 0), "TurretRing")
+	var hoop := TorusMesh.new()
+	hoop.inner_radius = r * 0.97
+	hoop.outer_radius = r * 1.02
+	hoop.rings = 18
+	var hm := _mi(body, hoop, mat(DARKMETAL, 0.5), pos)
+	hm.rotation_degrees = Vector3(0, 0, 90)
+	# gunner silhouette inside and the guns
+	var gd := SphereMesh.new()
+	gd.radius = r * 0.28
+	gd.height = r * 0.56
+	_mi(body, gd, mat(Color(0.3, 0.27, 0.2), 0.3), pos + Vector3(0, r * (0.25 if hemi else 0.0), 0))
+	var dz: float = -1.0 if forward else 1.0
+	for gx in [-r * 0.28, r * 0.28]:
+		var gl: float = r * 1.9
+		var b := cyl(body, 0.025, 0.022, gl, pos + Vector3(gx, r * (0.3 if hemi else 0.0), dz * (r * 0.5 + gl * 0.5)), mat(DARKMETAL, 0.5), Vector3(90, 0, 0), 6, "TurretGun")
+		b.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+
+
+static func gondola(body: Node3D, pos: Vector3, size: Vector3, skin: Color, glass: Material) -> void:
+	## Ventral gondola (He 111 / Ju 88 / Fw 200 "Bola"): a rounded fairing with glazed front and rear gun windows.
+	var hw: float = size.x * 0.5
+	var hh: float = size.y * 0.5
+	var zf: float = pos.z - size.z * 0.5
+	var zb: float = pos.z + size.z * 0.5
+	var top: float = pos.y + hh
+	var rings: Array = []
+	for st in [[0.0, 0.5, 0.35], [0.12, 0.92, 0.9], [0.3, 1.0, 1.0], [0.75, 0.95, 0.9], [0.92, 0.7, 0.55], [1.0, 0.4, 0.25]]:
+		var h2: float = hh * float(st[2])
+		rings.append(MeshUtil.ring_xy(lerpf(zf, zb, float(st[0])), hw * float(st[1]), h2, top - h2, 14))
+	_mi(body, MeshUtil.loft_smooth(rings, 2, 1), mat(skin, 0.5), Vector3.ZERO, "Gondola", true)
+	for z in [zf + size.z * 0.1, zb - size.z * 0.08]:
+		var win := SphereMesh.new()
+		win.radius = hw * 0.75
+		win.height = hh * 1.3
+		win.radial_segments = 12
+		win.rings = 6
+		_mi(body, win, glass, Vector3(pos.x, top - hh * 1.0, z), "GondolaGlass")
+	cyl(body, 0.022, 0.02, 0.7, Vector3(pos.x, top - hh, zb + 0.2), mat(DARKMETAL, 0.5), Vector3(90, 0, 0), 6, "GondolaGun")

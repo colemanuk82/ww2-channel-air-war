@@ -7,6 +7,8 @@ extends RefCounted
 # [t along fuselage 0..1 (nose->tail), width frac, height frac, centre-y offset (x hh)]
 const PROFILES := {
 	"inline": [[0.0, 0.10, 0.09, 0.0], [0.015, 0.34, 0.31, 0.0], [0.035, 0.56, 0.52, 0.0], [0.06, 0.74, 0.70, 0.0], [0.10, 0.90, 0.86, 0.0], [0.17, 1.0, 0.95, 0.0], [0.33, 0.96, 1.0, 0.1], [0.5, 0.78, 0.85, 0.1], [0.7, 0.5, 0.6, 0.12], [0.88, 0.26, 0.38, 0.16], [1.0, 0.1, 0.2, 0.2]],
+	# Hawker hump-back (Hurricane, Defiant): the top line climbs to a high cockpit and the rear fuselage stays deep
+	"hump": [[0.0, 0.10, 0.09, 0.0], [0.015, 0.34, 0.31, 0.0], [0.035, 0.56, 0.52, 0.0], [0.06, 0.74, 0.70, 0.02], [0.10, 0.88, 0.84, 0.05], [0.17, 0.97, 0.95, 0.09], [0.33, 1.0, 1.1, 0.2], [0.5, 0.86, 1.02, 0.24], [0.7, 0.6, 0.8, 0.26], [0.88, 0.34, 0.52, 0.28], [1.0, 0.12, 0.26, 0.3]],
 	"radial": [[0.0, 0.8, 0.8, 0.0], [0.05, 1.0, 1.0, 0.0], [0.2, 0.98, 1.0, 0.02], [0.4, 0.8, 0.9, 0.04], [0.6, 0.6, 0.72, 0.08], [0.8, 0.36, 0.5, 0.12], [0.93, 0.2, 0.3, 0.16], [1.0, 0.1, 0.18, 0.2]],
 	"bomber": [[0.0, 0.10, 0.10, 0.0], [0.012, 0.34, 0.34, 0.0], [0.03, 0.52, 0.52, 0.0], [0.06, 0.72, 0.72, 0.0], [0.10, 0.86, 0.86, 0.0], [0.16, 0.94, 0.94, 0.0], [0.3, 1.0, 1.0, 0.0], [0.55, 0.88, 0.9, 0.04], [0.75, 0.56, 0.62, 0.1], [0.9, 0.28, 0.34, 0.14], [1.0, 0.1, 0.12, 0.16]],
 }
@@ -137,7 +139,8 @@ static func _fin_mesh(fn: Dictionary, x: float) -> ArrayMesh:
 static func _nacelle_mesh(z0: float, z1: float, r: float, jet: bool) -> ArrayMesh:
 	var prof: Array = [[0.0, 0.65], [0.07, 0.95], [0.2, 1.0], [0.6, 0.9], [0.85, 0.55], [1.0, 0.12]]
 	if jet:
-		prof = [[0.0, 0.8], [0.08, 1.0], [0.5, 1.0], [0.9, 0.72], [1.0, 0.5]]
+		# Jumo 004 style: rounded intake lip, long parallel body, tapering to the exhaust
+		prof = [[0.0, 0.84], [0.03, 0.97], [0.1, 1.0], [0.55, 0.98], [0.8, 0.82], [1.0, 0.56]]
 	var secs: Array = []
 	for p in prof:
 		var z: float = lerpf(z0, z1, float(p[0]))
@@ -279,7 +282,27 @@ static func gear_height(spec: Dictionary) -> float:
 
 ## Dark cockpit framing over a glazing loft: a hoop rib at every canopy section plus a spine along the top.
 ## `rings` is a list of [z, half_w, half_h, cy] sections (the same ones lofted for the glass).
-static func canopy_frame(parent: Node3D, rings: Array, mat: Material) -> void:
+## Aircraft whose canopy is a clear blown hood: frames only at the windscreen arch and the rear of the hood (a
+## greenhouse of hoops on every station is right for the Bf 109 / Hurricane / bombers, wrong for these).
+const BUBBLE_CANOPY := ["spitfire", "p51", "tempest", "typhoon", "fw190", "p47", "me262"]
+
+
+static func canopy_frame(parent: Node3D, rings: Array, mat: Material, style: String = "framed") -> void:
+	if style == "bubble" and rings.size() >= 4:
+		# windscreen arch, hood rear hoop, and the short windscreen centre-top frame
+		for idx in [1, rings.size() - 2]:
+			var rb: Array = rings[idx]
+			var bw: float = float(rb[1]) * 1.04 + 0.008
+			var bh: float = float(rb[2]) * 1.04 + 0.008
+			_mi(parent, MeshUtil.loft([
+				MeshUtil.ring_xy(float(rb[0]) - 0.022, bw, bh, float(rb[3]), 14),
+				MeshUtil.ring_xy(float(rb[0]) + 0.022, bw, bh, float(rb[3]), 14)], false, false), mat)
+		var ws: Array = []
+		for k in 2:
+			var rk: Array = rings[k]
+			ws.append(MeshUtil.rect_xy(float(rk[0]), 0.022, 0.014, float(rk[3]) + float(rk[2]) + 0.004))
+		_mi(parent, MeshUtil.loft(ws), mat)
+		return
 	for r in rings:
 		var hw: float = float(r[1]) * 1.04 + 0.008
 		var hh: float = float(r[2]) * 1.04 + 0.008
@@ -305,20 +328,20 @@ static func pilot(canopy: Node3D, eye: Vector3) -> void:
 	var dark: Material = ToonUtil.make_toon(Color(0.09, 0.09, 0.10), {"outline": false, "rim": 0.0, "gloss": 0.6})
 	var base: Vector3 = eye - Vector3(0.0, 0.13, 0.0)
 	var hs := SphereMesh.new()
-	hs.radius = 0.10
-	hs.height = 0.20
+	hs.radius = 0.115
+	hs.height = 0.23
 	hs.radial_segments = 10
 	hs.rings = 5
 	_mi(root, hs, skin, base)
 	var hm := SphereMesh.new()
-	hm.radius = 0.112
-	hm.height = 0.224
+	hm.radius = 0.128
+	hm.height = 0.256
 	hm.radial_segments = 10
 	hm.rings = 4
 	var hmi := _mi(root, hm, helmet, base + Vector3(0.0, 0.015, 0.0))
 	hmi.scale = Vector3(1.0, 0.9, 1.0)
 	_mi(root, _box(0.17, 0.045, 0.06), dark, base + Vector3(0.0, 0.015, -0.09))
-	_mi(root, _box(0.30, 0.14, 0.20), kit, base + Vector3(0.0, -0.20, 0.02))
+	_mi(root, _box(0.40, 0.17, 0.24), kit, base + Vector3(0.0, -0.20, 0.02))
 	for c in root.get_children():
 		if c is MeshInstance3D:
 			(c as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -450,23 +473,42 @@ static func skin_marking(parent: Node3D, st: Array, nation: String, mz: float, s
 		skin_shapes(parent, st, mz, side, 0.028, Color(0.08, 0.14, 0.45), [["rect", size * 1.55, 0.0, size * 0.35, size * 0.07], ["rect", -size * 1.55, 0.0, size * 0.35, size * 0.07]])
 
 
-## RAF fin flash lofted along the real fin skin (follows sweep, taper and thickness).
+## Fin + rudder section at height fraction t. The trailing edge is the spec's straight line; the leading edge curves
+## back over a rounded top (real fins are never a flat-topped trapezoid), and an optional dorsal fillet ("fillet",
+## metres) sweeps the root forward along the spine (P-51D, Tempest, late P-47D). {chord, zle, y, w}
+static func fin_sec(fn: Dictionary, t: float) -> Dictionary:
+	var cr: float = float(fn["cr"])
+	var ct: float = float(fn["ct"])
+	var sweep: float = float(fn.get("sweep", 0.9))
+	var te: float = float(fn["z"]) + cr + (sweep + ct - cr) * t
+	var chord: float = lerpf(cr, ct, t) * sqrt(maxf(1.0 - pow(t, 2.5) * 0.78, 0.0))
+	var fil: float = float(fn.get("fillet", 0.0))
+	if fil > 0.0 and t < 0.3:
+		chord += fil * pow(1.0 - t / 0.3, 2.0)
+	chord = maxf(chord, 0.08)
+	var w: float = 0.09 * (1.0 - 0.5 * t) * maxf(1.0, cr * 0.5) * (0.4 + 0.6 * sqrt(maxf(1.0 - pow(t, 6.0), 0.0)))
+	return {"chord": chord, "zle": te - chord, "y": float(fn["y"]) + float(fn["h"]) * t, "w": w}
+
+
+## RAF fin flash: a rectangle with vertical edges (fixed z, as painted on the real aircraft) laid on the fin skin.
 static func fin_flash(parent: Node3D, fn: Dictionary, x: float) -> void:
 	var cols: Array = [Color(0.1, 0.17, 0.5), Color(0.95, 0.95, 0.95), Color(0.8, 0.1, 0.1)]
-	var fr: Array = [0.34, 0.47, 0.60, 0.73]
+	var mid: Dictionary = fin_sec(fn, 0.45)
+	var z0: float = float(mid["zle"]) + float(mid["chord"]) * 0.3
+	var z1: float = float(mid["zle"]) + float(mid["chord"]) * 0.74
+	var zb: Array = [z0, lerpf(z0, z1, 1.0 / 3.0), lerpf(z0, z1, 2.0 / 3.0), z1]
 	for i in 3:
 		for sx in [-1.0, 1.0]:
 			var secs: Array = []
-			for t in [0.25, 0.5, 0.75]:
-				var chord: float = lerpf(float(fn["cr"]), float(fn["ct"]), t)
-				var zle: float = float(fn["z"]) + float(fn.get("sweep", 0.9)) * t
-				var y: float = float(fn["y"]) + float(fn["h"]) * t
-				var w: float = 0.09 * (1.0 - 0.5 * t) * maxf(1.0, float(fn["cr"]) * 0.5)
+			for t in [0.12, 0.3, 0.48, 0.64]:
+				var d: Dictionary = fin_sec(fn, t)
 				var ring := PackedVector3Array()
-				for f in [fr[i], fr[i + 1]]:
-					ring.append(Vector3(x + sx * (_fin_half(w, f) + 0.004), y, zle + chord * f))
-				for f in [fr[i + 1], fr[i]]:
-					ring.append(Vector3(x + sx * (_fin_half(w, f) - 0.012), y, zle + chord * f))
+				for z in [zb[i], zb[i + 1]]:
+					var f: float = clampf((float(z) - float(d["zle"])) / float(d["chord"]), 0.0, 1.0)
+					ring.append(Vector3(x + sx * (_fin_half(float(d["w"]), f) + 0.004), float(d["y"]), float(z)))
+				for z in [zb[i + 1], zb[i]]:
+					var f2: float = clampf((float(z) - float(d["zle"])) / float(d["chord"]), 0.0, 1.0)
+					ring.append(Vector3(x + sx * (_fin_half(float(d["w"]), f2) - 0.012), float(d["y"]), float(z)))
 				secs.append(ring)
 			var mi := _mi(parent, MeshUtil.loft(secs), _flat(cols[i]))
 			mi.name = "DecalFin"
@@ -476,13 +518,11 @@ static func fin_flash(parent: Node3D, fn: Dictionary, x: float) -> void:
 ## Luftwaffe fin emblem: a black Hakenkreuz on a white disc, flat on both faces of the fin (twin fins: each one).
 ## Sits on the fin skin at mid-span, mid-chord, the same way fin_flash does for the RAF.
 static func fin_swastika(parent: Node3D, fn: Dictionary, x: float) -> void:
-	var t: float = 0.5
-	var chord: float = lerpf(float(fn["cr"]), float(fn["ct"]), t)
-	var zle: float = float(fn["z"]) + float(fn.get("sweep", 0.9)) * t
-	var yc: float = float(fn["y"]) + float(fn["h"]) * t
-	var zc: float = zle + chord * 0.5
-	var w: float = 0.09 * (1.0 - 0.5 * t) * maxf(1.0, float(fn["cr"]) * 0.5)
-	var half: float = _fin_half(w, 0.5)
+	var d: Dictionary = fin_sec(fn, 0.5)
+	var chord: float = d["chord"]
+	var yc: float = d["y"]
+	var zc: float = float(d["zle"]) + chord * 0.52
+	var half: float = _fin_half(float(d["w"]), 0.52)
 	var r: float = minf(chord * 0.24, float(fn["h"]) * 0.16)
 	var white := Color(0.93, 0.93, 0.93)
 	var black := Color(0.05, 0.05, 0.05)
@@ -607,8 +647,11 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 			secs.append(MeshUtil.ring_xy(r[0], r[1], r[2], r[3], 12))
 		var gmi := _mi(canopy, MeshUtil.loft_smooth(secs, 3, 1), glass)
 		gmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		canopy_frame(canopy, c, dark)
+		canopy_frame(canopy, c, dark, "bubble" if String(spec.get("id", "")) in BUBBLE_CANOPY else "framed")
 	pilot(canopy, spec["eye"] as Vector3)
+	if spec.has("turret"):
+		var tu: Dictionary = spec["turret"]
+		PlaneParts.gun_turret(body, tu["pos"] as Vector3, float(tu["r"]), glass, camo)
 	var eye_p: Vector3 = spec["eye"] as Vector3
 	var rings_p: Array = []
 	for c3 in spec.get("canopies", []):
@@ -629,6 +672,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 			(intake.mesh as CylinderMesh).bottom_radius = float(e["r"]) * 0.62
 			(intake.mesh as CylinderMesh).height = 0.1
 			intake.rotation.x = deg_to_rad(90.0)
+			PlaneParts.jet_fittings(body, Vector3(x, float(e["y"]), float(e["z0"])), float(e["z1"]), float(e["r"]))
 		else:
 			PlaneParts.nacelle_fittings(body, String(spec.get("id", "")), e, col["top"], col["under"])
 			var prop: Node3D = _make_prop(e["prop_r"], int(e.get("blades", 3)), float(e["r"]) * 0.32, tip, prop_idx == 0 and not spec.has("nose_prop"), prop_idx)
@@ -649,14 +693,25 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 			mat = camo
 		match ex["t"]:
 			"box":
-				_mi(body, _box(ex["size"].x, ex["size"].y, ex["size"].z), mat, ex["pos"])
+				var bsz: Vector3 = ex["size"]
+				if String(f.get("profile", "")) == "bomber" and bsz.z >= 1.9 and bsz.x >= 0.5:
+					PlaneParts.gondola(body, ex["pos"], bsz, col["under"], glass)
+				else:
+					_mi(body, _box(bsz.x, bsz.y, bsz.z), mat, ex["pos"])
 			"sphere":
-				var sm := SphereMesh.new()
-				sm.radius = ex["size"].x
-				sm.height = ex["size"].x * 2.0
-				sm.radial_segments = 8
-				sm.rings = 4
-				_mi(body, sm, mat, ex["pos"])
+				if String(ex.get("col", "")) == "grey":
+					var tp_pos: Vector3 = ex["pos"]
+					var fz_mid: float = (float(f["z0"]) + float(f["z1"])) * 0.5
+					var fdz: Array = fus_at(f, tp_pos.z)
+					var dorsal: bool = tp_pos.y > float(fdz[2]) + float(fdz[1]) * 0.6
+					PlaneParts.bomber_turret(body, tp_pos, float(ex["size"].x), glass, tp_pos.z < fz_mid and not dorsal, dorsal)
+				else:
+					var sm := SphereMesh.new()
+					sm.radius = ex["size"].x
+					sm.height = ex["size"].x * 2.0
+					sm.radial_segments = 8
+					sm.rings = 4
+					_mi(body, sm, mat, ex["pos"])
 			"slice":
 				_mi(body, _fus_slice(f, ex["z0"], ex["z1"]), mat)
 
@@ -678,7 +733,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		_mi(body, lm, ToonUtil.make_toon(lc, {"outline": false, "rim": 0.0, "emission": lc, "emission_energy": 1.1}), Vector3(side * float(wtip["x"]), float(wtip["yc"]), float(wtip["zle"]) + float(wtip["chord"]) * 0.5))
 
 	# Exhaust stacks down the nose of inline (liquid-cooled) engines
-	if spec.has("nose_prop") and String(f.get("profile", "inline")) == "inline":
+	if spec.has("nose_prop") and String(f.get("profile", "inline")) in ["inline", "hump"]:
 		PlaneParts.exhaust_stacks(body, f, float(f["z0"]) + 0.55, 5, 0.27)
 
 	# Landing gear
@@ -691,8 +746,14 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		body.add_child(pivot)
 		var wr: float = float(g["r"])
 		var ww: float = 0.14 + wr * 0.3
-		PlaneParts.gear_leg(pivot, side, float(g["len"]), leg_w, wr, ww, String(spec.get("id", "")) != "ju87")
-		PlaneParts.wheel(pivot, wr, ww, Vector3(0, -float(g["len"]) - 0.02, 0))
+		# narrow-track types (Bf 109, Spitfire) have legs canted outward: the leg and wheel hang off a splay node inside
+		# the retraction pivot so folding still works
+		var splay := Node3D.new()
+		splay.name = "Splay"
+		splay.rotation.z = side * deg_to_rad(float(g.get("splay", 0.0)))
+		pivot.add_child(splay)
+		PlaneParts.gear_leg(splay, side, float(g["len"]), leg_w, wr, ww, String(spec.get("id", "")) != "ju87")
+		PlaneParts.wheel(splay, wr, ww, Vector3(0, -float(g["len"]) - 0.02, 0))
 	if spec.has("tail_wheel"):
 		var tw: Array = spec["tail_wheel"]
 		PlaneParts.tail_wheel(body, float(tw[0]), float(tw[1]))
@@ -748,22 +809,16 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		for i in 5:
 			var cs: Color = Color(0.95, 0.95, 0.95) if i % 2 == 0 else Color(0.05, 0.05, 0.05)
 			_mi(body, _fus_slice(f, zs + 0.34 * float(i), zs + 0.34 * float(i + 1)), _flat(cs))
+		# wing bands wrap the chord, top and bottom, laid on the skin (5 equal bands, white-black-white-black-white)
+		var wing_cb: Callable = func(t: float) -> Dictionary: return wing_section(w, t)
+		var tm0: float = 0.09
+		var bwt: float = 0.082 * minf(1.0, 8.0 / maxf(float(w["half"]), 0.1))
+		var tm1: float = tm0 + bwt * 5.0
 		for side in [-1.0, 1.0]:
-			var sa: Dictionary = wing_section(w, 0.25)
-			var sb: Dictionary = wing_section(w, 0.7)
-			var xs: float = (float(sa["x"]) + float(sb["x"])) * 0.5
-			var chm: float = (float(sa["chord"]) + float(sb["chord"])) * 0.5
-			var zm: float = (float(sa["zle"]) + float(sb["zle"])) * 0.5
-			var ym: float = (float(sa["yc"]) + float(sb["yc"])) * 0.5
-			var tm: float = (float(sa["t"]) + float(sb["t"])) * 0.5
-			var dx: float = absf(float(sb["x"]) - float(sa["x"]))
-			var bw: float = dx / 5.0
 			for i in 5:
-				var cs2: Color = Color(0.95, 0.95, 0.95) if i % 2 == 0 else Color(0.05, 0.05, 0.05)
-				var xb: float = (float(sa["x"]) + float(sb["x"]) - dx) * 0.5 + bw * (float(i) + 0.5)
-				var yb: float = lerpf(float(sa["yc"]), float(sb["yc"]), (float(i) + 0.5) / 5.0) + tm * 0.36
-				var sm: MeshInstance3D = _mi(body, _box(bw, 0.024, chm * 0.74), _flat(cs2), Vector3(side * xb, yb, zm + chm * 0.5))
-				sm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				var cs2: Color = Color(0.8, 0.8, 0.78) if i % 2 == 0 else Color(0.04, 0.04, 0.04)
+				for surf in [1.0, -1.0]:
+					PlaneParts.skin_patch(body, wing_cb, side, lerpf(tm0, tm1, float(i) / 5.0), lerpf(tm0, tm1, float(i + 1) / 5.0), 0.015, 0.97 if surf > 0.0 else 0.7, surf, cs2)
 
 	# Markers (Model space; Body is scaled)
 	var gs: Array = spec["guns"]
@@ -795,6 +850,8 @@ static func _fit_details(body: Node3D, spec: Dictionary) -> void:
 	var rz: float = float(w0["zle"]) + float(w0["chord"]) * 0.45
 	var fd: Array = fus_at(f, rz)
 	PlaneDetails.underside(body, String(spec.get("id", "")), wing_of, float(fd[2]) - float(fd[1]), rz, f)
+	for sd in [-1.0, 1.0]:
+		PlaneParts.aileron_lines(body, wing_of, sd, 0.58 if bomber else 0.6, 0.93)
 	if bomber:
 		var nz: float = float(f["z0"]) + 1.6
 		var nd: Array = fus_at(f, nz)
@@ -803,10 +860,19 @@ static func _fit_details(body: Node3D, spec: Dictionary) -> void:
 		var wp: Dictionary = wing_section(w, 0.5)
 		PlaneDetails.pitot(body, Vector3(-float(wp["x"]), float(wp["yc"]) - float(wp["t"]) * 0.4, float(wp["zle"]) - 0.02))
 	var cam: Color = ((spec["colors"] as Dictionary)["under"] as Color).darkened(0.3)
+	if String(spec.get("id", "")) == "bf109":
+		var tp: Dictionary = spec["tail"]
+		var sm: Material = PlaneParts.mat(((spec["colors"] as Dictionary)["under"] as Color), 0.4)
+		for sd in [-1.0, 1.0]:
+			var tz: float = float(tp["z"]) + float(tp["cr"]) * 0.3
+			var tdd: Array = fus_at(f, tz)
+			PlaneDetails.rod(body, Vector3(sd * (0.15 + float(tp["span"]) * 0.45), float(tp["y"]) - 0.03, tz + 0.1), Vector3(sd * float(tdd[0]) * 0.8, float(tdd[2]) - float(tdd[1]) * 0.3, tz), 0.025, sm, "TailStrut")
 	var zf: float = float(f["z0"])
 	match String(spec.get("id", "")):
 		"bf109":
 			PlaneParts.underwing_radiators(body, wing_of, 0.3, Vector3(0.5, 0.17, 0.85), cam)
+			var od: Array = fus_at(f, zf + 1.1)
+			PlaneParts.intake_scoop(body, Vector3(0.0, float(od[2]) - float(od[1]) * 0.92, zf + 1.1), Vector3(0.32, 0.17, 0.55), cam)
 		"hurricane":
 			PlaneParts.intake_scoop(body, Vector3(0.0, float(fd[2]) - float(fd[1]) - 0.1, rz + float(w0["chord"]) * 0.55), Vector3(0.7, 0.34, 1.1), cam)
 		"typhoon", "tempest":
@@ -823,8 +889,9 @@ static func _fit_details(body: Node3D, spec: Dictionary) -> void:
 	var ad: Array = fus_at(f, mz)
 	var base := Vector3(0.0, float(ad[2]) + float(ad[1]) - 0.03, mz)
 	var fin: Dictionary = spec["fin"]
-	var fz: float = float(fin["z"]) + float(fin.get("sweep", 0.9)) + float(fin["ct"]) * 0.4
-	var fy: float = float(fin["y"]) + float(fin["h"])
+	var ftip: Dictionary = fin_sec(fin, 0.96)
+	var fz: float = float(ftip["zle"]) + float(ftip["chord"]) * 0.4
+	var fy: float = float(ftip["y"])
 	if bool(fin.get("twin", false)):
 		var fx: float = float(fin["x"])
 		PlaneDetails.aerial(body, base, 0.5 if bomber else 0.4, Vector3(-fx, fy, fz), Vector3(fx, fy, fz))

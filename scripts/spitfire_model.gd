@@ -11,7 +11,7 @@ const COL_DARK := Color(0.10, 0.10, 0.11)
 
 # Wing parameters (metres)
 const WING_ROOT_X := 0.35
-const WING_HALF := 5.61
+const WING_HALF := 5.27   # span 11.23 m like the real Mk IX
 const WING_Y := -0.28
 const WING_DIHEDRAL := 0.4
 
@@ -50,13 +50,22 @@ static func _fin_half(w: float, f: float) -> float:
 	return w * 0.6 * (1.0 - f) / 0.2
 
 
+## Fin + rudder section at height fraction t: the Spitfire's rounded "D" fin - a near-vertical rudder trailing edge
+## and a leading edge that curves back over an elliptical top. {chord, zle, y, w (max half-thickness)}.
+static func _fin_sec(t: float) -> Dictionary:
+	var te: float = 4.95 - 0.12 * t
+	var chord: float = maxf(1.8 * sqrt(maxf(1.0 - pow(t, 2.2), 0.0)), 0.1)
+	return {"chord": chord, "zle": te - chord, "y": 0.15 + 1.72 * t, "w": 0.09 * (1.0 - 0.5 * t)}
+
+
 static func _fin_mesh() -> ArrayMesh:
 	var secs: Array = []
-	for t in [0.0, 0.4, 0.8, 1.0]:
-		var chord: float = 1.8 - 1.0 * t
-		var zle: float = 3.3 + 0.9 * t
-		var y: float = 0.15 + 1.9 * t
-		var w: float = 0.09 * (1.0 - 0.5 * t)
+	for t in [0.0, 0.2, 0.4, 0.55, 0.68, 0.78, 0.86, 0.92, 0.96, 0.99, 1.0]:
+		var d: Dictionary = _fin_sec(t)
+		var chord: float = d["chord"]
+		var zle: float = d["zle"]
+		var y: float = d["y"]
+		var w: float = d["w"]
 		# airfoil in the Z-Y plane with thickness along X
 		secs.append(PackedVector3Array([
 			Vector3(0, y, zle), Vector3(w, y, zle + chord * 0.3), Vector3(w * 0.6, y, zle + chord * 0.8),
@@ -65,10 +74,12 @@ static func _fin_mesh() -> ArrayMesh:
 
 
 ## z, half width, half height, centre y (also used to lay the roundels on the skin curve)
+## Matched to side and plan photos of a Mk IX: a narrow Merlin nose that meets a large spinner, deepest at the
+## cockpit, then the rear fuselage tapering hard in depth to a slim tail cone.
 const FUS_RINGS: Array = [
-	[-3.75, 0.07, 0.07, 0.0], [-3.68, 0.20, 0.22, 0.0], [-3.5, 0.33, 0.37, 0.0], [-3.3, 0.42, 0.46, 0.0], [-2.2, 0.56, 0.62, 0.02],
-	[-0.8, 0.54, 0.68, 0.10], [0.8, 0.44, 0.56, 0.10], [2.5, 0.29, 0.40, 0.11],
-	[4.0, 0.15, 0.25, 0.14], [4.85, 0.06, 0.13, 0.17]]
+	[-3.74, 0.30, 0.31, 0.0], [-3.5, 0.35, 0.41, -0.02], [-3.0, 0.38, 0.51, -0.04], [-2.2, 0.41, 0.6, -0.02],
+	[-1.2, 0.44, 0.68, 0.04], [-0.3, 0.44, 0.7, 0.08], [0.8, 0.38, 0.6, 0.12], [2.0, 0.28, 0.45, 0.15],
+	[3.2, 0.18, 0.31, 0.17], [4.2, 0.1, 0.2, 0.19], [4.9, 0.04, 0.1, 0.2]]
 
 
 static func _fuselage_mesh() -> ArrayMesh:
@@ -181,14 +192,14 @@ static func build(nation: String = "RAF") -> Node3D:
 	gmi.material_override = ToonUtil.make_glass({"opacity": 0.2, "rim": 0.9, "tint": Color(0.58, 0.70, 0.76)})
 	gmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	canopy.add_child(gmi)
-	PlaneBuilder.canopy_frame(canopy, CANOPY_RINGS, dark)
+	PlaneBuilder.canopy_frame(canopy, CANOPY_RINGS, dark, "bubble")
 	PlaneBuilder.pilot(canopy, Vector3(0.0, 1.12, 0.45))
 	PlaneDetails.cockpit(canopy, Vector3(0.0, 1.12, 0.45), false, CANOPY_RINGS)
 
 	# Radiators under the wings: boxed housings with a bright lip and dark mouth (oil cooler port, radiator starboard)
 	for side in [-1.0, 1.0]:
 		var rsz := Vector3(0.52 if side > 0.0 else 0.42, 0.24, 0.8)
-		PlaneParts.intake_scoop(body, Vector3(side * 2.1, -0.54, 0.0), rsz, COL_UNDER.darkened(0.3))
+		PlaneParts.intake_scoop(body, Vector3(side * 2.1, -0.40, 0.05), rsz, COL_UNDER.darkened(0.3))
 
 	# Exhaust stubs: six ejector pipes a side
 	for side in [-1.0, 1.0]:
@@ -209,9 +220,11 @@ static func build(nation: String = "RAF") -> Node3D:
 
 	# Underside rack, pitot tube under the port wing, radio mast and aerial wire to the fin tip
 	PlaneDetails.underside(body, "spitfire", _wing_section, -0.52, 0.0)
+	for sd in [-1.0, 1.0]:
+		PlaneParts.aileron_lines(body, _wing_section, sd, 0.55, 0.9)
 	var wp: Dictionary = _wing_section(0.45)
 	PlaneDetails.pitot(body, Vector3(-float(wp["x"]), float(wp["yc"]) - float(wp["t"]) * 0.4, float(wp["zle"]) - 0.02))
-	PlaneDetails.aerial(body, Vector3(0.0, 0.55, 1.9), 0.42, Vector3(0.0, 2.05, 4.55))
+	PlaneDetails.aerial(body, Vector3(0.0, 0.55, 1.9), 0.42, Vector3(0.0, 1.83, 4.66))
 
 	# Navigation lights: red to port, green to starboard at the wingtips
 	var wt: Dictionary = _wing_section(1.0)
@@ -231,14 +244,15 @@ static func build(nation: String = "RAF") -> Node3D:
 	# Markings: the fuselage roundel is laid on the skin curve so it fits the tapered rear fuselage
 	var fx: float = 0.30
 	if nation == "Luftwaffe":
-		PlaneBuilder.skin_marking(body, FUS_RINGS, nation, 2.4, 1.0, 0.36)
-		PlaneBuilder.skin_marking(body, FUS_RINGS, nation, 2.4, -1.0, 0.36)
+		PlaneBuilder.skin_marking(body, FUS_RINGS, nation, 1.4, 1.0, 0.4)
+		PlaneBuilder.skin_marking(body, FUS_RINGS, nation, 1.4, -1.0, 0.4)
 	else:
-		var sd: Array = PlaneBuilder.station_at(FUS_RINGS, 2.4)
-		var r: float = minf(0.5, minf(float(sd[0]), float(sd[1])) * 0.85)
+		# the real fuselage roundel is big - about 4/5 of the fuselage depth - and sits between cockpit and fin
+		var sd: Array = PlaneBuilder.station_at(FUS_RINGS, 1.4)
+		var r: float = minf(0.42, float(sd[1]) * 0.8)
 		var layers: Array = [[1.0, Color(0.1, 0.17, 0.5)], [0.66, Color(0.95, 0.95, 0.95)], [0.34, Color(0.8, 0.1, 0.1)]]
-		PlaneBuilder.skin_roundel(body, FUS_RINGS, 2.4, 1.0, r, layers)
-		PlaneBuilder.skin_roundel(body, FUS_RINGS, 2.4, -1.0, r, layers)
+		PlaneBuilder.skin_roundel(body, FUS_RINGS, 1.4, 1.0, r, layers)
+		PlaneBuilder.skin_roundel(body, FUS_RINGS, 1.4, -1.0, r, layers)
 	# Wing top roundels: inboard of the aileron, tilted with the dihedral and kept inside the chord
 	for side in [-1.0, 1.0]:
 		var ws: Dictionary = _wing_section(0.5)
@@ -252,20 +266,24 @@ static func build(nation: String = "RAF") -> Node3D:
 	# Fin flash (RAF): bands lofted along the fin skin so they follow its sweep and thickness
 	if nation != "Luftwaffe":
 		var stripe_cols: Array = [Color(0.1, 0.17, 0.5), Color(0.95, 0.95, 0.95), Color(0.8, 0.1, 0.1)]
-		var fr: Array = [0.34, 0.47, 0.60, 0.73]
+		# a rectangle with vertical edges (fixed z), like the real flash, laid on the fin skin
+		var zb: Array = [3.86, 4.09, 4.32, 4.55]
 		for i in 3:
 			for sx in [-1.0, 1.0]:
 				var secs: Array = []
-				for t in [0.22, 0.45, 0.68, 0.85]:
-					var chord: float = 1.8 - 1.0 * t
-					var zle: float = 3.3 + 0.9 * t
-					var y: float = 0.15 + 1.9 * t
-					var w: float = 0.09 * (1.0 - 0.5 * t)
+				for t in [0.14, 0.32, 0.5, 0.66]:
+					var d: Dictionary = _fin_sec(t)
+					var chord: float = d["chord"]
+					var zle: float = d["zle"]
+					var y: float = d["y"]
+					var w: float = d["w"]
 					var ring := PackedVector3Array()
-					for f in [fr[i], fr[i + 1]]:
-						ring.append(Vector3(sx * (_fin_half(w, f) + 0.004), y, zle + chord * f))
-					for f in [fr[i + 1], fr[i]]:
-						ring.append(Vector3(sx * (_fin_half(w, f) - 0.012), y, zle + chord * f))
+					for z in [zb[i], zb[i + 1]]:
+						var f: float = clampf((float(z) - zle) / chord, 0.0, 1.0)
+						ring.append(Vector3(sx * (_fin_half(w, f) + 0.004), y, float(z)))
+					for z in [zb[i + 1], zb[i]]:
+						var f2: float = clampf((float(z) - zle) / chord, 0.0, 1.0)
+						ring.append(Vector3(sx * (_fin_half(w, f2) - 0.012), y, float(z)))
 					secs.append(ring)
 				_decal(body, MeshUtil.loft(secs), stripe_cols[i], Vector3.ZERO)
 	else:
@@ -275,10 +293,15 @@ static func build(nation: String = "RAF") -> Node3D:
 	for side in [-1.0, 1.0]:
 		var pivot := Node3D.new()
 		pivot.name = "GearR" if side > 0.0 else "GearL"
-		pivot.position = Vector3(side * 1.35, WING_Y + WING_DIHEDRAL * 0.17 - 0.05, -0.5)
+		pivot.position = Vector3(side * 1.35, WING_Y + WING_DIHEDRAL * 0.17 - 0.05, -1.2)
 		body.add_child(pivot)
-		PlaneParts.gear_leg(pivot, side, 0.8, 0.14, 0.3, 0.14)
-		PlaneParts.wheel(pivot, 0.3, 0.14, Vector3(0, -0.82, 0))
+		var splay := Node3D.new()
+		splay.name = "Splay"
+		splay.rotation.z = side * deg_to_rad(9.0)
+		splay.rotation.x = deg_to_rad(8.0)
+		pivot.add_child(splay)
+		PlaneParts.gear_leg(splay, side, 0.8, 0.14, 0.3, 0.14)
+		PlaneParts.wheel(splay, 0.3, 0.14, Vector3(0, -0.82, 0))
 	PlaneParts.tail_wheel(body, -0.12, 4.5, 0.12)
 
 	# Propeller group
@@ -287,10 +310,10 @@ static func build(nation: String = "RAF") -> Node3D:
 	prop.position = Vector3(0, 0, -3.8)
 	body.add_child(prop)
 	var spinner := MeshInstance3D.new()
-	spinner.mesh = PlaneParts.spinner_mesh(0.30)
+	spinner.mesh = PlaneParts.spinner_mesh(0.34)
 	spinner.material_override = ToonUtil.make_toon(Color(0.12, 0.12, 0.13), {"outline_thickness": 0.012, "gloss": 0.8})
 	prop.add_child(spinner)
-	PlaneParts.hub_plate(prop, 0.30)
+	PlaneParts.hub_plate(prop, 0.34)
 	var blade_mat := ToonUtil.make_toon(Color(0.07, 0.07, 0.07), {"outline": false})
 	# The blades hang off one node so a fast-spinning prop can swap them for the PropDisc blur (see
 	# AircraftModels.prop_blur): blades sampled a few times per turn strobe, which reads as the aircraft
@@ -303,7 +326,7 @@ static func build(nation: String = "RAF") -> Node3D:
 		pivot.rotation.z = TAU * float(i) / 3.0
 		blades.add_child(pivot)
 		var blade := MeshInstance3D.new()
-		blade.mesh = PlaneParts.blade_mesh(1.75, 0.30)
+		blade.mesh = PlaneParts.blade_mesh(1.75, 0.34)
 		blade.material_override = blade_mat
 		pivot.add_child(blade)
 		# yellow tip
