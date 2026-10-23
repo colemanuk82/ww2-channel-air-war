@@ -27,6 +27,11 @@ const AWARDS := {
 		["diver", "Anti-Diver commendation", "v1 >= 5"],
 		["coastal", "Coastal Command commendation", "ships >= 5"],
 		["ground", "Army Co-operation commendation", "ground >= 25"],
+		["ace", "Fighter Ace (5 air victories)", "air >= 5"],
+		["double_ace", "Double Ace (10 air victories)", "air >= 10"],
+		["scramble", "Readiness Flight (10 scrambles)", "scrambles >= 10"],
+		["hours10", "Ten hours in the air", "seconds >= 36000"],
+		["hours50", "Fifty hours in the air", "seconds >= 180000"],
 	],
 	"Axis": [
 		["ek2", "Iron Cross 2nd Class", "done + missions >= 3 or air >= 2 or ships >= 2"],
@@ -37,6 +42,11 @@ const AWARDS := {
 		["seenot", "Sea Rescue commendation", "rescues >= 3"],
 		["anti_ship", "Anti-Shipping commendation", "ships >= 5"],
 		["ground", "Ground Assault Badge", "ground >= 25"],
+		["ace", "Fighter Ace (5 air victories)", "air >= 5"],
+		["double_ace", "Double Ace (10 air victories)", "air >= 10"],
+		["scramble", "Readiness Flight (10 scrambles)", "scrambles >= 10"],
+		["hours10", "Ten hours in the air", "seconds >= 36000"],
+		["hours50", "Fifty hours in the air", "seconds >= 180000"],
 	],
 }
 
@@ -90,7 +100,7 @@ static func next_rank(side: String, points: int) -> Array:
 
 static func _test(expr_s: String, d: Dictionary) -> bool:
 	var e := Expression.new()
-	var names: PackedStringArray = ["done", "missed", "air", "ground", "ships", "v1", "scrambles", "rescues", "intel", "missions"]
+	var names: PackedStringArray = ["done", "missed", "air", "ground", "ships", "v1", "scrambles", "rescues", "intel", "missions", "seconds"]
 	if e.parse(expr_s, names) != OK:
 		return false
 	var vals: Array = []

@@ -52,6 +52,7 @@ func _ready() -> void:
 	_test_ai_takeoff_all()
 	_test_weak_gpu()
 	_test_accessibility()
+	_test_awards()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -1319,6 +1320,17 @@ func _test_history() -> void:
 
 ## Every flyable aircraft, flown by the AI pilot from a standing start on flat ground: it must lift off, climb
 ## away and hand over to its next state without crashing, within a sane time. The simulation is stepped by hand.
+func _test_awards() -> void:
+	for side in ["Allies", "Axis"]:
+		var ids: Array = []
+		for a in PilotLog.AWARDS[side]:
+			ids.append(a[0])
+			_check(PilotLog._test(String(a[2]), {}) == false, "%s award '%s' not given to a new pilot" % [side, a[0]])
+		_check(ids.has("ace") and ids.has("hours10"), side + " has the ace and hours awards")
+	_check(PilotLog._test("air >= 5", {"air": 5}), "ace award triggers at 5 air victories")
+	_check(PilotLog._test("seconds >= 36000", {"seconds": 36000}), "ten-hour award reads flown seconds")
+
+
 func _test_accessibility() -> void:
 	var save: bool = GameState.colorblind
 	GameState.colorblind = false
