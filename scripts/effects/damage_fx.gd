@@ -71,6 +71,8 @@ func _on_destroyed(a: Aircraft, _killer: Node) -> void:
 	else:
 		_smoke.dark = 0.95
 		_smoke.size = 3.4
+	if a.has_meta("bailed"):
+		return          # abandoned by its pilot: no flash, fire or wing loss, it just flies on and goes down
 	if _fire == null:
 		_fire = FX.trail(a, "fire", 3.0, Vector3(0, 0.5, 2.5))
 	FX.explosion(a.global_position, 4.0)   # in-air hit flash

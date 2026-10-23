@@ -491,7 +491,7 @@ func take_damage(amount: float, source: Node = null) -> void:
 	if _dmg_side == 0.0:
 		_dmg_side = 1.0 if randf() < 0.5 else -1.0
 	_impact_shake = minf(_impact_shake + amount * 0.02, 1.0)
-	if damage_model != null:
+	if damage_model != null and not has_meta("bailed"):
 		damage_model.on_hit(amount, source, _pending_hit, _pending_dir)
 	_pending_hit = Vector3.ZERO
 	_pending_dir = Vector3.ZERO
