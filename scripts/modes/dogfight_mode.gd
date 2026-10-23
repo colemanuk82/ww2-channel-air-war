@@ -13,6 +13,7 @@ var difficulty: float = 0.5
 var player_aircraft_id: String = "spitfire"
 var planes_left: int = 3
 var wave: int = 0
+var _low_wait: float = 0.0     # extra seconds the next wave has been held back while the player is low
 var total_waves: int = 5
 var kills: int = 0
 var deaths: int = 0
@@ -54,7 +55,7 @@ func start() -> void:
 	if player and is_instance_valid(player):
 		(player as Aircraft).destroyed.connect(_on_player_destroyed)
 	_top_up_wingmen()
-	_set_phase(Phase.PREP, 20.0)      # a long run-in before the first contact: climb, get set, spot them
+	_set_phase(Phase.PREP, 45.0)      # a long run-in before the first contact: take off, climb, get set, spot them
 	_announce("DOGFIGHT - %d waves" % total_waves, "Destroy all enemy aircraft.")
 	_refresh_label()
 
@@ -122,7 +123,13 @@ func _process(delta: float) -> void:
 		Phase.PREP, Phase.BREAK:
 			_phase_t -= delta
 			if _phase_t <= 0.0:
-				_next_wave()
+				# never launch a wave at a player still on the airfield or hugging the ground: wait (up to 90 s) until he is up
+				var pl: Aircraft = player as Aircraft
+				if pl != null and is_instance_valid(pl) and (pl.on_ground or pl.altitude_agl < 450.0) and _low_wait < 90.0:
+					_low_wait += delta
+				else:
+					_low_wait = 0.0
+					_next_wave()
 		Phase.ACTIVE:
 			_check_t -= delta
 			if _check_t <= 0.0:
@@ -181,7 +188,7 @@ func _next_wave() -> void:
 			if jets > 1:
 				id = "fw190"
 		var h: float = base_heading + randf_range(-40.0, 40.0)
-		var dist: float = randf_range(4500.0, 7000.0)
+		var dist: float = randf_range(9000.0, 12500.0) if wave == 1 else randf_range(6000.0, 8500.0)     # the first wave starts well out, far from the airfield
 		var pos: Vector3 = center + WorldCoords.heading_to_dir(h) * dist + Vector3(randf_range(-250, 250), 0, randf_range(-250, 250))
 		pos.y = _safe_alt(pos, center.y + randf_range(-150.0, 350.0))
 		var face: float = WorldCoords.dir_to_heading(center - pos)
