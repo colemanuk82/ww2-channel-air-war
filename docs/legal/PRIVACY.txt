@@ -15,7 +15,7 @@ The Game stores the following on your own computer only, in the Game's user data
 None. We do not collect your name, email address, location, device identifiers, play statistics or crash reports.
 
 4. NETWORK ACCESS
-The Game works offline. It connects to the internet only if you press "Download DLSS components", in which case it downloads a file from NVIDIA's public GitHub repository (github.com). GitHub, like any web server, will see your IP address and basic request details, under GitHub's own privacy statement. The "Support me on PayPal" button on the main menu opens a web page in your browser only when you press it; the Game itself sends nothing, and PayPal handles any payment under its own terms and privacy statement. No other connection is made by the Game.
+The Game works offline. It connects to the internet only if you press "Download DLSS components", in which case it downloads a file from NVIDIA's public GitHub repository (github.com). GitHub, like any web server, will see your IP address and basic request details, under GitHub's own privacy statement. The "Support me on PayPal" button on the main menu opens a web page in your browser only when you press it; the Game itself sends nothing, and PayPal handles any payment under its own terms and privacy statement. If you press "Check for updates" on the main menu, the Game asks GitHub's public releases page for the latest version number (GitHub sees your IP address and basic request details under its own privacy statement); nothing is sent in the background. No other connection is made by the Game.
 
 5. STORES AND PLATFORMS
 If you obtain the Game through a store or launcher (for example Steam), that platform processes your data under its own privacy policy. We do not control it.

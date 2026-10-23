@@ -254,6 +254,35 @@ void fragment() {
 	sup.offset_top = 40.0
 	sup.tooltip_text = "Optional. Opens " + DONATE_URL + " in your web browser."
 	root.add_child(sup)
+	# manual update check (a request is made only when this is pressed)
+	var upd_newer: Array = [false]
+	var upd := UIKit.button("Check for updates", func() -> void: pass, 15)
+	upd.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	upd.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	upd.offset_right = -22.0
+	upd.offset_top = 76.0
+	upd.tooltip_text = "Optional. Asks GitHub whether a newer release exists; sends nothing else."
+	root.add_child(upd)
+	var checker := UpdateCheck.new()
+	root.add_child(checker)
+	checker.result.connect(func(text: String, newer: bool) -> void:
+		upd.text = text
+		upd.disabled = false
+		upd_newer[0] = newer)
+	upd.pressed.connect(func() -> void:
+		if upd_newer[0]:
+			OS.shell_open(UpdateCheck.PAGE_URL)
+			return
+		upd.text = "Checking..."
+		upd.disabled = true
+		checker.check())
+	var logs := UIKit.button("Open logs folder", func() -> void: OS.shell_open(ProjectSettings.globalize_path("user://logs")), 15)
+	logs.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	logs.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	logs.offset_right = -22.0
+	logs.offset_top = 112.0
+	logs.tooltip_text = "Opens the folder with the game's log files (useful when reporting a crash)."
+	root.add_child(logs)
 	if FirstRun.pending():
 		_welcome_when_clear(root)
 

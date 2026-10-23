@@ -8,10 +8,15 @@
 
 config_version=5
 
+[debug]
+
+file_logging/enable_file_logging=true
+file_logging/max_log_files=8
+
 [application]
 
 config/name="WW2 Channel Air War"
-config/version="1.4"
+config/version="1.5"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 
