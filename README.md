@@ -29,6 +29,8 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 | 🌊 **Dam Busters** | A seven-day campaign. Skim low, hit your marks, put the bomb on the dam. |
 | 🎖️ **A war that moves** | Dynamic campaign and Pilot's Life: ranks, medals, telegrams, newsreels, and the occasional letter home you hope you never have to send. |
 | 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, rain squalls, searchlights and flak at night. |
+| 🧑‍✈️ **Bail out and live** | Hold `J` to jump. A detailed pilot (RAF or Luftwaffe kit, cloth and leather textures) swings under the canopy with rag-doll motion, and every man aboard gets his own parachute. Look around with the right stick, warp time with `]` / `[`, and skip to respawn when you've seen enough. Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
+| 🌡️ **Realism options** | Engine overheating with its own HEAT gauge, and G-forces that grey out your vision and can knock you out. Enemy pilots suffer too. On by default, switch off any time in Options > Realism. |
 | 🎵 **Bring your own soundtrack** | Import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
 | 💸 **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
 
@@ -50,7 +52,7 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v1.23.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v1.24.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
@@ -63,6 +65,13 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 - **Sortie planner:** start from any airfield (runway or airborne) or any point on the map, choose a scenario, set the enemy strength.
 - **A living world:** barrage balloons, searchlights, Atlantic Wall guns, convoys and trains. Landmarks include Battersea Power Station, the Tower of London and Rochester Castle.
 - **Radio chatter:** AI-voiced controllers, wingmen and bomber crews, with subtitles and static.
+- **Realism (Options > Realism, on by default):**
+  - **Engine heat:** full throttle and boost heat the engine. Throttle back or dive to cool it. Overheat too much, too often, and the engine wears: less power, then smoke and fire. A new HEAT arc (and a wear arc) sits on the airspeed dial.
+  - **G-forces:** sustained high G closes your vision in from the edges (red-out on negative G). Ease off and it returns slowly. Keep pulling and you black out, your hands come off the stick, and you had better wake up before the ground does.
+  - **AI pilots follow the same rules,** so enemies manage their power and can black out in a hard turn.
+- **Bailing out:** abandoned aircraft fly on out of control and crash. Multi-seat aircraft drop the right number of parachutes. Shoot or ram enemy parachutists if you can stomach it.
+- **Smarter dogfights:** the first wave comes later and from further out, and some waves are patrols that haven't spotted you, so you can sneak up on them.
+- **Safer airfields:** AI aircraft are protected until they have climbed to 50 m, and nothing is placed on the runways.
 - **Cockpit, chase, orbit and overhead cameras,** and a clean no-HUD view (`H`) for screenshots.
 - **Full gamepad support.** 🕹️
 
@@ -74,6 +83,8 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 | Yaw | `Q` `E` | Right stick look |
 | Throttle | `Shift` / `Ctrl` | Triggers |
 | Boost | `Tab` | `RB` |
+| Bail out (hold) | `J` | |
+| Time warp (in flight or under the parachute) | `]` `[` | |
 | Fire / drop bomb | `Space` | `A` |
 | Switch weapon | `X` / `B` | `B` |
 | Gear | `G` | `Y` |
@@ -83,6 +94,12 @@ Take off from Kent. Cross the Channel. Come home. Maybe.
 | Outlines / HUD / hints | `O` / `H` / `F1` | D-pad |
 | Photo (clean screenshot, saved to Pictures) | `F12` | |
 | Pause / respawn | | `Start` / `Back` |
+
+## 🗺️ Roadmap
+
+- **Proper in-cockpit views:** fully modelled, detailed cockpit interiors for every aircraft, including the bombers' crew positions. The current cockpit cameras are a stand-in and will be replaced at a later point.
+- More historical missions and the full Dam Busters campaign (both marked work in progress in the menus).
+- More realism options and aircraft detail as the game grows.
 
 ## ❓ Quick answers
 
