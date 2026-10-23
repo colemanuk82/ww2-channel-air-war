@@ -50,6 +50,7 @@ func _ready() -> void:
 	_test_moon_weather()
 	_test_history()
 	_test_ai_takeoff_all()
+	_test_realism()
 	_test_weak_gpu()
 	_test_accessibility()
 	_test_awards()
@@ -1436,3 +1437,62 @@ func _test_ai_takeoff_all() -> void:
 	if wm != null:
 		wm.set("wind_speed", wind_save[0])
 		wm.set("wind_dir_deg", wind_save[1])
+
+
+func _test_realism() -> void:
+	print("-- Realism: engine heat and G effects")
+	_check(GameState.engine_heat_on and GameState.g_effects_on, "realism settings are on by default")
+	var ac: Aircraft = AIFactory.spawn(self, "spitfire", "Allies", Vector3(0.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
+	ac.on_ground = false
+	ac.speed = ac.stats.max_speed * 0.8
+	# heat: full throttle + boost heats, throttled back / diving cools
+	ac.throttle = 1.0
+	ac.boosting = true
+	for i in 200:
+		ac._update_engine_heat(0.1)
+	_check(ac.engine_heat > 0.9, "boost + full throttle overheat the engine (%.2f)" % ac.engine_heat)
+	_check(ac.overheated and ac.engine_wear > 0.05, "overheating wears the engine (wear %.2f)" % ac.engine_wear)
+	_check(ac._engine_power() < 1.0, "a worn engine loses power (%.2f)" % ac._engine_power())
+	ac.boosting = false
+	ac.throttle = 0.3
+	var h0: float = ac.engine_heat
+	for i in 100:
+		ac._update_engine_heat(0.1)
+	var h_slow: float = ac.engine_heat
+	_check(h_slow < h0 - 0.05, "throttled back the engine cools (%.2f -> %.2f)" % [h0, h_slow])
+	ac.engine_heat = 0.8
+	ac.throttle = 0.6
+	ac._path_dir = Vector3(0.0, -0.7, -0.7).normalized()
+	ac._update_engine_heat(1.0)
+	var dive_h: float = ac.engine_heat
+	ac.engine_heat = 0.8
+	ac._path_dir = Vector3(0.0, 0.0, -1.0)
+	ac._update_engine_heat(1.0)
+	_check(dive_h < ac.engine_heat, "a dive cools the engine faster than level flight (%.3f vs %.3f)" % [dive_h, ac.engine_heat])
+	GameState.engine_heat_on = false
+	ac.engine_heat = 0.9
+	ac._update_engine_heat(1.0)
+	_check(ac.engine_heat < 0.9 and ac._engine_power() == 1.0, "heat can be switched off in Options > Realism")
+	GameState.engine_heat_on = true
+	# G: sustained high G greys out then knocks the pilot out; he wakes and the vision returns slowly
+	ac.g_load = 8.0
+	var greyed: bool = false
+	for i in 80:
+		ac._update_g_effects(0.1)
+		if ac.g_gray > 0.4 and ac.gloc_t <= 0.0:
+			greyed = true
+	_check(greyed, "vision greys out before the blackout")
+	_check(ac.gloc_t > 0.0 or ac._gloc_grace > 0.0, "sustained 8 g causes a G-LOC")
+	ac.g_load = 1.0
+	for i in 80:
+		ac._update_g_effects(0.1)
+	_check(ac.gloc_t <= 0.0, "the pilot wakes up")
+	for i in 60:
+		ac._update_g_effects(0.1)
+	_check(ac.g_gray < 0.5, "vision comes back (%.2f)" % ac.g_gray)
+	GameState.g_effects_on = false
+	ac.g_gray = 0.7
+	ac._update_g_effects(1.0)
+	_check(ac.g_gray < 0.7 and ac.gloc_t == 0.0, "G effects can be switched off")
+	GameState.g_effects_on = true
+	ac.queue_free()

@@ -9,8 +9,8 @@ signal closed
 
 static var start_on_controls: bool = false      # debug / shortcut: open straight on the Controls page
 
-const PAGES := ["video", "render", "audio", "music", "gameplay", "controls"]
-const PAGE_LABELS := {"video": "VIDEO", "render": "RENDER", "audio": "AUDIO", "music": "MUSIC", "gameplay": "GAMEPLAY", "controls": "CONTROLS"}
+const PAGES := ["video", "render", "audio", "music", "gameplay", "realism", "controls"]
+const PAGE_LABELS := {"video": "VIDEO", "render": "RENDER", "audio": "AUDIO", "music": "MUSIC", "gameplay": "GAMEPLAY", "realism": "REALISM", "controls": "CONTROLS"}
 
 ## Controls pages are slices of BINDINGS (header row included). Keep these in step with the table below:
 ##   FLIGHT 0-11   WEAPONS+BOMBERS 12-21   CAMERA 22-28   RADIO+WORLD 29-37   SYSTEM 38-43
@@ -114,7 +114,7 @@ func _ready() -> void:
 
 	var builders := {
 		"video": _build_video_page, "render": _build_render_page, "audio": _build_audio_page,
-		"music": _build_music_page, "gameplay": _build_gameplay_page, "controls": _build_controls_page,
+		"music": _build_music_page, "gameplay": _build_gameplay_page, "realism": _build_realism_page, "controls": _build_controls_page,
 	}
 	for key in PAGES:
 		var content: VBoxContainer = builders[key].call()
@@ -334,6 +334,26 @@ func _build_gameplay_page() -> VBoxContainer:
 		GameState.set_graphic("radio_static", i == 1))
 	_row(page, "Radio voice", ["Off", "On"], 1 if GameState.radio_voice else 0, func(i: int) -> void:
 		GameState.radio_voice = i == 1)
+	return page
+
+
+# ---------------------------------------------------------------- Realism
+
+func _note(page: VBoxContainer, text: String) -> void:
+	var l: Label = UIKit.label(text, 14, UIKit.TEXT_DIM)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(900, 0)
+	page.add_child(l)
+
+
+func _build_realism_page() -> VBoxContainer:
+	var page := _new_page()
+	_row(page, "Engine overheating", ["Off", "On"], 1 if GameState.engine_heat_on else 0, func(i: int) -> void:
+		GameState.set_graphic("engine_heat", i == 1))
+	_note(page, "Full power and boost heat the engine (new HEAT gauge). Throttle back or dive to cool it. Overheating too much, too often wears the engine: less power, then smoke and fire. Enemy pilots are affected too.")
+	_row(page, "G-force blackouts", ["Off", "On"], 1 if GameState.g_effects_on else 0, func(i: int) -> void:
+		GameState.set_graphic("g_effects", i == 1))
+	_note(page, "Sustained high G greys your vision out (red-out on negative G); ease off and it returns slowly. Keep pulling and you lose consciousness - the controls go slack until you wake. Enemy pilots can black out too.")
 	return page
 
 

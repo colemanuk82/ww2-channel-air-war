@@ -1541,6 +1541,9 @@ func start_game(cfg: Dictionary) -> void:
 	hud.visible = not _args.has("--nohud")      # debug: completely clean screenshots
 	add_child(hud)
 	hud.bind_aircraft(player)
+	var gvis := GVision.new()
+	gvis.hud = hud
+	add_child(gvis)
 	hud.bind_camera(camera_rig.chase_cam)
 	camera_rig.view_changed.connect(func(_c: bool) -> void: hud.bind_camera(camera_rig.current_camera()))
 	camera_rig.view_distance_changed.connect(func(msg: String, secs: float) -> void: hud.show_message(msg, secs))

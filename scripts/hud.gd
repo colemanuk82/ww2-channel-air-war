@@ -187,6 +187,14 @@ func bind_aircraft(a: Aircraft) -> void:
 	aircraft = a
 	if a != null and not a.flaps_changed.is_connected(_on_flaps):
 		a.flaps_changed.connect(_on_flaps)
+	if a != null and not a.engine_alert.is_connected(_on_engine_alert):
+		a.engine_alert.connect(_on_engine_alert)
+		a.blackout_alert.connect(_on_engine_alert)
+
+
+func _on_engine_alert(text: String) -> void:
+	if text != "":
+		show_message(text, 2.5)
 
 
 func bind_camera(c: Camera3D) -> void:
@@ -583,6 +591,16 @@ func _draw_inst() -> void:
 	_arc_meter(c, actr, r + 12.0, true, a.throttle, GOOD, "thr")
 	_arc_meter(c, actr, r + 12.0, false, a.boost_energy, BAD if a.boost_locked else (Color(1.0, 0.86, 0.4) if a.boosting else WARN), "boost")
 	_arc_meter(c, lctr, r + 12.0, true, hull, BAD if hull < 0.35 else (WARN if hull < 0.65 else Color(0.85, 0.82, 0.66)), "hull")
+	if GameState.engine_heat_on:
+		# engine temperature: outer arc on the airspeed dial (blue cold -> amber -> red), flashing when overheating
+		var hc: Color = Color(0.45, 0.75, 1.0).lerp(Color(1.0, 0.72, 0.2), clampf(a.engine_heat * 1.6, 0.0, 1.0)).lerp(Color(1.0, 0.22, 0.15), clampf((a.engine_heat - 0.7) / 0.3, 0.0, 1.0))
+		if a.overheated and int(Time.get_ticks_msec() / 250) % 2 == 0:
+			hc = Color(1.0, 0.9, 0.8)
+		_arc_meter(c, actr, r + 22.0, false, a.engine_heat, hc, "heat")
+		if a.engine_wear > 0.02:
+			_arc_meter(c, actr, r + 31.0, false, a.engine_wear, BAD if a.engine_wear > 0.6 else WARN, "wear")
+	if GameState.g_effects_on and maxf(a.g_gray, a.g_red) > 0.02:
+		_arc_meter(c, lctr, r + 22.0, false, maxf(a.g_gray, a.g_red), BAD if a.g_gray > 0.6 or a.g_red > 0.6 else WARN, "tol")
 	var gf: float = clampf(absf(a.g_load) / 8.0, 0.0, 1.0) if not a.on_ground else 0.0
 	_arc_meter(c, lctr, r + 12.0, false, gf, BAD if a.g_load > 6.5 or a.g_load < -2.0 else (WARN if a.g_load > 4.5 else Color(0.6, 0.85, 1.0)), "g")
 	# ---- airspeed indicator
@@ -691,6 +709,14 @@ func _arc_meter(c: Control, ctr: Vector2, rad: float, left: bool, frac: float, c
 			c.draw_line(ip + Vector2(0, -4), ip + Vector2(0, 4), Color(0, 0, 0, 0.6), 1.5)
 		"g":
 			_txt(c, "G", ip + Vector2(0, 5), 13, col, 1)
+		"heat":
+			# thermometer
+			c.draw_line(ip + Vector2(0, -6), ip + Vector2(0, 3), col, 2.5)
+			c.draw_circle(ip + Vector2(0, 5), 3.2, col)
+		"wear":
+			# little cog = engine wear
+			c.draw_arc(ip, 4.5, 0.0, TAU, 12, col, 2.0)
+			c.draw_circle(ip, 1.5, col)
 
 
 func _icon_gear(c: Control, p: Vector2, col: Color) -> void:

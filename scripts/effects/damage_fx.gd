@@ -28,6 +28,7 @@ func _process(delta: float) -> void:
 	if aircraft.state != Aircraft.State.ALIVE:
 		return
 	var frac: float = aircraft.health / maxf(aircraft.stats.max_health, 1.0)
+	frac = minf(frac, 1.0 - 0.75 * aircraft.engine_wear)      # a worn-out (over-heated) engine smokes and burns too
 	if frac > 0.6:
 		_stop_all()          # repaired / respawned: clear the damage trail
 		return

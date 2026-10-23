@@ -95,6 +95,7 @@ var _form_dir: Vector3 = Vector3.ZERO     # smoothed formation steering so wingm
 var _form_thr: float = 0.0
 var _dir: Vector3 = Vector3.FORWARD
 var _thr: float = 0.7
+var _cooling: bool = false     # engine too hot: reduced power until it cools (Options > Realism)
 ## Bombers cruise slower than any fighter's top speed (a Spitfire tops out at ~122 u/s), so escorts and interceptors can
 ## catch them. bomber_speed_k scales it (EscortMode ramps it up so the formation leaves the field slowly).
 const BOMBER_CRUISE_CAP := 90.0
@@ -345,6 +346,17 @@ func _process(delta: float) -> void:
 		_thr = clampf(_thr - maxf(ac.speed - vmax, 0.0) * 0.08, 0.4, 1.0)      # never so little power that the bomber sinks      # followers may run a little faster to hold station
 		if ac.velocity.y < -1.5 and _route_alt_err > -50.0:
 			_thr = clampf(maxf(_thr, 0.85), 0.85, 1.0)	# altitude-hold: thin air at escort alt needs power, not the cruise floor
+	# engine heat (Options > Realism): back off the power / boost before the engine cooks, resume once it has cooled
+	if GameState.engine_heat_on:
+		if ac.engine_heat > 0.88:
+			_cooling = true
+		elif ac.engine_heat < 0.6:
+			_cooling = false
+		if _cooling:
+			_thr = minf(_thr, 0.62)
+			_boost = false
+		elif ac.engine_heat > 0.7:
+			_boost = false
 	ac.throttle_target = _thr
 	ac.cmd_boost = _boost
 	_ground_strike(delta)

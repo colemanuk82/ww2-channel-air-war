@@ -17,6 +17,8 @@ signal took_off(aircraft: Aircraft)
 signal landed(aircraft: Aircraft)
 signal stall_changed(aircraft: Aircraft, stalled: bool)
 signal boost_changed(aircraft: Aircraft, active: bool)
+signal engine_alert(message: String)           # engine running hot / overheated / damaged (player HUD shows it)
+signal blackout_alert(message: String)         # pilot grey-out / G-LOC messages
 signal gear_changed(aircraft: Aircraft, down: bool)
 signal flaps_changed(aircraft: Aircraft, message: String)   # flap setting changed / refused / damaged
 
@@ -68,6 +70,18 @@ var health: float = 100.0
 var invulnerable: bool = false
 var _dmg_side: float = 0.0          # which way a damaged aircraft pulls (fixed per aircraft once it is hit)
 var boost_energy: float = 1.0
+# ---- engine heat (GameState.engine_heat_on): full throttle and boost heat the engine, low power and diving air cool it.
+# Overheating (heat reaches 1) wears the engine; a worn engine loses power and eventually smokes and burns.
+var engine_heat: float = 0.0       # 0 cold .. 1 overheating
+var engine_wear: float = 0.0       # 0 sound .. 1 seized (permanent for the sortie unless the player self-repairs)
+var overheated: bool = false
+var _heat_warned: bool = false
+# ---- G effects (GameState.g_effects_on): sustained high G greys the vision out, then the pilot loses consciousness
+# (controls released, no assist) until he wakes; sustained negative G reds it out the same way.
+var g_gray: float = 0.0            # 0 clear .. 1 black
+var g_red: float = 0.0             # 0 clear .. 1 red-out
+var gloc_t: float = 0.0            # > 0: unconscious, seconds left
+var _gloc_grace: float = 0.0       # no new blackout for a few seconds after waking
 var boosting: bool = false
 var boost_locked: bool = false
 var on_ground: bool = false
@@ -519,7 +533,9 @@ func _process(delta: float) -> void:
 	_update_wind(delta)
 	_update_air_data()
 	_update_flaps(delta)
-	if state == State.ALIVE and player_controlled:
+	_update_g_effects(delta)
+	_update_engine_heat(delta)
+	if state == State.ALIVE and player_controlled and gloc_t <= 0.0:
 		_read_input()
 	elif state == State.DYING:
 		cmd_pitch = -0.45   # nose drops: death spiral
@@ -534,6 +550,12 @@ func _process(delta: float) -> void:
 				_explode_in_air()
 	if not player_controlled and cmd_fire and state == State.ALIVE:
 		fire_requested.emit(self)   # AI fire (player emits from _read_input)
+	if gloc_t > 0.0:
+		cmd_pitch = 0.0       # unconscious: hands off the stick
+		cmd_roll = 0.0
+		cmd_yaw = 0.0
+		cmd_fire = false
+		cmd_boost = false
 	_update_throttle_boost(delta)
 	_update_rotation(delta)
 	_update_speed(delta)
@@ -814,7 +836,7 @@ func _stick(cur: float, want: float, dt: float) -> float:
 
 func _update_throttle_boost(delta: float) -> void:
 	throttle = move_toward(throttle, throttle_target, 0.7 * delta)
-	var want: bool = cmd_boost and not boost_locked and boost_energy > 0.0 and state == State.ALIVE and not on_ground
+	var want: bool = cmd_boost and not boost_locked and boost_energy > 0.0 and state == State.ALIVE and not on_ground and not overheated and engine_wear < 0.7
 	if want:
 		boost_energy = maxf(boost_energy - delta / stats.boost_duration, 0.0)
 		if boost_energy <= 0.0:
@@ -866,7 +888,7 @@ func _update_trim(delta: float) -> void:
 		var want: float = clampf(a_1g - raw, -0.08, 0.08)
 		_trim_corr = lerpf(_trim_corr, want, 1.0 - exp(-0.8 * delta))
 	var was_hold: bool = alt_hold_active
-	alt_hold_active = auto_level and stick_free and steady and absf(bank) < deg_to_rad(50.0) and not sight_hold
+	alt_hold_active = auto_level and gloc_t <= 0.0 and stick_free and steady and absf(bank) < deg_to_rad(50.0) and not sight_hold
 	if alt_hold_active:
 		if not was_hold:
 			_hold_y = global_position.y + velocity.y * 1.2     # capture, with a short projection of the climb/sink
@@ -947,7 +969,7 @@ func _update_rotation(delta: float) -> void:
 		t_yaw += dm.yaw_wander(delta) * air_auth
 
 	# Auto-level assist
-	if auto_level and state == State.ALIVE and not on_ground:
+	if auto_level and gloc_t <= 0.0 and state == State.ALIVE and not on_ground:
 		var bank: float = _bank_angle()
 		var roll_free: float = 1.0 - minf(absf(cmd_roll) * 3.0, 1.0)
 		t_roll += clampf(-bank * stats.assist_strength, -deg_to_rad(stats.roll_rate_deg), deg_to_rad(stats.roll_rate_deg)) * roll_free * air_auth
@@ -1033,9 +1055,9 @@ func _update_speed(delta: float) -> void:
 	var max_s: float = stats.max_speed
 	var target: float
 	if on_ground:
-		target = lerpf(0.0, max_s, throttle)
+		target = lerpf(0.0, max_s * _engine_power(), throttle)
 	else:
-		target = lerpf(stats.stall_speed * 1.15 / sqrt(air_density), max_s, throttle)
+		target = lerpf(stats.stall_speed * 1.15 / sqrt(air_density), max_s * _engine_power(), throttle)
 	var dmg_s: float = damage_level()
 	var boost_on: bool = boosting and dmg_s < 0.6          # a badly hit engine can't take emergency power
 	if boost_on:
@@ -1369,3 +1391,99 @@ func _touchdown_and_wash(delta: float) -> void:
 	var p: Vector3 = global_position
 	if p.y - FX.ground_height(p) < 22.0 and FX.is_water(p):
 		FX.water_splash(Vector3(p.x, 0.0, p.z), 1.2)
+
+
+# ---------------------------------------------------------------- engine heat
+
+## Power left in the engine: a worn engine loses up to 80 %, an overheating one a quarter more.
+func _engine_power() -> float:
+	if not GameState.engine_heat_on:
+		return 1.0
+	var k: float = 1.0 - 0.8 * smoothstep(0.0, 1.0, engine_wear)
+	k *= 1.0 - 0.25 * clampf((engine_heat - 0.9) / 0.1, 0.0, 1.0)
+	return maxf(k, 0.2)
+
+
+func _update_engine_heat(delta: float) -> void:
+	if not GameState.engine_heat_on or state == State.DEAD:
+		engine_heat = move_toward(engine_heat, 0.0, 0.2 * delta)
+		overheated = false
+		return
+	var airflow: float = clampf(speed / maxf(stats.max_speed, 1.0), 0.0, 1.2)
+	var gen: float = 0.0
+	if state == State.ALIVE:
+		if throttle > 0.75:
+			gen += pow((throttle - 0.75) / 0.25, 1.5) * 0.016          # full power alone: about a minute to red-line
+		if boosting:
+			gen += 0.055                                               # emergency boost: seconds
+	var cool: float = 0.010 + 0.022 * (1.0 - throttle)                 # throttled back it cools
+	cool += clampf(-_path_dir.y, 0.0, 1.0) * airflow * 0.05            # a dive pushes cold air through the radiator
+	cool *= (0.5 + 0.5 * minf(airflow, 1.0)) * clampf(air_density, 0.55, 1.0)
+	if on_ground and throttle > 0.5:
+		cool *= 0.5                                                    # no airflow standing on the runway
+	engine_heat = clampf(engine_heat + (gen - cool) * delta, 0.0, 1.0)
+	if engine_heat >= 0.98 and not overheated:
+		overheated = true
+		engine_wear = minf(engine_wear + 0.08, 1.0)                    # each overheat does a little lasting harm
+		if player_controlled:
+			engine_alert.emit("ENGINE OVERHEATING - throttle back or dive!")
+	elif overheated and engine_heat < 0.8:
+		overheated = false
+	if overheated:
+		engine_wear = minf(engine_wear + 0.025 * delta, 1.0)           # and the longer it stays hot the worse
+	elif engine_heat < 0.5 and player_controlled and GameState.player_heal and engine_wear > 0.0:
+		engine_wear = maxf(engine_wear - 0.0015 * delta, 0.0)          # the ground crew's patching, very slowly
+	if player_controlled:
+		if engine_heat > 0.85 and not _heat_warned:
+			_heat_warned = true
+			engine_alert.emit("ENGINE HOT - ease off the power")
+		elif engine_heat < 0.6:
+			_heat_warned = false
+
+
+# ---------------------------------------------------------------- G effects
+
+func _update_g_effects(delta: float) -> void:
+	if not GameState.g_effects_on or state != State.ALIVE or on_ground:
+		g_gray = move_toward(g_gray, 0.0, 0.6 * delta)
+		g_red = move_toward(g_red, 0.0, 0.6 * delta)
+		if not GameState.g_effects_on or state != State.ALIVE:
+			gloc_t = 0.0
+		elif gloc_t > 0.0:
+			gloc_t = maxf(gloc_t - delta, 0.0)
+		return
+	var tol: float = 1.0 if player_controlled else 1.3            # AI pilots are fitter / better trained
+	_gloc_grace = maxf(_gloc_grace - delta, 0.0)
+	if gloc_t > 0.0:
+		gloc_t -= delta
+		g_gray = 1.0
+		g_red = 0.0
+		if gloc_t <= 0.0:
+			gloc_t = 0.0
+			g_gray = 0.9                                          # he wakes: vision comes back slowly
+			_gloc_grace = 7.0
+			if player_controlled:
+				blackout_alert.emit("")
+		return
+	var g: float = g_load
+	var gthr: float = 4.6 * tol
+	var was_gray: float = g_gray
+	if g > gthr:
+		g_gray += (g - gthr) * 0.12 * delta / tol
+	elif g < gthr - 1.2:
+		g_gray -= 0.28 * delta                                    # fades back in slowly once the pull is off
+	g_gray = clampf(g_gray, 0.0, 1.0)
+	var nthr: float = -2.0 * tol
+	if g < nthr:
+		g_red += (nthr - g) * 0.15 * delta / tol
+	else:
+		g_red -= 0.4 * delta
+	g_red = clampf(g_red, 0.0, 1.0)
+	if player_controlled and was_gray < 0.45 and g_gray >= 0.45:
+		blackout_alert.emit("EASE OFF THE G!")
+	if (g_gray >= 1.0 or g_red >= 1.0) and _gloc_grace <= 0.0:
+		gloc_t = randf_range(2.5, 5.0)
+		g_gray = 1.0
+		g_red = 0.0
+		if player_controlled:
+			blackout_alert.emit("G-LOC")
