@@ -53,6 +53,7 @@ func _ready() -> void:
 	_test_weak_gpu()
 	_test_accessibility()
 	_test_awards()
+	_test_legal_docs()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
@@ -1321,6 +1322,16 @@ func _test_history() -> void:
 
 ## Every flyable aircraft, flown by the AI pilot from a standing start on flat ground: it must lift off, climb
 ## away and hand over to its next state without crashing, within a sane time. The simulation is stepped by hand.
+func _test_legal_docs() -> void:
+	for f in ["EULA", "PRIVACY", "CREDITS", "EPILEPSY"]:
+		var fa: FileAccess = FileAccess.open("res://docs/legal/%s.txt" % f, FileAccess.READ)
+		_check(fa != null and fa.get_length() > 200, "legal text %s ships and is not empty" % f)
+	var pr: FileAccess = FileAccess.open("res://docs/legal/PRIVACY.txt", FileAccess.READ)
+	if pr != null:
+		var txt: String = pr.get_as_text()
+		_check(txt.contains("Check for updates") and txt.contains("DLSS") and txt.contains("PayPal"), "privacy text covers every button that touches the network")
+
+
 func _test_awards() -> void:
 	for side in ["Allies", "Axis"]:
 		var ids: Array = []
