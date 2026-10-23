@@ -181,7 +181,7 @@ static func build(nation: String = "RAF") -> Node3D:
 	canopy.add_child(gmi)
 	PlaneBuilder.canopy_frame(canopy, CANOPY_RINGS, dark)
 	PlaneBuilder.pilot(canopy, Vector3(0.0, 1.12, 0.45))
-	PlaneDetails.cockpit(canopy, Vector3(0.0, 1.12, 0.45))
+	PlaneDetails.cockpit(canopy, Vector3(0.0, 1.12, 0.45), false, CANOPY_RINGS)
 
 	# Radiators under the wings
 	for side in [-1.0, 1.0]:

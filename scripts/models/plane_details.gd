@@ -185,11 +185,66 @@ static func underside(body: Node3D, id: String, wing_of: Callable, bottom_y: flo
 		bay_doors(body, f, zz0, zz1)
 
 
+## Glazing envelope [half_w, half_h, centre_y] at z from the canopy rings ([[z, hw, hh, cy], ...]); [] outside them.
+static func _env(rings: Array, z: float) -> Array:
+	if rings.is_empty() or z < float(rings[0][0]) or z > float(rings[rings.size() - 1][0]):
+		return []
+	for i in range(rings.size() - 1):
+		var a: Array = rings[i]
+		var b: Array = rings[i + 1]
+		if z >= float(a[0]) and z <= float(b[0]):
+			var u: float = inverse_lerp(float(a[0]), float(b[0]), z)
+			return [lerpf(float(a[1]), float(b[1]), u), lerpf(float(a[2]), float(b[2]), u), lerpf(float(a[3]), float(b[3]), u)]
+	return []
+
+
+## A cockpit part that is kept inside the glazing: trimmed in length to the canopy, and its top and sides pulled
+## in under the glass (an ellipse inside the canopy rings), so no seat, armour or panel can poke through the canopy.
+static func _fit(root: Node3D, rings: Array, size: Vector3, c: Vector3, mat: Material, nm: String) -> MeshInstance3D:
+	if rings.is_empty():
+		return box(root, size, c, mat, nm)
+	var zmin: float = float(rings[0][0]) + 0.04
+	var zmax: float = float(rings[rings.size() - 1][0]) - 0.04
+	var zl: float = maxf(c.z - size.z * 0.5, zmin)
+	var zh: float = minf(c.z + size.z * 0.5, zmax)
+	if zh - zl < 0.012:
+		return null
+	var sz := Vector3(size.x, size.y, zh - zl)
+	var cc := Vector3(c.x, c.y, (zl + zh) * 0.5)
+	# the tightest glazing along the part's length decides how big it may be
+	var hwm: float = INF
+	var topm: float = INF
+	for z in [zl, (zl + zh) * 0.5, zh]:
+		var e: Array = _env(rings, z)
+		if e.is_empty():
+			return null
+		topm = minf(topm, float(e[2]) + float(e[1]) * 0.86)
+		hwm = minf(hwm, float(e[0]) * 0.86)
+	var bottom: float = cc.y - sz.y * 0.5
+	var top: float = minf(cc.y + sz.y * 0.5, topm)
+	if top - bottom < 0.012:
+		return null
+	sz.y = top - bottom
+	cc.y = (top + bottom) * 0.5
+	var ax: float = absf(cc.x)
+	if ax < 0.001:
+		sz.x = minf(sz.x, hwm * 2.0)
+	else:
+		var inner: float = maxf(ax - sz.x * 0.5, 0.0)
+		var outer: float = minf(ax + sz.x * 0.5, hwm)
+		if outer - inner < 0.012:
+			return null
+		sz.x = outer - inner
+		cc.x = signf(cc.x) * (inner + outer) * 0.5
+	return box(root, sz, cc, mat, nm)
+
+
 ## The cockpit as seen through the canopy from outside: armoured seat back and headrest behind the pilot, a seat
 ## pan and side rails, harness straps over the shoulders, the instrument panel under the coaming, a reflector
 ## gunsight, a control column and the rear bulkhead. `eye` is the pilot's eye point (the pilot model sits just
-## below it). Bombers also get a second seat behind the pilot for the flight engineer / navigator.
-static func cockpit(canopy: Node3D, eye: Vector3, bomber: bool = false) -> void:
+## below it). `rings` is the canopy glazing ([[z, half_w, half_h, cy], ...]): every part is trimmed to sit inside
+## it. Bombers also get a second seat behind the pilot for the flight engineer / navigator.
+static func cockpit(canopy: Node3D, eye: Vector3, bomber: bool = false, rings: Array = []) -> void:
 	var root := Node3D.new()
 	root.name = "CockpitInterior"
 	canopy.add_child(root)
@@ -200,43 +255,44 @@ static func cockpit(canopy: Node3D, eye: Vector3, bomber: bool = false) -> void:
 	var leather: Material = _mat(LEATHER)
 	var glass: Material = _mat(Color(0.55, 0.75, 0.85))
 	# armoured seat back + headrest plate (behind the pilot, +Z)
-	box(root, Vector3(0.36, 0.52, 0.035), eye + Vector3(0.0, -0.34, 0.17), seat_col, "SeatBack")
-	box(root, Vector3(0.24, 0.22, 0.03), eye + Vector3(0.0, -0.02, 0.185), steel, "HeadArmour")
-	box(root, Vector3(0.20, 0.10, 0.03), eye + Vector3(0.0, -0.13, 0.15), leather, "HeadCushion")
+	_fit(root, rings, Vector3(0.34, 0.50, 0.035), eye + Vector3(0.0, -0.36, 0.17), seat_col, "SeatBack")
+	_fit(root, rings, Vector3(0.22, 0.17, 0.03), eye + Vector3(0.0, -0.06, 0.18), steel, "HeadArmour")
+	_fit(root, rings, Vector3(0.18, 0.09, 0.03), eye + Vector3(0.0, -0.14, 0.15), leather, "HeadCushion")
 	# seat pan and side rails
-	box(root, Vector3(0.36, 0.035, 0.34), eye + Vector3(0.0, -0.56, 0.0), seat_col, "SeatPan")
+	_fit(root, rings, Vector3(0.34, 0.035, 0.34), eye + Vector3(0.0, -0.56, 0.0), seat_col, "SeatPan")
 	for side in [-1.0, 1.0]:
-		box(root, Vector3(0.03, 0.14, 0.34), eye + Vector3(side * 0.19, -0.50, 0.0), steel, "SeatRail")
+		_fit(root, rings, Vector3(0.03, 0.14, 0.34), eye + Vector3(side * 0.18, -0.50, 0.0), steel, "SeatRail")
 		# harness: shoulder strap from behind the headrest down to the lap
-		rod(root, eye + Vector3(side * 0.09, -0.07, 0.15), eye + Vector3(side * 0.06, -0.45, -0.10), 0.014, web, "Harness")
-	box(root, Vector3(0.34, 0.025, 0.04), eye + Vector3(0.0, -0.46, -0.10), web, "LapStrap")
-	box(root, Vector3(0.07, 0.05, 0.015), eye + Vector3(0.0, -0.46, -0.125), _mat(STEEL), "HarnessBuckle")
+		rod(root, eye + Vector3(side * 0.09, -0.10, 0.15), eye + Vector3(side * 0.06, -0.45, -0.10), 0.014, web, "Harness")
+	_fit(root, rings, Vector3(0.32, 0.025, 0.04), eye + Vector3(0.0, -0.46, -0.10), web, "LapStrap")
+	_fit(root, rings, Vector3(0.07, 0.05, 0.015), eye + Vector3(0.0, -0.46, -0.125), _mat(STEEL), "HarnessBuckle")
 	# instrument panel under the coaming, with the reflector gunsight on top
-	box(root, Vector3(0.58, 0.20, 0.03), eye + Vector3(0.0, -0.20, -0.50), dark, "Panel")
-	box(root, Vector3(0.62, 0.05, 0.10), eye + Vector3(0.0, -0.09, -0.52), dark, "Coaming")
+	_fit(root, rings, Vector3(0.52, 0.18, 0.03), eye + Vector3(0.0, -0.22, -0.50), dark, "Panel")
+	_fit(root, rings, Vector3(0.50, 0.04, 0.10), eye + Vector3(0.0, -0.12, -0.52), dark, "Coaming")
 	for k in 3:
 		var dial := CylinderMesh.new()
-		dial.top_radius = 0.035
-		dial.bottom_radius = 0.035
+		dial.top_radius = 0.032
+		dial.bottom_radius = 0.032
 		dial.height = 0.012
 		dial.radial_segments = 8
-		var dm: MeshInstance3D = _add(root, dial, _mat(Color(0.7, 0.7, 0.62)), eye + Vector3(-0.17 + 0.17 * float(k), -0.19, -0.48))
+		var dm: MeshInstance3D = _add(root, dial, _mat(Color(0.7, 0.7, 0.62)), eye + Vector3(-0.15 + 0.15 * float(k), -0.21, -0.48))
 		dm.rotation.x = deg_to_rad(90.0)
-	box(root, Vector3(0.05, 0.05, 0.08), eye + Vector3(0.0, -0.05, -0.43), dark, "SightHousing")
-	var sg: MeshInstance3D = box(root, Vector3(0.10, 0.10, 0.006), eye + Vector3(0.0, 0.02, -0.46), glass, "SightGlass")
-	sg.rotation.x = deg_to_rad(-25.0)
+	_fit(root, rings, Vector3(0.05, 0.04, 0.08), eye + Vector3(0.0, -0.09, -0.43), dark, "SightHousing")
+	var sg: MeshInstance3D = _fit(root, rings, Vector3(0.09, 0.07, 0.006), eye + Vector3(0.0, -0.02, -0.45), glass, "SightGlass")
+	if sg != null:
+		sg.rotation.x = deg_to_rad(-25.0)
 	# control column with a spade grip, and rudder bar
-	rod(root, eye + Vector3(0.0, -0.58, -0.18), eye + Vector3(0.0, -0.33, -0.27), 0.016, dark, "Stick")
-	box(root, Vector3(0.11, 0.04, 0.04), eye + Vector3(0.0, -0.31, -0.28), dark, "StickGrip")
-	box(root, Vector3(0.34, 0.025, 0.03), eye + Vector3(0.0, -0.60, -0.40), dark, "RudderBar")
-	# rear bulkhead behind the seat, and a canopy rail each side
-	box(root, Vector3(0.52, 0.46, 0.03), eye + Vector3(0.0, -0.30, 0.33), dark, "RearBulkhead")
+	rod(root, eye + Vector3(0.0, -0.58, -0.18), eye + Vector3(0.0, -0.36, -0.27), 0.016, dark, "Stick")
+	_fit(root, rings, Vector3(0.11, 0.04, 0.04), eye + Vector3(0.0, -0.34, -0.28), dark, "StickGrip")
+	_fit(root, rings, Vector3(0.32, 0.025, 0.03), eye + Vector3(0.0, -0.60, -0.40), dark, "RudderBar")
+	# rear bulkhead behind the seat
+	_fit(root, rings, Vector3(0.50, 0.40, 0.03), eye + Vector3(0.0, -0.32, 0.32), dark, "RearBulkhead")
 	if bomber:
-		# second seat behind the pilot, offset to the right: a folding seat with a low back
-		var sx: Vector3 = eye + Vector3(0.32, -0.30, 0.95)
-		box(root, Vector3(0.34, 0.035, 0.34), sx + Vector3(0.0, -0.20, 0.0), seat_col, "SecondSeat")
-		box(root, Vector3(0.34, 0.40, 0.035), sx + Vector3(0.0, 0.0, 0.17), seat_col, "SecondSeatBack")
-		box(root, Vector3(0.20, 0.10, 0.06), sx + Vector3(0.0, 0.18, 0.18), leather, "SecondHeadrest")
+		# second seat behind the pilot: a folding seat with a low back
+		var sx: Vector3 = eye + Vector3(0.0, -0.30, 0.95)
+		_fit(root, rings, Vector3(0.34, 0.035, 0.34), sx + Vector3(0.0, -0.22, 0.0), seat_col, "SecondSeat")
+		_fit(root, rings, Vector3(0.34, 0.36, 0.035), sx + Vector3(0.0, -0.02, 0.17), seat_col, "SecondSeatBack")
+		_fit(root, rings, Vector3(0.20, 0.09, 0.05), sx + Vector3(0.0, 0.14, 0.17), leather, "SecondHeadrest")
 	for c in root.get_children():
 		if c is MeshInstance3D:
 			(c as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

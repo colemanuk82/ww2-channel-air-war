@@ -627,7 +627,12 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		gmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		canopy_frame(canopy, c, dark)
 	pilot(canopy, spec["eye"] as Vector3)
-	PlaneDetails.cockpit(canopy, spec["eye"] as Vector3, String((spec["fus"] as Dictionary).get("profile", "")) == "bomber")
+	var eye_p: Vector3 = spec["eye"] as Vector3
+	var rings_p: Array = []
+	for c3 in spec.get("canopies", []):
+		if eye_p.z >= float(c3[0][0]) and eye_p.z <= float(c3[c3.size() - 1][0]):
+			rings_p = c3
+	PlaneDetails.cockpit(canopy, eye_p, String((spec["fus"] as Dictionary).get("profile", "")) == "bomber", rings_p)
 
 	# Engines on wings / nacelles
 	var prop_idx: int = 0
