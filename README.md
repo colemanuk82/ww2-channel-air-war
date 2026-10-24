@@ -4,8 +4,10 @@
 
 ### *"Scramble! Bandits over Dover, angels fifteen!"*
 
-**A free, cell-shaded WW2 flight game over a real-scale slice of Europe.**<br>
+**A free, WW2 flight game over a real-scale slice of Europe.**<br>
 Take off from Kent. Cross the Channel. Come home. Maybe.
+
+Any suggestions or feedback let me know!
 
 ![Free](https://img.shields.io/badge/price-100%25%20free-2ea44f) ![Windows](https://img.shields.io/badge/platform-Windows%2064--bit-0078d4) ![Engine](https://img.shields.io/badge/engine-Godot%204-478cbf) ![Missions](https://img.shields.io/badge/missions-74-d4a017)
 
@@ -143,7 +145,7 @@ All 25 aircraft were rebuilt for v2.0 and checked against photographs and the pu
 - **Is it really free?** Yes, completely. Donations are optional.
 - **Will it run on my PC?** It needs 64-bit Windows and a reasonably modern graphics card. RTX owners get optional DLSS.
 - **Is there multiplayer?** No, it's single player.
-- **Is it safe?** The source is right here.Rea it yourself nothing is hidden.The game has a photosensitivity warning, a licence screen and a privacy policy.
+- **Is it safe?** The source is right here read it yourself nothing is hidden.The game has a photosensitivity warning, a licence screen and a privacy policy.
 
 ## 🤖 Honest disclosure
 
