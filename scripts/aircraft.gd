@@ -502,6 +502,8 @@ func take_damage(amount: float, source: Node = null) -> void:
 		return
 	health = maxf(health - amount, 0.0)
 	_regen_cd = 8.0        # pause the player's slow self-repair while under fire
+	if player_controlled and (_pending_hit != Vector3.ZERO or source != null):
+		FX.audio.player_hit("bullet", amount / maxf(stats.max_health, 1.0))     # a strike on the airframe, heard in the cockpit
 	if _dmg_side == 0.0:
 		_dmg_side = 1.0 if randf() < 0.5 else -1.0
 	_impact_shake = minf(_impact_shake + amount * 0.02, 1.0)

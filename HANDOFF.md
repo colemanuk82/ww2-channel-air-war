@@ -1,3 +1,15 @@
+# SESSION 2026-10-24 (v2.6): double-precision engine
+- The game is now built with a `precision=double` build of the NVIDIA RTX Godot fork, which gives camera-relative
+  rendering and no more ~1 cm aircraft jitter in close chase views far from the map origin. Build steps, fork and
+  base commit, binary names and DLL notes: [engine/BUILDING-ENGINE.md](engine/BUILDING-ENGINE.md).
+- Engine fix (patch in `engine/patches/`, details in [engine/CHANGELOG.md](engine/CHANGELOG.md)): in double builds
+  `CAMERA_POSITION_WORLD` held the negated camera position. That washed out trees in grey-blue haze and broke
+  camera-distance fades in toon, world_pbr, water, cloud_volume and the ocean addon.
+- `tools/cache/build10b.ps1` (`$exe`) and `export_presets.cfg` (`custom_template/release`) point at the `.double`
+  binaries. Use the double console editor for import, tests and export from now on.
+- Chase-camera damping was tried and dropped: both aircraft and camera run in `_process` (camera after it, at
+  `process_priority` 100). Velocity-predicted exp smoothing made the jitter worse; the cause was float rounding.
+
 # SESSION 2026-10-22: copyright cleanup
 - **Music:** deleted the *Battle of Britain* film score (19 tracks in `assets/music/ingame/`), the three BBC Churchill broadcast recordings and the newsreel / NBC radio clips from `assets/music/` and `assets/music/victory/`. Menu music is now copies of two Pixabay tracks (`freedom.mp3`, `cinematic_violin_tribal.mp3`); `victory/allies.mp3` is a copy of "Battle Cry of the Brave". Playlists are discovered from the folders, so licensed tracks can be dropped in at any time.
 - **Missions:** all missions derived from third-party mission packs (43 commercial-game and 30 free-pack) were removed. Replacements are original, authored by `tools/add_original_missions.py` (25 missions, ids `op_*`, diamond-prefixed names). Do not re-import third-party mission data.

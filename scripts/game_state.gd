@@ -100,6 +100,9 @@ const UPSCALE_NAMES := ["Quality", "Balanced", "Performance", "Ultra Performance
 var upscaler: int = -1             # -1 = not chosen yet: DLSS when the GPU/engine supports it, otherwise off
 var upscale_quality: int = 0
 var frame_gen: bool = false
+var vsync_on: bool = true
+var fps_cap: int = 0                                  # 0 = unlimited; otherwise frames per second
+const FPS_CAPS := [0, 30, 60, 120, 144, 165, 240]    # Options > Render "Frame rate limit" presets
 
 # Gamepad remapping (Options > Controls): _pad_defaults holds the built-in joypad events, pad_bindings any
 # player override (encoded), persisted under [input] in settings.cfg.
@@ -191,6 +194,8 @@ func _load_settings() -> void:
 	upscaler = int(cf.get_value("gfx", "upscaler", upscaler))
 	upscale_quality = int(cf.get_value("gfx", "upscale_quality", upscale_quality))
 	frame_gen = bool(cf.get_value("gfx", "frame_gen", frame_gen))
+	vsync_on = bool(cf.get_value("gfx", "vsync", vsync_on))
+	fps_cap = clampi(int(cf.get_value("gfx", "fps_cap", fps_cap)), 0, 1000)
 	show_hints = bool(cf.get_value("ui", "show_hints", show_hints))
 	player_heal = bool(cf.get_value("gameplay", "player_heal", player_heal))
 	engine_heat_on = bool(cf.get_value("realism", "engine_heat", engine_heat_on))
@@ -254,6 +259,8 @@ func save_settings() -> void:
 	cf.set_value("gfx", "upscaler", upscaler)
 	cf.set_value("gfx", "upscale_quality", upscale_quality)
 	cf.set_value("gfx", "frame_gen", frame_gen)
+	cf.set_value("gfx", "vsync", vsync_on)
+	cf.set_value("gfx", "fps_cap", fps_cap)
 	cf.set_value("ui", "show_hints", show_hints)
 	cf.set_value("gameplay", "player_heal", player_heal)
 	cf.set_value("realism", "engine_heat", engine_heat_on)
@@ -388,6 +395,10 @@ func set_graphic(key: String, value: Variant) -> void:
 			upscale_quality = int(value)
 		"frame_gen":
 			frame_gen = bool(value)
+		"vsync":
+			vsync_on = bool(value)
+		"fps_cap":
+			fps_cap = clampi(int(value), 0, 1000)
 		"show_hints":
 			show_hints = bool(value)
 		"time_speed":
@@ -457,6 +468,8 @@ func apply_graphics() -> void:
 	var tod0: Node = get_tree().root.get_node_or_null("TimeOfDay")
 	if tod0 != null:
 		tod0.set("time_scale", float(TIME_SPEEDS[clampi(time_speed, 0, TIME_SPEEDS.size() - 1)]) / 3600.0)   # game hours per real second
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync_on else DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = fps_cap
 	var win: Window = get_window()
 	if win:
 		win.mode = Window.MODE_FULLSCREEN if fullscreen else Window.MODE_WINDOWED

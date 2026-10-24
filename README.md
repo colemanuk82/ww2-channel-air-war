@@ -104,7 +104,7 @@ Prisoner-of-war and labour camps stay where they were, as static scenery, never 
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.6.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.7.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
@@ -197,6 +197,8 @@ comes from open data (see below). It's a work of fiction inspired by real histor
 ## 🔧 Under the bonnet
 
 Built on a custom **NVIDIA RTX Godot fork (4.8-dev, GDScript)** with DLSS, Streamline and frame generation.
+From v2.6 it uses a **double-precision** build of that fork. See [engine/BUILDING-ENGINE.md](engine/BUILDING-ENGINE.md)
+for how to build it, and [engine/CHANGELOG.md](engine/CHANGELOG.md) for the engine fixes.
 Terrain uses `data/heightmap/region_height.png` + `region_meta.json`; the Python tools in `tools/`
 (see `tools/README.md`) rebuild the map from Sentinel-2, ESA WorldCover, AWS Terrain Tiles and OpenStreetMap.
 

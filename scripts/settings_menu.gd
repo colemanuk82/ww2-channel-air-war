@@ -243,8 +243,36 @@ func _build_render_page() -> VBoxContainer:
 		GameState.set_graphic("frame_gen", i == 1))
 	_ui_scale = _row(page, "UI scale", ["85%", "100%", "125%", "150%"], _ui_index(), func(i: int) -> void:
 		GameState.set_graphic("ui_scale", float(GameState.UI_SCALES[i])))
+	_frame_rate_rows(page)
 	_dlss_section(page)
 	return page
+
+
+## V-sync on/off and a frame rate limiter: Off / presets / Custom (a number box, 20-1000 fps).
+func _frame_rate_rows(page: VBoxContainer) -> void:
+	_row(page, "V-sync", ["Off", "On"], 1 if GameState.vsync_on else 0, func(i: int) -> void:
+		GameState.set_graphic("vsync", i == 1))
+	var items: Array = []
+	for c in GameState.FPS_CAPS:
+		items.append("Off" if int(c) == 0 else "%d fps" % int(c))
+	items.append("Custom")
+	var preset: int = GameState.FPS_CAPS.find(GameState.fps_cap)
+	var custom_idx: int = items.size() - 1
+	var sel: int = preset if preset >= 0 else custom_idx
+	var spin := SpinBox.new()
+	spin.min_value = 20
+	spin.max_value = 1000
+	spin.step = 1
+	spin.value = GameState.fps_cap if GameState.fps_cap > 0 else 90
+	spin.editable = sel == custom_idx
+	spin.custom_minimum_size = Vector2(140, 0)
+	var ob: OptionButton = _row(page, "Frame rate limit", items, sel, func(i: int) -> void:
+		spin.editable = i == custom_idx
+		GameState.set_graphic("fps_cap", int(spin.value) if i == custom_idx else int(GameState.FPS_CAPS[i])))
+	ob.get_parent().add_child(spin)
+	spin.value_changed.connect(func(v: float) -> void:
+		if ob.selected == custom_idx:
+			GameState.set_graphic("fps_cap", int(v)))
 
 
 ## The optional NVIDIA DLSS components are not shipped with the game: offer the download here (or explain why not).

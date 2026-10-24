@@ -121,7 +121,10 @@ func _burst(pos: Vector3, sh: Dictionary, dmul: float) -> void:
 			continue
 		var d: float = (a as Node3D).global_position.distance_to(pos)
 		if d < r:
-			a.call("take_damage", float(sh["d"]) * dmul * (1.0 - d / r), null)
+			var dmg: float = float(sh["d"]) * dmul * (1.0 - d / r)
+			if a is Aircraft and (a as Aircraft).player_controlled:
+				FX.audio.player_hit("blast", dmg / maxf((a as Aircraft).stats.max_health, 1.0))     # fragments tearing in
+			a.call("take_damage", dmg, null)
 
 
 static func _seg_dist(a: Vector3, b: Vector3, c: Vector3) -> float:
