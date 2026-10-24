@@ -20,6 +20,12 @@ var dead_count: int = 0
 var is_dead: bool = false
 const SPACING: float = 17.0
 var _frame: int = 0
+## Steam exhaust (C2): a white trail from the chimney while the camera is within STEAM_RANGE, at most STEAM_MAX
+## locomotives at once across the world (each is one emitter in the shared FX pool).
+const STEAM_RANGE: float = 7000.0
+const STEAM_MAX: int = 6
+static var _steaming: int = 0
+var _steam: FXEmitter = null
 
 
 static func create(p_team: String, p_route: RoutePath, start_s: float = 0.0, p_speed: float = 14.0, p_spec: Array = []) -> Train:
@@ -57,6 +63,31 @@ func _process(delta: float) -> void:
 	if speed > 0.0:
 		s = fposmod(s + speed * delta, route.length)
 	_update_cars(delta)
+	if _frame % 30 == 0:
+		_update_steam()
+
+
+func _update_steam() -> void:
+	var loco: Node3D = cars[0] if not cars.is_empty() and is_instance_valid(cars[0]) else null
+	var cam: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() else null
+	var want: bool = loco != null and cam != null and speed > 0.0 and not is_dead and loco.global_position.distance_to(cam.global_position) < STEAM_RANGE
+	if want and _steam == null and _steaming < STEAM_MAX:
+		var fx: Node = get_node_or_null("/root/FX")
+		if fx != null and fx.has_method("trail"):
+			_steam = fx.call("trail", loco, "smoke", 1.8, Vector3(0.0, 4.4, -2.6), 0.0)
+			if _steam != null:
+				_steaming += 1
+	elif not want and _steam != null:
+		_steam.stop()
+		_steam = null
+		_steaming = maxi(_steaming - 1, 0)
+
+
+func _exit_tree() -> void:
+	if _steam != null:
+		_steam.stop()
+		_steam = null
+		_steaming = maxi(_steaming - 1, 0)
 
 
 func _update_cars(_delta: float) -> void:

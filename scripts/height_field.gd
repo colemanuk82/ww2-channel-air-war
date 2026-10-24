@@ -66,6 +66,8 @@ var cliff_zones: Array = [
 
 # Flat zones (airfields): Vector4(x, z, flat_radius, blend) + height array
 var _zones: Array = []
+const ZONE_CELL := 4000.0
+var _zone_grid: Dictionary = {}      # Vector2i cell -> PackedInt32Array of _zones indices touching it
 var _zone_h: PackedFloat32Array = PackedFloat32Array()
 
 
@@ -335,6 +337,18 @@ func add_flat_zone(x: float, z: float, flat_radius: float, blend: float, min_hei
 	var h: float = maxf(height_y(x, z), min_height)
 	_zones.append(Vector4(x, z, flat_radius, blend))
 	_zone_h.append(h)
+	# index the zone in every grid cell its outer edge touches, so height_y only tests the few zones near a point
+	# (it used to test all of them for every height sample: ~120 airfields, and more with the camps)
+	var idx: int = _zones.size() - 1
+	var r: float = flat_radius + blend
+	var c0 := Vector2i(floori((x - r) / ZONE_CELL), floori((z - r) / ZONE_CELL))
+	var c1 := Vector2i(floori((x + r) / ZONE_CELL), floori((z + r) / ZONE_CELL))
+	for cx in range(c0.x, c1.x + 1):
+		for cz in range(c0.y, c1.y + 1):
+			var key := Vector2i(cx, cz)
+			var lst: PackedInt32Array = _zone_grid.get(key, PackedInt32Array())
+			lst.append(idx)
+			_zone_grid[key] = lst
 	return h
 
 
@@ -347,7 +361,10 @@ func height_y(wx: float, wz: float) -> float:
 		y = e * WorldCoords.VERTICAL_SCALE
 	else:
 		y = minf(e * WorldCoords.VERTICAL_SCALE, SEA_FLOOR_Y)
-	for i in _zones.size():
+	var cell := Vector2i(floori(wx / ZONE_CELL), floori(wz / ZONE_CELL))
+	if not _zone_grid.has(cell):
+		return y
+	for i in (_zone_grid[cell] as PackedInt32Array):
 		var z: Vector4 = _zones[i]
 		var d: float = Vector2(wx - z.x, wz - z.y).length()
 		var w: float = 1.0 - smoothstep(z.z, z.z + z.w, d)

@@ -18,7 +18,7 @@ extends RefCounted
 const CAMPS := [
 	# held by Germany: Allied and other prisoners
 	["dulag_luft", "Dulag Luft, Oberursel", 50.2045, 8.5560, "Axis", "stalag", 1],
-	["stalag_6a", "Stalag VI-A, Hemer", 51.3850, 7.7750, "Axis", "stalag", 3],
+	["stalag_6a", "Stalag VI-A, Hemer", 51.3860, 7.7800, "Axis", "stalag", 3],   # Sauerlandpark (ex Bluecher barracks)
 	["stalag_6j", "Stalag VI-J, Krefeld-Fichtenhain", 51.3080, 6.5450, "Axis", "stalag", 2],
 	["stalag_6g", "Stalag VI-G, Bonn-Duisdorf", 50.7180, 7.0450, "Axis", "stalag", 2],
 	["stalag_6d", "Stalag VI-D, Dortmund", 51.4960, 7.4520, "Axis", "stalag", 2],
@@ -56,6 +56,35 @@ static func extents(style: String, size: int) -> Vector2:
 static func radius(style: String, size: int) -> float:
 	var e: Vector2 = extents(style, size)
 	return e.length() + (110.0 if style == "stalag" else 50.0)
+
+
+## The flattest spot within 300 m of the listed position (camps were built on level ground; the height data
+## around some sites is coarse and hilly). Scores the height range over the footprint; the listed spot wins ties.
+static func flattest(pos: Vector3, style: String, size: int) -> Vector3:
+	var e: Vector2 = extents(style, size)
+	var best: Vector3 = pos
+	var best_s: float = INF
+	for ox in range(-3, 4):
+		for oz in range(-3, 4):
+			var c: Vector3 = pos + Vector3(float(ox) * 100.0, 0.0, float(oz) * 100.0)
+			if c.distance_to(pos) > 300.0:
+				continue
+			var lo: float = INF
+			var hi: float = -INF
+			var wet: bool = false
+			for sx in [-1.0, 0.0, 1.0]:
+				for sz in [-1.0, 0.0, 1.0]:
+					var y: float = GroundKit.raw_y(c.x + sx * e.x, c.z + sz * e.y)
+					lo = minf(lo, y)
+					hi = maxf(hi, y)
+					wet = wet or y < 1.5
+			if wet:
+				continue
+			var score: float = (hi - lo) + c.distance_to(pos) * 0.01
+			if score < best_s:
+				best_s = score
+				best = c
+	return best
 
 
 static func heading_for(id: String) -> float:

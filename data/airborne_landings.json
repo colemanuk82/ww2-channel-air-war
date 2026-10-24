@@ -1,0 +1,326 @@
+{
+ "source_note": "Glider landing zones and parachute dropping zones of the big airborne landings inside the map. Positions are the zone centres from the cited operation articles' descriptions (village and landmark relations), rounded; the glider counts per zone are spread from each operation's totals and capped for performance.",
+ "zones": [
+  {
+   "id": "deadstick_x",
+   "name": "LZ X, Pegasus Bridge (Benouville)",
+   "kind": "lz",
+   "lat": 49.2416,
+   "lon": -0.2712,
+   "rx": 110,
+   "rz": 60,
+   "heading": 160,
+   "from": "1944-06-06",
+   "to": "1944-08-31",
+   "source": "Wikipedia: Operation Deadstick",
+   "types": {
+    "horsa": 3
+   }
+  },
+  {
+   "id": "deadstick_y",
+   "name": "LZ Y, Horsa Bridge (Ranville)",
+   "kind": "lz",
+   "lat": 49.235,
+   "lon": -0.264,
+   "rx": 90,
+   "rz": 50,
+   "heading": 160,
+   "from": "1944-06-06",
+   "to": "1944-08-31",
+   "source": "Wikipedia: Operation Deadstick",
+   "types": {
+    "horsa": 2
+   }
+  },
+  {
+   "id": "tonga_lz_n",
+   "name": "LZ N, north of Ranville (Tonga, Mallard)",
+   "kind": "lz",
+   "lat": 49.244,
+   "lon": -0.25,
+   "rx": 650,
+   "rz": 450,
+   "heading": 200,
+   "from": "1944-06-06",
+   "to": "1944-08-31",
+   "source": "Wikipedia: Operation Tonga; Operation Mallard (LZ N north of Ranville, east of the Orne)",
+   "types": {
+    "horsa": 110,
+    "hamilcar": 24
+   }
+  },
+  {
+   "id": "mallard_lz_w",
+   "name": "LZ W, east of Saint-Aubin-d'Arquenay (Mallard)",
+   "kind": "lz",
+   "lat": 49.2585,
+   "lon": -0.279,
+   "rx": 450,
+   "rz": 300,
+   "heading": 200,
+   "from": "1944-06-06",
+   "to": "1944-08-31",
+   "source": "Wikipedia: Operation Mallard (LZ W east of Saint-Aubin-d'Arquenay, west of the Caen Canal)",
+   "types": {
+    "horsa": 55,
+    "hamilcar": 8
+   }
+  },
+  {
+   "id": "tonga_dz_n",
+   "name": "DZ N, Ranville (parachutes)",
+   "kind": "dz",
+   "lat": 49.239,
+   "lon": -0.242,
+   "rx": 700,
+   "rz": 500,
+   "heading": 0,
+   "from": "1944-06-06",
+   "to": "1944-06-08",
+   "source": "Wikipedia: Operation Tonga (DZ N near Ranville and Le Bas de Ranville)",
+   "count": 220
+  },
+  {
+   "id": "chicago_lz_e",
+   "name": "LZ E, Hiesville (Chicago, Keokuk)",
+   "kind": "lz",
+   "lat": 49.3505,
+   "lon": -1.243,
+   "rx": 800,
+   "rz": 550,
+   "heading": 0,
+   "from": "1944-06-06",
+   "to": "1944-08-31",
+   "source": "Wikipedia: Operation Chicago; Operation Keokuk (LZ E near Hiesville)",
+   "types": {
+    "waco": 50,
+    "horsa": 30
+   }
+  },
+  {
+   "id": "elmira_lz_w",
+   "name": "LZ W, Les Forges (Elmira, Galveston, Hackensack)",
+   "kind": "lz",
+   "lat": 49.383,
+   "lon": -1.296,
+   "rx": 1100,
+   "rz": 650,
+   "heading": 0,
+   "from": "1944-06-06",
+   "to": "1944-08-31",
+   "source": "Wikipedia: Operation Elmira; Operation Galveston; Operation Hackensack (LZ W south of Sainte-Mere-Eglise)",
+   "types": {
+    "waco": 120,
+    "horsa": 70
+   }
+  },
+  {
+   "id": "us_dz_o",
+   "name": "DZ O, Sainte-Mere-Eglise (parachutes)",
+   "kind": "dz",
+   "lat": 49.408,
+   "lon": -1.3,
+   "rx": 900,
+   "rz": 600,
+   "heading": 0,
+   "from": "1944-06-06",
+   "to": "1944-06-08",
+   "source": "Wikipedia: Mission Boston (DZ O north-west of Sainte-Mere-Eglise)",
+   "count": 240
+  },
+  {
+   "id": "arnhem_lz_s",
+   "name": "LZ S, Reijerscamp, Wolfheze",
+   "kind": "lz",
+   "lat": 52.006,
+   "lon": 5.804,
+   "rx": 800,
+   "rz": 450,
+   "heading": 90,
+   "from": "1944-09-17",
+   "to": "1945-05-05",
+   "source": "Wikipedia: Battle of Arnhem (LZ S north of the railway at Wolfheze)",
+   "types": {
+    "horsa": 110,
+    "hamilcar": 4
+   }
+  },
+  {
+   "id": "arnhem_lz_z",
+   "name": "LZ Z, Renkum Heath",
+   "kind": "lz",
+   "lat": 51.996,
+   "lon": 5.77,
+   "rx": 850,
+   "rz": 550,
+   "heading": 90,
+   "from": "1944-09-17",
+   "to": "1945-05-05",
+   "source": "Wikipedia: Battle of Arnhem (LZ Z on Renkum Heath)",
+   "types": {
+    "horsa": 120,
+    "hamilcar": 13
+   }
+  },
+  {
+   "id": "arnhem_lz_x",
+   "name": "LZ X, Renkum Heath (second lift)",
+   "kind": "lz",
+   "lat": 51.989,
+   "lon": 5.747,
+   "rx": 650,
+   "rz": 380,
+   "heading": 90,
+   "from": "1944-09-18",
+   "to": "1945-05-05",
+   "source": "Wikipedia: Battle of Arnhem (LZ X, second lift 18 Sep)",
+   "types": {
+    "horsa": 80,
+    "hamilcar": 15
+   }
+  },
+  {
+   "id": "arnhem_lz_l",
+   "name": "LZ L, Johannahoeve",
+   "kind": "lz",
+   "lat": 52.0085,
+   "lon": 5.839,
+   "rx": 450,
+   "rz": 280,
+   "heading": 90,
+   "from": "1944-09-19",
+   "to": "1945-05-05",
+   "source": "Wikipedia: Battle of Arnhem (LZ L at Johannahoeve farm, Polish lift)",
+   "types": {
+    "horsa": 35
+   }
+  },
+  {
+   "id": "arnhem_dz_x",
+   "name": "DZ X, Renkum Heath (parachutes)",
+   "kind": "dz",
+   "lat": 51.99,
+   "lon": 5.755,
+   "rx": 800,
+   "rz": 500,
+   "heading": 90,
+   "from": "1944-09-17",
+   "to": "1944-09-19",
+   "source": "Wikipedia: Battle of Arnhem (DZ X, Renkum Heath)",
+   "count": 260
+  },
+  {
+   "id": "arnhem_dz_y",
+   "name": "DZ Y, Ginkel Heath (parachutes)",
+   "kind": "dz",
+   "lat": 52.039,
+   "lon": 5.716,
+   "rx": 700,
+   "rz": 450,
+   "heading": 90,
+   "from": "1944-09-18",
+   "to": "1944-09-20",
+   "source": "Wikipedia: Battle of Arnhem (DZ Y, Ginkel Heath)",
+   "count": 240
+  },
+  {
+   "id": "groesbeek_lz_n",
+   "name": "LZ N, Groesbeek",
+   "kind": "lz",
+   "lat": 51.78,
+   "lon": 5.948,
+   "rx": 1100,
+   "rz": 700,
+   "heading": 90,
+   "from": "1944-09-17",
+   "to": "1945-02-28",
+   "source": "Wikipedia: Operation Market Garden (82nd Airborne landing zones round Groesbeek)",
+   "types": {
+    "waco": 140
+   }
+  },
+  {
+   "id": "son_lz_w",
+   "name": "LZ W, Son",
+   "kind": "lz",
+   "lat": 51.527,
+   "lon": 5.475,
+   "rx": 900,
+   "rz": 600,
+   "heading": 90,
+   "from": "1944-09-17",
+   "to": "1944-12-31",
+   "source": "Wikipedia: Operation Market Garden (101st Airborne landing zone W near Son)",
+   "types": {
+    "waco": 120
+   }
+  },
+  {
+   "id": "varsity_lz_p",
+   "name": "LZ P, Hamminkeln",
+   "kind": "lz",
+   "lat": 51.715,
+   "lon": 6.585,
+   "rx": 800,
+   "rz": 500,
+   "heading": 90,
+   "from": "1945-03-24",
+   "to": "1945-06-30",
+   "source": "Wikipedia: Operation Varsity (British landing zones round Hamminkeln)",
+   "types": {
+    "horsa": 90,
+    "hamilcar": 10
+   }
+  },
+  {
+   "id": "varsity_lz_o",
+   "name": "LZ O, Hamminkeln station",
+   "kind": "lz",
+   "lat": 51.735,
+   "lon": 6.6,
+   "rx": 700,
+   "rz": 450,
+   "heading": 90,
+   "from": "1945-03-24",
+   "to": "1945-06-30",
+   "source": "Wikipedia: Operation Varsity",
+   "types": {
+    "horsa": 80
+   }
+  },
+  {
+   "id": "varsity_lz_u",
+   "name": "LZ U, west of Hamminkeln",
+   "kind": "lz",
+   "lat": 51.74,
+   "lon": 6.57,
+   "rx": 700,
+   "rz": 450,
+   "heading": 90,
+   "from": "1945-03-24",
+   "to": "1945-06-30",
+   "source": "Wikipedia: Operation Varsity",
+   "types": {
+    "horsa": 70,
+    "hamilcar": 8
+   }
+  },
+  {
+   "id": "varsity_lz_s",
+   "name": "LZ S, Diersfordt (US)",
+   "kind": "lz",
+   "lat": 51.695,
+   "lon": 6.56,
+   "rx": 900,
+   "rz": 550,
+   "heading": 90,
+   "from": "1945-03-24",
+   "to": "1945-06-30",
+   "source": "Wikipedia: Operation Varsity (17th Airborne landing zones near Diersfordt)",
+   "types": {
+    "waco": 150
+   }
+  }
+ ]
+}

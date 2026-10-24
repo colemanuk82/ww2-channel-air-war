@@ -162,10 +162,12 @@ void fragment() {
 	float shore = near * mix(0.6, 1.0, rings) * mix(0.35, 1.0, lacy);
 	float edge = (1.0 - smoothstep(0.0, foam_depth * 0.45, diff)) * mix(0.5, 1.0, lacy);
 	// surf: wide bands of broken swell rolling in over the shallows, with lacy backwash between them
-	float surf_zone = (1.0 - smoothstep(foam_depth * 1.6, foam_depth * 6.0, diff)) * smoothstep(foam_depth * 0.4, foam_depth * 1.0, diff);
+	// (v2.4: the surf band and the lace hug the shore - the seabed ramp is shallow for kilometres, so the old 6x depth
+	// band spread white lace over whole estuaries and bays when seen from above)
+	float surf_zone = (1.0 - smoothstep(foam_depth * 0.9, foam_depth * 2.4, diff)) * smoothstep(foam_depth * 0.3, foam_depth * 0.8, diff);
 	float surf_ph = diff * 0.38 + TIME * 0.55 + n1 * 3.2 + t_vnoise2(wp * 0.06) * 0.6;
 	float surf_line = smoothstep(0.86, 0.97, sin(surf_ph) * 0.5 + 0.5) * smoothstep(0.25, 0.60, t_vnoise2(wp * 0.035 + TIME * 0.05));
-	float lace = smoothstep(0.62, 0.80, t_vnoise2(wp * 0.22 + TIME * 0.08)) * (1.0 - smoothstep(foam_depth * 0.8, foam_depth * 3.0, diff)) * 0.6;
+	float lace = smoothstep(0.62, 0.80, t_vnoise2(wp * 0.22 + TIME * 0.08)) * (1.0 - smoothstep(foam_depth * 0.35, foam_depth * 1.1, diff)) * 0.6;
 	float surf = surf_line * surf_zone + lace;
 	float wake = max(max(wake_one(wp, wake_0), wake_one(wp, wake_1)), max(wake_one(wp, wake_2), wake_one(wp, wake_3)));
 	float foam = clamp(shore + edge + crest * 0.9 + streak * 0.4 + surf * 0.9 + wake * 0.9, 0.0, 1.0) * (1.0 - lake_mode);

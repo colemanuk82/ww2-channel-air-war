@@ -55,6 +55,7 @@ func _ready() -> void:
 	_test_accessibility()
 	_test_awards()
 	_test_legal_docs()
+	_test_era_damage()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
@@ -74,6 +75,132 @@ func _test_moon_weather() -> void:
 	_check(WeatherManager.PRESETS.has(fc), "forecast is a WeatherManager preset")
 	_check(MoonWeather.nav_penalty("fog") > MoonWeather.nav_penalty("clear"), "fog is harder to navigate than clear")
 	_check(is_equal_approx(MoonWeather.moon_light(), TimeOfDay.moon_illum), "moon_light reads TimeOfDay")
+
+
+func _test_era_damage() -> void:
+	var keep: String = EraClock.current()
+	EraClock.set_date("")
+	_check(EraClock.current() == EraClock.DEFAULT and EraClock.band() == "1940", "no date means summer 1940")
+	EraClock.set_date("1940-10-01")
+	_check(EraClock.band() == "blitz", "October 1940 is the Blitz band")
+	EraClock.set_date("1944-05-15")
+	_check(EraClock.band() == "buildup", "May 1944 is the build-up band")
+	EraClock.set_date("1944-07-20")
+	_check(EraClock.band() == "liberation" and EraClock.is_between("1944-06-06", "") and not EraClock.is_between("", "1944-06-05"), "July 1944: liberation, after D-Day")
+	_check(absf(EraClock.ramp("1944-07-10", "1944-07-30") - 0.5) < 0.05, "ramp is linear in days")
+	WarDamage.load_data()
+	_check(WarDamage.rows().size() >= 40, "war damage data has %d areas" % WarDamage.rows().size())
+	for r in WarDamage.rows():
+		var rd: Dictionary = r
+		_check(str(rd.get("source", "")) != "" and float(rd["level"]) > 0.0 and float(rd["level"]) <= 1.0 and str(rd["from"]) <= str(rd["full"]), "war damage row %s is complete" % str(rd.get("id", "?")))
+	var caen: Vector3 = WorldCoords.latlon_to_world(49.183, -0.370)
+	var docks: Vector3 = WorldCoords.latlon_to_world(51.497, -0.043)
+	WarDamage.refresh()
+	_check(WarDamage.level_at(caen.x, caen.z) > 0.5, "Caen is in ruins on 1944-07-20")
+	EraClock.set_date("1940-08-01")
+	WarDamage.refresh()
+	_check(WarDamage.level_at(caen.x, caen.z) == 0.0 and WarDamage.level_at(docks.x, docks.z) == 0.0, "no bomb damage in Caen or the London docks on 1940-08-01")
+	EraClock.set_date("1940-10-15")
+	WarDamage.refresh()
+	_check(WarDamage.level_at(docks.x, docks.z) > 0.4, "the Surrey docks are burnt out by mid-October 1940")
+	var lists: Array = [[Transform3D(Basis.IDENTITY.scaled(Vector3(8, 7, 9)), docks + Vector3(0, 3, 0))], []]
+	for i in 200:
+		(lists[1] as Array).append(Transform3D(Basis.IDENTITY.scaled(Vector3(8, 7, 9)), docks + Vector3(float(i % 20) * 9.0, 3.0, float(i / 20) * 11.0)))
+	var ruins: Array = [[], []]
+	WarDamage.apply_to_houses(lists, ruins, WarDamage.areas_near(Vector2(docks.x, docks.z) - Vector2(900, 900), 1800.0))
+	var n_ruin: int = (ruins[0] as Array).size() + (ruins[1] as Array).size()
+	var n_left: int = (lists[0] as Array).size() + (lists[1] as Array).size()
+	_check(n_ruin > 40 and n_left > 20 and n_ruin + n_left < 201, "a burnt dock street keeps %d houses, %d shells" % [n_left, n_ruin])
+	for v in 2:
+		var rm: ArrayMesh = WarDamage.ruin_mesh(v)
+		_check(rm != null and rm.get_surface_count() > 0 and rm.get_surface_count() <= 6, "ruin mesh %d builds with %d surfaces" % [v, rm.get_surface_count()])
+	# the 1944 build-up
+	var bd: Dictionary = BuildupKit.data()
+	_check((bd.get("marshalling", []) as Array).size() >= 8 and (bd.get("anchorages", []) as Array).size() >= 8, "build-up data loads")
+	for k in ["lct", "lci", "lst"]:
+		_check(BuildupKit.craft_mesh(k).get_surface_count() > 0, "landing craft mesh %s builds" % k)
+	_check(BuildupKit.hard_mesh().get_surface_count() > 0, "embarkation hard mesh builds")
+	EraClock.set_date("1940-08-01")
+	for r0 in bd.get("anchorages", []):
+		var n0: Node3D = BuildupKit.build(r0, "anchorage")
+		_check(n0.get_child_count() == 0, "no invasion fleet at %s in 1940" % str((r0 as Dictionary)["id"]))
+		n0.free()
+	EraClock.set_date("1944-05-20")
+	var on_n: int = 0
+	for r1 in bd.get("anchorages", []):
+		if EraClock.is_between(str((r1 as Dictionary)["from"]), str((r1 as Dictionary)["to"])):
+			on_n += 1
+	_check(on_n == (bd.get("anchorages", []) as Array).size(), "every anchorage is in its window on 1944-05-20 (the test terrain has no sea to moor in)")
+	# farming regions and seasons
+	RegionMap.load_map()
+	_check(RegionMap.ready(), "region map loads (data/heightmap/region_types.png)")
+	var probe: Array = [[49.25, -1.40, 0, "bocage (Cotentin)"], [49.90, 2.30, 1, "open field (Picardy)"], [52.30, 4.75, 2, "polder (Holland)"], [51.10, 0.30, 3, "Weald"], [51.50, -0.10, -1, "London (none)"]]
+	for pr in probe:
+		var wp3: Vector3 = WorldCoords.latlon_to_world(float(pr[0]), float(pr[1]))
+		var tw: Vector4 = RegionMap.type_weights(wp3.x, wp3.z)
+		var want: int = int(pr[2])
+		var got: int = -1
+		for c in 4:
+			if tw[c] > 0.5:
+				got = c
+		_check(got == want, "region at %s is %s (got %d)" % [str(pr[3]), str(pr[3]), got])
+	var fe: Dictionary = Scatter.field_edge(Vector2(WorldCoords.latlon_to_world(49.25, -1.40).x, WorldCoords.latlon_to_world(49.25, -1.40).z))
+	_check(not fe.is_empty() and (fe["region"] as Vector4).x > 0.5, "field_edge reports the bocage region")
+	# barges
+	_check(BargeTraffic.peniche_mesh().get_surface_count() > 0 and BargeTraffic.barge_train_mesh().get_surface_count() > 0, "barge meshes build")
+	# Westwall, bridges, anti-landing obstacles
+	_check(WestwallKit.chunks().size() >= 3, "the Westwall line is cut into %d streamed sections" % WestwallKit.chunks().size())
+	_check(WestwallKit.teeth_mesh().get_surface_count() > 0 and RuralProps.obstacle_mesh().get_surface_count() > 0, "dragon's teeth and field-obstacle meshes build")
+	EraClock.set_date("1945-03-20")
+	var lb: Node3D = Landmarks.build("ludendorff_bridge")
+	EraClock.set_date("1945-03-01")
+	var lb0: Node3D = Landmarks.build("ludendorff_bridge")
+	_check(lb.get_child_count() != lb0.get_child_count(), "the Ludendorff bridge has fallen by 20 Mar 1945 (%d vs %d parts)" % [lb.get_child_count(), lb0.get_child_count()])
+	lb.free()
+	lb0.free()
+	# floods, battlefields, beaches and landing zones by date
+	EraClock.set_date("1944-06-10")
+	var wz: Array = WarGround.zones()
+	var kinds: Dictionary = {}
+	for z in wz:
+		kinds[int(floor(float(z["kind"]) + 0.001))] = true
+	_check(kinds.has(5) and kinds.has(6), "on 1944-06-10 the Normandy floods and churned beaches are on")
+	var lz_on: Node3D = null
+	for r in GliderKit.rows():
+		if str((r as Dictionary)["id"]) == "tonga_lz_n":
+			lz_on = GliderKit.build(r)
+	_check(lz_on != null and lz_on.get_child_count() > 0, "gliders lie on LZ N on 1944-06-10")
+	if lz_on != null:
+		lz_on.free()
+	EraClock.set_date("1940-08-01")
+	var wz40: Array = WarGround.zones()
+	var dunk: bool = false
+	for z2 in wz40:
+		if int(floor(float(z2["kind"]) + 0.001)) == 5:
+			dunk = true
+	_check(not dunk, "no floods in August 1940")
+	for r2 in GliderKit.rows():
+		var n2: Node3D = GliderKit.build(r2)
+		_check(n2.get_child_count() == 0, "no gliders at %s in August 1940" % str((r2 as Dictionary)["id"]))
+		n2.free()
+	var mb40: Node3D = MulberryKit.build("B")
+	_check(mb40.get_child_count() == 0, "no Mulberry harbour in 1940")
+	mb40.free()
+	EraClock.set_date("1944-06-20")
+	var mb: Node3D = MulberryKit.build("B")
+	_check(mb.get_child_count() >= 4, "Mulberry B stands on 1944-06-20 (%d parts)" % mb.get_child_count())
+	mb.free()
+	for gt in ["horsa", "hamilcar", "waco"]:
+		for st in GliderKit.STATES:
+			var gm: ArrayMesh = GliderKit.glider_mesh(gt, st)
+			_check(gm != null and gm.get_surface_count() > 0 and gm.get_surface_count() <= 8, "glider mesh %s/%s (%d surfaces)" % [gt, st, gm.get_surface_count()])
+	for k in ["landing_craft", "tank", "enemy_tank", "lorry"]:
+		_check(WarGround._mesh(k, "Allies").get_surface_count() > 0, "war ground mesh %s builds" % k)
+	for row in WarGround.data().get("floods", []) + WarGround.data().get("battlefields", []) + WarGround.data().get("beaches", []) + GliderKit.rows():
+		var rr: Dictionary = row
+		_check(str(rr.get("source", "")) != "" and str(rr["from"]) <= str(rr["to"]), "dated war-ground row %s has a source and a sane window" % str(rr["id"]))
+	EraClock.set_date("" if keep == EraClock.DEFAULT else keep)
+	WarDamage.refresh()
 
 
 func _check(ok: bool, what: String) -> bool:

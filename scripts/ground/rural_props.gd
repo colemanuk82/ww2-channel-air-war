@@ -64,3 +64,46 @@ static func wreck_mesh() -> ArrayMesh:
 	var m: ArrayMesh = AirfieldAssets._build(parts)
 	Scatter._meshes["field_wreck"] = m
 	return m
+
+
+## Anti-landing obstacles in a big open field near the coast: in England in the invasion summer of 1940 (fields over
+## ~300 yards long within a few miles of the coast or of an airfield were blocked with rows of poles, trenches and old
+## vehicles, most cleared again by the end of 1942), and on the French coast in 1944 ("Rommel's asparagus": stakes
+## against gliders behind the Normandy and Pas-de-Calais beaches, February to the summer of 1944).
+## Sources: Wikipedia - British anti-invasion preparations of the Second World War; Atlantic Wall (Rommelspargel).
+static func wants_obstacles(p: Vector2) -> bool:
+	var ll: Vector2 = WorldCoords.world_to_latlon(Vector3(p.x, 0.0, p.y))
+	var england: bool = ll.x > 50.5 and ll.y < 1.5
+	var on_date: bool = EraClock.is_between("1940-06-01", "1942-12-31") if england else (EraClock.is_between("1944-02-01", "1944-08-31") and ll.y < 3.0)
+	if not on_date:
+		return false
+	# within ~8 km of the sea
+	for k in 8:
+		var a: float = TAU * float(k) / 8.0
+		for r in [3000.0, 7000.0]:
+			if GroundKit.is_water(p.x + cos(a) * r, p.y + sin(a) * r):
+				return true
+	return false
+
+
+## One field's worth: a grid of 4 m timber poles at ~25 m spacing over 125 x 125 m, with two zig-zag spoil trenches.
+static func obstacle_mesh() -> ArrayMesh:
+	if Scatter._meshes.has("landing_obstacles"):
+		return Scatter._meshes["landing_obstacles"]
+	var wood := Color(0.36, 0.28, 0.19)
+	var spoil := Color(0.27, 0.22, 0.15)
+	var parts: Array = []
+	for i in 6:
+		for j in 6:
+			var x: float = -62.5 + float(i) * 25.0 + (12.5 if j % 2 == 1 else 0.0)
+			if x > 62.5:
+				continue
+			parts.append(GroundKit.cyl_part(0.12, 0.16, 4.0, Vector3(x, 1.8, -62.5 + float(j) * 25.0), wood, Vector3(float((i * 7 + j * 3) % 9) - 4.0, 0, float((i * 5 + j) % 7) - 3.0), 5, false))
+	for t in 2:
+		for k in 5:
+			var z0: float = -50.0 + float(k) * 25.0
+			var x0: float = -30.0 + float(t) * 60.0
+			parts.append(GroundKit.box_part(Vector3(2.6, 0.5, 27.0), Vector3(x0 + (5.0 if k % 2 == 0 else -5.0), 0.2, z0), spoil, Vector3(0, 22.0 if k % 2 == 0 else -22.0, 0), false))
+	var m: ArrayMesh = AirfieldAssets._build(parts)
+	Scatter._meshes["landing_obstacles"] = m
+	return m
