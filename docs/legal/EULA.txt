@@ -18,7 +18,7 @@ You may not: (a) copy, sell, rent, sublicense or redistribute the Game; (b) reve
 We and our licensors own the Game and everything in it. Third-party components are used under their own licences, listed on the Credits and Licences screen. Nothing here transfers ownership to you.
 
 5. THIRD-PARTY COMPONENTS
-The Game is built on the Godot Engine (MIT licence). Optional NVIDIA DLSS and Streamline components can be downloaded by you from NVIDIA's public repository; they are licensed to you by NVIDIA under NVIDIA's own terms, which are saved to the "licenses" folder next to the Game when you download them. We do not supply or support those components.
+The Game is built on the Godot Engine (MIT licence).
 
 6. AI-GENERATED CONTENT
 Radio and briefing voices were produced with AI text-to-speech. Menu paintings were produced with AI image tools. No human recordings or photographs are used for those items. The Game is a work of fiction based on historical events. Characters you play and radio messages are invented.

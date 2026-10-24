@@ -110,7 +110,7 @@ func _step_eula() -> void:
 
 # ---- 3. optional DLSS download ----------------------------------------------------------------------------
 func _step_dlss_or_finish() -> void:
-	if not DlssInstaller.can_download() or DlssInstaller.offer_declined() or OS.has_feature("editor"):
+	if not GameState.engine_has_streamline() or not DlssInstaller.can_download() or DlssInstaller.offer_declined() or OS.has_feature("editor"):
 		done.emit()
 		return
 	_clear()
