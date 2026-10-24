@@ -401,7 +401,14 @@ func flak_burst(pos: Vector3, scale_v: float = 1.0, quiet: bool = false) -> void
 		puffs.spawn(pos + off, off * 0.5 + Vector3(0.0, 0.4, 0.0) + wind * 0.6, randf_range(18.0, 30.0), 3.0 * k, randf_range(14.0, 24.0) * k,
 			Color(0.06, 0.06, 0.07, 0.95), Color(0.26, 0.26, 0.28, 0.0), 0.8, -0.12, 0.35)
 	if not quiet:
-		sfx("flak", pos, 0.0, 0.05)
+		# Close bursts get the cracking voice and extra level (the distant one is mostly low rumble and falls to nothing
+		# beside you); both bypass the rate gate when near, so a barrage never swallows the one right on top of you.
+		var cam: Camera3D = get_viewport().get_camera_3d()
+		var near: float = cam.global_position.distance_to(pos) if cam != null else 1.0e9
+		if near < 700.0:
+			sfx("flak_close", pos, lerpf(9.0, 3.0, clampf(near / 700.0, 0.0, 1.0)), 0.05)
+		else:
+			sfx("flak", pos, 0.0, 0.05)
 
 
 func sparks(pos: Vector3, normal: Vector3 = Vector3.UP, count: int = 4) -> void:

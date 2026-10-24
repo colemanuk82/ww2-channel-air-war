@@ -5,7 +5,10 @@ extends Node
 ## Owned by the FX autoload: FX.sfx("gun", pos).
 
 const RATE := 22050
-const POOL := 20
+const POOL := 28
+## Sounds nearer the listener than this skip the per-name rate gate: a close flak burst or hit must never be dropped
+## because a far one played a moment earlier.
+const NEAR_BYPASS := 450.0
 
 ## Engine voices. base/pulse_hz must be even whole numbers (the loop is 0.5 s, so cycles stay whole and it loops
 ## cleanly). harm = number of harmonics, roll = harmonic roll-off, rasp = high mechanical hash, pulse = firing-order
@@ -41,6 +44,7 @@ var _streams: Dictionary = {}
 var _players: Array[AudioStreamPlayer3D] = []
 var _next: int = 0
 var _last_play: Dictionary = {}
+var _slot_loud: PackedFloat32Array = PackedFloat32Array()   # estimated loudness (dB at the listener) of what each pool slot is playing
 var _engine: AudioStreamPlayer
 var _engine_key: String = ""
 var _wind_lo: AudioStreamPlayer
@@ -80,19 +84,56 @@ func play(sfx_name: String, pos: Vector3, volume_db: float = 0.0, min_interval: 
 	if not enabled or _players.is_empty():
 		return
 	var now: float = Time.get_ticks_msec() * 0.001
-	if min_interval > 0.0 and now - float(_last_play.get(sfx_name, -10.0)) < min_interval:
+	var dist: float = _listener_dist(pos)
+	if min_interval > 0.0 and dist > NEAR_BYPASS and now - float(_last_play.get(sfx_name, -10.0)) < min_interval:
 		return
-	_last_play[sfx_name] = now
 	var s: AudioStream = _stream(sfx_name)
 	if s == null:
 		return
-	var p: AudioStreamPlayer3D = _players[_next]
-	_next = (_next + 1) % POOL
+	var vol: float = volume_db + _vol_db() + _sfx_trim(sfx_name)
+	# how loud it will actually be at the listener (inverse-distance falloff past the unit size)
+	var loud: float = vol - 20.0 * log(maxf(dist / 90.0, 1.0)) / log(10.0)
+	var slot: int = _pick_slot(loud)
+	if slot < 0:
+		return           # every voice is busy with something louder
+	_last_play[sfx_name] = now
+	var p: AudioStreamPlayer3D = _players[slot]
 	p.stream = s
 	p.global_position = pos
-	p.volume_db = volume_db + _vol_db() + _sfx_trim(sfx_name)
+	p.volume_db = vol
 	p.pitch_scale = randf_range(0.92, 1.08)
 	p.play()
+	_slot_loud[slot] = loud
+
+
+## Distance from the listening camera (0 when there is none, so headless runs treat every sound as near).
+func _listener_dist(pos: Vector3) -> float:
+	var vp: Viewport = get_viewport()
+	var cam: Camera3D = vp.get_camera_3d() if vp != null else null
+	if cam == null:
+		return 0.0
+	return cam.global_position.distance_to(pos)
+
+
+## A free voice if there is one, else steal the quietest playing voice - but only if the new sound is louder.
+## Plain round-robin let a barrage of far flak or a dogfight's gunfire cut off the one burst right beside you.
+func _pick_slot(loud: float) -> int:
+	if _slot_loud.size() != _players.size():
+		_slot_loud.resize(_players.size())
+		_slot_loud.fill(-200.0)
+	var quiet_i: int = -1
+	var quiet_v: float = 1.0e9
+	for k in _players.size():
+		var i: int = (_next + k) % _players.size()
+		if not _players[i].playing:
+			_next = (i + 1) % _players.size()
+			return i
+		if _slot_loud[i] < quiet_v:
+			quiet_v = _slot_loud[i]
+			quiet_i = i
+	if loud >= quiet_v:
+		return quiet_i
+	return -1
 
 
 ## Engine drone for the player aircraft. throttle 0..1, speed_ratio 0..1, profile = key of ENGINES,
@@ -199,14 +240,14 @@ func wind(speed_ratio: float, wind_mps: float, turb: float, cockpit: bool, on_gr
 
 ## Non-positional one-shot for sounds heard from across a town (wardens' whistles, distant fire bells). The caller
 ## sets the loudness, so there is no distance falloff.
-func flat(sfx_name: String, volume_db: float) -> void:
+func flat(sfx_name: String, volume_db: float, pitch_jitter: float = 0.03) -> void:
 	if not enabled:
 		return
 	var s: AudioStream = _stream(sfx_name)
 	if s == null:
 		return
 	if _flat.is_empty():
-		for i in 3:
+		for i in 5:
 			var fp := AudioStreamPlayer.new()
 			fp.bus = _bus()
 			add_child(fp)
@@ -215,8 +256,26 @@ func flat(sfx_name: String, volume_db: float) -> void:
 	_flat_next = (_flat_next + 1) % _flat.size()
 	p.stream = s
 	p.volume_db = volume_db + _vol_db()
-	p.pitch_scale = randf_range(0.97, 1.03)
+	p.pitch_scale = randf_range(1.0 - pitch_jitter, 1.0 + pitch_jitter)
 	p.play()
+
+
+## Something hit the player's own aircraft, heard through the airframe (no distance falloff). kind "bullet" is a
+## machine-gun / cannon strike (clang and ring of metal), "blast" is flak bursting alongside (a hard thump and a
+## patter of fragments). share is the hit as a fraction of the aircraft's health and sets how loud it is.
+func player_hit(kind: String, share: float) -> void:
+	if not enabled:
+		return
+	var now: float = Time.get_ticks_msec() * 0.001
+	var key: String = "ph_" + kind
+	if now - float(_last_play.get(key, -10.0)) < 0.045:
+		return
+	_last_play[key] = now
+	var k: float = clampf(share * 12.0, 0.0, 1.0)
+	if kind == "blast":
+		flat("hit_frag:%d" % randi_range(0, 2), lerpf(-3.0, 6.0, k), 0.05)
+	else:
+		flat("hit_metal:%d" % randi_range(0, 2), lerpf(-5.0, 4.0, k), 0.06)
 
 
 func stop_engine() -> void:
@@ -224,7 +283,8 @@ func stop_engine() -> void:
 		_engine.stop()
 
 
-const PREWARM_NAMES := ["gun", "cannon", "hit", "flak", "siren", "whistle_warden", "fire_bell", "thunder", "explosion",
+const PREWARM_NAMES := ["gun", "cannon", "hit", "flak", "flak_close", "hit_metal:0", "hit_metal:1", "hit_metal:2",
+	"hit_frag:0", "hit_frag:1", "hit_frag:2", "siren", "whistle_warden", "fire_bell", "thunder", "explosion",
 	"crash", "bomb_whistle", "rocket", "engine", "wind_lo", "wind_hi"]
 var _pre_queue: Array = []
 
@@ -267,6 +327,10 @@ func _synth(n: String) -> AudioStreamWAV:
 	if n.begins_with("gun:"):
 		var g: Dictionary = GUNS.get(n.substr(4), GUNS["browning50"])
 		return _noise_burst(float(g["dur"]), float(g["lp"]), float(g["decay"]), float(g["hz"]), float(g["amt"]))
+	if n.begins_with("hit_metal:"):
+		return _hit_metal(int(n.substr(10)))
+	if n.begins_with("hit_frag:"):
+		return _hit_frag(int(n.substr(9)))
 	if n.begins_with("engine:"):
 		var parts: PackedStringArray = n.substr(7).split(":")
 		return _engine_loop_p(parts[0], int(parts[1]))
@@ -279,6 +343,8 @@ func _synth(n: String) -> AudioStreamWAV:
 			s = _noise_burst(0.06, 0.8, 60.0, 1700.0, 0.25)
 		"flak":
 			s = _noise_burst(0.6, 0.12, 8.0, 90.0, 0.8)
+		"flak_close":
+			s = _flak_close()
 		"siren":
 			s = _siren_loop()
 		"whistle_warden":
@@ -332,6 +398,93 @@ func _noise_burst(dur: float, lp: float, decay: float, thump_hz: float, thump_am
 		f += (randf_range(-1.0, 1.0) - f) * lp
 		var th: float = sin(TAU * thump_hz * t) * exp(-decay * 0.7 * t) * thump_amt
 		out[i] = (f * 1.4 + th) * env * 0.8
+	return _wav(out)
+
+
+## A shell bursting close by: a hard crack on the front, a chest-thump underneath, then fragments whirring past.
+## The distant "flak" voice is mostly low rumble, which vanishes on small speakers; this has real top end.
+func _flak_close() -> AudioStreamWAV:
+	var dur: float = 1.5
+	var n: int = int(dur * RATE)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var f: float = 0.0
+	var hp: float = 0.0
+	for i in n:
+		var t: float = float(i) / RATE
+		var w: float = randf_range(-1.0, 1.0)
+		f += (w - f) * 0.14
+		hp = w - f                                          # high-passed noise: the sharp crack
+		var crack: float = hp * exp(-70.0 * t) * 1.6
+		var body: float = f * exp(-7.0 * t) * 2.2
+		var thump: float = sin(TAU * (78.0 - 30.0 * minf(t, 0.4)) * t) * exp(-9.0 * t) * 0.9
+		out[i] = (crack + body + thump) * minf(t * 900.0, 1.0)
+	# fragments whizzing and pattering past, a few hundredths of a second apart
+	for k in 14:
+		var t0: float = randf_range(0.04, 0.7)
+		var hz: float = randf_range(1400.0, 3600.0)
+		var amp: float = randf_range(0.12, 0.3) * (1.0 - t0 / 1.1)
+		var i0: int = int(t0 * RATE)
+		for j in int(0.09 * RATE):
+			var idx: int = i0 + j
+			if idx >= n:
+				break
+			var tj: float = float(j) / RATE
+			out[idx] += (sin(TAU * hz * (1.0 - 4.0 * tj) * tj) * 0.7 + randf_range(-0.3, 0.3)) * exp(-45.0 * tj) * amp
+	for i in n:
+		out[i] = clampf(out[i], -1.0, 1.0) * 0.95
+	return _wav(out)
+
+
+## A bullet or cannon shell striking the player's own airframe: a sharp clang with a short metallic ring and a dull
+## thud behind it. The variant picks a different set of ring frequencies so a burst of hits does not sound looped.
+func _hit_metal(variant: int) -> AudioStreamWAV:
+	var rings: Array = [[820.0, 1330.0, 2150.0], [690.0, 1180.0, 1890.0], [960.0, 1570.0, 2480.0]]
+	var r: Array = rings[variant % 3]
+	var dur: float = 0.45
+	var n: int = int(dur * RATE)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var f: float = 0.0
+	for i in n:
+		var t: float = float(i) / RATE
+		var w: float = randf_range(-1.0, 1.0)
+		f += (w - f) * 0.5
+		var tick: float = (w - f) * exp(-220.0 * t) * 1.5
+		var ring: float = 0.0
+		for q in 3:
+			ring += sin(TAU * float(r[q]) * t) * exp(-(16.0 + 9.0 * q) * t) * (0.5 - 0.1 * q)
+		var thud: float = sin(TAU * (130.0 - 40.0 * minf(t * 6.0, 1.0)) * t) * exp(-30.0 * t) * 0.7
+		out[i] = clampf(tick + ring + thud, -1.0, 1.0) * minf(t * 2500.0, 1.0) * 0.95
+	return _wav(out)
+
+
+## Flak fragments tearing into the player's aircraft: a heavy thump, a crunch, and a rattle of small metal strikes.
+func _hit_frag(variant: int) -> AudioStreamWAV:
+	var dur: float = 1.0
+	var n: int = int(dur * RATE)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var f: float = 0.0
+	for i in n:
+		var t: float = float(i) / RATE
+		f += (randf_range(-1.0, 1.0) - f) * 0.2
+		var thump: float = sin(TAU * (88.0 - 36.0 * minf(t * 3.0, 1.0)) * t) * exp(-10.0 * t) * 1.0
+		var crunch: float = f * exp(-16.0 * t) * 2.0
+		out[i] = (thump + crunch) * minf(t * 1500.0, 1.0)
+	for k in 9 + variant * 2:
+		var t0: float = randf_range(0.02, 0.55)
+		var hz: float = randf_range(900.0, 2600.0)
+		var amp: float = randf_range(0.18, 0.45) * (1.0 - t0 * 0.9)
+		var i0: int = int(t0 * RATE)
+		for j in int(0.12 * RATE):
+			var idx: int = i0 + j
+			if idx >= n:
+				break
+			var tj: float = float(j) / RATE
+			out[idx] += (sin(TAU * hz * tj) * 0.8 + randf_range(-0.4, 0.4) * exp(-120.0 * tj)) * exp(-38.0 * tj) * amp
+	for i in n:
+		out[i] = clampf(out[i], -1.0, 1.0) * 0.95
 	return _wav(out)
 
 

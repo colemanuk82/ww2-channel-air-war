@@ -469,6 +469,11 @@ func _test_audio() -> void:
 		if not _check(g != null and g.data.size() > 100, "gun %s built" % id):
 			continue
 		_check(_peak(g) > 0.05, "gun %s is audible" % id)
+	for n in ["flak_close", "hit_metal:0", "hit_metal:1", "hit_metal:2", "hit_frag:0", "hit_frag:1", "hit_frag:2"]:
+		var cs: AudioStreamWAV = a._stream(n) as AudioStreamWAV
+		if _check(cs != null and cs.data.size() > 1000, "combat sound %s built" % n):
+			var cp: float = _peak(cs)
+			_check(cp > 0.3 and cp <= 0.999, "combat sound %s peak %.2f in range" % [n, cp])
 	a.free()
 
 
@@ -1569,6 +1574,15 @@ func _test_ai_takeoff_all() -> void:
 func _test_realism() -> void:
 	print("-- Realism: engine heat and G effects")
 	_check(GameState.engine_heat_on and GameState.g_effects_on, "realism settings are on by default")
+	var vs0: bool = GameState.vsync_on
+	var cap0: int = GameState.fps_cap
+	GameState.set_graphic("vsync", false)
+	GameState.set_graphic("fps_cap", 60)
+	_check(not GameState.vsync_on and Engine.max_fps == 60, "frame limiter and vsync apply live")
+	GameState.set_graphic("fps_cap", 0)
+	_check(Engine.max_fps == 0, "frame limiter off = unlimited")
+	GameState.set_graphic("vsync", vs0)
+	GameState.set_graphic("fps_cap", cap0)
 	var ac: Aircraft = AIFactory.spawn(self, "spitfire", "Allies", Vector3(0.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
 	ac.on_ground = false
 	ac.speed = ac.stats.max_speed * 0.8
