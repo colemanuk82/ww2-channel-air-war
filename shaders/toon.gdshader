@@ -76,20 +76,9 @@ vec3 detail_building(vec3 col, inout float emit, float cam_dist) {
 		col *= mix(0.85, 0.70 + 0.30 * line_h * line_v, near_k);         // average roof tone preserved
 		col *= mix(1.0, 0.88 + 0.24 * t_vnoise2(w_pos.xz * 0.7), near_k);
 	} else if (abs(n.y) <= 0.35) {
+		// walls: plain brick / render, no windows (owner's call - the window grid made towns look busy)
 		vec2 tg = normalize(vec2(-n.z, n.x) + 1e-5);
 		float u = dot(w_pos.xz, tg);
-		float fl = w_pos.y / 3.1;
-		float cu = fract(u / 3.3);
-		float cv = fract(fl);
-		vec2 cell = vec2(floor(u / 3.3), floor(fl));
-		float bay = step(0.45, t_hash12(cell + 7.0));   // only some bays carry a window, so facades read sparser
-		float win = step(0.30, cu) * step(cu, 0.62) * step(0.34, cv) * step(cv, 0.74) * bay;
-		float frame = step(0.26, cu) * step(cu, 0.66) * step(0.29, cv) * step(cv, 0.79) * bay * (1.0 - win);
-		float lit = step(0.92, t_hash12(cell + floor(w_pos.xz * 0.05)));
-		vec3 glass = mix(vec3(0.10, 0.14, 0.20), vec3(0.28, 0.36, 0.46), 0.5 + 0.5 * n.x) * (1.0 - 0.0 * lit);
-		col = mix(col, col * 0.78 + 0.07, frame * near_k);
-		col = mix(col, glass, win * 0.92 * near_k);
-		emit = win * lit;      // a fifth of the windows glow warm at night
 		// brick/render streaking and a dirty plinth
 		col *= mix(1.0, 0.93 + 0.07 * t_vnoise2(vec2(u * 2.5, w_pos.y * 0.4)), near_k);
 	}
