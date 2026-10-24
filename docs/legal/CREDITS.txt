@@ -34,6 +34,9 @@ Licensed under the Pixabay Content Licence, https://pixabay.com/service/license-
 VOICES
 All radio, briefing, training and crew voices are AI-generated with ElevenLabs text-to-speech, https://elevenlabs.io. No human recordings are used.
 
+AIRCRAFT AND MISSIONS
+DH.89A Dragon Rapide dimensions: Wikipedia, the de Havilland Aircraft Museum, Shuttleworth Collection, FlightGear wiki. POW escape missions are fictional what-ifs. D-Day airborne zones: Wikipedia articles on Operations Tonga, Deadstick, Mallard and Chicago.
+
 IMAGES
 Menu paintings are AI-generated.
 

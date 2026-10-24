@@ -395,7 +395,7 @@ func _refresh_info() -> void:
 
 ## The Mission list holds historical missions or training lessons depending on the mode.
 func _fill_missions(mode_id: String) -> void:
-	var want: String = "training" if mode_id == "training" else ("dambuster" if mode_id == "dambuster" else "historical")
+	var want: String = "training" if mode_id == "training" else ("dambuster" if mode_id == "dambuster" else ("pow_escape" if mode_id == "pow_escape" else ("airborne" if mode_id == "airborne" else "historical")))
 	if want == _mission_kind:
 		return
 	_mission_kind = want
@@ -406,6 +406,16 @@ func _fill_missions(mode_id: String) -> void:
 			_mission_ids.append(str(i))
 			var tag: String = "" if (DamCampaign.is_passed(i) or DamCampaign.is_open(i)) else "  (locked)"
 			_mission.add_item(str(DamCampaign.DAYS[i]["title"]) + "  [WIP]" + tag)
+	elif want == "pow_escape":
+		for i in PowEscapeCampaign.count():
+			_mission_ids.append(str(i))
+			var ptag: String = "" if (PowEscapeCampaign.is_passed(i) or PowEscapeCampaign.is_open(i)) else "  (locked)"
+			_mission.add_item(str(PowEscapeCampaign.OPS[i]["title"]) + "  [WIP]" + ptag)
+	elif want == "airborne":
+		for i in AirborneCampaign.count():
+			_mission_ids.append(str(i))
+			var atag: String = "" if (AirborneCampaign.is_passed(i) or AirborneCampaign.is_open(i)) else "  (locked)"
+			_mission.add_item(str(AirborneCampaign.OPS[i]["title"]) + "  [WIP]" + atag)
 	elif want == "training":
 		for l in TrainingMode.LESSONS:
 			_mission_ids.append(String(l["id"]))
@@ -431,11 +441,19 @@ func _mission_done_at(i: int) -> bool:
 		return false
 	if _mission_kind == "dambuster":
 		return DamCampaign.is_passed(int(_mission_ids[i]))
+	if _mission_kind == "pow_escape":
+		return PowEscapeCampaign.is_passed(int(_mission_ids[i]))
+	if _mission_kind == "airborne":
+		return AirborneCampaign.is_passed(int(_mission_ids[i]))
 	return _mission_kind == "historical" and GameState.is_mission_done(str(_mission_ids[i]))
 
 
 ## Dam Busters days that are still locked are greyed out.
 func _mission_locked_at(i: int) -> bool:
+	if _mission_kind == "pow_escape":
+		return i >= 0 and i < _mission_ids.size() and not PowEscapeCampaign.is_open(int(_mission_ids[i]))
+	if _mission_kind == "airborne":
+		return i >= 0 and i < _mission_ids.size() and not AirborneCampaign.is_open(int(_mission_ids[i]))
 	return _mission_kind == "dambuster" and i >= 0 and i < _mission_ids.size() and not DamCampaign.is_open(int(_mission_ids[i]))
 
 
@@ -533,10 +551,14 @@ func _refresh_mode() -> void:
 	_plan_label.visible = free
 	_plan_hint.visible = free
 	_spawn_note.visible = not free
-	_mission_row.visible = id == "historical" or id == "training" or id == "dambuster"
+	_mission_row.visible = id == "historical" or id == "training" or id == "dambuster" or id == "pow_escape" or id == "airborne"
 	_fill_missions(id)
 	if id == "dambuster":
 		_desc.text = str(DamCampaign.DAYS[clampi(maxi(_mission.selected, 0), 0, DamCampaign.count() - 1)]["brief"]) + DamCampaign.STEER_NOTE
+	elif id == "pow_escape":
+		_desc.text = str(PowEscapeCampaign.OPS[clampi(maxi(_mission.selected, 0), 0, PowEscapeCampaign.count() - 1)].get("brief", ModeRegistry.description(id)))
+	elif id == "airborne":
+		_desc.text = str(AirborneCampaign.OPS[clampi(maxi(_mission.selected, 0), 0, AirborneCampaign.count() - 1)].get("brief", ModeRegistry.description(id)))
 	elif id == "training":
 		_desc.text = TrainingMode.brief_for(_mission_ids[_mission.selected]) if _mission.selected >= 0 and _mission.selected < _mission_ids.size() else ""
 	elif id == "historical" and not _mission_ids.is_empty():
@@ -669,6 +691,20 @@ func _on_start() -> void:
 			start_requested.emit(DamCampaign.config_for(di))
 		else:
 			_desc.text = "Locked. Pass the previous day first."
+		return
+	if mode_id == "airborne":
+		var ai: int = clampi(maxi(_mission.selected, 0), 0, AirborneCampaign.count() - 1)
+		if AirborneCampaign.is_open(ai):
+			start_requested.emit(AirborneCampaign.config_for(ai))
+		else:
+			_desc.text = "Locked. Complete the previous operation first."
+		return
+	if mode_id == "pow_escape":
+		var pi: int = clampi(maxi(_mission.selected, 0), 0, PowEscapeCampaign.count() - 1)
+		if PowEscapeCampaign.is_open(pi):
+			start_requested.emit(PowEscapeCampaign.config_for(pi))
+		else:
+			_desc.text = "Locked. Complete the previous operation first."
 		return
 	if mode_id == "historical":
 		_apply_mission_defaults()      # never start a mission from a side it has no briefing for

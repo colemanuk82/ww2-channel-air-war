@@ -895,7 +895,10 @@ func _draw_compass() -> void:
 
 
 func _out_of_ammo() -> bool:
-	return aircraft != null and aircraft.ammo <= 0 and aircraft.bombs <= 0 and aircraft.rockets <= 0
+	if aircraft == null or aircraft.has_meta("unarmed") or (aircraft.stats != null and aircraft.stats.ammo <= 0):
+		return false          # civil / transport sorties carry no weapons: nothing to run out of
+	var rk: int = aircraft.weapons.rockets_left if aircraft.weapons != null else 0
+	return aircraft.ammo <= 0 and aircraft.bombs <= 0 and rk <= 0
 
 
 ## Nearest airfield on the player's own side (the "head home" point once the guns are dry).

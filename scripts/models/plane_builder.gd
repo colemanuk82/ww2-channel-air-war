@@ -751,6 +751,10 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	for side in [-1.0, 1.0]:
 		_mi(body, _wing_mesh(w, side), camo, Vector3.ZERO, "WingR" if side > 0.0 else "WingL")
 
+	if spec.has("wing2"):      # a biplane's lower wing
+		for side in [-1.0, 1.0]:
+			_mi(body, _wing_mesh(spec["wing2"], side), camo, Vector3.ZERO, "WingLowerR" if side > 0.0 else "WingLowerL")
+
 	_add_flaps(body, w, camo)
 
 	# Tail
@@ -851,6 +855,9 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 					_mi(body, sm, mat, ex["pos"])
 			"slice":
 				_mi(body, _fus_slice(f, ex["z0"], ex["z1"]), mat)
+			"spat":      # a streamlined wheel fairing: a long body round the wheel, stretched tall
+				var sp_mi := _mi(body, _nacelle_mesh(ex["z0"], ex["z1"], ex["r"], false), camo, Vector3(ex["x"], ex["y"], 0.0), "WheelSpat")
+				sp_mi.scale = Vector3(0.62, 1.75, 1.0)
 
 	if spec.has("nose_prop") and String(f.get("profile", "")) == "radial":
 		PlaneParts.radial_cowl(body, f, col["top"])
@@ -902,7 +909,9 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	var fd: Array = fus_at(f, mz)
 	# fuselage markings are sized by the fuselage depth (photos: roundels and crosses fill most of the side)
 	var msz: float = minf(float(spec.get("mark_size", 0.55)) * 1.25, float(fd[1]) * 0.78)
-	if nation == "RAF":
+	if nation == "Civil":
+		pass                                 # a civil airliner carries no national roundel, only its registration
+	elif nation == "RAF":
 		var st: Array = stations(f)          # roundels follow the fuselage curve instead of floating flat
 		skin_roundel(body, st, mz, 1.0, msz, raf_fuselage_layers())
 		skin_roundel(body, st, mz, -1.0, msz, raf_fuselage_layers())
@@ -925,7 +934,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	var wa: Dictionary = wing_section(w, maxf(spec.get("mark_t", 0.55) - 0.08, 0.0))
 	var wb: Dictionary = wing_section(w, minf(spec.get("mark_t", 0.55) + 0.08, 1.0))
 	var wtilt: float = atan2(float(wb["yc"]) - float(wa["yc"]), maxf(absf(float(wb["x"]) - float(wa["x"])), 0.001))
-	for side in [-1.0, 1.0]:
+	for side in ([] if nation == "Civil" else [-1.0, 1.0]):
 		var wing_mi: MeshInstance3D = body.get_node_or_null("WingR" if side > 0.0 else "WingL") as MeshInstance3D
 		marking(body, nation, Vector3(side * float(ws["x"]), top_y, wz), Vector3.UP, wsz, false, side * wtilt, slope_top)
 		if wing_mi != null:
@@ -934,7 +943,9 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 			marking(body, nation, Vector3(side * float(ws["x"]), bot_y, wz), Vector3.DOWN, wsz, false, side * wtilt, slope_bot)
 			if wing_mi != null:
 				bake_marking_onto(body.get_child(body.get_child_count() - 1) as Node3D, wing_mi, Vector3.DOWN)
-	if nation == "RAF":
+	if nation == "Civil":
+		pass
+	elif nation == "RAF":
 		# fin flash lofted along the fin skin
 		if fin.get("twin", false):
 			fin_flash(body, fin, -float(fin["x"]))

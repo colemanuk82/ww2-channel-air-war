@@ -28,6 +28,8 @@ func _ready() -> void:
 	_test_landscape_data()
 	_test_sea_defence_kinds()
 	_test_dams_build()
+	_test_pow_escape()
+	_test_airborne()
 	_test_city_balloons()
 	_test_balloon_cables_and_streams()
 	_test_decoy_kinds()
@@ -701,6 +703,40 @@ func _test_sea_defence_kinds() -> void:
 		if n != null:
 			n.free()
 	_check(fails.is_empty(), "every sea-defence site builds >= 1 mesh (%d sites); fail: %s" % [sites.size(), ", ".join(PackedStringArray(fails))])
+
+
+## POW escape: every operation has a config the mode accepts, the mode script compiles and the strips plan.
+func _test_pow_escape() -> void:
+	print("-- pow escape")
+	_check(PowEscapeCampaign.count() == 6, "six POW escape operations")
+	var scr: Script = load("res://scripts/modes/pow_escape_mode.gd")
+	_check(scr != null and scr.can_instantiate(), "pow_escape_mode.gd compiles")
+	for i in PowEscapeCampaign.count():
+		var cfg: Dictionary = PowEscapeCampaign.config_for(i)
+		_check(str(cfg.get("mode", "")) == "pow_escape", "op %d mode" % i)
+		_check(not PowEscapeCampaign.camp_row(str(cfg.get("camp", ""))).is_empty(), "op %d camp exists" % i)
+		_check(EscapeStripKit.strip_for_camp(str(cfg.get("camp", ""))) != "", "op %d has a strip" % i)
+		if str(cfg.get("kind", "")) == "pickup":
+			_check(str(cfg.get("aircraft", "")) == "dh89", "op %d flies the Rapide" % i)
+	_check(PowEscapeCampaign.is_open(0), "first op open")
+
+## D-Day airborne: configs, zones, scripts compile, the tow rig builds for both glider types.
+func _test_airborne() -> void:
+	print("-- airborne")
+	_check(AirborneCampaign.count() == 5, "five airborne operations")
+	for sp in ["res://scripts/modes/airborne_mode.gd", "res://scripts/effects/tow_rig.gd"]:
+		var scr: Script = load(sp)
+		_check(scr != null and scr.can_instantiate(), "%s compiles" % sp)
+	for i in AirborneCampaign.count():
+		var cfg: Dictionary = AirborneCampaign.config_for(i)
+		_check(str(cfg.get("mode", "")) == "airborne", "airborne op %d mode" % i)
+		_check(not AirborneCampaign.zone_row(str(cfg.get("zone", ""))).is_empty(), "airborne op %d zone exists" % i)
+		_check(str(cfg.get("aircraft", "")) == "c47", "airborne op %d flies the C-47" % i)
+	for gt in ["horsa", "hamilcar", "waco"]:
+		_check(GliderKit.glider_mesh(gt, "intact") != null, "glider mesh " + gt)
+	var rig: TowRig = TowRig.make(null, "waco", Vector3.ZERO)
+	_check(rig.state == "towed", "tow rig starts towed")
+	rig.free()
 
 
 ## Every dam id in the data builds a non-null GroundStructure("dam") wall AND DamKit scenery, each >= 1 mesh (P3).

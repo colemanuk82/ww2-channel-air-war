@@ -15,7 +15,7 @@ const RUST := Color(0.28, 0.15, 0.08)
 ## ring radiator; inline: ejector exhausts and a chin radiator).
 const ENGINE_KIND := {
 	"b25": "radial", "b26": "radial", "a20": "radial", "c47": "radial", "do17": "radial", "ju52": "radial",
-	"fw200": "radial", "blenheim": "radial", "ju88": "annular",
+	"fw200": "radial", "blenheim": "radial", "ju88": "annular", "dh89": "inline",
 	"lancaster": "inline", "he111": "inline", "bf110": "inline", "mosquito": "inline", "p38": "inline",
 }
 
@@ -38,6 +38,7 @@ const CODES := {
 	"b26": ["FW", "K", Color(0.86, 0.86, 0.84), null, 0.7],
 	"a20": ["5C", "N", Color(0.86, 0.86, 0.84), null, 0.7],
 	"c47": ["X5", "N", Color(0.86, 0.86, 0.84), null, 0.7],
+	"dh89": ["G-AF", "RW", Color(0.05, 0.05, 0.06), null, 0.55],   # civil registration G-AFRW
 	"bf109": ["12", "", Color(0.06, 0.06, 0.06), Color(0.92, 0.92, 0.9), 1.05],
 	"fw190": ["7", "", Color(0.92, 0.92, 0.9), Color(0.06, 0.06, 0.06), 1.05],
 	"me262": ["9", "", Color(0.92, 0.92, 0.9), Color(0.06, 0.06, 0.06), 1.0],

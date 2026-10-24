@@ -813,7 +813,28 @@ func _register_pow_camps() -> void:
 		RoadMesh.add_exclusion_disc(Vector2(pos.x, pos.z), r * 0.8)
 		_ground_zones.append(PowCampKit.zone_for(str(c[0]), pos, style, size))
 		_add_site("pow_" + str(c[0]), pos, 8000.0, _build_pow_camp, {"name": str(c[1]), "team": str(c[4]), "style": style, "size": size, "id": str(c[0])})
+		var strip_id: String = EscapeStripKit.strip_for_camp(str(c[0]))
+		if strip_id != "":
+			_register_escape_strip(strip_id, str(c[0]), pos)
 	GroundKit.lp("  _register_pow_camps (%d)" % PowCampKit.CAMPS.size())
+
+
+## The rough landing strip near a camp (see EscapeStripKit): levelled ground and a rolled strip, kept clear of scatter.
+func _register_escape_strip(strip_id: String, camp_id: String, camp_pos: Vector3) -> void:
+	var pl: Dictionary = EscapeStripKit.plan(camp_pos)
+	var pos: Vector3 = pl["pos"]
+	if terrain != null:
+		pos.y = float(terrain.call("add_flat_zone", pos, EscapeStripKit.LENGTH * 0.55, 200.0))
+	else:
+		pos.y = GroundKit.ground_y(pos.x, pos.z)
+	var name_s: String = strip_id
+	for st in EscapeStripKit.STRIPS:
+		if str(st[0]) == strip_id:
+			name_s = str(st[2])
+	EscapeStripKit.placed[strip_id] = {"pos": pos, "heading": float(pl["heading"]), "camp": camp_pos, "camp_id": camp_id, "name": name_s}
+	_exclude.append([pos, EscapeStripKit.KEEP_CLEAR])
+	RoadMesh.add_exclusion_disc(Vector2(pos.x, pos.z), EscapeStripKit.KEEP_CLEAR * 0.8)
+	_add_site("strip_" + strip_id, pos, 6000.0, func(s: Dictionary) -> Node3D: return EscapeStripKit.build(s["pos"], float(s["heading"])), {"heading": float(pl["heading"])})
 
 
 func _build_pow_camp(s: Dictionary) -> Node3D:

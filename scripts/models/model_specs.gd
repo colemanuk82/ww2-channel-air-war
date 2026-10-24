@@ -2,7 +2,7 @@ class_name ModelSpecs
 extends RefCounted
 ## Spec dictionaries for PlaneBuilder (metres, nose toward -Z). get_spec(id) returns {} if unknown.
 
-const IDS := ["hurricane", "typhoon", "mosquito", "p51", "p47", "bf109", "fw190", "me262", "lancaster", "b26", "ju87", "he111", "ju88", "bf110", "do17", "ju52", "fw200", "blenheim", "tempest", "p38", "defiant", "b25", "a20", "c47"]
+const IDS := ["hurricane", "typhoon", "mosquito", "p51", "p47", "bf109", "fw190", "me262", "lancaster", "b26", "ju87", "he111", "ju88", "bf110", "do17", "ju52", "fw200", "blenheim", "tempest", "p38", "defiant", "b25", "a20", "c47", "dh89"]
 
 const RAF_TOP := Color(0.18, 0.28, 0.14)
 const RAF_PATCH := Color(0.33, 0.26, 0.16)
@@ -48,6 +48,7 @@ static func _spec_for(id: String) -> Dictionary:
 		"b25": return b25()
 		"a20": return a20()
 		"c47": return c47()
+		"dh89": return dh89()
 	return {}
 
 
@@ -523,5 +524,42 @@ static func c47() -> Dictionary:
 		"tail_wheel": [-0.9, 11.2],
 		"guns": [0.0, 0.0, -6.8], "eye": Vector3(0, 1.3, -5.6),
 		"mark_z": 8.4, "mark_t": 0.9, "mark_size": 0.9, "wing_mark_size": 1.2,
+		"prop_tip": Color(0.1, 0.1, 0.1),
+	}
+
+
+## de Havilland DH.89 Dragon Rapide: the civil twin-engine biplane airliner (see tools/models/data/dh89.md for the
+## published figures). Scale 1.0, so it is a true 1:1 airframe: length 10.52 m, upper span 14.63 m, 8 passengers.
+static func dh89() -> Dictionary:
+	var silver := Color(0.74, 0.76, 0.78)
+	var extras: Array = []
+	# cabane struts from the cabin roof to the upper wing, then the two pairs of interplane struts per side
+	for sx in [-1.0, 1.0]:
+		extras.append({"t": "box", "size": Vector3(0.06, 0.62, 0.11), "pos": Vector3(sx * 0.46, 0.62, -0.95), "col": "dark"})
+		extras.append({"t": "box", "size": Vector3(0.06, 0.62, 0.11), "pos": Vector3(sx * 0.46, 0.62, 0.20), "col": "dark"})
+		for sp in [[2.05, -0.785], [2.05, -0.095], [4.55, -0.585], [4.55, 0.105]]:
+			extras.append({"t": "box", "size": Vector3(0.065, 1.50, 0.13), "pos": Vector3(sx * float(sp[0]), 0.26, float(sp[1])), "col": "dark"})
+		# five square cabin windows each side, and the wheel spat under each engine
+		for i in 5:
+			extras.append({"t": "box", "size": Vector3(0.04, 0.34, 0.40), "pos": Vector3(sx * 0.635, 0.12, -1.55 + float(i) * 0.62), "col": "dark"})
+		extras.append({"t": "spat", "col": "top", "x": sx * 2.19, "y": -1.30, "z0": -0.95, "z1": 0.95, "r": 0.26})
+		extras.append({"t": "box", "size": Vector3(0.035, 0.07, 2.6), "pos": Vector3(sx * 0.64, -0.28, -0.45), "col": Color(0.10, 0.16, 0.40)})
+	return {
+		"scale": 1.0, "nation": "Civil", "outline": 0.012,
+		"colors": {"top": silver, "under": Color(0.70, 0.72, 0.75), "patch": Color(0.69, 0.71, 0.74)},
+		"fus": {"z0": -3.85, "z1": 6.67, "hw": 0.63, "hh": 0.77, "cy": 0.0, "profile": "bomber"},
+		"wing": {"root_x": 0.5, "half": 6.8, "y": 1.02, "dihedral": 0.0, "cr": 1.55, "ct": 0.95, "le_z": -1.10, "sweep": 0.15, "thick": 0.115},
+		"wing2": {"root_x": 0.5, "half": 5.9, "y": -0.50, "dihedral": 0.28, "cr": 1.38, "ct": 0.76, "le_z": -0.80, "sweep": 0.12, "thick": 0.12},
+		"tail": {"z": 5.39, "span": 2.2, "cr": 1.20, "ct": 0.55, "y": 0.36},
+		"fin": {"z": 5.40, "y": 0.36, "h": 1.17, "cr": 1.18, "ct": 0.40, "twin": true, "x": 1.55},
+		"engines": [
+			{"x": -2.05, "y": -0.46, "z0": -1.85, "z1": 0.75, "r": 0.32, "prop_r": 1.10, "blades": 2},
+			{"x": 2.05, "y": -0.46, "z0": -1.85, "z1": 0.75, "r": 0.32, "prop_r": 1.10, "blades": 2}],
+		"canopies": [[[-3.50, 0.30, 0.10, 0.22], [-3.25, 0.44, 0.17, 0.36], [-2.95, 0.54, 0.22, 0.46], [-2.60, 0.58, 0.22, 0.50], [-2.25, 0.58, 0.18, 0.48]]],
+		"extras": extras,
+		"gear": {"x": 2.05, "y": -0.62, "z": -0.70, "len": 0.75, "r": 0.42, "leg_w": 0.10},
+		"tail_wheel": [-0.62, 5.50],
+		"guns": [0.30, -0.10, -3.45], "eye": Vector3(0, 0.42, -2.45),
+		"mark_z": 3.2, "mark_t": 0.8, "mark_size": 0.30, "wing_mark_size": 0.4,
 		"prop_tip": Color(0.1, 0.1, 0.1),
 	}

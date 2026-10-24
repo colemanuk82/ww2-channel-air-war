@@ -23,6 +23,7 @@ import sys
 
 import bpy
 import bmesh
+from mathutils import Vector
 
 TAU = math.pi * 2.0
 _SKIN_CACHE = {}
@@ -361,6 +362,54 @@ def bar(name, size, loc, rot=(0, 0, 0)):
     return box(name, size, loc, rot)
 
 
+_GLYPHS = {
+    "G": ("###", "#..", "#.#", "#.#", "###"), "A": (".#.", "#.#", "###", "#.#", "#.#"),
+    "F": ("###", "#..", "##.", "#..", "#.."), "R": ("##.", "#.#", "##.", "#.#", "#.#"),
+    "W": ("#.#", "#.#", "#.#", "###", "#.#"), "-": ("...", "...", "###", "...", "..."),
+    "E": ("###", "#..", "##.", "#..", "###"), "B": ("##.", "#.#", "##.", "#.#", "##."),
+    "C": ("###", "#..", "#..", "#..", "###"), "D": ("##.", "#.#", "#.#", "#.#", "##."),
+    "H": ("#.#", "#.#", "###", "#.#", "#.#"), "J": ("..#", "..#", "..#", "#.#", "###"),
+    "K": ("#.#", "#.#", "##.", "#.#", "#.#"), "L": ("#..", "#..", "#..", "#..", "###"),
+    "M": ("#.#", "###", "###", "#.#", "#.#"), "N": ("##.", "#.#", "#.#", "#.#", "#.#"),
+    "O": ("###", "#.#", "#.#", "#.#", "###"), "P": ("###", "#.#", "###", "#..", "#.."),
+    "S": ("###", "#..", "###", "..#", "###"), "T": ("###", ".#.", ".#.", ".#.", ".#."),
+    "U": ("#.#", "#.#", "#.#", "#.#", "###"), "Y": ("#.#", "#.#", ".#.", ".#.", ".#."),
+    "Z": ("###", "..#", ".#.", "#..", "###"), "I": ("###", ".#.", ".#.", ".#.", "###"),
+    "V": ("#.#", "#.#", "#.#", "#.#", ".#."), "X": ("#.#", "#.#", ".#.", "#.#", "#.#"),
+    "Q": ("###", "#.#", "#.#", "###", "..#"),
+}
+
+
+def glyph_text(name, text, origin, cell, u_axis, v_axis, n_axis, depth=0.02):
+    """Block-letter text as ONE mesh: each lit cell of the 3x5 font becomes a thin box. `origin` is the
+    centre of the string, `u_axis` / `v_axis` are the reading and up directions, `n_axis` the surface normal."""
+    verts, faces = [], []
+    adv = cell * 4.0
+    total = len(text) * adv - cell
+    o = Vector(origin)
+    ua, va, na = Vector(u_axis), Vector(v_axis), Vector(n_axis)
+    for ci, ch in enumerate(text):
+        g = _GLYPHS.get(ch)
+        if g is None:
+            continue
+        for ri, row in enumerate(g):
+            for cj, c in enumerate(row):
+                if c != "#":
+                    continue
+                u = -total * 0.5 + ci * adv + cj * cell + cell * 0.5
+                v = (2 - ri) * cell
+                ctr = o + ua * u + va * v
+                base = len(verts)
+                for du in (-0.5, 0.5):
+                    for dv in (-0.5, 0.5):
+                        for dn in (0.0, 1.0):
+                            q = ctr + ua * (du * cell) + va * (dv * cell) + na * (dn * depth)
+                            verts.append((q.x, q.y, q.z))
+                for f in ((0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)):
+                    faces.append(tuple(base + i for i in f))
+    return new_mesh_object(name, verts, faces)
+
+
 def markings(nation, fus_x, fus_y, fus_z, fus_r, wing_y, wing_span_x, wing_z, wing_r,
              fin_x, fin_y, fin_z, fin_r):
     """National markings as flat decal meshes (the tests look for DecalFus* inside the fuselage box and any
@@ -373,7 +422,30 @@ def markings(nation, fus_x, fus_y, fus_z, fus_r, wing_y, wing_span_x, wing_z, wi
     # the airframe the markings sit on: sampling the real skin is what keeps a roundel flush
     wing_ob = bpy.data.objects.get("Wing") or bpy.data.objects.get("WingL")
     fus_ob = bpy.data.objects.get("Fuselage")
-    if nation == "Luftwaffe":
+    if nation == "Civil":
+        # a civil airliner: no national roundel, a black registration on the fuselage sides and the upper wing,
+        # a blue cheat line along the cabin and a blue band on each fin
+        reg = "G-AFRW"
+        for i, sx in enumerate((-1.0, 1.0)):
+            side_x = skin_point(fus_ob, fus_x * sx, fus_y, fus_z, "yz", sx) if fus_ob else fus_x * sx
+            side_x = (side_x if side_x is not None else fus_x * sx) + 0.010 * sx
+            read = Vector((0.0, sx, 0.0))      # starboard reads toward the nose, port toward the tail
+            g = glyph_text("DecalFusBlackReg_%d" % i, reg, (side_x, fus_y, fus_z), fus_r * 0.30,
+                           read, (0.0, 0.0, 1.0), (sx, 0.0, 0.0))
+            parent_to(g, grp)
+            band = bar("DecalFusBlueBand_%d" % i, (0.03, 4.1, 0.07), (side_x, fus_y + 0.55, fus_z - 0.34))
+            parent_to(band, grp)
+            wx = wing_span_x * sx * 0.62
+            top = skin_point(wing_ob, wx, wing_y, wing_z - 0.12, "xy", 1.0) if wing_ob else None
+            top = (top if top is not None else wing_z) + 0.012
+            wg = glyph_text("DecalWingBlackReg_%d" % i, reg, (wx, wing_y, top), wing_r * 0.16,
+                            Vector((sx, 0.0, 0.0)), Vector((0.0, 1.0, 0.0)), Vector((0.0, 0.0, 1.0)))
+            parent_to(wg, grp)
+        fin_ob = bpy.data.objects.get("Fin")
+        for i, sx in enumerate((-1.0, 1.0)):
+            fb = bar("DecalFinBlue_%d" % i, (0.04, fin_r * 1.4, fin_r * 0.8), (fin_x * sx, fin_y, fin_z))
+            parent_to(fb, grp)
+    elif nation == "Luftwaffe":
         # Balkenkreuz on the fuselage sides and the wings, a black/white band on the fin
         for i, sx in enumerate((-1.0, 1.0)):
             side_x = skin_point(fus_ob, fus_x * sx, fus_y, fus_z, "yz", sx) if fus_ob else fus_x * sx

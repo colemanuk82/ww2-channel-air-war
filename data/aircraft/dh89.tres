@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "dh89"
+display_name = "de Havilland DH.89 Dragon Rapide (civil)"
+side = "Allies"
+nation = "Civil"
+model_id = "dh89"
+ammo = 0
+gun_count = 0
+fire_rate = 1
+gear_height = 1.81
+engine_sound = "gipsy"
+engine_count = 2
+max_speed = 70.0
+stall_speed = 24.0
+boost_bonus = 0
+accel = 2.6
+decel = 2.8
+pitch_rate_deg = 30
+roll_rate_deg = 55
+yaw_rate_deg = 12
+bank_turn_rate = 0.5
+rate_response = 3.0
+max_health = 110
+radius = 8
+crash_vspeed = 30
