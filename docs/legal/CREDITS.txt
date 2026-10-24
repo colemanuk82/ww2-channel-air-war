@@ -5,10 +5,7 @@ DESIGN, CODE, PROCEDURAL ART AND MISSIONS
 {PUBLISHER}. Aircraft, terrain, sea, sky, clouds, HUD and all 30 original missions are generated or written for this game.
 
 ENGINE
-Godot Engine, built from the Godot source with NVIDIA RTX/Streamline integration. Copyright (c) 2014-present Godot Engine contributors; Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur. Licensed under the MIT licence. The full list of engine third-party components and licences is shown under "Engine licences" on this screen. Includes AMD FidelityFX Super Resolution 2 (MIT).
-
-OPTIONAL NVIDIA COMPONENTS (DOWNLOADED BY THE PLAYER)
-NVIDIA DLSS, DLSS Frame Generation, NVIDIA Streamline and NVIDIA Reflex are the property of NVIDIA Corporation and are not distributed with this game. If you choose to download them from Options, they are fetched from NVIDIA's own repository and their licence files are saved to the "licenses" folder next to the game. NVIDIA, DLSS, GeForce and RTX are trademarks of NVIDIA Corporation.
+Godot Engine 4.7, built from the official Godot source with double-precision (large world) coordinates. Copyright (c) 2014-present Godot Engine contributors; Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur. Licensed under the MIT licence. The full list of engine third-party components and licences is shown under "Engine licences" on this screen. Includes AMD FidelityFX Super Resolution 2 (MIT).
 
 WATER
 Ocean3D Lite by Justin Schroeder, MIT licence (text below). Gerstner wave field adapted for the sea surface.

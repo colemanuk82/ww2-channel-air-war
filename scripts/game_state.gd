@@ -97,7 +97,7 @@ func reset_sim_warp() -> void:
 enum Upscaler { OFF, FSR2, DLSS }
 const UPSCALE_SCALES := [0.667, 0.58, 0.5, 0.333]     # Quality, Balanced, Performance, Ultra Performance
 const UPSCALE_NAMES := ["Quality", "Balanced", "Performance", "Ultra Performance"]
-var upscaler: int = -1             # -1 = not chosen yet: DLSS when the GPU/engine supports it, otherwise off
+var upscaler: int = -1             # -1 = not chosen yet: DLSS when the GPU/engine supports it, otherwise FSR 2
 var upscale_quality: int = 0
 var frame_gen: bool = false
 var vsync_on: bool = true
@@ -125,6 +125,12 @@ const VIEW_SCALES := [0.7, 1.0, 1.35]
 const UI_SCALES := [0.85, 1.0, 1.25, 1.5]
 
 
+## True only on the NVIDIA RTX engine fork (Streamline built in). The standard Godot build has no DLSS, no frame
+## generation and no use for the DLSS download, so those options are hidden there.
+func engine_has_streamline() -> bool:
+	return Engine.has_singleton("Streamline")
+
+
 ## True when this build is the DLSS-enabled engine AND Streamline reports DLSS on this GPU.
 func dlss_supported() -> bool:
 	if not Engine.has_singleton("Streamline"):
@@ -142,7 +148,7 @@ func framegen_supported() -> bool:
 func effective_upscaler() -> int:
 	var u: int = upscaler
 	if u < 0:
-		u = Upscaler.DLSS if dlss_supported() else Upscaler.OFF
+		u = Upscaler.DLSS if dlss_supported() else Upscaler.FSR2
 	if u == Upscaler.DLSS and not dlss_supported():
 		u = Upscaler.FSR2
 	return u

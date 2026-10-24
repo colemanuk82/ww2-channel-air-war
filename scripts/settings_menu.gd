@@ -232,19 +232,25 @@ func _build_video_page() -> VBoxContainer:
 
 func _build_render_page() -> VBoxContainer:
 	var page := _new_page()
+	var rtx: bool = GameState.engine_has_streamline()
 	var dlss_ok: bool = GameState.dlss_supported()
-	var up_items: Array = ["Off", "FSR 2", "DLSS" if dlss_ok else "DLSS (not available)"]
-	var cur_up: int = GameState.upscaler if GameState.upscaler >= 0 else (2 if dlss_ok else 0)
+	var up_items: Array = ["Off", "FSR 2"]
+	if rtx:
+		up_items.append("DLSS" if dlss_ok else "DLSS (not available)")
+	var cur_up: int = GameState.effective_upscaler() if GameState.upscaler < 0 else GameState.upscaler
+	cur_up = clampi(cur_up, 0, up_items.size() - 1)
 	_row(page, "Upscaling", up_items, cur_up, func(i: int) -> void:
 		GameState.set_graphic("upscaler", i))
 	_row(page, "Upscale quality", GameState.UPSCALE_NAMES, GameState.upscale_quality, func(i: int) -> void:
 		GameState.set_graphic("upscale_quality", i))
-	_row(page, "Frame generation", ["Off", "On" if GameState.framegen_supported() else "On (needs RTX 40+)"], 1 if GameState.frame_gen else 0, func(i: int) -> void:
-		GameState.set_graphic("frame_gen", i == 1))
+	if rtx:
+		_row(page, "Frame generation", ["Off", "On" if GameState.framegen_supported() else "On (needs RTX 40+)"], 1 if GameState.frame_gen else 0, func(i: int) -> void:
+			GameState.set_graphic("frame_gen", i == 1))
 	_ui_scale = _row(page, "UI scale", ["85%", "100%", "125%", "150%"], _ui_index(), func(i: int) -> void:
 		GameState.set_graphic("ui_scale", float(GameState.UI_SCALES[i])))
 	_frame_rate_rows(page)
-	_dlss_section(page)
+	if rtx:
+		_dlss_section(page)
 	return page
 
 

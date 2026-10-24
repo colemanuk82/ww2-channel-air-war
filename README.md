@@ -104,11 +104,11 @@ Prisoner-of-war and labour camps stay where they were, as static scenery, never 
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.7.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.8.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
-**Got an NVIDIA RTX card?** The game offers to download **DLSS** (about 213 MB, straight from NVIDIA's own GitHub repo, checksum-verified). It's optional and makes everything faster and sharper. No NVIDIA card? You get the standard renderer with AMD FSR 2 upscaling.
+**Upscaling:** the game uses AMD FSR 2 (Options > Render) to render at a lower resolution and sharpen it back up, which works on any modern graphics card. Turn it off for native resolution.
 
 ## ✈️ The aircraft
 
@@ -182,7 +182,7 @@ All 25 aircraft were rebuilt for v2.0 and checked against photographs and the pu
 ## ❓ Quick answers
 
 - **Is it really free?** Yes, completely. Donations are optional.
-- **Will it run on my PC?** It needs 64-bit Windows and a reasonably modern graphics card. RTX owners get optional DLSS.
+- **Will it run on my PC?** It needs 64-bit Windows and a reasonably modern graphics card.
 - **Is there multiplayer?** No, it's single player.
 - **Is it safe?** The source is right here: read it yourself, nothing is hidden. The game has a photosensitivity warning, a licence screen and a privacy policy.
 
@@ -196,7 +196,7 @@ comes from open data (see below). It's a work of fiction inspired by real histor
 
 ## 🔧 Under the bonnet
 
-Built on a custom **NVIDIA RTX Godot fork (4.8-dev, GDScript)** with DLSS, Streamline and frame generation.
+Built on **standard Godot 4.7 (GDScript)**, compiled from the official source with double-precision coordinates (`precision=double`) so the 954 km map stays rock-steady far from the origin. AMD FSR 2 upscaling.
 From v2.6 it uses a **double-precision** build of that fork. See [engine/BUILDING-ENGINE.md](engine/BUILDING-ENGINE.md)
 for how to build it, and [engine/CHANGELOG.md](engine/CHANGELOG.md) for the engine fixes.
 Terrain uses `data/heightmap/region_height.png` + `region_meta.json`; the Python tools in `tools/`
@@ -204,7 +204,7 @@ Terrain uses `data/heightmap/region_height.png` + `region_meta.json`; the Python
 
 - Run the missions checker: `python tools/validate_missions.py`
 - Add or edit original missions: `tools/add_original_missions.py` (idempotent)
-- Build the installer: `ISCC.exe installer\setup.iss` (per-user install, so the DLSS download can write next to the game)
+- Build the installer: `ISCC.exe installer\setup.iss` (per-user install, no administrator rights needed)
 - Legal texts live in `docs/legal/`; fill in the publisher and contact in `tools/build_legal.py` and run it to refresh `data/legal.json`
 - More notes for developers: [HANDOFF.md](HANDOFF.md), [SPEC.md](SPEC.md)
 
@@ -219,7 +219,7 @@ Full credits and licences are in the game (**Credits** button on the main menu) 
 - **Elevation:** [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/)
 - **Roads, rail, rivers, woods, towns:** © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL)
 - **Water:** Ocean3D Lite by Justin Schroeder (MIT) · **Fonts:** Barlow by Jeremy Tribby (SIL OFL 1.1)
-- **Engine:** Godot (MIT). NVIDIA DLSS and Streamline belong to NVIDIA and are downloaded by the player, never bundled.
+- **Engine:** Godot (MIT), with AMD FidelityFX Super Resolution 2 (MIT).
 
 ## ☕ Support
 

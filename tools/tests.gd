@@ -1462,7 +1462,7 @@ func _test_legal_docs() -> void:
 	var pr: FileAccess = FileAccess.open("res://docs/legal/PRIVACY.txt", FileAccess.READ)
 	if pr != null:
 		var txt: String = pr.get_as_text()
-		_check(txt.contains("Check for updates") and txt.contains("DLSS") and txt.contains("PayPal"), "privacy text covers every button that touches the network")
+		_check(txt.contains("Check for updates") and txt.contains("PayPal"), "privacy text covers every button that touches the network")
 
 
 func _test_awards() -> void:

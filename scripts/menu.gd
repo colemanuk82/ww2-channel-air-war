@@ -239,8 +239,11 @@ void fragment() {
 	hint.offset_right = -36.0
 	hint.offset_bottom = -26.0
 	root.add_child(hint)
-	# release version (project.godot application/config/version), small and quiet in the top-right corner
-	var ver := UIKit.label("v%s" % str(ProjectSettings.get_setting("application/config/version", "dev")), 14, Color(0.85, 0.83, 0.75, 0.55))
+	# engine and release version (Godot from Engine.get_version_info(), game from project.godot
+	# application/config/version), small and quiet in the top-right corner
+	var gv: Dictionary = Engine.get_version_info()
+	var godot_ver: String = "Godot %d.%d%s" % [int(gv["major"]), int(gv["minor"]), (".%d" % int(gv["patch"])) if int(gv["patch"]) > 0 else ""]
+	var ver := UIKit.label("%s  ·  v%s" % [godot_ver, str(ProjectSettings.get_setting("application/config/version", "dev"))], 14, Color(0.85, 0.83, 0.75, 0.55))
 	ver.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	ver.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	ver.offset_right = -22.0

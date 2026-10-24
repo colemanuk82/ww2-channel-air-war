@@ -1,3 +1,18 @@
+# SESSION 2026-10-24 (v2.8): standard Godot 4.7.2, double precision
+- The game now runs on **standard Godot 4.7.2-stable**, built from the official source in `F:\godot-std` with
+  `precision=double` (`tools/cache/build_std.ps1`: `platform=windows precision=double optimize=speed use_static_cpp=yes angle=no`).
+  The RTX fork (`F:\godot-rtx`) was dropped: its DLSS path was the source of the visual glitches the owner saw (FSR 2 was clean).
+- The same camera-origin fix as the fork's `engine/patches/0001-...patch` is applied to `F:\godot-std` (uncommitted
+  there): `render_scene_data_rd.cpp` stores `+cam_transform.origin` in `inv_view_matrix[3]`, and the forward clustered /
+  mobile scene shaders subtract it (`-inv_view_matrix[3].xyz, -view_precision`). Without it `CAMERA_POSITION_WORLD` is
+  negated far from the origin. Re-apply it after any engine update.
+- Binaries: `F:\godot-std\bin\godot.windows.editor.double.x86_64(.console).exe` and
+  `godot.windows.template_release.double.x86_64.exe` (`export_presets.cfg` custom template). Every `tools/cache/*.ps1`
+  now points at them; `perf2_rtx.ps1`, `shots_rtx.ps1` and `ab_eng.ps1` keep the RTX build for comparisons.
+- Game side: `GameState.engine_has_streamline()`. DLSS, frame generation and the DLSS download offer/section only
+  appear on the RTX engine; the default upscaler is now FSR 2. The legal texts, README and installer comments
+  no longer mention the DLSS download. The uninstaller still removes DLSS files left by older installs.
+
 # SESSION 2026-10-24 (v2.6): double-precision engine
 - The game is now built with a `precision=double` build of the NVIDIA RTX Godot fork, which gives camera-relative
   rendering and no more ~1 cm aircraft jitter in close chase views far from the map origin. Build steps, fork and
