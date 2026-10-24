@@ -30,12 +30,12 @@ const CAMO := {
 	"spitfire": "raf_day", "hurricane": "raf_day", "typhoon": "raf_day", "tempest": "raf_day",
 	"defiant": "raf_night", "mosquito": "raf_day", "blenheim": "raf_day", "lancaster": "raf_night",
 	"p51": "usaaf_od", "p47": "usaaf_od", "p38": "bare_metal", "b25": "usaaf_od", "b26": "usaaf_od",
-	"a20": "usaaf_od", "c47": "usaaf_od",
+	"a20": "usaaf_od", "c47": "usaaf_od", "dh89": "civil_silver",
 	"bf109": "lw_fighter", "bf110": "lw_fighter", "fw190": "lw_fighter", "me262": "lw_fighter",
 	"he111": "lw_splinter", "ju88": "lw_splinter", "ju87": "lw_splinter", "do17": "lw_splinter",
 	"ju52": "lw_splinter", "fw200": "lw_splinter",
 }
-const CAMO_BY_NATION := {"Luftwaffe": "lw_splinter", "USAAF": "usaaf_od", "USN": "usaaf_od", "RAF": "raf_day"}
+const CAMO_BY_NATION := {"Civil": "civil_silver", "Luftwaffe": "lw_splinter", "USAAF": "usaaf_od", "USN": "usaaf_od", "RAF": "raf_day"}
 
 ## Paint tweaks per scheme: [underside tone, roughness, metallic, sheen]. Wartime camouflage paint is matt, so the
 ## painted schemes are rough and barely metallic (photos show almost no sheen); bare metal is the exception.
@@ -47,6 +47,7 @@ const FINISH := {
 	"lw_desert": [Color(0.62, 0.66, 0.70), 0.70, 0.04, 0.0],
 	"usaaf_od": [Color(0.50, 0.52, 0.52), 0.70, 0.05, 0.0],      # Neutral Grey under
 	"bare_metal": [Color(0.62, 0.63, 0.62), 0.30, 0.75, 0.35],
+	"civil_silver": [Color(0.70, 0.72, 0.75), 0.55, 0.12, 0.15],   # silver-doped fabric airliner
 }
 ## Schemes that reuse another scheme's texture with a different paint layout (see scheme_mode in the shader).
 const TEXTURE_OF := {}

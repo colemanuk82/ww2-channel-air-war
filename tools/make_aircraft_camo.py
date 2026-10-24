@@ -103,6 +103,8 @@ SCHEMES = {
     "usaaf_od": {"base": (0.31, 0.31, 0.21), "patch": (0.35, 0.35, 0.24), "freq": 4, "edge": 0.08, "seed": 5, "style": "soft"},
     # bare metal / silver
     "bare_metal": {"base": (0.63, 0.64, 0.63), "patch": (0.55, 0.56, 0.57), "freq": 4, "edge": 0.10, "seed": 6, "style": "panels"},
+    # civil airliner of the 1930s: silver-doped fabric over plywood, faintly uneven
+    "civil_silver": {"base": (0.72, 0.74, 0.76), "patch": (0.67, 0.69, 0.72), "freq": 4, "edge": 0.12, "seed": 8, "style": "soft"},
 }
 
 

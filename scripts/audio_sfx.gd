@@ -24,6 +24,7 @@ const ENGINES := {
 	"radial_bmw": {"base": 54, "harm": 6, "roll": 0.7, "rasp": 0.08, "pulse": 0.5, "pulse_hz": 26, "db": 1.0, "plo": 0.6, "phi": 1.45},
 	"radial_pw": {"base": 46, "harm": 6, "roll": 0.6, "rasp": 0.06, "pulse": 0.55, "pulse_hz": 22, "db": 2.0, "plo": 0.6, "phi": 1.4},
 	"radial_mercury": {"base": 58, "harm": 6, "roll": 0.7, "rasp": 0.07, "pulse": 0.45, "pulse_hz": 28, "db": 1.0, "plo": 0.6, "phi": 1.5},
+	"gipsy": {"base": 104, "harm": 7, "roll": 0.8, "rasp": 0.05, "pulse": 0.22, "pulse_hz": 34, "db": -4.0, "plo": 0.7, "phi": 1.55},   # DH Gipsy Six: a quiet inverted in-line
 	"jet": {"base": 30, "harm": 3, "roll": 1.0, "rasp": 0.7, "pulse": 0.05, "pulse_hz": 12, "whine": 0.18, "db": 2.0, "plo": 0.5, "phi": 1.6},
 }
 

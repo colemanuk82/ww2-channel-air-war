@@ -47,6 +47,11 @@ Imported assets (CC0 / CC-BY) must be listed here as: name, author, licence, sou
 - Menu music (Pixabay Content License): "Remembering Our Veterans - Heroic Cinematic Music" by Luis_Humanoide — https://pixabay.com/users/luis_humanoide-12661853/ ; "Swing That Jazz - 1940s Big Band Dance Music" by kaazoom — https://pixabay.com/users/kaazoom-448850/
 - Axis victory music (`assets/music/victory/axis.mp3`, Pixabay Content License): "Epic Military March – Heroic Snare Drum Theme" by DesiFreeMusic — https://pixabay.com/users/desifreemusic-28163210/
 
+## Aircraft and mission sources (POW escape, D-Day airborne)
+- DH.89A Dragon Rapide (`tools/models/data/dh89.py`, `ModelSpecs.dh89()`): dimensions from Wikipedia "De Havilland Dragon Rapide", The de Havilland Aircraft Museum (DH.89A), Shuttleworth Collection and the FlightGear wiki; geometry authored here.
+- POW escape missions are a what-if built on camp positions already in the game; real pick-ups used Lysanders and Hudsons (161 Squadron). No concentration or extermination camps are depicted.
+- D-Day airborne missions use the zones in `data/airborne_landings.json` (Wikipedia: Operation Tonga, Deadstick, Mallard, Chicago) and the existing Horsa and Waco CG-4A glider meshes.
+
 ## Voices
 - Radio, briefing, training and crew voices (`assets/voice/`): generated with ElevenLabs (paid plan) from `assets/voice/voice_lines.csv` and `voice_story.csv`.
 - UI fonts (`assets/fonts/`): Barlow and Barlow Condensed by Jeremy Tribby, SIL Open Font License 1.1 (see `assets/fonts/OFL-Barlow.txt`), https://github.com/jpt/barlow

@@ -1349,13 +1349,19 @@ func _initial_config() -> Dictionary:
 		return Engine.get_meta(CFG_META) as Dictionary
 	var skip: bool = _args.has("--skip-menu")
 	for a in _args:
-		if a.begins_with("--mode=") or a.begins_with("--shot=") or a.begins_with("--tour=") or a.begins_with("--dam-day="):
+		if a.begins_with("--mode=") or a.begins_with("--shot=") or a.begins_with("--tour=") or a.begins_with("--dam-day=") or a.begins_with("--pow-op=") or a.begins_with("--air-op="):
 			skip = true
 	if not skip:
 		return {}
 	for a in _args:       # debug: start a Dam Busters course day directly (--dam-day=N, 0-based)
 		if a.begins_with("--dam-day="):
 			return DamCampaign.config_for(int(a.substr(10)))
+	for a in _args:       # debug: start a POW escape operation directly (--pow-op=N, 0-based)
+		if a.begins_with("--pow-op="):
+			return PowEscapeCampaign.config_for(int(a.substr(9)))
+	for a in _args:       # debug: start a D-Day airborne operation directly (--air-op=N, 0-based)
+		if a.begins_with("--air-op="):
+			return AirborneCampaign.config_for(int(a.substr(9)))
 	var cfg: Dictionary = {"side": "Allies", "aircraft": "", "mode": "free", "difficulty": 0.5, "weather": "clear", "time": "noon", "ambient": false}
 	for a in _args:
 		if a.begins_with("--mode="):
@@ -1639,7 +1645,7 @@ func start_game(cfg: Dictionary) -> void:
 
 	var mid: String = String(config.get("mode", "free"))
 	# moving weather fronts in the open modes; scripted / training sorties keep the weather they were set with
-	WeatherManager.fronts_enabled = not (mid in ["training", "dambuster", "historical"]) and not _args.has("--no-fronts")
+	WeatherManager.fronts_enabled = not (mid in ["training", "dambuster", "historical", "pow_escape", "airborne"]) and not _args.has("--no-fronts")
 	if _args.has("--front-now"):      # debug: a front from the west-south-west, close by (look along 250 to see it)
 		WeatherManager.wind_dir_deg = 250.0
 		WeatherManager._wind_target_dir = 250.0
@@ -1659,7 +1665,7 @@ func start_game(cfg: Dictionary) -> void:
 	add_child(mode)
 	mode.mission_complete.connect(_on_mission_complete)
 	# the war going on around you: distant flak, searchlights, raids on towns, the V-weapons blitz (scenery only)
-	if not (mid in ["dambuster", "training"]) and not _args.has("--no-skywar"):
+	if not (mid in ["dambuster", "training", "pow_escape", "airborne"]) and not _args.has("--no-skywar"):
 		add_child(SkyWar.new().setup(self, player, hud, mid))
 
 	_pause = PauseMenu.new()
@@ -1849,6 +1855,10 @@ func _on_mission_complete(success: bool, stats: Dictionary) -> void:
 		stats.merge(Career.record_result(success, stats, config), true)
 	if String(config.get("mode", "")) == "dambuster":
 		DamCampaign.record(int(config.get("day", 0)), success)
+	if String(config.get("mode", "")) == "airborne":
+		AirborneCampaign.record(int(config.get("op", 0)), success)
+	if String(config.get("mode", "")) == "pow_escape":
+		PowEscapeCampaign.record(int(config.get("op", 0)), success)
 	_results = ResultsScreen.show_results(self, success, stats)
 	MedalCeremony.show_pending(self, GameState.player_side)     # any decoration earned is presented over the results
 	_ui_shot()

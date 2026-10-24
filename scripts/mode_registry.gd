@@ -17,6 +17,8 @@ const MODES := {
 	"defend": {"name": "Defend Targets", "script": "res://scripts/ground/defend_mode.gd", "desc": "Intercept enemy bomber raids before they hit your installations."},
 	"escort": {"name": "Bomber Escort", "script": "res://scripts/modes/escort_mode.gd", "desc": "Escort a bomber formation to a real target and back. Keep the bombers alive through the interceptors."},
 	"dambuster": {"name": "Dam Busters [WIP]", "script": "res://scripts/modes/dam_run_mode.gd", "desc": "Training, then Operation Chastise: low flying, skipping bombs, release timing and the attack on the Möhne, Eder and Sorpe dams. One mission a day."},
+	"pow_escape": {"name": "POW Escape [WIP]", "script": "res://scripts/modes/pow_escape_mode.gd", "desc": "What-if clandestine operations: scout a prisoner-of-war camp by day, then fly a civil Dragon Rapide in at night under cloud, land on a field strip beside the camp, pick up the escapers and get home quietly. Each camp is a scouting sortie then a pickup."},
+	"airborne": {"name": "D-Day Airborne [WIP]", "script": "res://scripts/modes/airborne_mode.gd", "desc": "6 June 1944 in a C-47 Skytrain: drop sticks of paratroopers onto the dropping zones, low and slow, and tow assault gliders to the landing zones, with the tow rope in view and a cast-off in reach of the zone."},
 	"historical": {"name": "Historical Missions [WIP]", "script": "res://scripts/modes/historical_missions.gd", "desc": "Battle of Britain, Dieppe, D-Day, Dunkirk and the bomber raids. Pick a mission from the Mission list."},
 }
 
