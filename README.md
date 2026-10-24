@@ -7,7 +7,7 @@
 **A free, WW2 flight game over a real-scale slice of Europe.**<br>
 Take off from Kent. Cross the Channel. Come home. Maybe.
 
-Any suggestions or feedback let me know!
+Any suggestions or feedback? Let me know!
 
 ![Free](https://img.shields.io/badge/price-100%25%20free-2ea44f) ![Windows](https://img.shields.io/badge/platform-Windows%2064--bit-0078d4) ![Engine](https://img.shields.io/badge/engine-Godot%204-478cbf) ![Missions](https://img.shields.io/badge/missions-74-d4a017)
 
@@ -20,6 +20,8 @@ Any suggestions or feedback let me know!
 **▶ [Watch the in-game highlights reel](docs/promo/highlights.mp4)** (real gameplay: day, sunset and night flying, combat, G effects and bailing out)
 
 ### [⬇️ Download the free installer](../../releases/latest)
+
+**New in v2.4: [the war on the ground](#%EF%B8%8F-the-war-on-the-ground).** Pick a date and the map shows that day of the war: Blitz damage, the 1944 build-up, Normandy with the Mulberry harbours, floods, the Westwall, and farmland that changes with the region and the season. It runs faster too, up to 40% more FPS over London and the Ruhr.
 
 </div>
 
@@ -37,6 +39,7 @@ Any suggestions or feedback let me know!
 | 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, rain squalls, searchlights and flak at night. |
 | 🧑‍✈️ **Bail out and live** | Hold `J` to jump. A detailed pilot (RAF or Luftwaffe kit, cloth and leather textures) swings under the canopy with rag-doll motion, and every man aboard gets his own parachute. Look around with the right stick, warp time with `]` / `[`, and skip to respawn when you've seen enough. Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
 | 🌡️ **Realism options** | Engine overheating with its own HEAT gauge, and G-forces that grey out your vision and can knock you out. Enemy pilots suffer too. On by default, switch off any time in Options > Realism. |
+| 🗓️ **The map follows the war** | Choose your sortie date and the ground changes with it: bomb damage that builds up through the Blitz and the bombing of Germany, the 1944 invasion build-up, Normandy after D-Day, flooded valleys, the Westwall, and bridges that fall on the day they did. Bocage, open fields, polders and the Weald, with the seasons on the farmland. [More below](#%EF%B8%8F-the-war-on-the-ground). |
 | 🏕️ **A living wartime map** | 116 real airfields in RAF and Luftwaffe styles, with gun pits, blast pens and dispersals. Wired army camps packed with tanks under camouflage nets, tent lines, ammo bays and fuel dumps. Prisoner-of-war camps at their real sites, from Dulag Luft and the Rhineland Stalags to Kempton Park and Island Farm, plus the Organisation Todt labour camps on Alderney. Corn ricks in the fields, and the odd crashed fighter on its scorched scar. |
 | 🎵 **Soundtrack** | 15 royalty-free orchestral and big-band tracks, separate Allied and Axis victory music, or import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
 | 💸 **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
@@ -181,7 +184,7 @@ All 25 aircraft were rebuilt for v2.0 and checked against photographs and the pu
 - **Is it really free?** Yes, completely. Donations are optional.
 - **Will it run on my PC?** It needs 64-bit Windows and a reasonably modern graphics card. RTX owners get optional DLSS.
 - **Is there multiplayer?** No, it's single player.
-- **Is it safe?** The source is right here read it yourself nothing is hidden.The game has a photosensitivity warning, a licence screen and a privacy policy.
+- **Is it safe?** The source is right here: read it yourself, nothing is hidden. The game has a photosensitivity warning, a licence screen and a privacy policy.
 
 ## 🤖 Honest disclosure
 
