@@ -236,6 +236,88 @@ static func _star_mesh(r: float) -> ArrayMesh:
 	return st.commit()
 
 
+## Lay a flat marking built by marking() onto the real wing skin. Every top-face triangle of the marking is
+## subdivided and each vertex projected onto the wing mesh (TriangleMesh ray along -up), then lifted a few mm per
+## layer, so the marking follows the camber instead of sinking into it at one edge. The result is one mesh per
+## colour, parented to the wing MeshInstance with an identity transform: the wing and its markings then share the
+## exact same world matrix, so far from the map origin (single-precision coordinates) they cannot jitter or
+## z-fight against each other. The flat marking node is freed.
+static func bake_marking_onto(m: Node3D, wing: MeshInstance3D, up: Vector3) -> void:
+	if m == null or not String(m.name).begins_with("DecalWing") or not (wing.mesh is ArrayMesh):
+		return
+	var tm: TriangleMesh = wing.mesh.generate_triangle_mesh()
+	if tm == null:
+		return
+	var to_wing: Transform3D = wing.transform.affine_inverse() * m.transform     # marking local -> wing local
+	var up_w: Vector3 = (wing.transform.basis.inverse() * up).normalized()
+	var by_mat: Dictionary = {}
+	const N := 4
+	for c in m.get_children():
+		var mi := c as MeshInstance3D
+		if mi == null or mi.mesh == null:
+			continue
+		var mat: Material = mi.material_override
+		var key: int = mat.get_instance_id() if mat != null else 0
+		if not by_mat.has(key):
+			var st0 := SurfaceTool.new()
+			st0.begin(Mesh.PRIMITIVE_TRIANGLES)
+			st0.set_material(mat)
+			by_mat[key] = st0
+		var st: SurfaceTool = by_mat[key]
+		for si in mi.mesh.get_surface_count():
+			var arr: Array = mi.mesh.surface_get_arrays(si)
+			var vv: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var ix: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+			var loc := PackedVector3Array()
+			loc.resize(vv.size())
+			var zmax: float = -1.0e9
+			for vi in vv.size():
+				loc[vi] = mi.transform * vv[vi]           # marking local: z is the height along the marking normal
+				zmax = maxf(zmax, loc[vi].z)
+			var lift: float = 0.006 + maxf(zmax - 0.01, 0.0) * 0.6
+			var n: int = ix.size() if ix.size() > 0 else vv.size()
+			for t in range(0, n - 2, 3):
+				var a: Vector3 = loc[ix[t] if ix.size() > 0 else t]
+				var b: Vector3 = loc[ix[t + 1] if ix.size() > 0 else t + 1]
+				var cc: Vector3 = loc[ix[t + 2] if ix.size() > 0 else t + 2]
+				if minf(minf(a.z, b.z), cc.z) < zmax - 0.001:
+					continue                                    # only the top face of each layer
+				var grid: Dictionary = {}
+				for i in N + 1:
+					for j in N + 1 - i:
+						var q: Vector3 = a + (b - a) * (float(i) / N) + (cc - a) * (float(j) / N)
+						var pw: Vector3 = to_wing * q
+						var hit: Dictionary = tm.intersect_ray(pw + up_w * 0.6, -up_w)
+						grid[Vector2i(i, j)] = (Vector3(hit["position"]) if not hit.is_empty() else pw) + up_w * lift
+				for i in N:
+					for j in N - i:
+						var tris: Array = [[grid[Vector2i(i, j)], grid[Vector2i(i + 1, j)], grid[Vector2i(i, j + 1)]]]
+						if i + j < N - 1:
+							tris.append([grid[Vector2i(i + 1, j)], grid[Vector2i(i + 1, j + 1)], grid[Vector2i(i, j + 1)]])
+						for tri in tris:
+							st.set_normal(up_w)
+							st.add_vertex(tri[0])
+							st.set_normal(up_w)
+							st.add_vertex(tri[1])
+							st.set_normal(up_w)
+							st.add_vertex(tri[2])
+							st.set_normal(up_w)
+							st.add_vertex(tri[2])     # both windings, whichever way the source was wound
+							st.set_normal(up_w)
+							st.add_vertex(tri[1])
+							st.set_normal(up_w)
+							st.add_vertex(tri[0])
+	for k in by_mat:
+		var dm := MeshInstance3D.new()
+		dm.name = "DecalWing"
+		dm.mesh = (by_mat[k] as SurfaceTool).commit()
+		dm.material_override = dm.mesh.surface_get_material(0)
+		dm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		wing.add_child(dm)
+	m.get_parent().remove_child(m)
+	m.free()
+
+
 ## Flat national marking node facing `normal`. kind: "roundel" | "star" | "cross".
 static func marking(parent: Node3D, nation: String, pos: Vector3, normal: Vector3, size: float, fuselage: bool, tilt: float = 0.0, pitch: float = 0.0) -> void:
 	var m := Node3D.new()
@@ -844,9 +926,14 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	var wb: Dictionary = wing_section(w, minf(spec.get("mark_t", 0.55) + 0.08, 1.0))
 	var wtilt: float = atan2(float(wb["yc"]) - float(wa["yc"]), maxf(absf(float(wb["x"]) - float(wa["x"])), 0.001))
 	for side in [-1.0, 1.0]:
+		var wing_mi: MeshInstance3D = body.get_node_or_null("WingR" if side > 0.0 else "WingL") as MeshInstance3D
 		marking(body, nation, Vector3(side * float(ws["x"]), top_y, wz), Vector3.UP, wsz, false, side * wtilt, slope_top)
+		if wing_mi != null:
+			bake_marking_onto(body.get_child(body.get_child_count() - 1) as Node3D, wing_mi, Vector3.UP)
 		if nation == "Luftwaffe":
 			marking(body, nation, Vector3(side * float(ws["x"]), bot_y, wz), Vector3.DOWN, wsz, false, side * wtilt, slope_bot)
+			if wing_mi != null:
+				bake_marking_onto(body.get_child(body.get_child_count() - 1) as Node3D, wing_mi, Vector3.DOWN)
 	if nation == "RAF":
 		# fin flash lofted along the fin skin
 		if fin.get("twin", false):
