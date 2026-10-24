@@ -133,7 +133,6 @@ static func house_mesh(variant: int) -> ArrayMesh:
 		cparts.append([_boxm(0.94, 0.66, 0.14), Transform3D(Basis.IDENTITY, Vector3(0.0, -0.08, -0.52)), _dmat(Color(0.63, 0.60, 0.55), 1, 0.0, false)])
 		cparts.append([_boxm(0.90, 0.13, 0.06), Transform3D(Basis.IDENTITY, Vector3(0.0, 0.17, -0.58)), _dmat(Color(0.98, 0.86, 0.42), 1, 0.0, false)])
 		cparts.append([_boxm(0.30, 0.36, 0.06), Transform3D(Basis.IDENTITY, Vector3(0.0, -0.17, -0.58)), _dmat(Color(0.12, 0.11, 0.10), 1, 0.0, false)])
-		cparts.append([_boxm(0.16, 0.30, 0.16), Transform3D(Basis.IDENTITY, Vector3(0.30, 0.30, 0.30)), _dmat(chimney, 1, 0.0, false)])
 		var m8: ArrayMesh = GroundKit.combine(cparts)
 		_meshes[key] = m8
 		return m8
@@ -149,21 +148,19 @@ static func house_mesh(variant: int) -> ArrayMesh:
 		return m9
 	var parts: Array = []
 	match variant % 8:
-		0, 1:   # terrace unit: narrow, two storeys, gable roof, stack on the party wall, bay to the street
+		0, 1:   # terrace unit: narrow, two storeys, gable roof, bay to the street; a slim stack on the brick variant only
 			var wall: Color = brick if variant == 0 else brick_dk
 			parts.append([_boxm(1.0, 1.0, 1.0), Transform3D.IDENTITY, _dmat(wall, 1, 0.0, false)])
 			parts.append([GroundKit.prism_mesh(1.05, 1.0, 0.40), Transform3D(Basis.IDENTITY, Vector3(0, 0.5, 0)), _dmat(slate, 1, 0.0, false)])
-			parts.append([_boxm(0.20, 0.38, 0.22), Transform3D(Basis.IDENTITY, Vector3(-0.36, 0.84, 0)), _dmat(chimney, 1, 0.0, false)])
+			if variant == 0:
+				parts.append([_boxm(0.12, 0.26, 0.15), Transform3D(Basis.IDENTITY, Vector3(-0.38, 0.80, 0)), _dmat(chimney, 1, 0.0, false)])
 			parts.append([_boxm(0.40, 0.40, 0.10), Transform3D(Basis.IDENTITY, Vector3(0.02, -0.30, -0.54)), _dmat(wall * 0.9, 1, 0.0, false)])
-		2:   # semi-detached pair: wider, one roof over two homes, a stack each side of the party wall
+		2:   # semi-detached pair: wider, one roof over two homes (no stack: chimneys kept to a few house types so streets read less busy)
 			parts.append([_boxm(1.0, 1.0, 1.0), Transform3D.IDENTITY, _dmat(brick, 1, 0.0, false)])
 			parts.append([GroundKit.prism_mesh(1.08, 1.0, 0.34), Transform3D(Basis.IDENTITY, Vector3(0, 0.5, 0)), _dmat(slate, 1, 0.0, false)])
-			parts.append([_boxm(0.16, 0.34, 0.20), Transform3D(Basis.IDENTITY, Vector3(-0.12, 0.80, 0)), _dmat(chimney, 1, 0.0, false)])
-			parts.append([_boxm(0.16, 0.34, 0.20), Transform3D(Basis.IDENTITY, Vector3(0.12, 0.80, 0)), _dmat(chimney, 1, 0.0, false)])
-		3:   # cottage: low, deep thatch/tile roof, one stack
+		3:   # cottage: low, deep thatch/tile roof
 			parts.append([_boxm(1.0, 0.78, 1.0), Transform3D(Basis.IDENTITY, Vector3(0, -0.11, 0)), _dmat(stone, 1, 0.0, false)])
 			parts.append([GroundKit.prism_mesh(1.12, 1.06, 0.55), Transform3D(Basis.IDENTITY, Vector3(0, 0.28, 0)), _dmat(Color(0.50, 0.42, 0.26), 1, 0.0, false)])
-			parts.append([_boxm(0.18, 0.42, 0.20), Transform3D(Basis.IDENTITY, Vector3(-0.30, 0.74, 0)), _dmat(chimney, 1, 0.0, false)])
 		4:   # corner shop: taller, parapet front, shopfront band at street level
 			parts.append([_boxm(1.0, 1.0, 1.0), Transform3D.IDENTITY, _dmat(brick * 1.06, 1, 0.0, false)])
 			parts.append([_boxm(1.04, 0.10, 1.04), Transform3D(Basis.IDENTITY, Vector3(0, 0.52, 0)), _dmat(Color(0.34, 0.33, 0.31), 1, 0.0, false)])
@@ -172,7 +169,7 @@ static func house_mesh(variant: int) -> ArrayMesh:
 			parts.append([_boxm(1.0, 1.0, 1.0), Transform3D.IDENTITY, _dmat(brick * 0.95, 1, 0.0, false)])
 			parts.append([GroundKit.prism_mesh(1.06, 1.0, 0.50), Transform3D(Basis.IDENTITY, Vector3(0, 0.5, 0)), _dmat(slate * 1.05, 1, 0.0, false)])
 			parts.append([_boxm(0.44, 0.60, 0.14), Transform3D(Basis.IDENTITY, Vector3(0.0, -0.20, -0.55)), _dmat(brick * 0.88, 1, 0.0, false)])
-			parts.append([_boxm(0.18, 0.52, 0.22), Transform3D(Basis.IDENTITY, Vector3(-0.36, 0.92, 0)), _dmat(chimney, 1, 0.0, false)])
+			parts.append([_boxm(0.13, 0.32, 0.16), Transform3D(Basis.IDENTITY, Vector3(-0.38, 0.86, 0)), _dmat(chimney, 1, 0.0, false)])
 		6:   # warehouse: tall brick block, shallow roof, small windows
 			parts.append([_boxm(1.0, 1.0, 1.0), Transform3D.IDENTITY, _dmat(brick_dk, 1, 0.0, false)])
 			parts.append([GroundKit.prism_mesh(1.04, 1.0, 0.18), Transform3D(Basis.IDENTITY, Vector3(0, 0.5, 0)), _dmat(slate * 0.9, 1, 0.0, false)])

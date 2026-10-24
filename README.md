@@ -104,7 +104,7 @@ Prisoner-of-war and labour camps stay where they were, as static scenery, never 
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.8.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.9.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
