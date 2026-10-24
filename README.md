@@ -143,7 +143,7 @@ All 25 aircraft were rebuilt for v2.0 and checked against photographs and the pu
 - **Is it really free?** Yes, completely. Donations are optional.
 - **Will it run on my PC?** It needs 64-bit Windows and a reasonably modern graphics card. RTX owners get optional DLSS.
 - **Is there multiplayer?** No, it's single player.
-- **Is it safe?** The source is right here. The game has a photosensitivity warning, a licence screen and a privacy policy.
+- **Is it safe?** The source is right here.Rea it yourself nothing is hidden.The game has a photosensitivity warning, a licence screen and a privacy policy.
 
 ## 🤖 Honest disclosure
 
