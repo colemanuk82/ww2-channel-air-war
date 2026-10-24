@@ -144,6 +144,82 @@ static func combine(parts: Array) -> ArrayMesh:
 	return out
 
 
+## Bake a container of static box / cylinder props (rail and canal furniture on a scenery tile) into merged meshes:
+## one surface per material instead of one MeshInstance per box - a London tile carried ~400 of them, each its own draw
+## call. Small structures go in a mesh that fades at `vis_small`; big ones (viaducts, bridges, sheds over BIG metres)
+## stay visible as before. Anything that is not a plain Node3D / MeshInstance3D (scripted, lights, particles) is kept.
+const FLATTEN_BIG := 60.0
+static func flatten(container: Node3D, vis_small: float) -> Node3D:
+	var out := Node3D.new()
+	out.name = container.name
+	var small: Dictionary = {}    # material id -> SurfaceTool
+	var big: Dictionary = {}
+	for top in container.get_children():
+		var t3: Node3D = top as Node3D
+		if t3 == null or t3.get_script() != null or not (t3.get_class() == "Node3D" or t3.get_class() == "MeshInstance3D"):
+			container.remove_child(top)
+			out.add_child(top)
+			continue
+		var parts: Array = []
+		var ok: bool = true
+		var aabb := AABB()
+		var first: bool = true
+		var stack: Array = [[t3, t3.transform]]
+		while not stack.is_empty():
+			var e: Array = stack.pop_back()
+			var n: Node3D = e[0]
+			var xf: Transform3D = e[1]
+			if n.get_script() != null or not (n.get_class() == "Node3D" or n.get_class() == "MeshInstance3D"):
+				ok = false
+				break
+			if not n.visible:
+				continue      # hidden subtree stays hidden
+			if n is MeshInstance3D and (n as MeshInstance3D).mesh != null:
+				var mi: MeshInstance3D = n
+				for si in mi.mesh.get_surface_count():
+					var mat: Material = mi.material_override if mi.material_override != null else mi.mesh.surface_get_material(si)
+					parts.append([mi.mesh, si, xf, mat])
+				var bb: AABB = xf * mi.mesh.get_aabb()
+				aabb = bb if first else aabb.merge(bb)
+				first = false
+			for c in n.get_children():
+				var c3: Node3D = c as Node3D
+				if c3 == null:
+					ok = false
+					break
+				stack.append([c3, xf * c3.transform])
+			if not ok:
+				break
+		if not ok:
+			container.remove_child(top)
+			out.add_child(top)
+			continue
+		var bucket: Dictionary = big if aabb.get_longest_axis_size() > FLATTEN_BIG else small
+		for p in parts:
+			var m: Material = p[3]
+			var key: int = m.get_instance_id() if m != null else 0
+			if not bucket.has(key):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				st.set_material(m)
+				bucket[key] = st
+			(bucket[key] as SurfaceTool).append_from(p[0], int(p[1]), p[2])
+	for pair in [[small, vis_small], [big, 0.0]]:
+		var bk: Dictionary = pair[0]
+		if bk.is_empty():
+			continue
+		var am := ArrayMesh.new()
+		for k in bk:
+			(bk[k] as SurfaceTool).commit(am)
+		var mi2 := MeshInstance3D.new()
+		mi2.mesh = am
+		if float(pair[1]) > 0.0:
+			mi2.visibility_range_end = float(pair[1])
+		out.add_child(mi2)
+	container.free()
+	return out
+
+
 static func box_part(size: Vector3, pos: Vector3, color: Color, rot_deg: Vector3 = Vector3.ZERO, outline: bool = true) -> Array:
 	var bm := BoxMesh.new()
 	bm.size = size
@@ -186,6 +262,32 @@ static func raw_y(x: float, z: float) -> float:
 
 static func is_water(x: float, z: float) -> bool:
 	return raw_y(x, z) < 0.6
+
+
+## Axis (unit XZ vector) along which the water near `pos` runs - the principal direction of the water samples on a
+## 13 x 13 grid within `r` (a river's course at a bridge). ZERO when there is too little water.
+static func river_axis(pos: Vector3, r: float) -> Vector3:
+	var pts: Array = []
+	var c := Vector2.ZERO
+	for i in 13:
+		for j in 13:
+			var q := Vector2(pos.x + (float(i) - 6.0) / 6.0 * r, pos.z + (float(j) - 6.0) / 6.0 * r)
+			if is_water(q.x, q.y):
+				pts.append(q)
+				c += q
+	if pts.size() < 6:
+		return Vector3.ZERO
+	c /= float(pts.size())
+	var sxx: float = 0.0
+	var sxz: float = 0.0
+	var szz: float = 0.0
+	for q2 in pts:
+		var d: Vector2 = (q2 as Vector2) - c
+		sxx += d.x * d.x
+		sxz += d.x * d.y
+		szz += d.y * d.y
+	var ang: float = 0.5 * atan2(2.0 * sxz, sxx - szz)
+	return Vector3(cos(ang), 0.0, sin(ang))
 
 
 ## Direction (unit XZ vector) toward the nearest open water within max_d, or ZERO.

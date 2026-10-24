@@ -63,9 +63,45 @@ Any suggestions or feedback let me know!
 <sub>A wired army camp beside a south-coast fighter station · Stalag VI-A at Hemer</sub>
 </div>
 
+## 🗓️ The war on the ground
+
+Pick a date for your sortie and the map shows that day of the war. Nothing is a static backdrop:
+
+- **Bomb damage that builds up.** The London docks are intact in August 1940 and cratered and burnt by October. Coventry, Portsmouth, Plymouth, Rotterdam, the Ruhr towns, Cologne, Caen, Saint-Lô, Le Havre and 40-odd more places show their damage from the date it happened: rubble, gutted blocks, scorched streets and crater fields.
+- **1940 invasion fears.** Fields near the English coast are blocked with poles and zig-zag trenches against glider landings from the summer of 1940 until 1942.
+- **The 1944 build-up.** Vehicle parks lining the roads behind the south coast, landing craft packed into the harbours and anchorages, Phoenix caissons waiting off Selsey and Dungeness, and concrete embarkation hards.
+- **Normandy after D-Day.** The Mulberry harbours at Arromanches and Omaha (the Omaha one wrecked by the storm from 20 June), churned invasion beaches, gliders on the landing zones, the flooded Merderet and Dives valleys, and the burnt-out wrecks of Goodwood and Villers-Bocage.
+- **Into the Low Countries and the Reich.** Walcheren flooded behind its broken dykes, the Arnhem and Nijmegen landing zones, the Westwall's dragon's teeth, and the Arnhem and Remagen bridges dropping into the river on the dates they fell.
+- **Farmland that changes with the region and the season.** Small hedged bocage fields in Normandy, big open fields in Picardy and on the chalk, long polder strips in Holland, and the small fields and woods of the Weald. Stooks in August, ricks through the winter, brown ploughland in October.
+- **Life at low level.** Barges and Rhine barge trains on the canals and rivers, steam from the locomotives, the Kammhuber Line searchlights across the Netherlands in 1941-42, and a brown industrial haze over the Ruhr and London.
+
+Prisoner-of-war and labour camps stay where they were, as static scenery, never as targets.
+
+<div align="center">
+<table>
+<tr>
+<td><img src="docs/promo/map/war_docks_aug1940.jpg" alt="London docks, August 1940" width="420"></td>
+<td><img src="docs/promo/map/war_docks_oct1940.jpg" alt="London docks, October 1940" width="420"></td>
+</tr>
+<tr>
+<td><img src="docs/promo/map/war_caen_jul1944.jpg" alt="Caen, July 1944" width="420"></td>
+<td><img src="docs/promo/map/war_mulberry_b.jpg" alt="Mulberry B at Arromanches" width="420"></td>
+</tr>
+<tr>
+<td><img src="docs/promo/map/war_merderet_flood.jpg" alt="The flooded Merderet valley" width="420"></td>
+<td><img src="docs/promo/map/war_seasons_kent.jpg" alt="Kent in May, August, October and January" width="420"></td>
+</tr>
+<tr>
+<td><img src="docs/promo/map/war_bocage.jpg" alt="Normandy bocage" width="420"></td>
+<td><img src="docs/promo/map/war_open_fields.jpg" alt="Open fields in Picardy" width="420"></td>
+</tr>
+</table>
+<sub>London docks in August and October 1940 · Caen in July 1944 · Mulberry B · the flooded Merderet · Kent through the seasons · Normandy bocage · open fields in Picardy</sub>
+</div>
+
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.3.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.4.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 

@@ -1,0 +1,421 @@
+{
+ "source_note": "The 1944 invasion build-up in southern England. Sources: Wikipedia - Operation Overlord; Operation Neptune; Exercise Tiger (Slapton, Torbay, Dartmouth); Mulberry harbour (Phoenixes sunk at Dungeness and Pagham before D-Day); D-Day embarkation hards (Lepe, Stokes Bay and others survive). Areas and anchorages are placed at the named embarkation points; counts are illustrative and capped for performance.",
+ "marshalling": [
+  {
+   "id": "ma_new_forest",
+   "name": "Marshalling area, New Forest (Lepe and Southampton)",
+   "lat": 50.86,
+   "lon": -1.52,
+   "radius_m": 6500,
+   "vehicles": 320,
+   "from": "1944-04-20",
+   "to": "1944-06-10",
+   "source": "Wikipedia: Operation Overlord (marshalling areas behind the embarkation points)"
+  },
+  {
+   "id": "ma_fareham",
+   "name": "Marshalling area, Fareham and Gosport (Stokes Bay, Hardway)",
+   "lat": 50.85,
+   "lon": -1.18,
+   "radius_m": 5000,
+   "vehicles": 260,
+   "from": "1944-04-20",
+   "to": "1944-06-10",
+   "source": "Wikipedia: Operation Overlord (marshalling areas behind the embarkation points)"
+  },
+  {
+   "id": "ma_havant",
+   "name": "Marshalling area, Havant and the Portsmouth hinterland",
+   "lat": 50.87,
+   "lon": -0.98,
+   "radius_m": 5000,
+   "vehicles": 220,
+   "from": "1944-04-20",
+   "to": "1944-06-10",
+   "source": "Wikipedia: Operation Overlord (marshalling areas behind the embarkation points)"
+  },
+  {
+   "id": "ma_poole",
+   "name": "Marshalling area, Poole and Wareham",
+   "lat": 50.735,
+   "lon": -2.06,
+   "radius_m": 5500,
+   "vehicles": 240,
+   "from": "1944-04-20",
+   "to": "1944-06-10",
+   "source": "Wikipedia: Operation Overlord (marshalling areas behind the embarkation points)"
+  },
+  {
+   "id": "ma_dorchester",
+   "name": "Marshalling area, Dorchester and Weymouth (US V Corps)",
+   "lat": 50.68,
+   "lon": -2.45,
+   "radius_m": 6000,
+   "vehicles": 280,
+   "from": "1944-04-20",
+   "to": "1944-06-10",
+   "source": "Wikipedia: Operation Overlord (marshalling areas behind the embarkation points)"
+  },
+  {
+   "id": "ma_torbay",
+   "name": "Marshalling area, Torbay and Dartmouth (US VII Corps, Force U)",
+   "lat": 50.42,
+   "lon": -3.62,
+   "radius_m": 6500,
+   "vehicles": 260,
+   "from": "1944-04-20",
+   "to": "1944-06-10",
+   "source": "Wikipedia: Operation Overlord (marshalling areas behind the embarkation points)"
+  },
+  {
+   "id": "ma_plymouth",
+   "name": "Marshalling area, Plymouth and Saltash",
+   "lat": 50.42,
+   "lon": -4.17,
+   "radius_m": 5000,
+   "vehicles": 200,
+   "from": "1944-04-20",
+   "to": "1944-06-10",
+   "source": "Wikipedia: Operation Overlord (marshalling areas behind the embarkation points)"
+  },
+  {
+   "id": "ma_newhaven",
+   "name": "Marshalling area, Newhaven and Shoreham",
+   "lat": 50.84,
+   "lon": -0.15,
+   "radius_m": 5500,
+   "vehicles": 220,
+   "from": "1944-04-20",
+   "to": "1944-06-10",
+   "source": "Wikipedia: Operation Overlord (marshalling areas behind the embarkation points)"
+  },
+  {
+   "id": "ma_tilbury",
+   "name": "Marshalling area, Tilbury and the Essex follow-up",
+   "lat": 51.48,
+   "lon": 0.38,
+   "radius_m": 5000,
+   "vehicles": 200,
+   "from": "1944-04-20",
+   "to": "1944-06-10",
+   "source": "Wikipedia: Operation Overlord (marshalling areas behind the embarkation points)"
+  },
+  {
+   "id": "ma_felixstowe",
+   "name": "Marshalling area, Felixstowe and Harwich",
+   "lat": 51.96,
+   "lon": 1.3,
+   "radius_m": 5000,
+   "vehicles": 160,
+   "from": "1944-04-20",
+   "to": "1944-06-10",
+   "source": "Wikipedia: Operation Overlord (marshalling areas behind the embarkation points)"
+  }
+ ],
+ "anchorages": [
+  {
+   "id": "anc_spithead",
+   "name": "Spithead anchorage",
+   "lat": 50.765,
+   "lon": -1.09,
+   "radius_m": 2200,
+   "heading": 90,
+   "craft": {
+    "lst": 14,
+    "lct": 30,
+    "lci": 16
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  },
+  {
+   "id": "anc_solent",
+   "name": "The Solent off Cowes and Lepe",
+   "lat": 50.775,
+   "lon": -1.33,
+   "radius_m": 2400,
+   "heading": 70,
+   "craft": {
+    "lct": 40,
+    "lci": 18
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  },
+  {
+   "id": "anc_soton_water",
+   "name": "Southampton Water",
+   "lat": 50.855,
+   "lon": -1.36,
+   "radius_m": 1600,
+   "heading": 135,
+   "craft": {
+    "lct": 24,
+    "lst": 8
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  },
+  {
+   "id": "anc_portsmouth",
+   "name": "Portsmouth Harbour",
+   "lat": 50.815,
+   "lon": -1.11,
+   "radius_m": 900,
+   "heading": 0,
+   "craft": {
+    "lct": 20,
+    "lci": 10
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  },
+  {
+   "id": "anc_poole",
+   "name": "Poole Harbour",
+   "lat": 50.7,
+   "lon": -1.99,
+   "radius_m": 1800,
+   "heading": 90,
+   "craft": {
+    "lct": 26,
+    "lci": 10
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  },
+  {
+   "id": "anc_portland",
+   "name": "Portland Harbour",
+   "lat": 50.57,
+   "lon": -2.43,
+   "radius_m": 1500,
+   "heading": 90,
+   "craft": {
+    "lst": 10,
+    "lct": 24
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  },
+  {
+   "id": "anc_dart",
+   "name": "River Dart, Dartmouth",
+   "lat": 50.35,
+   "lon": -3.58,
+   "radius_m": 600,
+   "heading": 0,
+   "craft": {
+    "lct": 14,
+    "lci": 6
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  },
+  {
+   "id": "anc_torbay",
+   "name": "Torbay off Brixham",
+   "lat": 50.41,
+   "lon": -3.49,
+   "radius_m": 2000,
+   "heading": 0,
+   "craft": {
+    "lst": 12,
+    "lct": 20
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  },
+  {
+   "id": "anc_plymouth",
+   "name": "Plymouth Sound",
+   "lat": 50.345,
+   "lon": -4.145,
+   "radius_m": 1800,
+   "heading": 90,
+   "craft": {
+    "lst": 12,
+    "lct": 24
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  },
+  {
+   "id": "anc_newhaven",
+   "name": "Newhaven",
+   "lat": 50.783,
+   "lon": 0.06,
+   "radius_m": 500,
+   "heading": 0,
+   "craft": {
+    "lct": 10,
+    "lci": 6
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  },
+  {
+   "id": "anc_shoreham",
+   "name": "Shoreham harbour",
+   "lat": 50.828,
+   "lon": -0.235,
+   "radius_m": 600,
+   "heading": 90,
+   "craft": {
+    "lct": 12,
+    "lci": 6
+   },
+   "from": "1944-05-01",
+   "to": "1944-06-05",
+   "source": "Wikipedia: Operation Neptune (assault forces assembled in the south-coast harbours)"
+  }
+ ],
+ "phoenix_parks": [
+  {
+   "id": "phoenix_selsey",
+   "name": "Phoenix caissons parked off Selsey and Pagham",
+   "lat": 50.745,
+   "lon": -0.735,
+   "heading": 45,
+   "rows": 5,
+   "cols": 9,
+   "from": "1944-04-20",
+   "to": "1944-06-07",
+   "source": "Wikipedia: Mulberry harbour (Phoenixes sunk at Dungeness and Pagham to await D-Day)"
+  },
+  {
+   "id": "phoenix_dungeness",
+   "name": "Phoenix caissons parked off Dungeness",
+   "lat": 50.925,
+   "lon": 0.99,
+   "heading": 20,
+   "rows": 4,
+   "cols": 9,
+   "from": "1944-04-20",
+   "to": "1944-06-07",
+   "source": "Wikipedia: Mulberry harbour (Phoenixes sunk at Dungeness and Pagham to await D-Day)"
+  }
+ ],
+ "hards": [
+  {
+   "id": "hard_lepe",
+   "name": "Lepe hard",
+   "lat": 50.786,
+   "lon": -1.356,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  },
+  {
+   "id": "hard_stokes_bay",
+   "name": "Stokes Bay hards",
+   "lat": 50.783,
+   "lon": -1.156,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  },
+  {
+   "id": "hard_hamble",
+   "name": "Hamble (Mercury) hard",
+   "lat": 50.857,
+   "lon": -1.315,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  },
+  {
+   "id": "hard_hardway",
+   "name": "Hardway, Gosport",
+   "lat": 50.807,
+   "lon": -1.131,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  },
+  {
+   "id": "hard_hamworthy",
+   "name": "Hamworthy, Poole",
+   "lat": 50.712,
+   "lon": -1.996,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  },
+  {
+   "id": "hard_weymouth",
+   "name": "Weymouth hard",
+   "lat": 50.607,
+   "lon": -2.452,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  },
+  {
+   "id": "hard_torquay",
+   "name": "Torquay hard",
+   "lat": 50.461,
+   "lon": -3.527,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  },
+  {
+   "id": "hard_brixham",
+   "name": "Brixham hard",
+   "lat": 50.397,
+   "lon": -3.513,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  },
+  {
+   "id": "hard_turnchapel",
+   "name": "Turnchapel, Plymouth",
+   "lat": 50.361,
+   "lon": -4.12,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  },
+  {
+   "id": "hard_shoreham",
+   "name": "Shoreham hard",
+   "lat": 50.831,
+   "lon": -0.25,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  },
+  {
+   "id": "hard_newhaven",
+   "name": "Newhaven hard",
+   "lat": 50.787,
+   "lon": 0.058,
+   "width": 3,
+   "from": "1943-06-01",
+   "to": "",
+   "source": "Wikipedia: Embarkation hard (D-Day hards built 1942-43 along the south coast)"
+  }
+ ]
+}

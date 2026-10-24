@@ -158,9 +158,37 @@ func apply_post(level: int) -> void:
 
 
 var _tick_acc: float = 0.0
+## Industrial haze (D2): [lat, lon, radius km, strength]. The Ruhr's coking plants and steelworks and London's
+## coal fires kept a brown pall over them that the bomber crews often could not see through (Wikipedia - Battle of
+## the Ruhr: "industrial haze"; Great Smog / London fog).
+const HAZE_AREAS := [[51.47, 7.10, 38.0, 1.0], [51.51, -0.10, 22.0, 0.7], [50.62, 5.55, 14.0, 0.5], [50.42, 4.45, 14.0, 0.5],
+	[50.64, 3.07, 14.0, 0.45], [51.92, 4.48, 12.0, 0.35], [51.22, 4.40, 12.0, 0.35], [52.48, -1.90, 22.0, 0.6]]
+var haze_k: float = 0.0
+var _haze_acc: float = 1.0
+
+
+func _update_haze(delta: float) -> void:
+	_haze_acc += delta
+	if _haze_acc < 1.0:
+		return
+	_haze_acc = 0.0
+	var cam: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() else null
+	if cam == null:
+		return
+	var ll: Vector2 = WorldCoords.world_to_latlon(cam.global_position)
+	var k: float = 0.0
+	for a in HAZE_AREAS:
+		var dlat: float = (ll.x - float(a[0])) * 111.0
+		var dlon: float = (ll.y - float(a[1])) * 71.0
+		var d: float = sqrt(dlat * dlat + dlon * dlon)
+		k = maxf(k, float(a[3]) * (1.0 - smoothstep(float(a[2]) * 0.55, float(a[2]) * 1.35, d)))
+	if absf(k - haze_k) > 0.0005:
+		haze_k = lerpf(haze_k, k, 0.5) if absf(k - haze_k) > 0.02 else k
+		_apply()
 
 
 func _process(delta: float) -> void:
+	_update_haze(delta)
 	if time_scale != 0.0:
 		# the sun moves slowly: re-light the sky / fog / HUD clock 5 times a second, not every frame
 		_tick_acc += delta
@@ -271,7 +299,7 @@ func _apply() -> void:
 
 	environment.ambient_light_color = amb
 	environment.ambient_light_energy = amb_e
-	environment.fog_light_color = fogc
+	environment.fog_light_color = fogc.lerp(Color(0.52, 0.47, 0.40), 0.55 * haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0))
 	# light shafts: thicken the (high-preset) volumetric haze while the sun is low, so a dawn or dusk sun throws
 	# visible rays through the gaps between clouds; thin again by day so the noon air stays clear
 	if environment.volumetric_fog_enabled:
@@ -280,7 +308,7 @@ func _apply() -> void:
 		environment.volumetric_fog_albedo = Color(0.92, 0.94, 1.0).lerp(lc, 0.45 * low)
 		environment.volumetric_fog_anisotropy = 0.65 + 0.2 * low
 		sun.light_volumetric_fog_energy = 1.0 + 0.8 * low
-	environment.fog_density = float(s[9]) * fog_mul * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
+	environment.fog_density = float(s[9]) * fog_mul * (1.0 + 1.0 * haze_k) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
 	sun_color = lc
 	horizon_color = hor
 	light_level = clampf(sun_e / 1.3 + moon_e * 0.3 + 0.12, 0.0, 1.0)

@@ -220,7 +220,8 @@
    "rows": 1,
    "team": "Allies",
    "style": "",
-   "source": "Wikipedia, Mulberry harbour: Corncob blockship breakwater at Arromanches, June 1944"
+   "source": "Wikipedia, Mulberry harbour: Corncob blockship breakwater at Arromanches, June 1944",
+   "from": "1944-06-07"
   },
   {
    "id": "gooseberry_omaha",
@@ -233,7 +234,8 @@
    "rows": 1,
    "team": "Allies",
    "style": "",
-   "source": "Wikipedia, Mulberry harbour: Corncob blockship breakwater off Omaha, June 1944"
+   "source": "Wikipedia, Mulberry harbour: Corncob blockship breakwater off Omaha, June 1944",
+   "from": "1944-06-07"
   },
   {
    "id": "fort_roughs",

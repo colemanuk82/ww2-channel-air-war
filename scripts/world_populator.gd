@@ -77,6 +77,10 @@ static func ensure(world: Node3D) -> WorldPopulator:
 func _ready() -> void:
 	instance = self
 	add_to_group("world_populator")
+	EraClock.set_date(GameState.era_date)
+	_built_era = EraClock.current()
+	WarDamage.refresh()
+	RegionMap.load_map()
 	GroundKit.lp("  populator _ready start")
 	_load_locations()
 	GroundKit.lp("  _load_locations")
@@ -127,8 +131,16 @@ func _ready() -> void:
 	_register_port_clutter()
 	_register_camps()
 	_register_pow_camps()
+	_register_mulberries()
+	_register_war_ground()
+	_register_buildup()
+	_register_kammhuber()
+	add_child(BargeTraffic.new())
+	for ch in WestwallKit.chunks():
+		_add_site("westwall_%s_%d" % [str(ch[0]), int(ch[1])], ch[3], 9000.0, func(s: Dictionary) -> Node3D: return WestwallKit.build(str(s["lid"]), int(s["i0"]), int(s["i1"])), {"lid": str(ch[0]), "i0": int(ch[1]), "i1": int(ch[2])})
 	if terrain != null and terrain.has_method("add_ground_zones"):
 		terrain.call("add_ground_zones", _ground_zones)
+	_push_era_zones()
 	_register_osm_extras()
 	GroundKit.lp("  register coast..osm extras")
 	if enable_traffic:
@@ -216,6 +228,8 @@ func _register_airfields() -> void:
 			camp = ArmyCampKit.site_for(id, pos, float(d["heading_deg"]))
 			if camp != Vector3.INF:
 				_exclude.append([camp, ArmyCampKit.CAMP_RADIUS])
+				if terrain:
+					terrain.call("add_flat_zone", camp, 370.0, 260.0)
 				RoadMesh.add_exclusion_disc(Vector2(camp.x, camp.z), ArmyCampKit.CAMP_RADIUS * 0.85)
 				_ground_zones.append(ArmyCampKit.zone_for(camp, float(d["heading_deg"])))
 		_add_site("af_" + id, pos, 9500.0, _build_airfield, {"id": id, "data": d, "y": y, "existing": ex, "camp": camp})
@@ -255,6 +269,8 @@ func _register_features() -> void:
 		var pos: Vector3 = _ll(d)
 		match str(d["type"]):
 			"landmark":
+				if str(d["id"]) == "arromanches_mulberry":
+					continue        # replaced by the dated MulberryKit harbours (_register_mulberries)
 				_add_site("lm_" + d["id"], pos, 16000.0, _build_landmark, {"id": d["id"], "data": d})
 			"beach":
 				var r: float = clampf(float(d.get("radius_m", 3000.0)) / 10.0, 150.0, 900.0)
@@ -730,13 +746,69 @@ func _register_camps() -> void:
 			_ground_zones.append({"pos": pos, "heading": 0.0, "half": Vector2(cr * 0.75, cr * 0.75), "feather": cr * 0.45, "kind": 2})
 
 
+## The two Mulberry harbours (June 1944 on). Always registered; the builder decides from the war date what exists.
+func _register_mulberries() -> void:
+	for hid in MulberryKit.HARBOURS.keys():
+		_add_site("mulberry_" + str(hid), MulberryKit.centre(str(hid)), 22000.0, func(s: Dictionary) -> Node3D: return MulberryKit.build(str(s["hid"])), {"hid": str(hid)})
+
+
+## Battlefields, invasion beaches and airborne landing zones. Always registered (cheap); each builder checks the date.
+func _register_war_ground() -> void:
+	var d: Dictionary = WarGround.data()
+	for r in d.get("battlefields", []):
+		var rd: Dictionary = r
+		_add_site("wg_" + str(rd["id"]), WarGround._pos(rd), 6000.0 + float(rd["rx"]), func(s: Dictionary) -> Node3D: return WarGround.build(s["row"], "battlefield"), {"row": rd})
+	for r in d.get("beaches", []):
+		var bd: Dictionary = r
+		_add_site("wg_" + str(bd["id"]), WarGround._pos(bd), 6000.0 + float(bd["length"]) * 0.5, func(s: Dictionary) -> Node3D: return WarGround.build(s["row"], "beach"), {"row": bd})
+	for r in GliderKit.rows():
+		var gd: Dictionary = r
+		var gp: Vector3 = WorldCoords.latlon_to_world(float(gd["lat"]), float(gd["lon"]))
+		_add_site("lz_" + str(gd["id"]), gp, 5500.0 + float(gd.get("rx", 400.0)), func(s: Dictionary) -> Node3D: return GliderKit.build(s["row"]), {"row": gd})
+
+
+## The Kammhuber Line (C4): the belt of searchlight boxes across the Netherlands and Belgium on the night bombers'
+## route to the Ruhr, 1941-42 (the "Helle Nachtjagd": searchlights lit the bombers for the night fighters inside each
+## box). The lights were withdrawn to the cities in late 1942. Sources: Wikipedia - Kammhuber Line.
+const KAMMHUBER := [[52.95, 6.35], [52.65, 6.30], [52.35, 6.20], [52.05, 6.05], [51.75, 5.90], [51.45, 5.75], [51.15, 5.65], [50.85, 5.60]]
+
+
+func _register_kammhuber() -> void:
+	for i in KAMMHUBER.size() - 1:
+		var a: Vector3 = WorldCoords.latlon_to_world(float(KAMMHUBER[i][0]), float(KAMMHUBER[i][1]))
+		var b: Vector3 = WorldCoords.latlon_to_world(float(KAMMHUBER[i + 1][0]), float(KAMMHUBER[i + 1][1]))
+		var n: int = maxi(int(a.distance_to(b) / 9000.0), 1)
+		for k in n:
+			var p: Vector3 = a.lerp(b, (float(k) + 0.5) / float(n))
+			_add_site("kammhuber_%d_%d" % [i, k], p, 26000.0, _build_kammhuber, {})
+
+
+func _build_kammhuber(s: Dictionary) -> Node3D:
+	var c := Node3D.new()
+	if EraClock.is_between("1941-01-01", "1942-12-31"):
+		_defences(c, s["pos"], "Axis", 0, 0, 2, 0, 1800.0, hash(str(s["key"])))
+	return c
+
+
+## The 1944 invasion build-up (BuildupKit): marshalling areas, anchorages, Phoenix parks, embarkation hards.
+func _register_buildup() -> void:
+	var d: Dictionary = BuildupKit.data()
+	for spec in [["marshalling", "marshalling", 4500.0], ["anchorages", "anchorage", 6000.0], ["phoenix_parks", "phoenix_park", 9000.0], ["hards", "hard", 5000.0]]:
+		for r in d.get(str(spec[0]), []):
+			var rd: Dictionary = r
+			var act: float = float(spec[2]) + float(rd.get("radius_m", 0.0))
+			_add_site("bu_" + str(rd["id"]), BuildupKit.pos(rd), act, func(s: Dictionary) -> Node3D: return BuildupKit.build(s["row"], str(s["bkind"])), {"row": rd, "bkind": str(spec[1])})
+
+
 ## Prisoner-of-war and labour camps (PowCampKit.CAMPS) at their real locations.
 func _register_pow_camps() -> void:
 	for c in PowCampKit.CAMPS:
-		var pos: Vector3 = WorldCoords.latlon_to_world(float(c[2]), float(c[3]))
 		var style: String = str(c[5])
 		var size: int = int(c[6])
+		var pos: Vector3 = PowCampKit.flattest(WorldCoords.latlon_to_world(float(c[2]), float(c[3])), style, size)
 		var r: float = PowCampKit.radius(style, size)
+		if terrain != null:   # level the compound (the huts stood on level ground) with a gentle ramp out to the land
+			terrain.call("add_flat_zone", pos, PowCampKit.extents(style, size).length() + 15.0, 220.0)
 		_exclude.append([pos, r])
 		RoadMesh.add_exclusion_disc(Vector2(pos.x, pos.z), r * 0.8)
 		_ground_zones.append(PowCampKit.zone_for(str(c[0]), pos, style, size))
@@ -914,7 +986,8 @@ func _register_sea_defences() -> void:
 		var team: String = str(dd.get("team", GroundKit.side_at(pos)))
 		var act: float = 9000.0 if kind == "sea_fort" else 7000.0
 		_add_site("sd_" + id, pos, act, _build_sea_defence,
-			{"id": id, "kind": kind, "style": style, "length_m": length_m, "rows": rows, "heading_deg": heading, "team": team})
+			{"id": id, "kind": kind, "style": style, "length_m": length_m, "rows": rows, "heading_deg": heading, "team": team,
+			"from": str(dd.get("from", "")), "to": str(dd.get("to", ""))})
 		if kind in ["minefield", "boom", "obstacles"]:
 			km += length_m
 		n += 1
@@ -925,6 +998,8 @@ func _register_sea_defences() -> void:
 
 ## Builder for one sea-defence site: hands the kind to SeaDefenceKit, seeded from hash(id) for determinism.
 func _build_sea_defence(s: Dictionary) -> Node3D:
+	if not EraClock.is_between(str(s.get("from", "")), str(s.get("to", ""))):
+		return Node3D.new()      # not there on this date (e.g. the Gooseberry blockships before June 1944)
 	return SeaDefenceKit.build(str(s["kind"]), str(s["style"]), s["pos"], float(s["heading_deg"]), float(s["length_m"]), int(s["rows"]), hash(str(s["id"])))
 
 
@@ -1945,6 +2020,38 @@ func _free_site(s: Dictionary) -> void:
 	s["main"] = null
 
 
+var _built_era: String = ""     # the date the built tiles / sites were made for
+var _tile_gen: int = 0          # bumps when the era changes: tile jobs started earlier are dropped
+
+
+## The sortie's date is known (main.start_game): if it differs from the one the world was built for, drop the built
+## tiles and sites so they rebuild for the new date (this happens behind the load screen), and re-pick the terrain
+## tint zones (many are dated).
+func on_era_date(d: String) -> void:
+	# tile jobs on the workers read EraClock / WarDamage: let them finish before those change under them
+	for jb in _tile_jobs:
+		WorkerThreadPool.wait_for_task_completion(int((jb as Dictionary)["task"]))
+	_tile_jobs.clear()
+	EraClock.set_date(d)
+	WarDamage.refresh()
+	_push_era_zones()
+	if terrain != null and terrain.has_method("refresh_zones"):
+		terrain.call("refresh_zones")
+	if EraClock.current() == _built_era:
+		return
+	_built_era = EraClock.current()
+	_tile_gen += 1
+	free_all()
+	print("[era] world rebuilt for %s (%s)" % [_built_era, EraClock.band()])
+
+
+## Terrain zones that depend on the war date (bomb damage now; floods and beach churn later).
+func _push_era_zones() -> void:
+	if terrain != null and terrain.has_method("set_zone_group"):
+		terrain.call("set_zone_group", "damage", WarDamage.zones())
+		terrain.call("set_zone_group", "warground", WarGround.zones())
+
+
 func free_all() -> void:
 	for s in _sites:
 		_free_site(s)
@@ -2011,7 +2118,7 @@ func _stream_tiles() -> void:
 		var jk: Vector2i = jb["k"]
 		var res: Dictionary = jb["res"]
 		var jc := Vector2((float(jk.x) + 0.5) * TILE, (float(jk.y) + 0.5) * TILE)
-		if not _tiles.has(jk) and res.has("data") and jc.distance_to(Vector2(fp.x, fp.z)) < TILE_RADIUS + TILE:
+		if int(jb.get("gen", 0)) == _tile_gen and not _tiles.has(jk) and res.has("data") and jc.distance_to(Vector2(fp.x, fp.z)) < TILE_RADIUS + TILE:
 			var ft0: int = Time.get_ticks_msec()
 			var jn: Node3D = _finish_tile(jk, res["data"])
 			add_child(jn)
@@ -2097,7 +2204,7 @@ func _start_tile_job(k: Vector2i) -> void:
 		res["data"] = Scatter.tile_landcover_data(org, TILE, seed_v, ex)
 		RiverMesh.clear_block()
 		RoadMesh.clear_block())
-	_tile_jobs.append({"k": k, "task": task, "res": res})
+	_tile_jobs.append({"k": k, "task": task, "res": res, "gen": _tile_gen})
 
 
 func _finish_tile(k: Vector2i, data: Dictionary) -> Node3D:
@@ -2126,12 +2233,12 @@ func _finish_tile(k: Vector2i, data: Dictionary) -> Node3D:
 	if CanalKit.canal_count() > 0:
 		var cnn: Node3D = CanalKit.build_tile(org, TILE)
 		if cnn != null:
-			node.add_child(cnn)
+			node.add_child(GroundKit.flatten(cnn, 6000.0 * Scatter.vis_scale))
 	tt.append(Time.get_ticks_usec())
 	if RailKit.rail_count() > 0:
 		var rln: Node3D = RailKit.build_tile(org, TILE)
 		if rln != null:
-			node.add_child(rln)
+			node.add_child(GroundKit.flatten(rln, 6000.0 * Scatter.vis_scale))
 	tt.append(Time.get_ticks_usec())
 	if int(tt[5]) - int(tt[0]) > 30000 and not boost:
 		print("[slow] tile parts ms: scatter %d roads %d traffic %d rivers/pylons/canals %d rails %d" % [(int(tt[1]) - int(tt[0])) / 1000, (int(tt[2]) - int(tt[1])) / 1000, (int(tt[3]) - int(tt[2])) / 1000, (int(tt[4]) - int(tt[3])) / 1000, (int(tt[5]) - int(tt[4])) / 1000])
@@ -2164,11 +2271,11 @@ func _make_tile(k: Vector2i) -> Node3D:
 	if CanalKit.canal_count() > 0:
 		var cnn: Node3D = CanalKit.build_tile(org, TILE)
 		if cnn != null:
-			node.add_child(cnn)
+			node.add_child(GroundKit.flatten(cnn, 6000.0 * Scatter.vis_scale))
 	if RailKit.rail_count() > 0:
 		var rln: Node3D = RailKit.build_tile(org, TILE)
 		if rln != null:
-			node.add_child(rln)
+			node.add_child(GroundKit.flatten(rln, 6000.0 * Scatter.vis_scale))
 	return node
 
 
@@ -2863,6 +2970,8 @@ func _city_skyline(container: Node3D, pos: Vector3, size: int, id: String, radiu
 ## a breakwater / mole / dock wall runs parallel to the shore.
 const LM_SEA_KINDS := ["docks", "harbour_works", "pier"]
 ## Open-sea marks with no terrain-drapable footing that predate the json set (kept alongside the json kinds above).
+## Landmark bridges that are turned to cross their river (GroundKit.river_axis).
+const RIVER_BRIDGES := ["ludendorff_bridge", "nijmegen_bridge", "arnhem_bridge"]
 const LM_SEA_IDS := ["eddystone", "needles", "arromanches_mulberry"]
 ## Curated label -> id fallbacks for cities[].landmark wording that differs from the builder name.
 const LM_ALIASES := {
@@ -2914,6 +3023,11 @@ static func _landmark_at_sea(id: String) -> bool:
 static func _landmark_heading(id: String, pos: Vector3) -> float:
 	if id in ["tower_bridge", "big_ben"]:
 		return 90.0
+	if id in RIVER_BRIDGES:
+		var ax: Vector3 = GroundKit.river_axis(pos, 260.0)
+		if ax != Vector3.ZERO:
+			var p := Vector3(-ax.z, 0.0, ax.x)      # the span runs across the river
+			return rad_to_deg(atan2(-p.z, p.x))
 	var kind: String = _landmark_kind(id)
 	if kind in LM_SEA_KINDS:
 		var sea: Vector3 = GroundKit.water_dir(pos, 900.0)

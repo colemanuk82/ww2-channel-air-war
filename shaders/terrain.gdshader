@@ -48,6 +48,13 @@ uniform bool use_map = false;
 uniform float map_amount : hint_range(0.0, 1.0) = 0.72;
 // Built-up land (ESA WorldCover class 50) on the same rect as map_tex: towns get paved ground.
 uniform sampler2D urban_tex : filter_linear, repeat_disable;
+// Farming regions (data/heightmap/region_types.png, same rect as map_tex): R bocage, G open field / downland,
+// B polder / fen, A Weald. Hard 0.5 thresholds; Scatter.field_edge() (RegionMap) mirrors them for the hedges.
+uniform sampler2D region_tex : filter_linear, repeat_disable;
+uniform bool use_regions = false;
+// Seasons (EraClock month): the crop cycle centre (-1 = off: every field at its own stage) and a tint on the farmland.
+uniform float season_center = -1.0;
+uniform vec3 season_tint = vec3(1.0);
 uniform bool use_urban = false;
 uniform sampler2D sea_tex : filter_linear, repeat_disable;   // distance to the sea (R = metres / SEA_MAX_M), same rect as map_tex
 uniform bool use_sea = false;
@@ -57,8 +64,12 @@ uniform vec3 paving_col : source_color = vec3(0.37, 0.34, 0.31);
 
 // Airfield grass: oriented, soft-edged rectangles tinted onto the terrain (no slab, no hard edge).
 // af_a = (x, z, dir.x, dir.z) of the runway direction, af_b = (half along, half across, softness, active).
-uniform vec4 af_a[24];
-uniform vec4 af_b[24];
+uniform vec4 af_a[32];
+uniform vec4 af_b[32];
+// Which of the 32 zone slots can reach each 1 km cell (bit i = slot i, packed in RGBA8), in a 256 km window around
+// the player, built by terrain_chunk_manager.gd: most of the ground touches no zone and skips the loop entirely.
+uniform sampler2D zone_tex : filter_nearest, repeat_disable;
+uniform vec4 zone_rect = vec4(0.0, 0.0, 0.001, 0.0);   // origin x, origin z, 1 / cell size, cells across
 
 // ---- New palette / tuning uniforms (sensible defaults; scripts do not touch these) ----
 uniform vec3 soil_col : source_color = vec3(0.300, 0.220, 0.140);       // bare ploughed earth
@@ -120,7 +131,22 @@ void fragment() {
 	float zn = t_vnoise2(xz * 0.0009 + 77.0);
 	float zscale = zn < 0.22 ? 0.65 : (zn < 0.42 ? 1.0 : (zn < 0.58 ? 1.6 : 1.2));   // small old enclosures .. big arable
 	float zjit = zn < 0.42 ? 0.85 : (zn < 0.58 ? 0.6 : 0.12);
-	float zrect = step(0.58, zn) * (1.0 - strip);       // regular rectangular enclosure: straight hedges and ditches
+	// regional farming patterns (hard flags, see RegionMap.type_weights)
+	vec4 rgn = vec4(0.0);
+	if (use_regions) {
+		vec2 ruv = clamp(vec2((w_pos.x - map_rect.x) * map_rect.z, (w_pos.z - map_rect.y) * map_rect.w), vec2(0.0), vec2(1.0));
+		rgn = texture(region_tex, ruv);
+	}
+	float r_boc = step(0.5, rgn.r);
+	float r_open = step(0.5, rgn.g) * (1.0 - r_boc);
+	float r_pold = step(0.5, rgn.b) * (1.0 - r_boc) * (1.0 - r_open);
+	float r_weald = step(0.5, rgn.a) * (1.0 - r_boc) * (1.0 - r_open) * (1.0 - r_pold);
+	strip = max(strip * (1.0 - r_boc), r_pold);          // bocage: no strip fields; polder: all long parcels
+	zscale = mix(zscale, 0.48, r_boc);                   // bocage: small enclosures (0.5-2 ha)
+	zjit = mix(zjit, 0.9, r_boc);
+	zscale = mix(zscale, 2.1, r_open);                   // open field: big hedgeless arable
+	zscale = mix(zscale, zscale * 0.72, r_weald);        // Weald: small fields between the shaws
+	float zrect = step(0.58, zn) * (1.0 - strip) * (1.0 - r_boc);       // regular rectangular enclosure: straight hedges and ditches
 	float zrot = max(strip, step(0.42, zn));
 	float sang = t_hash12(floor(xz * 0.00035) + 5.0) * 3.14159 * zrot;   // one bearing per district, no swirl
 	vec2 sdir = vec2(cos(sang), sin(sang));
@@ -128,7 +154,7 @@ void fragment() {
 	float sa = dot(wq, sdir);
 	float sb = dot(wq, vec2(-sdir.y, sdir.x));
 	float zs = mix(zscale, 1.0, strip);
-	vec2 wp = vec2(sa / (field_cell * mix(1.0, 1.7, strip) * zs), sb / (field_cell * mix(1.0, 0.72, strip) * zs));   // long fields ~2.4:1
+	vec2 wp = vec2(sa / (field_cell * mix(1.0, 1.7, strip) * zs * mix(1.0, 1.6, r_pold)), sb / (field_cell * mix(1.0, 0.72, strip) * zs * mix(1.0, 0.62, r_pold)));   // long fields ~2.4:1 (polders ~6:1)
 	vec2 cell_id = floor(wp);
 	vec2 gv = fract(wp) - 0.5;
 	float f1 = 8.0;
@@ -155,6 +181,9 @@ void fragment() {
 	float fh2 = t_hash12(cell_id + 19.7);
 	float fh3 = t_hash12(cell_id + 31.1);
 	float stage = fract(cell_h * 1.7 + fh2 * 2.3 + fh3 * 0.9);
+	if (season_center >= 0.0) {
+		stage = fract(season_center + (stage - 0.5) * 0.5);   // most fields near the season's stage, a spread either side
+	}
 
 	vec3 soil = soil_col * (0.85 + 0.30 * fh2);
 	vec3 young = mix(crop_young_col, grass_b, 0.40 * fh3);
@@ -168,7 +197,7 @@ void fragment() {
 	pasture = mix(pasture, grass_a * 0.80, step(0.72, cell_h) * 0.5);         // dark improved pasture
 
 	// How pastoral this enclosure is: low cells and pasture districts stay grass.
-	float pasture_w = clamp((1.0 - smoothstep(0.22, 0.60, cell_h)) * 0.75 + regional_pasture * 0.45, 0.0, 1.0);
+	float pasture_w = clamp((1.0 - smoothstep(0.22, 0.60, cell_h)) * 0.75 + regional_pasture * 0.45 + 0.35 * r_boc + 0.30 * r_pold - 0.35 * r_open, 0.0, 1.0);
 	vec3 field = mix(arable, pasture, pasture_w);
 	// occasional whole field of oilseed rape, only where farming is arable
 	float rape = step(0.92, fh3) * (1.0 - regional_pasture) * (1.0 - pasture_w);
@@ -180,8 +209,9 @@ void fragment() {
 	field *= 1.0 + (micro - 0.5) * 0.22 * detail_strength;
 
 	// hedgerow / headland shading along the cell boundaries (subtle linear feature, not a hard step)
-	float hedge = 1.0 - smoothstep(0.013, 0.046, edge);   // ~same width in metres as before at the bigger cell size
-	field = mix(field, hedge_col, hedge * 0.85);
+	float hedge = 1.0 - smoothstep(0.013, 0.046 + 0.05 * r_boc, edge);   // ~same width in metres as before at the bigger cell size; bocage hedge banks wider
+	vec3 bound_col = mix(hedge_col * (1.0 - 0.25 * r_boc), vec3(0.035, 0.050, 0.060), r_pold);   // polder: water-filled ditches
+	field = mix(field, bound_col, hedge * 0.85 * (1.0 - 0.85 * r_open));
 
 	float is_crop = clamp(1.0 - pasture_w, 0.0, 1.0);   // for drill lines / tramlines below
 
@@ -246,13 +276,20 @@ void fragment() {
 	}
 
 	// Re-apply the field patchwork / land-use colours over the imagery so variety, hedges and heath survive.
-	col = mix(col, mix(col, field, 0.34), lowland * (1.0 - urban));
+	// (with a war date set, crop fields show their season's stage more strongly: stubble, plough, green shoots)
+	col = mix(col, mix(col, field, 0.34 + (season_center >= 0.0 ? 0.28 * is_crop : 0.0)), lowland * (1.0 - urban));
 	// Dull farmland: the aerial imagery and the field palette are both graded a shade down and slightly
 	// desaturated over the lowland, so the patchwork reads as muted wartime countryside rather than a
 	// bright summer postcard. Upland, heath and towns are left alone.
 	{
 		float lg = lowland * (1.0 - urban);
 		vec3 dull = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114))), 0.22) * 0.87;
+		if (season_center >= 0.0) {
+			// season grade (B6): winter farmland greyer and duller, spring greener, harvest golden, autumn brown
+			float sl = dot(season_tint, vec3(0.3333));
+			dull = mix(dull, vec3(dot(dull, vec3(0.299, 0.587, 0.114))), clamp((0.95 - sl) * 3.0, 0.0, 0.35));
+			dull *= season_tint;
+		}
 		col = mix(col, dull, lg);
 	}
 	// Mid-range texture (visible from altitude): mottled canopy of grass/crop, drill lines per field, dappled light.
@@ -343,23 +380,47 @@ void fragment() {
 	float afw = 0.0;
 	float cw = 0.0;
 	float pw = 0.0;
-	for (int i = 0; i < 24; i++) {
+	float dmg = 0.0;     // kind 4: bomb damage (rubble, scorch, craters); strength in the fractional part
+	float flood = 0.0;   // kind 5: flood water up to a level (fraction x 40 = world y)
+	float churn = 0.0;   // kind 6: beach churned by landing craft, tracks and shells
+	int zmask = 0;
+	ivec2 zc = ivec2(floor((xz - zone_rect.xy) * zone_rect.z));
+	if (zc.x >= 0 && zc.y >= 0 && zc.x < int(zone_rect.w) && zc.y < int(zone_rect.w)) {
+		uvec4 zt = uvec4(round(texelFetch(zone_tex, zc, 0) * 255.0));
+		zmask = int(zt.r | (zt.g << 8u) | (zt.b << 16u) | (zt.a << 24u));
+	}
+	for (int i = 0; i < 32; i++) {
+		if (zmask == 0) { break; }
+		bool on = (zmask & 1) != 0;
+		zmask = (zmask >> 1) & 0x7fffffff;
+		if (!on) { continue; }
 		vec4 b = af_b[i];
 		if (b.w < 0.5) { continue; }
 		vec4 a = af_a[i];
 		vec2 d = xz - a.xy;
+		// cheap reject first: most of the 32 zones are kilometres away from any given pixel
+		float reach = max(b.x, b.y) * 1.415 + b.z * 1.8;
+		if (dot(d, d) > reach * reach) { continue; }
 		float along = dot(d, a.zw);
 		float across = dot(d, vec2(-a.w, a.z));
 		vec2 q = abs(vec2(along, across)) - b.xy;
 		float sd = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
-		if (b.w > 1.5) {
-			// camps: a ragged worn edge, not a ruled rectangle
+		if (sd > b.z * 1.75) { continue; }
+		if (b.w > 1.5 && sd > -b.z * 0.72) {
+			// camps, damage, floods: a ragged edge, not a ruled rectangle (only the noise where it can matter)
 			sd += (t_vnoise2(xz * 0.018 + a.xy * 0.001) - 0.5) * b.z * 1.4;
 		}
 		float w = 1.0 - smoothstep(0.0, b.z, sd);
-		if (b.w < 1.5) { afw = max(afw, w); }
-		else if (b.w < 2.5) { cw = max(cw, w); }
-		else { pw = max(pw, w); }
+		float kind = floor(b.w + 0.001);
+		if (kind < 1.5) { afw = max(afw, w); }
+		else if (kind < 2.5) { cw = max(cw, w); }
+		else if (kind < 3.5) { pw = max(pw, w); }
+		else if (kind < 4.5) { dmg = max(dmg, w * fract(b.w)); }
+		else if (kind < 5.5) {
+			float lvl = fract(b.w) * 40.0;
+			flood = max(flood, w * (1.0 - smoothstep(lvl - 0.8, lvl + 0.15, h)) * step(0.3, h));
+		}
+		else if (kind < 6.5) { churn = max(churn, w * fract(b.w)); }
 	}
 	if (cw > 0.0) {
 		// Army camp: the field lattice and hedge lines stop; worn pasture churned to mud in patches by tracks
@@ -369,6 +430,49 @@ void fragment() {
 		worn = mix(worn, mud_col * 0.95, churn * 0.65);
 		worn *= 0.94 + 0.12 * t_vnoise2(xz * 0.09 + 3.0);
 		col = mix(col, worn, cw * 0.9);
+	}
+	if (dmg > 0.0) {
+		// Bomb damage: the burnt-out districts of the Blitz and the bombed towns of 1942-45 seen from the air -
+		// grey-brown rubble where blocks were pulled down, black scorch where whole streets burned, and crater
+		// fields (one possible crater per 30 m cell, more of them the heavier the damage) with spoil rims. The
+		// rubble wash follows the built-up area (urban); open ground inside the zone only gets the craters.
+		// Colours are linear (sRGB rubble ~0.42/0.38/0.33, scorch ~0.12).
+		vec3 rubble = vec3(0.150, 0.124, 0.094);
+		vec3 scorch = vec3(0.016, 0.014, 0.012);
+		vec3 g = rubble * (0.80 + 0.35 * t_vnoise2(xz * 0.21 + 2.0));
+		g = mix(g, scorch, smoothstep(0.56, 0.78, t_vnoise2(xz * 0.028 + 11.0)) * 0.7);
+		vec2 ccell = floor(xz / 30.0);
+		vec2 cpos = (ccell + 0.2 + 0.6 * vec2(t_hash12(ccell + 3.7), t_hash12(ccell + 8.1))) * 30.0;
+		float crad = 3.0 + 5.0 * t_hash12(ccell + 1.3);
+		float cd = length(xz - cpos) / crad;
+		float has = step(1.0 - dmg * 0.75, t_hash12(ccell + 9.9));
+		float pit = (1.0 - smoothstep(0.55, 0.95, cd)) * has;
+		float rim = smoothstep(0.85, 1.0, cd) * (1.0 - smoothstep(1.0, 1.4, cd)) * has;
+		float wash = clamp(dmg * 1.1, 0.0, 0.9) * mix(0.15, 1.0, urban);
+		col = mix(col, g, wash);
+		col = mix(col, scorch * 2.0, pit * min(dmg * 1.4, 0.85));
+		col = mix(col, rubble * 1.05, rim * min(dmg * 1.2, 0.6));
+	}
+	float water_k = 0.0;
+	if (flood > 0.0) {
+		// Deliberate inundation: a sheet of grey, sky-lit water over the fields, with the hedge lines and the
+		// field boundaries still showing as darker stripes (the hedges stood up out of the water in the photos).
+		vec3 fwater = vec3(0.075, 0.095, 0.105) * (0.88 + 0.22 * t_vnoise2(xz * 0.012 + 4.0));
+		fwater = mix(fwater, col * 0.45, hedge * 0.6);
+		col = mix(col, fwater, flood * 0.92);
+		water_k = flood * (1.0 - hedge * 0.6);
+	}
+	if (churn > 0.0) {
+		// Beach after the landings: sand torn up by tracks and shells - long darker track bands running up the
+		// beach, wet dark patches, and small shell holes.
+		float trk = smoothstep(0.62, 0.74, t_vnoise2(vec2(xz.x * 0.02, xz.y * 0.4) + 3.0)) + smoothstep(0.62, 0.74, t_vnoise2(vec2(xz.x * 0.4, xz.y * 0.02) + 9.0));
+		vec2 sc = floor(xz / 14.0);
+		vec2 sp = (sc + 0.25 + 0.5 * vec2(t_hash12(sc + 1.0), t_hash12(sc + 6.0))) * 14.0;
+		float sh = (1.0 - smoothstep(0.4, 1.0, length(xz - sp) / (1.5 + 2.0 * t_hash12(sc + 2.0)))) * step(0.55, t_hash12(sc + 4.0));
+		vec3 dark = col * 0.62;
+		col = mix(col, dark, clamp(trk, 0.0, 1.0) * 0.5 * churn);
+		col = mix(col, col * 0.45, sh * churn * 0.8);
+		col = mix(col, col * vec3(0.78, 0.80, 0.82), smoothstep(0.55, 0.8, t_vnoise2(xz * 0.05)) * 0.4 * churn);
 	}
 	if (pw > 0.0) {
 		// POW compound: the ground inside the wire is beaten bare - pale sandy earth with a little grass at the
@@ -471,6 +575,6 @@ void fragment() {
 
 	col = mix(col, col * vec3(0.66, 0.70, 0.72) + vec3(0.0, 0.006, 0.012), wetness * (1.0 - urban * 0.4));
 	ALBEDO = col;
-	ROUGHNESS = ground_roughness;
+	ROUGHNESS = mix(ground_roughness, 0.12, water_k);
 	METALLIC = 0.0;
 }

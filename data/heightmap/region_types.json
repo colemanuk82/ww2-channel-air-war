@@ -1,0 +1,16 @@
+{
+ "lat_min": 48.9,
+ "lat_max": 53.0,
+ "lon_min": -4.6,
+ "lon_max": 9.0,
+ "w": 1024,
+ "h": 512,
+ "hash": "76ea622561bf",
+ "channels": [
+  "bocage",
+  "open",
+  "polder",
+  "weald"
+ ],
+ "source": "data/regions_1940.json"
+}

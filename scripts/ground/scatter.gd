@@ -779,6 +779,12 @@ static func make_town(center: Vector3, size: int, seed_v: int, church: bool = tr
 	var root := Node3D.new()
 	var d: Dictionary = town_layout(center, size, seed_v, church)
 	var lists: Array = d["houses"]
+	var town_ruins: Array = [[], []]
+	var t_areas: Array = WarDamage.areas_near(Vector2(center.x, center.z) - Vector2(3000.0, 3000.0), 6000.0)
+	WarDamage.apply_to_houses(lists, town_ruins, t_areas)
+	for rv in 2:
+		if not (town_ruins[rv] as Array).is_empty():
+			root.add_child(multi(WarDamage.ruin_mesh(rv), town_ruins[rv], 11000.0))
 	var smokes: Array = d["smokes"]
 	if not smokes.is_empty():
 		var cs := ChimneySmokes.new()
@@ -793,7 +799,7 @@ static func make_town(center: Vector3, size: int, seed_v: int, church: bool = tr
 	for c in d["civic"]:
 		_build_civic(root, c as Dictionary)
 	var ch_d: Variant = d["church"]
-	if ch_d != null:
+	if ch_d != null and WarDamage.level_in(t_areas, (ch_d as Dictionary)["pos"].x, (ch_d as Dictionary)["pos"].z) < 0.6:
 		var cd: Dictionary = ch_d
 		var ch: Node3D = Landmarks.church(float(cd["scale"]))
 		ch.position = cd["pos"]
@@ -1195,7 +1201,11 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 	var hedges: Array = []
 	var ricks: Array = []
 	var stooks: Array = []
+	var mon: int = EraClock.month()
+	var harvest_season: bool = mon >= 7 or mon <= 3       # ricks stood from the harvest until threshing in the winter
+	var stook_season: bool = mon == 8 or mon == 9
 	var wrecks: Array = []
+	var obstacles: Array = []
 	var house_yaw: float = rng.randf() * PI
 	var farms_n: int = 0
 	var step: float = 22.0
@@ -1218,10 +1228,11 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 					if trees_c.size() + trees_r.size() < 9000 and rng.randf() < 0.008 and _ok_tree(p, exclude):
 						_add_tree(trees_c, trees_r, p, rng, 0.9, 1.3)
 					# harvest: a group of corn ricks, or rows of stooks drying in the field
-					if ricks.size() < 24 and rng.randf() < 0.0011 and _ok(p, exclude, 1.5):
+					var rick_roll: float = rng.randf()     # drawn every time, so the season never shifts the rest of the tile
+					if ricks.size() < 24 and harvest_season and rick_roll < 0.0011 and _ok(p, exclude, 1.5):
 						var ry: float = rng.randf() * TAU
 						var rdir := Vector2(cos(ry), sin(ry))
-						if rng.randf() < 0.5:
+						if rng.randf() < 0.5 or not stook_season:
 							for k in rng.randi_range(2, 5):
 								var q: Vector2 = p + rdir * (float(k) * 9.0) + Vector2(-rdir.y, rdir.x) * rng.randf_range(-1.5, 1.5)
 								ricks.append(_xf(Vector3(q.x, GroundKit.ground_y(q.x, q.y) - 0.2, q.y), rng.randf() * TAU, Vector3.ONE * rng.randf_range(0.85, 1.1)))
@@ -1231,6 +1242,8 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 								stooks.append(_xf(Vector3(q2.x, GroundKit.ground_y(q2.x, q2.y), q2.y), ry, Vector3.ONE))
 					if wrecks.size() < 1 and rng.randf() < 0.00005 and _ok(p, exclude, 1.5):
 						wrecks.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * TAU, Vector3.ONE))
+					if obstacles.size() < 6 and rng.randf() < 0.004 and RuralProps.wants_obstacles(p) and _ok(p, exclude, 1.5):
+						obstacles.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * PI, Vector3.ONE))
 				30:                                   # grassland
 					_field_edge_props(p, exclude, hedges, trees_c, trees_r, rng, 0.6)
 					if farms_n < 3 and rng.randf() < 0.0004 and _add_farmstead(p, exclude, houses, trees_c, trees_r, rng):
@@ -1239,6 +1252,8 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 						_add_tree(trees_c, trees_r, p, rng, 0.85, 1.25)
 					if wrecks.size() < 1 and rng.randf() < 0.00004 and _ok(p, exclude, 1.5):
 						wrecks.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * TAU, Vector3.ONE))
+					if obstacles.size() < 6 and rng.randf() < 0.003 and RuralProps.wants_obstacles(p) and _ok(p, exclude, 1.5):
+						obstacles.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * PI, Vector3.ONE))
 					if rng.randf() < 0.012 and _ok(p, exclude, 1.5):
 						cows.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * TAU, Vector3.ONE * 1.8))
 				50:                                   # built-up: terraced rows along the local street grid
@@ -1248,6 +1263,10 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 							_add_tree(trees_c, trees_r, p, rng, 1.0, 1.5)
 					elif rng.randf() < 0.88 and _ok(p, exclude, 1.2):
 						_add_terrace(houses, p, rng, house_yaw)
+	# bomb damage on the war date: gutted shells and cleared plots (same transforms, two shared shell meshes)
+	var dmg_areas: Array = WarDamage.areas_near(origin, cell)
+	var ruins: Array = [[], []]
+	WarDamage.apply_to_houses(houses, ruins, dmg_areas)
 	var out: Dictionary = {"multis": [], "church": null}
 	# A church at the heart of each village (a cluster of houses in this tile)
 	var n_houses: int = 0
@@ -1268,7 +1287,9 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 					best_d = d2
 					best_p = (t2 as Transform3D).origin
 		var cp := Vector3(best_p.x + 14.0, GroundKit.ground_y(best_p.x + 14.0, best_p.z), best_p.z)
-		out["church"] = [cp, house_yaw, rng.randf_range(0.9, 1.3)]
+		var ch_scale: float = rng.randf_range(0.9, 1.3)
+		if WarDamage.level_in(dmg_areas, cp.x, cp.z) < 0.6:
+			out["church"] = [cp, house_yaw, ch_scale]
 	# thin white chimney smoke over a handful of the houses (capped per tile: each one is a live emitter)
 	var smokes: Array = []
 	for k in 4:
@@ -1284,6 +1305,9 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 			out["multis"].append(["house%d" % k, multi_data(houses[k]), VIS_HOUSE])
 	if not hedges.is_empty():
 		out["multis"].append(["hedge", multi_data(hedges), VIS_HEDGE])
+	for rv in 2:
+		if not (ruins[rv] as Array).is_empty():
+			out["multis"].append(["ruin%d" % rv, multi_data(ruins[rv]), VIS_HOUSE])
 	if LIVESTOCK and not cows.is_empty():
 		out["multis"].append(["cow", multi_data(cows), VIS_COW])
 	if not ricks.is_empty():
@@ -1292,6 +1316,8 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 		out["multis"].append(["stooks", multi_data(stooks), RuralProps.VIS_RICK * 0.6])
 	if not wrecks.is_empty():
 		out["multis"].append(["field_wreck", multi_data(wrecks), RuralProps.VIS_WRECK])
+	if not obstacles.is_empty():
+		out["multis"].append(["landing_obstacles", multi_data(obstacles), RuralProps.VIS_RICK])
 	var tsp: Array = _split_trees(trees_c, trees_r)
 	for tv3 in tsp.size():
 		if not (tsp[tv3] as Array).is_empty():
@@ -1330,6 +1356,8 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 				mesh = RuralProps.stook_mesh()
 			"field_wreck":
 				mesh = RuralProps.wreck_mesh()
+			"landing_obstacles":
+				mesh = RuralProps.obstacle_mesh()
 			"tree_c":
 				mesh = tree_mesh(false)
 			"tree_r":
@@ -1337,6 +1365,8 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 			_:
 				if kind.begins_with("bk_"):
 					mesh = BeachKit.mesh(kind)
+				elif kind.begins_with("ruin"):
+					mesh = WarDamage.ruin_mesh(int(kind.substr(4)))
 				elif kind.begins_with("tree_v"):
 					mesh = tree_variant(int(kind.substr(6)))
 				else:
@@ -1567,15 +1597,21 @@ static func field_edge(p: Vector2) -> Dictionary:
 	var zn: float = _vn(p.x * 0.0009 + 77.0, p.y * 0.0009 + 77.0)
 	var zscale: float = 0.65 if zn < 0.22 else (1.0 if zn < 0.42 else (1.6 if zn < 0.58 else 1.2))
 	var zjit: float = 0.85 if zn < 0.42 else (0.6 if zn < 0.58 else 0.12)
-	var zrect: float = (1.0 if zn >= 0.58 else 0.0) * (1.0 - strip)
+	var rg: Vector4 = RegionMap.type_weights(p.x, p.y)       # [bocage, open, polder, weald] - as terrain.gdshader
+	strip = maxf(strip * (1.0 - rg.x), rg.z)
+	zscale = lerpf(zscale, 0.48, rg.x)
+	zjit = lerpf(zjit, 0.9, rg.x)
+	zscale = lerpf(zscale, 2.1, rg.y)
+	zscale = lerpf(zscale, zscale * 0.72, rg.w)
+	var zrect: float = (1.0 if zn >= 0.58 else 0.0) * (1.0 - strip) * (1.0 - rg.x)
 	var zrot: float = maxf(strip, 1.0 if zn >= 0.42 else 0.0)
 	var sang: float = _fh(floorf(p.x * 0.00035) + 5.0, floorf(p.y * 0.00035) + 5.0) * 3.14159 * zrot
 	var sdir := Vector2(cos(sang), sin(sang))
 	var perp := Vector2(-sdir.y, sdir.x)
 	var wq := Vector2(p.x + wx * 30.0, p.y + wy * 30.0)
 	var zs: float = lerpf(zscale, 1.0, strip)
-	var cell_x: float = FIELD_CELL * lerpf(1.0, 1.7, strip) * zs
-	var cell_y: float = FIELD_CELL * lerpf(1.0, 0.72, strip) * zs
+	var cell_x: float = FIELD_CELL * lerpf(1.0, 1.7, strip) * zs * lerpf(1.0, 1.6, rg.z)
+	var cell_y: float = FIELD_CELL * lerpf(1.0, 0.72, strip) * zs * lerpf(1.0, 0.62, rg.z)
 	var u := Vector2(wq.dot(sdir) / cell_x, wq.dot(perp) / cell_y)
 	var cid := Vector2(floorf(u.x), floorf(u.y))
 	var gv: Vector2 = u - cid - Vector2(0.5, 0.5)
@@ -1619,7 +1655,7 @@ static func field_edge(p: Vector2) -> Dictionary:
 	var c1: Vector2 = cid + f1.round()
 	var c2: Vector2 = cid + f2.round()
 	var eid: int = hash(Vector4(c1.x + c2.x, c1.y + c2.y, absf(c1.x - c2.x), absf(c1.y - c2.y)))
-	return {"q": qw, "tan": tg.normalized(), "dist": dist_vec.length(), "eid": eid}
+	return {"q": qw, "tan": tg.normalized(), "dist": dist_vec.length(), "eid": eid, "region": rg}
 
 
 ## Hedge segments and the odd tree along the field boundary that passes near sample point p.
@@ -1633,7 +1669,23 @@ static func _field_edge_props(p: Vector2, exclude: Array, hedges: Array, trees_c
 	var e: Dictionary = field_edge(p)
 	if e.is_empty() or float(e["dist"]) > 11.0:
 		return
-	if absi(int(e["eid"])) % 100 < HEDGE_OPEN_PCT:
+	var rgw: Vector4 = e.get("region", Vector4.ZERO)
+	# share of open boundaries by region: bocage almost all hedged, open-field country almost none, polders are
+	# ditches (a line of poplars or willows along some of them), the Weald well hedged
+	var open_pct: int = HEDGE_OPEN_PCT
+	if rgw.x > 0.5:
+		open_pct = 4
+	elif rgw.y > 0.5:
+		open_pct = 93
+	elif rgw.z > 0.5:
+		open_pct = 100
+	elif rgw.w > 0.5:
+		open_pct = 22
+	if absi(int(e["eid"])) % 100 < open_pct:
+		if rgw.z > 0.5 and absi(int(e["eid"])) % 7 == 0 and trees_c.size() + trees_r.size() < 9000:
+			var qq: Vector2 = e["q"]
+			if _ok_tree(qq, exclude):
+				_add_tree(trees_c, trees_r, qq, rng, 0.9, 1.25)     # poplar / willow line along a polder ditch
 		return     # an open boundary (post-and-wire, ditch or grubbed out): no hedge row, no hedgerow trees
 	var q: Vector2 = e["q"]
 	if q.distance_to(p) > 15.0 or not _ok(q, exclude, 1.6) or GroundKit.ground_y(q.x, q.y) > 350.0:
@@ -1655,8 +1707,10 @@ static func _field_edge_props(p: Vector2, exclude: Array, hedges: Array, trees_c
 	if half <= 0.0:
 		return
 	var ang: float = atan2(tg.y, tg.x)
-	hedges.append(_xf(Vector3(q.x, GroundKit.ground_y(q.x, q.y) + 1.15, q.y), -ang, Vector3(half * 2.0 + 1.0, 2.3, 1.9)))
-	if trees_c.size() + trees_r.size() < 9000 and rng.randf() < 0.45:
+	var boc: bool = rgw.x > 0.5
+	# bocage: the hedge stands on a bank, taller and thicker, with more trees in it
+	hedges.append(_xf(Vector3(q.x, GroundKit.ground_y(q.x, q.y) + (1.6 if boc else 1.15), q.y), -ang, Vector3(half * 2.0 + 1.0, 3.2 if boc else 2.3, 2.6 if boc else 1.9)))
+	if trees_c.size() + trees_r.size() < 9000 and rng.randf() < (0.8 if boc else (0.6 if rgw.w > 0.5 else 0.45)):
 		var tp: Vector2 = q + tg * rng.randf_range(-half, half) + Vector2(-tg.y, tg.x) * rng.randf_range(-2.5, 2.5)
 		if _ok_tree(tp, exclude):
 			_add_tree(trees_c, trees_r, tp, rng, 0.9, 1.3)

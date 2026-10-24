@@ -21,6 +21,7 @@ var cockpit_cam: Camera3D
 var is_cockpit: bool = false
 var overhead: bool = false
 var overhead_alt: float = 2000.0
+var overhead_anchor: Vector3 = Vector3.INF
 
 var _fwd: Vector3 = Vector3.FORWARD
 var _up: Vector3 = Vector3.UP
@@ -306,10 +307,11 @@ func _process(delta: float) -> void:
 			return
 	var p: Vector3 = target.global_position
 	if overhead:
-		var up_dir: Vector3 = tf
-		if up_dir.length() < 0.001:
-			up_dir = Vector3.FORWARD
-		chase_cam.global_transform = Transform3D(Basis.looking_at(Vector3.DOWN, up_dir), p + Vector3.UP * overhead_alt)
+		# debug overhead view: north up, centred on where the view was first taken (the aircraft keeps flying, so
+		# following it put the subject at the bottom of the frame)
+		if overhead_anchor == Vector3.INF:
+			overhead_anchor = p
+		chase_cam.global_transform = Transform3D(Basis.looking_at(Vector3.DOWN, Vector3.FORWARD), overhead_anchor + Vector3.UP * overhead_alt)
 		chase_cam.fov = _fov
 		return
 	if not is_cockpit:

@@ -73,13 +73,24 @@ static func _cathedral(root: Node3D, nave_len: float, nave_w: float, tower_h: fl
 
 
 ## Arch bridge (steel / stone): deck, a row of arch members with hangers and optional end towers.
-static func _arch_bridge(root: Node3D, span: float, rise: float, col: Color, towers: bool) -> void:
-	_b(root, Vector3(span, 2.0, 9.0), Vector3(0, 8.0, 0), Color(0.28, 0.28, 0.3))
+## broken: the centre of the span has fallen (Ludendorff Bridge from 17 Mar 1945, Arnhem road bridge from 7 Oct
+## 1944): the deck and arch stop short each side and the fallen girders lie in the river.
+static func _arch_bridge(root: Node3D, span: float, rise: float, col: Color, towers: bool, broken: bool = false) -> void:
+	var gap: float = span * 0.36 if broken else 0.0
+	if broken:
+		for sx in [-1.0, 1.0]:
+			_b(root, Vector3((span - gap) * 0.5, 2.0, 9.0), Vector3(sx * (gap * 0.5 + (span - gap) * 0.25), 8.0, 0), Color(0.28, 0.28, 0.3))
+		_b(root, Vector3(gap * 0.55, 2.0, 9.0), Vector3(-gap * 0.12, 1.2, 1.5), Color(0.26, 0.24, 0.24), Vector3(0, 6, -14))
+		_b(root, Vector3(gap * 0.45, 1.6, 8.0), Vector3(gap * 0.2, 0.6, -2.0), col.darkened(0.2), Vector3(0, -9, 11))
+	else:
+		_b(root, Vector3(span, 2.0, 9.0), Vector3(0, 8.0, 0), Color(0.28, 0.28, 0.3))
 	var n: int = 9
 	for sz in [-1.0, 1.0]:
 		for i in n:
 			var t: float = float(i) / float(n - 1)
 			var x: float = lerpf(-span * 0.5, span * 0.5, t)
+			if broken and absf(x) < gap * 0.5:
+				continue
 			var y: float = 8.0 + rise * sin(PI * t)
 			_b(root, Vector3(span / float(n - 1) * 1.15, 1.6, 1.6), Vector3(x, y, sz * 4.4), col, Vector3(0, 0, rad_to_deg(atan2(PI * rise * cos(PI * t) / span, 1.0))))
 			if i % 2 == 0 and y > 10.0:
@@ -356,11 +367,11 @@ static func build(id: String) -> Node3D:
 					var b: float = a + TAU / 28.0
 					_b(root, Vector3(9.0, 1.2, 1.6), Vector3(cos(b) * 17.0, 7.3, sin(b) * 17.0), Color(0.58, 0.56, 0.52), Vector3(0, -rad_to_deg(b) + 90.0, 0))
 		"ludendorff_bridge":
-			_arch_bridge(root, 240.0, 24.0, Color(0.34, 0.36, 0.4), true)
+			_arch_bridge(root, 240.0, 24.0, Color(0.34, 0.36, 0.4), true, EraClock.current() >= "1945-03-17")   # collapsed 17 Mar 1945
 		"nijmegen_bridge":
 			_arch_bridge(root, 300.0, 40.0, Color(0.32, 0.34, 0.38), false)
 		"arnhem_bridge":
-			_arch_bridge(root, 200.0, 22.0, Color(0.38, 0.4, 0.42), false)
+			_arch_bridge(root, 200.0, 22.0, Color(0.38, 0.4, 0.42), false, EraClock.current() >= "1944-10-07")   # bombed down 7 Oct 1944
 		"battersea_power_station":
 			_b(root, Vector3(120, 34, 70), Vector3(0, 17, 0), Color(0.55, 0.33, 0.26))
 			_b(root, Vector3(90, 30, 60), Vector3(105, 15, 0), Color(0.48, 0.3, 0.24))

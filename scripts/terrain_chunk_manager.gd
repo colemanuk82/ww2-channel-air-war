@@ -83,6 +83,47 @@ func add_ground_zones(zones: Array) -> void:
 	_upload_zones(true)
 
 
+## Replace one named group of zones (e.g. "damage": WarDamage.zones(), rebuilt when the war date changes).
+func set_zone_group(group: String, zones: Array) -> void:
+	_zones_all = _zones_all.filter(func(z): return str(z.get("group", "")) != group)
+	for z in zones:
+		var zz: Dictionary = (z as Dictionary).duplicate()
+		zz["group"] = group
+		_zones_all.append(zz)
+	_upload_zones(true)
+
+
+const SLOTS := 32     # terrain.gdshader af_a / af_b array size
+
+
+static func _zone_edge_dist(z: Dictionary, fp: Vector3) -> float:
+	var half: Vector2 = z.get("half", Vector2(650.0, 700.0))
+	return (z["pos"] as Vector3).distance_to(fp) - maxf(half.x, half.y)
+
+
+## Re-pick the uploaded zones now (the war date changed: dated zones come and go).
+func refresh_zones() -> void:
+	_upload_zones(true)
+	apply_season()
+
+
+## Crop-cycle centre and farmland tint for the EraClock month (B6 seasons): ploughed in October, sown and green
+## through the winter and spring, ripening in June-July, harvest and stubble in August-September.
+const SEASON_CENTER := [0.30, 0.33, 0.38, 0.45, 0.55, 0.66, 0.78, 0.88, 0.96, 0.08, 0.18, 0.26]
+const SEASON_TINT := [Vector3(0.84, 0.83, 0.80), Vector3(0.85, 0.84, 0.81), Vector3(0.89, 0.91, 0.85), Vector3(0.96, 1.03, 0.93),
+	Vector3(0.97, 1.07, 0.94), Vector3(1.0, 1.05, 0.93), Vector3(1.05, 1.02, 0.89), Vector3(1.09, 1.02, 0.85), Vector3(1.06, 0.99, 0.87),
+	Vector3(1.01, 0.94, 0.85), Vector3(0.93, 0.89, 0.83), Vector3(0.86, 0.85, 0.81)]
+
+
+func apply_season() -> void:
+	if material == null:
+		return
+	var m: int = clampi(EraClock.month(), 1, 12) - 1
+	material.set_shader_parameter("season_center", float(SEASON_CENTER[m]))
+	var t: Vector3 = SEASON_TINT[m]
+	material.set_shader_parameter("season_tint", Vector3(t.x, t.y, t.z))
+
+
 func _upload_zones(force: bool = false) -> void:
 	if material == null:
 		return
@@ -91,12 +132,13 @@ func _upload_zones(force: bool = false) -> void:
 	if not force and fp.distance_to(_zone_at) < 3000.0:
 		return
 	_zone_at = fp
-	var order: Array = _zones_all.duplicate()
-	if order.size() > 24:
-		order.sort_custom(func(p, q): return (p["pos"] as Vector3).distance_squared_to(fp) < (q["pos"] as Vector3).distance_squared_to(fp))
+	var order: Array = _zones_all.filter(func(z): return EraClock.is_between(str(z.get("from", "")), str(z.get("to", ""))))
+	if order.size() > SLOTS:
+		# nearest by their edge, not their centre: a big flood or battlefield matters before a small camp beyond it
+		order.sort_custom(func(p, q): return _zone_edge_dist(p, fp) < _zone_edge_dist(q, fp))
 	var a := PackedVector4Array()
 	var b := PackedVector4Array()
-	for i in 24:
+	for i in SLOTS:
 		if i < order.size():
 			var z: Dictionary = order[i]
 			var p: Vector3 = z["pos"]
@@ -111,6 +153,47 @@ func _upload_zones(force: bool = false) -> void:
 			b.append(Vector4(0, 0, 1, 0))
 	material.set_shader_parameter("af_a", a)
 	material.set_shader_parameter("af_b", b)
+	_build_zone_mask(order, fp)
+
+
+## Zone-slot mask texture: ZCELLS x ZCELLS cells of ZCELL metres centred on the player; each texel holds the bits of
+## the slots whose reach (as the shader's own early-out measures it) touches that cell.
+const ZCELL := 1000.0
+const ZCELLS := 256
+var _zone_img: Image
+var _zone_tex: ImageTexture
+func _build_zone_mask(order: Array, fp: Vector3) -> void:
+	var ox: float = floorf(fp.x / ZCELL) * ZCELL - ZCELL * ZCELLS * 0.5
+	var oz: float = floorf(fp.z / ZCELL) * ZCELL - ZCELL * ZCELLS * 0.5
+	var bits := PackedInt32Array()
+	bits.resize(ZCELLS * ZCELLS)
+	for i in mini(order.size(), SLOTS):
+		var z2: Dictionary = order[i]
+		var p2: Vector3 = z2["pos"]
+		var half2: Vector2 = z2.get("half", Vector2(650.0, 700.0))
+		var r: float = maxf(half2.x, half2.y) * 1.415 + float(z2.get("feather", 330.0)) * 1.8 + 20.0
+		var x0: int = clampi(floori((p2.x - r - ox) / ZCELL), 0, ZCELLS - 1)
+		var x1: int = clampi(floori((p2.x + r - ox) / ZCELL), 0, ZCELLS - 1)
+		var y0: int = clampi(floori((p2.z - r - oz) / ZCELL), 0, ZCELLS - 1)
+		var y1: int = clampi(floori((p2.z + r - oz) / ZCELL), 0, ZCELLS - 1)
+		if p2.x + r < ox or p2.z + r < oz or p2.x - r > ox + ZCELL * ZCELLS or p2.z - r > oz + ZCELL * ZCELLS:
+			continue
+		var bit: int = 1 << i
+		for y in range(y0, y1 + 1):
+			var cz0: float = oz + float(y) * ZCELL
+			var dz: float = maxf(maxf(cz0 - p2.z, 0.0), p2.z - (cz0 + ZCELL))
+			for x in range(x0, x1 + 1):
+				var cx0: float = ox + float(x) * ZCELL
+				var dx: float = maxf(maxf(cx0 - p2.x, 0.0), p2.x - (cx0 + ZCELL))
+				if dx * dx + dz * dz <= r * r:
+					bits[y * ZCELLS + x] |= bit
+	var img: Image = Image.create_from_data(ZCELLS, ZCELLS, false, Image.FORMAT_RGBA8, bits.to_byte_array())
+	if _zone_tex == null:
+		_zone_tex = ImageTexture.create_from_image(img)
+		material.set_shader_parameter("zone_tex", _zone_tex)
+	else:
+		_zone_tex.update(img)
+	material.set_shader_parameter("zone_rect", Vector4(ox, oz, 1.0 / ZCELL, float(ZCELLS)))
 
 
 ## Drape the real imagery mosaic (data/heightmap/region_color.png) if it has been generated.
@@ -139,6 +222,11 @@ func _apply_imagery() -> void:
 	if _urban_tex != null:
 		material.set_shader_parameter("urban_tex", _urban_tex)
 		material.set_shader_parameter("use_urban", true)
+	var rimg: Image = RegionMap.image()
+	if rimg != null:
+		material.set_shader_parameter("region_tex", ImageTexture.create_from_image(rimg))
+		material.set_shader_parameter("use_regions", true)
+	apply_season()
 
 
 ## Sea-distance texture over the imagery rect, so the sand strip can be kept to the coast (see terrain.gdshader).
@@ -257,8 +345,7 @@ func _process(delta: float) -> void:
 	if _timer <= 0.0:
 		_timer = 0.1
 		_update_streaming()
-		if _zones_all.size() > 24:
-			_upload_zones()
+		_upload_zones()      # returns at once unless the focus moved 3 km; the zone-mask window follows the player
 
 
 ## True once every chunk wanted around the focus has been built (used by the load screen).

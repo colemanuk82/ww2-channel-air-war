@@ -1542,6 +1542,13 @@ func start_game(cfg: Dictionary) -> void:
 	var side: String = String(config.get("side", "Allies"))
 	GameState.player_side = side
 	GameState.era_date = String(config.get("era_date", ""))
+	for a in _args:
+		if a.begins_with("--date="):   # debug: force the war date (YYYY-MM-DD) for screenshots / perf runs
+			GameState.era_date = a.substr(7)
+	if WorldPopulator.instance != null and is_instance_valid(WorldPopulator.instance):
+		WorldPopulator.instance.on_era_date(GameState.era_date)
+	else:
+		EraClock.set_date(GameState.era_date)
 	# Quick missions start from a random friendly airfield each sortie (historical / training missions pick
 	# their own field, and the planner overrides this later). Previously it was always the first one (Manston).
 	var side_fields: Array = SIDE_AIRFIELDS.get(side, [])
@@ -2183,6 +2190,23 @@ var _perf_dt: PackedFloat32Array = []
 var _perf_acc: Dictionary = {}
 
 
+var _rail_speed: float = 0.0
+var _rail_t: float = 0.0
+var _rail_from: Vector3 = Vector3.ZERO
+var _rail_dir: Vector3 = Vector3.FORWARD
+var _rail_basis: Basis = Basis.IDENTITY
+
+
+## Debug (--rail=SPEED): pin the player to a straight level line so every perf run sees the same frames.
+func _rail_step(delta: float) -> void:
+	if player == null or not is_instance_valid(player):
+		return
+	_rail_t += delta
+	player.global_transform = Transform3D(_rail_basis, _rail_from + _rail_dir * _rail_speed * _rail_t)
+	player.velocity = _rail_dir * _rail_speed
+	player.speed = _rail_speed
+
+
 ## Debug profiler (--perf=SECS[:SETTLE]): after SETTLE s in game, records every frame for SECS s and
 ## prints average / 1%-low FPS, CPU and GPU frame time, draw calls and object counts.
 func _perf_step(delta: float) -> void:
@@ -2228,12 +2252,16 @@ func _perf_step(delta: float) -> void:
 
 
 ## Debug: triangles (x instances) of visible geometry within 6 km of the camera, grouped by owner script / node name.
+var _dump_r: float = 60000.0
 func _perf_dump() -> void:
 	var cam: Camera3D = get_viewport().get_camera_3d()
 	var cp: Vector3 = cam.global_position
 	var tally: Dictionary = {}
 	var cnt: Dictionary = {}
 	var shadow: Dictionary = {}
+	var rev: Dictionary = {}
+	for mk in Scatter._meshes:
+		rev[Scatter._meshes[mk]] = str(mk)
 	for n in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
 		var g: GeometryInstance3D = n
 		if not g.is_visible_in_tree():
@@ -2251,7 +2279,7 @@ func _perf_dump() -> void:
 			continue
 		var ab: AABB = g.global_transform * g.get_aabb()
 		var d: float = ab.get_center().distance_to(cp) - ab.size.length() * 0.5
-		if d > 6000.0:
+		if d > _dump_r:
 			continue
 		if g.visibility_range_end > 0.0 and d > g.visibility_range_end:
 			continue
@@ -2272,15 +2300,32 @@ func _perf_dump() -> void:
 				key = sc.resource_path.get_file()
 			owner_n = owner_n.get_parent()
 		key += "/" + String(g.name).rstrip("0123456789@")
+		var up: Node = g
+		while up != null and up.get_parent() != null and not (up.get_parent().get_script() != null and up.get_parent().get_script().resource_path.ends_with("world_populator.gd")):
+			up = up.get_parent()
+		if up != null and up.get_parent() != null and up != g:
+			key += " <" + String(up.name).rstrip("0123456789_-@").left(22) + ">"
+			if String(up.name).begins_with("tile"):
+				var par: Node = g.get_parent()
+				key += " " + String(par.get_parent().name).rstrip("0123456789_-@").left(12) + ">" + String(par.name).rstrip("0123456789_-@").left(16) + "/" + str(mesh.resource_name if mesh.resource_name != "" else str(rev.get(mesh, "?"))).left(16) + " t=%d" % int(tris)
 		if g is MultiMeshInstance3D:
-			key = "mm %s tri/inst=%d vis=%.0f" % [String(g.get_parent().name).left(18), int(tris), g.visibility_range_end]
+			key = "mm %s/%s tri/inst=%d vis=%.0f" % [String(g.get_parent().name).rstrip("0123456789_-").left(18), String(rev.get(mesh, "?")).left(16), int(tris), g.visibility_range_end]
 		tally[key] = float(tally.get(key, 0.0)) + tris * inst
 		cnt[key] = int(cnt.get(key, 0)) + 1
 		if g.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
 			shadow[key] = true
 	var keys: Array = tally.keys()
 	keys.sort_custom(func(a, b) -> bool: return tally[a] > tally[b])
-	for i in mini(30, keys.size()):
+	var tot: float = 0.0
+	var totn: int = 0
+	for k in keys:
+		tot += float(tally[k])
+		totn += int(cnt[k])
+	print("DUMP TOTAL tris=%.0fk nodes=%d" % [tot / 1000.0, totn])
+	for k2 in keys:
+		if "barge" in str(k2) or "kammhuber" in str(k2):
+			print("DUMPX %s tris=%.1fk nodes=%d" % [k2, float(tally[k2]) / 1000.0, cnt[k2]])
+	for i in mini(60, keys.size()):
 		var k: String = keys[i]
 		print("DUMP %-60s tris=%8.0fk nodes=%5d shadow=%s" % [k, float(tally[k]) / 1000.0, cnt[k], shadow.has(k)])
 
@@ -2559,6 +2604,13 @@ func _parse_debug_args() -> void:
 			_warp_forced = true
 			_set_sim_warp(int(a.substr(7)))
 			print("[warp] forced %s for this run (contact cancel disabled)" % GameState.SIM_WARP_NAMES[GameState.sim_warp_index()])
+		elif a.begins_with("--rail="):   # debug: fly a fixed straight, level line at SPEED m/s (repeatable perf runs)
+			_rail_speed = float(a.substr(7))
+			_rail_from = player.global_position
+			_rail_dir = -player.global_transform.basis.z
+			_rail_dir.y = 0.0
+			_rail_dir = _rail_dir.normalized()
+			_rail_basis = player.global_transform.basis
 		elif a.begins_with("--perf="):   # debug: --perf=SECS[:SETTLE] frame-time profile, then quit
 			var pp: PackedStringArray = a.substr(7).split(":")
 			_perf_secs = float(pp[0])
@@ -2767,6 +2819,8 @@ func _physics_process(delta: float) -> void:
 		_stall_test_step(delta)
 	if _lift_test:
 		_lift_test_step(delta)
+	if _rail_speed > 0.0:
+		_rail_step(delta)
 	if _auto_takeoff:
 		Input.action_press("throttle_up")
 		if player.speed > 46.0:
