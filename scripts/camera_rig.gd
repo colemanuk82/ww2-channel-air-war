@@ -359,13 +359,24 @@ func _process(delta: float) -> void:
 			fwd_h = fwd_h.normalized()
 			var el: float = clampf(atan2(height, distance) + _look_pitch, ORBIT_MIN_EL, ORBIT_MAX_EL)
 			var dir_h: Vector3 = (-fwd_h).rotated(Vector3.UP, _look_yaw)
-			pos = p + dir_h * (cam_dist * cos(el)) + Vector3.UP * (cam_dist * sin(el))
-			pos.y = maxf(pos.y, _ground(pos) + 3.0)
-			cam_basis = Basis.looking_at((p - pos).normalized(), up_v)
+			var off: Vector3 = dir_h * (cam_dist * cos(el)) + Vector3.UP * (cam_dist * sin(el))
+			pos = p + off
+			var gmin: float = _ground(pos) + 3.0
+			if pos.y < gmin:
+				pos.y = gmin
+				off = pos - p
+			# Aim along the exact offset, not (p - pos): far from the map origin both positions are rounded to
+			# ~1 cm (single precision), and the difference of two rounded values swings the aim a few hundredths
+			# of a degree from frame to frame - which shows as the aircraft shaking in the close views.
+			cam_basis = Basis.looking_at((-off).normalized(), up_v)
 		chase_cam.global_transform = Transform3D(cam_basis, pos)
 		chase_cam.fov = _fov
-		chase_cam.h_offset = sin(_t * 47.0) * clampf(_shake, 0.0, 1.5) * 0.25 * (0.25 if GameState.reduce_shake else 1.0)
-		chase_cam.v_offset = cos(_t * 39.0) * clampf(_shake, 0.0, 1.5) * 0.25 * (0.25 if GameState.reduce_shake else 1.0)
+		# Slight airframe buffet: a slow, smooth sway (a few cm, a few Hz) that grows with speed, rough air, a
+		# stall or boost - plus the sharp hit shake from impacts.
+		var rs: float = 0.25 if GameState.reduce_shake else 1.0
+		var buf: float = (0.006 + 0.012 * clampf(speed_ratio, 0.0, 1.0) + 0.05 * clampf(sh, 0.0, 1.0)) * rs
+		chase_cam.h_offset = (sin(_t * 2.3) * 0.5 + sin(_t * 3.7 + 1.1) * 0.3 + sin(_t * 6.1 + 2.0) * 0.2) * buf + sin(_t * 47.0) * clampf(_shake, 0.0, 1.5) * 0.25 * rs
+		chase_cam.v_offset = (sin(_t * 1.9 + 0.7) * 0.5 + sin(_t * 4.3 + 0.3) * 0.3 + sin(_t * 5.3 + 1.4) * 0.2) * buf * 1.4 + cos(_t * 39.0) * clampf(_shake, 0.0, 1.5) * 0.25 * rs
 	elif cockpit_cam:
 		cockpit_cam.fov = clampf(_cockpit_fov + speed_ratio * 6.0, COCKPIT_FOV_MIN, COCKPIT_FOV_MAX)
 		var look: Vector3 = Vector3(_look_pitch, _look_yaw, 0.0)
