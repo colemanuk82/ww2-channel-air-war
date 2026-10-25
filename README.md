@@ -114,14 +114,8 @@ Pick a date for your sortie and the map shows that day of the war. Nothing is a 
 
     ww2-channel-air-war
 
-Repository navigation
 
-    Code
-    Issues
-
-    ww2-channel-air-war
-
-Attribution
+<Atribution>
 
 All Stage 1 art (aircraft, terrain, sea, sky, clouds, HUD) is generated procedurally in code. No imported assets.
 
