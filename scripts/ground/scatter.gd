@@ -271,6 +271,15 @@ static func _split_trees(cones: Array, rounds: Array) -> Array:
 ## Tree species meshes: 0 spruce, 1 oak, 2 poplar, 3 birch, 4 broad oak, 5 beech, 6 scots pine, 7 lime / willow.
 ## Every crown stays a shade of green / olive: no copper-red species, so no tree ever reads as a red blob
 ## against the fields from the air. Birch and lime / willow (which turn early) carry only a faint autumn khaki.
+## Tree crowns keep close to one green whatever the species (birch yellows and poplar limes pulled most of the way in),
+## so woods and tree lines read as one consistent colour, near and far.
+const TREE_GREEN: Color = Color(0.19, 0.31, 0.15)
+
+
+static func _calm(c: Color) -> Color:
+	return c.lerp(TREE_GREEN, 0.65)
+
+
 static func tree_variant(v: int) -> ArrayMesh:
 	var key: String = "tree_v%d" % v
 	if _meshes.has(key):
@@ -372,7 +381,7 @@ static func tree_variant(v: int) -> ArrayMesh:
 	trk.rings = 1
 	parts.append([trk, Transform3D(Basis.IDENTITY, Vector3(0, trunk_h * 0.5, 0)), GroundKit.mat(trunk_col, false)])
 	for c in crown:
-		parts.append([c[0], Transform3D(Basis.IDENTITY, c[1]), _dmat(c[2], 3, 0.1)])
+		parts.append([c[0], Transform3D(Basis.IDENTITY, c[1]), _dmat(_calm(c[2]), 3, 0.1)])
 	# ragged bushy silhouette: a ring of small leafy lobes round the main crown mass
 	if not crown.is_empty():
 		var main_mesh: Mesh = crown[0][0]
@@ -382,7 +391,7 @@ static func tree_variant(v: int) -> ArrayMesh:
 			rad = (main_mesh as SphereMesh).radius
 		elif main_mesh is CylinderMesh:
 			rad = (main_mesh as CylinderMesh).bottom_radius * 0.8
-		_bushy(parts, ctr, rad, 5, crown[0][2], 31 + v)
+		_bushy(parts, ctr, rad, 5, _calm(crown[0][2]), 31 + v)
 	var m: ArrayMesh = _merge(parts)
 	_meshes[key] = m
 	return m
@@ -1195,6 +1204,11 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 	var cows: Array = []
 	var trees_c: Array = []
 	var trees_r: Array = []
+	# forest INTERIOR (not near the wood's margin): individual trees only close up, with whole-wood clump blobs
+	# standing in at range; the margin keeps the full trees (and their long-range low-poly crowns)
+	var wtrees_c: Array = []
+	var wtrees_r: Array = []
+	var blobs: Array = [[], []]
 	var hedges: Array = []
 	var ricks: Array = []
 	var stooks: Array = []
@@ -1213,7 +1227,14 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 			var cls: int = LandCover.class_at(p.x, p.y)
 			match cls:
 				10:                                   # tree cover
-					if trees_c.size() + trees_r.size() < 6000 and rng.randf() < 0.52 and _ok_tree(p, exclude):
+					if _wood_interior(p):
+						if i % 3 == 0 and j % 3 == 0 and _ok_tree(p, exclude):
+							var br: float = rng.randf_range(34.0, 52.0)
+							(blobs[rng.randi() % 2] as Array).append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y) - 1.0, p.y), rng.randf() * TAU,
+								Vector3(br, rng.randf_range(15.0, 21.0), br * rng.randf_range(0.85, 1.1))))
+						if wtrees_c.size() + wtrees_r.size() < 6000 and rng.randf() < 0.52 and _ok_tree(p, exclude):
+							_add_tree(wtrees_c, wtrees_r, p, rng, 1.25, 1.8)
+					elif trees_c.size() + trees_r.size() < 6000 and rng.randf() < 0.52 and _ok_tree(p, exclude):
 						_add_tree(trees_c, trees_r, p, rng, 1.25, 1.8)     # fewer, bigger trees: the same canopy
 				20:                                   # shrub
 					if trees_c.size() + trees_r.size() < 6000 and rng.randf() < 0.2 and _ok_tree(p, exclude):
@@ -1291,9 +1312,9 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 	var smokes: Array = []
 	for k in 4:
 		for t3 in (houses[k] as Array):
-			if smokes.size() >= 6:
+			if smokes.size() >= 2:
 				break
-			if rng.randf() < 0.06:
+			if rng.randf() < 0.015:          # only the odd house has a fire lit
 				var tb: Transform3D = t3
 				smokes.append(tb.origin + Vector3(tb.basis.x.normalized().x * 2.0, tb.basis.get_scale().y * 0.5 + 1.2, tb.basis.x.normalized().z * 2.0))
 	out["smokes"] = smokes
@@ -1319,6 +1340,13 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 	for tv3 in tsp.size():
 		if not (tsp[tv3] as Array).is_empty():
 			out["multis"].append(["tree_v%d" % tv3, multi_data(tsp[tv3]), VIS_TREE])
+	var wsp: Array = _split_trees(wtrees_c, wtrees_r)
+	for wv in wsp.size():
+		if not (wsp[wv] as Array).is_empty():
+			out["multis"].append(["wtree_v%d" % wv, multi_data(wsp[wv]), WOOD_TREE_VIS])
+	for bv in 2:
+		if not (blobs[bv] as Array).is_empty():
+			out["multis"].append(["wblob%d" % bv, multi_data(blobs[bv]), VIS_TREE])
 	for bm in BeachKit.tile_multis(origin, cell, seed_v, exclude):
 		out["multis"].append(bm)
 	return out
@@ -1366,10 +1394,21 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 					mesh = WarDamage.ruin_mesh(int(kind.substr(4)))
 				elif kind.begins_with("tree_v"):
 					mesh = tree_variant(int(kind.substr(6)))
+				elif kind.begins_with("wtree_v"):
+					mesh = tree_variant(int(kind.substr(7)))
+				elif kind.begins_with("wblob"):
+					mesh = wood_blob_mesh(int(kind.substr(5)))
 				else:
 					mesh = house_mesh(int(kind.substr(5)))
 		if kind.begins_with("tree_v") or kind == "hedge":
 			_add_lod_pair(root, mesh, far_mesh(kind), m[1], float(m[2]), TREE_NEAR if kind != "hedge" else HEDGE_NEAR)
+		elif kind.begins_with("wtree_v"):
+			_add_lod_pair(root, mesh, far_mesh("tree_v" + kind.substr(7)), m[1], float(m[2]), WOOD_TREE_NEAR)
+		elif kind.begins_with("wblob"):
+			var bi: MultiMeshInstance3D = multi_from_data(mesh, m[1], float(m[2]))
+			bi.visibility_range_begin = WOOD_BLOB_BEGIN * vis_scale
+			bi.visibility_range_begin_margin = 250.0
+			root.add_child(bi)
 		else:
 			root.add_child(multi_from_data(mesh, m[1], float(m[2])))
 	return root
@@ -1393,6 +1432,44 @@ static func _add_lod_pair(root: Node, near_mesh: Mesh, far: Mesh, d: Dictionary,
 
 
 const TREE_NEAR: float = 2200.0
+const WOOD_TREE_NEAR: float = 700.0      # forest interior: full trees only this close ...
+const WOOD_TREE_VIS: float = 2400.0      # ... low-poly crowns out to here, then the clump blobs take over
+const WOOD_BLOB_BEGIN: float = 1900.0    # blobs fade in from here (overlapping the crowns) to the far limit
+const WOOD_EDGE_PROBE: float = 110.0     # a wood sample within this of non-wood land counts as the margin
+
+
+## True when p is well inside woodland: all four probes WOOD_EDGE_PROBE m away are tree cover too.
+static func _wood_interior(p: Vector2) -> bool:
+	return LandCover.class_at(p.x + WOOD_EDGE_PROBE, p.y) == 10 and LandCover.class_at(p.x - WOOD_EDGE_PROBE, p.y) == 10 \
+		and LandCover.class_at(p.x, p.y + WOOD_EDGE_PROBE) == 10 and LandCover.class_at(p.x, p.y - WOOD_EDGE_PROBE) == 10
+
+
+## A clump of canopy for far-off forest: a few overlapping squashed domes in one cheap surface (unit size: the
+## instance scale sets radius and height). Variant 0 is darker conifer, 1 mixed woodland.
+static func wood_blob_mesh(variant: int) -> ArrayMesh:
+	var key: String = "wood_blob_%d" % variant
+	if _meshes.has(key):
+		return _meshes[key]
+	var base: Color = TREE_GREEN * (0.93 if variant == 0 else 1.06)
+	var lumps: Array = [
+		[Vector3(0.0, 0.5, 0.0), 0.72, 1.0, 1.00],
+		[Vector3(0.55, 0.36, 0.15), 0.5, 0.8, 1.12],
+		[Vector3(-0.5, 0.34, -0.3), 0.5, 0.75, 0.92],
+		[Vector3(0.1, 0.3, -0.65), 0.45, 0.7, 1.06],
+		[Vector3(-0.25, 0.32, 0.6), 0.42, 0.66, 0.96],
+	]
+	var parts: Array = []
+	for l in lumps:
+		var sm := SphereMesh.new()
+		sm.radius = float(l[1])
+		sm.height = float(l[2])
+		sm.radial_segments = 7
+		sm.rings = 3
+		var c: Color = Color(base.r * float(l[3]), base.g * float(l[3]), base.b * float(l[3]))
+		parts.append([sm, Transform3D(Basis.IDENTITY, l[0]), _dmat(c, 3, 0.1, false)])
+	var m: ArrayMesh = _merge(parts)
+	_meshes[key] = m
+	return m
 const HEDGE_NEAR: float = 1500.0
 # far crowns per species: [cone?, centre, radius, height, colour] (radius a little wider: the near model's bushy lobes)
 const TREE_FAR: Array = [
@@ -1436,7 +1513,7 @@ static func far_mesh(kind: String) -> ArrayMesh:
 			sm.radial_segments = 6
 			sm.rings = 3
 			shape = sm
-		parts.append([shape, Transform3D(Basis.IDENTITY, spec[1]), _dmat(spec[4], 3, 0.1, false)])
+		parts.append([shape, Transform3D(Basis.IDENTITY, spec[1]), _dmat(_calm(spec[4]), 3, 0.1, false)])
 	var m: ArrayMesh = _merge(parts)
 	_meshes[key] = m
 	return m
@@ -1922,8 +1999,10 @@ static func make_beach_defences(center: Vector3, radius: float, count: int, seed
 		root.add_child(multi(box_unit(Color(0.7, 0.12, 0.1), false), mines, 2500.0))
 	var nr: int = 0
 	for rp in ruin_pts:
-		if nr >= 3 or GroundKit.raw_y((rp as Vector3).x, (rp as Vector3).z) < 2.0:
+		if nr >= 2 or GroundKit.raw_y((rp as Vector3).x, (rp as Vector3).z) < 2.0:
 			continue
+		if WarDamage.level_at((rp as Vector3).x, (rp as Vector3).z) < 0.3:
+			continue          # burning ruins only where the war date shows a recent raid
 		var ru: BurningRuin = BurningRuin.create(int(absf((rp as Vector3).x * 7.0 + (rp as Vector3).z)), rng.randf_range(0.9, 1.4))
 		ru.position = Vector3((rp as Vector3).x, GroundKit.ground_y((rp as Vector3).x, (rp as Vector3).z), (rp as Vector3).z)
 		root.add_child(ru)

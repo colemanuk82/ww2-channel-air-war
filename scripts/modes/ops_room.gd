@@ -210,7 +210,44 @@ func _ammo_check() -> void:
 
 
 ## Where the compass / minimap waypoint points (FreeFlightMode.nav_point forwards here).
+## Taskings against moving enemy air and sea targets are given as a general area, not an exact fix: the
+## minimap shows a search circle (offset from the real position) and only shows enemy aircraft and ships
+## once they are within FOG_SEE_RANGE of the player.
+const FOG_KINDS := ["intercept", "cover", "sweep", "eboats", "shipping"]
+const FOG_SEE_RANGE := 2000.0      # metres: enemy contacts appear on the minimap only inside this
+const FOG_AREA := 3000.0           # metres: radius of the search circle
+
+
+func _fog_on() -> bool:
+	if active.is_empty() or str(active.get("kind", "")) not in FOG_KINDS:
+		return false
+	return str(active.get("stage", "")) not in ["rv", "home"]
+
+
+## HUD: how close (world units) an enemy aircraft or ship must be to show on the minimap; 0 = no limit.
+func minimap_fog_range() -> float:
+	return FOG_SEE_RANGE / WorldCoords.HORIZ_COMPRESSION if _fog_on() else 0.0
+
+
+## HUD: radius (world units) of the search circle drawn instead of an exact objective; 0 = exact.
+func minimap_fog_area() -> float:
+	return FOG_AREA / WorldCoords.HORIZ_COMPRESSION if _fog_on() else 0.0
+
+
+func _fogged(p: Variant) -> Variant:
+	if p == null or not _fog_on():
+		return p
+	if not active.has("fuzz"):
+		var a: float = _rng.randf() * TAU
+		active["fuzz"] = Vector3(cos(a), 0.0, sin(a)) * _rng.randf_range(0.25, 0.55) * FOG_AREA / WorldCoords.HORIZ_COMPRESSION
+	return (p as Vector3) + (active["fuzz"] as Vector3)
+
+
 func nav_point() -> Variant:
+	return _fogged(_nav_exact())
+
+
+func _nav_exact() -> Variant:
 	if _await_rearm and active.is_empty():
 		return _home_airfield()
 	if active.is_empty():
@@ -756,8 +793,10 @@ func _make_raid(cover: bool) -> Dictionary:
 	var nb: int = 3 if difficulty < 0.4 else (4 if difficulty < 0.75 else 5)
 	var form: BomberFormation = BomberFormation.spawn(world, bid, enemy, nb, start, WorldCoords.dir_to_heading(-from_dir), route, difficulty)
 	var nodes: Array = []
+	var downs: Array = [0]          # bombers actually shot down (counted from the destroyed signal, so a removed wreck still counts)
 	for m in form.members:
 		nodes.append(m)
+		(m as Aircraft).destroyed.connect(func(_a: Aircraft, _k: Node) -> void: downs[0] = int(downs[0]) + 1)
 		AIFactory.add_marker(hud, m, Color(1.0, 0.25, 0.2))
 	# escort fighters weaving above the bombers
 	var fpool: Array = AircraftCatalog.fighters_for_side(enemy).filter(func(i: String) -> bool: return i != "me262")
@@ -775,7 +814,7 @@ func _make_raid(cover: bool) -> Dictionary:
 		nodes.append(e)          # escorts live in the world; listed so the clean-up removes them
 	var ang: int = int(round(alt_y / WorldCoords.VERTICAL_SCALE * 3.281 / 1000.0))
 	return {"title": ("Convoy cover" if cover else "Intercept: raid on %s" % tgt_name), "what": AircraftCatalog.display_name(bid), "pos": tgt, "place": tgt_name,
-		"track": form, "goal": "raid", "nodes": nodes, "bombers": form.members.duplicate(), "count": nb, "angels": ang,
+		"track": form, "goal": "raid", "nodes": nodes, "bombers": form.members.duplicate(), "count": nb, "angels": ang, "downs": downs, "hit": [],
 		"root": root, "protect": protect, "points": 1300 if not cover else 1100, "raid_target": tgt}
 
 
@@ -1093,8 +1132,7 @@ func _hits_target(node: Node) -> bool:
 			var c: Vector3 = active["pos"]
 			var q: Vector3 = (node as Node3D).global_position
 			return Vector2(q.x - c.x, q.z - c.z).length() <= float(active.get("radius", 2000.0))
-	if str(active.get("kind", "")) in ["intercept", "cover"]:
-		return (active.get("bombers", []) as Array).has(node) or (active.get("nodes", []) as Array).has(node)
+	# an intercept or convoy cover is only won by bringing a bomber DOWN: a hit (or a downed escort) is not enough
 	return false
 
 
@@ -1403,10 +1441,7 @@ func _count_kills() -> void:
 
 
 func _update_raid() -> void:
-	var down: int = 0
-	for b in active["bombers"]:
-		if not is_instance_valid(b) or (b as Aircraft).state != Aircraft.State.ALIVE:
-			down += 1
+	var down: int = int((active.get("downs", [0]) as Array)[0])
 	active["got"] = down
 	if down >= 1:
 		_end_active(true)
@@ -1799,7 +1834,7 @@ func map_pins() -> Array:
 	var out: Array = []
 	if not active.is_empty():
 		var np: Variant = nav_point()
-		var obj: Variant = active.get("pos")
+		var obj: Variant = _fogged(active.get("pos"))
 		var tr: Variant = active.get("track")
 		if tr != null and is_instance_valid(tr) and str(active.get("stage", "")) != "rv":
 			obj = nav_point()

@@ -154,30 +154,10 @@ func _ignite(pos: Vector3, strength: float, anywhere: bool) -> bool:
 	# a modest light for the walls and smoke right by the fire. The old one reached 300-400 m and its clustered
 	# lighting lit a hard-edged red square of ground and trees; the wide firelight on the ground is the soft
 	# GroundGlow pool instead.
-	var l := OmniLight3D.new()
-	l.light_color = Color(1.0, 0.48, 0.16)
-	l.omni_range = 45.0 + 9.0 * sz
-	l.omni_attenuation = 2.0
-	l.light_energy = 0.0
-	l.shadow_enabled = false
-	l.distance_fade_enabled = true
-	l.distance_fade_begin = 2500.0
-	l.distance_fade_length = 800.0
-	l.position = Vector3(0, 4.0 * sz, 0)
-	n.add_child(l)
-	var tg0: int = Time.get_ticks_usec()
-	var glow: GroundGlow = GroundGlow.create(n, 40.0 + 14.0 * sz)
-	if Time.get_ticks_usec() - tg0 > 10000:
-		print("[slow] fire ground glow %d ms" % ((Time.get_ticks_usec() - tg0) / 1000))
-	glow.intensity = 0.0
-	var halo := MeshInstance3D.new()
-	var q := QuadMesh.new()
-	q.size = Vector2.ONE * (60.0 + 24.0 * sz)
-	halo.mesh = q
-	halo.material_override = _halo_mat
-	halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	halo.position = Vector3(0, 12.0 * sz, 0)
-	n.add_child(halo)
+	# (no omni light, ground glow or glow halo any more: the red reflections showed as blinking red squares from
+	# a distance. The flames and the smoke plume carry the fire.)
+	var l: OmniLight3D = null
+	var glow: GroundGlow = null
 	var life: float = randf_range(300.0, 540.0) * (0.8 + 0.2 * strength)
 	_fires.append({"node": n, "light": l, "glow": glow, "emit": emit, "life": life, "max_life": life, "power": strength,
 		"pillar": pillar, "city": str(city.get("name", "")), "seed": randf() * 10.0, "cpos": city.get("pos", gp)})
@@ -232,7 +212,8 @@ func _process(delta: float) -> void:
 		var fade: float = clampf(float(f["life"]) / 60.0, 0.0, 1.0)
 		var sd: float = float(f["seed"])
 		var fl: float = 0.75 + 0.18 * sin(_t * 8.0 + sd) + 0.1 * sin(_t * 21.0 + sd * 3.0)
-		(f["light"] as OmniLight3D).light_energy = (0.4 + 2.2 * night) * fl * fade * (0.7 + 0.15 * float(f["power"]))
+		if f["light"] != null and is_instance_valid(f["light"]):
+			(f["light"] as OmniLight3D).light_energy = (0.4 + 2.2 * night) * fl * fade * (0.7 + 0.15 * float(f["power"]))
 		var g: Variant = f.get("glow")
 		if g != null and is_instance_valid(g):
 			(g as GroundGlow).intensity = (0.08 + 0.62 * night) * fade * clampf(0.6 + 0.15 * float(f["power"]), 0.6, 1.2)

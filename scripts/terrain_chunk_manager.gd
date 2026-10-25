@@ -37,6 +37,7 @@ var _base_lod: Array = []
 # and uploading them again (about 75 MB of video memory stays resident).
 static var _imagery_tex: Texture2D
 static var _urban_tex: Texture2D
+static var _wood_tex: Texture2D
 static var _sea_tex: Texture2D
 
 
@@ -222,6 +223,12 @@ func _apply_imagery() -> void:
 	if _urban_tex != null:
 		material.set_shader_parameter("urban_tex", _urban_tex)
 		material.set_shader_parameter("use_urban", true)
+	# woodland: no fields or hedge lines under real forest cover (tools/make_wood_mask.py)
+	if _wood_tex == null and ResourceLoader.exists("res://data/heightmap/region_wood.png"):
+		_wood_tex = load("res://data/heightmap/region_wood.png") as Texture2D
+	if _wood_tex != null:
+		material.set_shader_parameter("wood_tex", _wood_tex)
+		material.set_shader_parameter("use_wood", true)
 	var rimg: Image = RegionMap.image()
 	if rimg != null:
 		material.set_shader_parameter("region_tex", ImageTexture.create_from_image(rimg))

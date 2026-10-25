@@ -56,6 +56,8 @@ uniform bool use_regions = false;
 uniform float season_center = -1.0;
 uniform vec3 season_tint = vec3(1.0);
 uniform bool use_urban = false;
+uniform sampler2D wood_tex : filter_linear, repeat_disable;   // ESA WorldCover tree cover (R), same rect as map_tex
+uniform bool use_wood = false;
 uniform sampler2D sea_tex : filter_linear, repeat_disable;   // distance to the sea (R = metres / SEA_MAX_M), same rect as map_tex
 uniform bool use_sea = false;
 const float SEA_MAX_M = 3000.0;
@@ -212,8 +214,24 @@ void fragment() {
 	float hedge = 1.0 - smoothstep(0.013, 0.046 + 0.05 * r_boc, edge);   // ~same width in metres as before at the bigger cell size; bocage hedge banks wider
 	vec3 bound_col = mix(hedge_col * (1.0 - 0.25 * r_boc), vec3(0.035, 0.050, 0.060), r_pold);   // polder: water-filled ditches
 	field = mix(field, bound_col, hedge * 0.85 * (1.0 - 0.85 * r_open));
+	// Woodland: under real forest cover there are no fields - no patchwork colours, hedge lines or drill marks,
+	// only a dark mottled canopy ground, with a noise-broken edge so the wood margin is not a ruled curve.
+	float wood = 0.0;
+	if (use_wood) {
+		vec2 wuv = vec2((w_pos.x - map_rect.x) * map_rect.z, (w_pos.z - map_rect.y) * map_rect.w);
+		if (wuv.x >= 0.0 && wuv.x <= 1.0 && wuv.y >= 0.0 && wuv.y <= 1.0) {
+			float wm = texture(wood_tex, wuv).r + (t_vnoise2(xz * 0.012 + 3.0) - 0.5) * 0.45 + (t_vnoise2(xz * 0.05 + 17.0) - 0.5) * 0.18;
+			wood = smoothstep(0.40, 0.58, wm);
+		}
+	}
+	if (wood > 0.0) {
+		float cm = t_vnoise2(xz * 0.07 + 5.0) * 0.55 + t_vnoise2(xz * 0.28 + 11.0) * 0.45;
+		vec3 canopy = forest_col * (0.80 + 0.40 * cm);
+		field = mix(field, canopy, wood * 0.92);
+		hedge *= 1.0 - wood;
+	}
 
-	float is_crop = clamp(1.0 - pasture_w, 0.0, 1.0);   // for drill lines / tramlines below
+	float is_crop = clamp(1.0 - pasture_w, 0.0, 1.0) * (1.0 - wood);   // for drill lines / tramlines below
 
 	// --- upland rough grazing, heath and moor ---
 	vec3 moor = mix(upland_col, moor_col, smoothstep(0.30, 0.90, t_vnoise2(xz * 0.02 + 5.0)));
@@ -278,6 +296,7 @@ void fragment() {
 	// Re-apply the field patchwork / land-use colours over the imagery so variety, hedges and heath survive.
 	// (with a war date set, crop fields show their season's stage more strongly: stubble, plough, green shoots)
 	col = mix(col, mix(col, field, 0.34 + (season_center >= 0.0 ? 0.28 * is_crop : 0.0)), lowland * (1.0 - urban));
+	col = mix(col, field, wood * 0.7 * (1.0 - urban));      // under forest the ground is canopy, whatever the imagery says
 	// Dull farmland: the aerial imagery and the field palette are both graded a shade down and slightly
 	// desaturated over the lowland, so the patchwork reads as muted wartime countryside rather than a
 	// bright summer postcard. Upland, heath and towns are left alone.

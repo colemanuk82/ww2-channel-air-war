@@ -239,7 +239,7 @@ func _process(delta: float) -> void:
 	if _finish_t >= 0.0:
 		_finish_t -= delta
 		if _finish_t <= 0.0:
-			var ok: bool = float(alive.size()) >= float(protected_nodes.size()) * 0.5
+			var ok: bool = float(alive.size()) >= float(protected_nodes.size()) * 0.5 and bombers_down >= 1     # at least one raider must be shot down
 			add_score(alive.size() * 600)
 			finish(ok, _stats())
 			return

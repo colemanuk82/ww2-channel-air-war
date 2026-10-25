@@ -629,6 +629,11 @@ func _ready() -> void:
 				tops = [Vector3(22.0, 42.5, -22.0), Vector3(34.0, 38.5, -22.0)]
 			"oil_depot":
 				tops = [Vector3(0.0, 8.0, 40.0)]
+		# not every chimney smokes: half the works are cold, and a working one has a single stack alight
+		if randf() < 0.5:
+			tops = []
+		elif tops.size() > 1:
+			tops = [tops[randi() % tops.size()]]
 		for tp in tops:
 			var s: Node3D = GroundKit.stack_smoke(self, tp, 1.0 if skind != "oil_depot" else 0.6)
 			if s:
@@ -664,23 +669,46 @@ func _on_destroyed(_killer: Node) -> void:
 	if is_inside_tree() and skind == "decoy":
 		# a struck decoy fires up exactly as intended (it is built to burn): black columns with fire
 		for i in 3:
-			GroundKit.persistent_smoke(self, Vector3(-24.0 + float(i) * 24.0, 5.0, 6.0), 2.2, true)
+			GroundKit.persistent_smoke(self, Vector3(-24.0 + float(i) * 24.0, 5.0, 6.0), 2.2, false)
 		return
 	if is_inside_tree() and skind in INDUSTRIAL:
 		# the whole works goes up: several fat black columns with fire at their base
 		var cols: int = 5 if skind != "factory" else 3
 		for i in cols:
 			var lp := Vector3(randf_range(-0.5, 0.5) * hit_radius, 6.0, randf_range(-0.4, 0.4) * hit_radius)
-			GroundKit.persistent_smoke(self, lp, 3.2 + randf() * 1.6, true)
+			GroundKit.persistent_smoke(self, lp, 3.2 + randf() * 1.6, false)
 
 
 const INDUSTRIAL := ["factory", "oil_depot", "refinery", "hangar", "fuel_tank", "gasworks", "colliery", "goods_yard", "engine_shed"]
 var _hit_level: int = 0
+var _tint_mat: StandardMaterial3D
+var _tint_meshes: Array = []
+
+
+## A damaged building turns redder the more it is hurt (a translucent red coat over every surface), instead of a
+## red fire glow that read as blinking red squares from a distance.
+func _damage_tint() -> void:
+	var f: float = clampf(1.0 - health / maxf(max_health, 1.0), 0.0, 1.0)
+	if f <= 0.02:
+		return
+	if _tint_mat == null:
+		_tint_mat = StandardMaterial3D.new()
+		_tint_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_tint_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_tint_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_tint_mat.albedo_color = Color(1.0, 0.1, 0.06, 0.0)
+		for n in find_children("*", "MeshInstance3D", true, false):
+			var mi := n as MeshInstance3D
+			if mi != null and mi.visible and _tint_meshes.size() < 240:
+				mi.material_overlay = _tint_mat
+				_tint_meshes.append(mi)
+	_tint_mat.albedo_color = Color(1.0, 0.1, 0.06, clampf(0.18 + 0.5 * f, 0.0, 0.68))
 
 
 ## Industrial buildings start pouring black smoke from the first hit, and it gets worse the more damage they take.
 func take_damage(amount: float, source: Node = null) -> void:
 	super.take_damage(amount, source)
+	_damage_tint()
 	if is_dead or not (skind in INDUSTRIAL) or not is_inside_tree():
 		return
 	var f: float = 1.0 - health / maxf(max_health, 1.0)
@@ -696,5 +724,5 @@ func take_damage(amount: float, source: Node = null) -> void:
 	while _hit_level < lvl:
 		_hit_level += 1
 		var lp := Vector3(randf_range(-0.45, 0.45) * hit_radius, 5.0 + randf() * 5.0, randf_range(-0.35, 0.35) * hit_radius)
-		GroundKit.persistent_smoke(self, lp, 1.0 + 0.9 * float(_hit_level), _hit_level >= 2)
+		GroundKit.persistent_smoke(self, lp, 1.0 + 0.9 * float(_hit_level), false)      # smoke only: no red flame glow (it flickered as red squares at range)
 		GroundKit.explosion(to_global(lp), 0.7 + 0.25 * float(_hit_level))
