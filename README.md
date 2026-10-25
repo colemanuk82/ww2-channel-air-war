@@ -2,17 +2,11 @@
 
 # ✈️ WW2 Channel Air War
 
-### *"Scramble! Bandits over Dover, angels fifteen!"*
-
 **A free, WW2 flight game over a real-scale slice of Europe.**<br>
 
 Any suggestions or feedback? Let me know!
 
-![Free](https://img.shields.io/badge/price-100%25%20free-2ea44f) ![Windows](https://img.shields.io/badge/platform-Windows%2064--bit-0078d4) ![Engine](https://img.shields.io/badge/engine-Godot%204-478cbf) ![Missions](https://img.shields.io/badge/missions-74-d4a017)
-
-[![WW2 Channel Air War promo](docs/promo/channel-air-war-promo.gif)](docs/promo/channel-air-war-promo.mp4)
-
-**▶ [Watch the full promo with music](docs/promo/channel-air-war-promo.mp4)**
+![Free](https://img.shields.io/badge/price-100%25%20free-2ea44f) ![Windows](https://img.shields.io/badge/platform-Windows%2064--bit-0078d4) ![Engine](https://img.shields.io/badge/engine-Godot%204-478cbf) !
 
 [![WW2 Channel Air War in-game highlights](docs/promo/highlights.gif)](docs/promo/highlights.mp4)
 
@@ -29,7 +23,7 @@ Any suggestions or feedback? Let me know!
 
 |  |  |
 |---|---|
-| 🌍 **Real-scale Europe** | **954 × 453 km** of England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports. Fly from Kent to the Ruhr and it actually takes a while. |
+| 🌍 **Real-scale Europe** | England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports.|
 | ✈️ **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
 | ⚔️ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and dynamic missions in free flight.  |
 | 🌊 **Dam Busters** | A seven-day campaign. Skim low, hit your marks, put the bomb on the dam. |
