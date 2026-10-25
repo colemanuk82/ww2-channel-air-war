@@ -185,12 +185,15 @@ void fragment() {
 	var wn: Array = []
 	for w in _weather_names:
 		wn.append(String(w).capitalize())
+	wn.append("Random")
 	_weather = UIKit.option_row(cond, "Weather", wn, 20)
+	_weather.select(wn.size() - 1)       # random by default: a different sky every sortie
 	var tn: Array = []
 	for t in TIMES:
 		tn.append(String(t).capitalize())
+	tn.append("Random")
 	_time = UIKit.option_row(cond, "Time of day", tn, 20)
-	_time.select(1)
+	_time.select(tn.size() - 1)
 
 	# --- BRIEFING ---
 	var brief := _new_page()
@@ -718,13 +721,27 @@ func _on_start() -> void:
 		"mode": mode_id,
 		"mission": _mission_ids[_mission.selected] if ((mode_id == "historical" or mode_id == "training") and not _mission_ids.is_empty()) else "",
 		"difficulty": DIFFICULTIES[_diff.get_item_text(_diff.selected)],
-		"weather": _weather_names[_weather.selected],
-		"time": TIMES[_time.selected],
+		"weather": _weather_names[_weather.selected] if _weather.selected < _weather_names.size() else _weather_names[randi() % _weather_names.size()],
+		"time": TIMES[_time.selected] if _time.selected < TIMES.size() else TIMES[randi() % TIMES.size()],
 		"ambient": _ambient.button_pressed,
 		"taskings": _taskings.button_pressed and mode_id == "free",
 	}
+	if (mode_id == "free" or mode_id == "dogfight") and not cfg.has("era_date") and _random_date_ok():
+		cfg["era_date"] = _random_war_date()      # a random day of the war, so the ground and the airfields change too
 	if mode_id == "free":
 		cfg["spawn"] = String(SpawnPoints.LIST[_spawn.selected]["id"])
 		if not _plan.is_empty():
 			cfg.merge(_plan, true)      # map planner overrides spawn, scenario (mode), targets, enemy strength
 	start_requested.emit(cfg)
+
+
+## Dogfight and free flight start on a random day of the war unless the planner or a mission has set one.
+func _random_date_ok() -> bool:
+	return _weather.selected >= _weather_names.size() or _time.selected >= TIMES.size()
+
+
+func _random_war_date() -> String:
+	var t0: int = int(Time.get_unix_time_from_datetime_string("1940-07-10"))
+	var t1: int = int(Time.get_unix_time_from_datetime_string("1945-04-30"))
+	var d: Dictionary = Time.get_datetime_dict_from_unix_time(randi_range(t0, t1))
+	return "%04d-%02d-%02d" % [int(d["year"]), int(d["month"]), int(d["day"])]
