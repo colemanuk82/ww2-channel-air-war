@@ -106,7 +106,7 @@ Prisoner-of-war and labour camps stay where they were, as static scenery, never 
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.16.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.17.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
@@ -198,11 +198,12 @@ comes from open data (see below). It's a work of fiction inspired by real histor
 
 ## 🔧 Under the bonnet
 
-Built on **standard Godot 4.7 (GDScript)**, compiled from the official source with double-precision coordinates (`precision=double`) so the 954 km map stays rock-steady far from the origin. AMD FSR 2 upscaling.
-From v2.6 it uses a **double-precision** build of that fork. See [engine/BUILDING-ENGINE.md](engine/BUILDING-ENGINE.md)
-for how to build it, and [engine/CHANGELOG.md](engine/CHANGELOG.md) for the engine fixes.
-Terrain uses `data/heightmap/region_height.png` + `region_meta.json`; the Python tools in `tools/`
-(see `tools/README.md`) rebuild the map from Sentinel-2, ESA WorldCover, AWS Terrain Tiles and OpenStreetMap.
+Built on **standard Godot 4.7 (GDScript)**, compiled from the official source with double-precision coordinates
+(`precision=double`) so the 954 km map stays rock-steady far from the origin, with AMD FSR 2 upscaling.
+See [engine/BUILDING-ENGINE.md](engine/BUILDING-ENGINE.md) for how to build it and
+[engine/CHANGELOG.md](engine/CHANGELOG.md) for the engine fixes. Terrain uses `data/heightmap/region_height.png` +
+`region_meta.json`; the Python tools in `tools/` (see `tools/README.md`) rebuild the map from Sentinel-2, ESA
+WorldCover, AWS Terrain Tiles and OpenStreetMap.
 
 - Run the missions checker: `python tools/validate_missions.py`
 - Add or edit original missions: `tools/add_original_missions.py` (idempotent)
@@ -215,13 +216,14 @@ Terrain uses `data/heightmap/region_height.png` + `region_meta.json`; the Python
 Full credits and licences are in the game (**Credits** button on the main menu) and in
 [ATTRIBUTION.md](ATTRIBUTION.md).
 
-- **Music** (Pixabay Content Licence): "Freedom" by [jeremusic70](https://pixabay.com/users/jeremusic70-25199461/) · "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans" and "Battle Cry of the Brave" by [nocopyrightsound633](https://pixabay.com/users/nocopyrightsound633-47610058/) · "Cinematic Action Movie Music", "Epic Orchestral Music with Flute" and "Suspenseful Thriller Music" by [musicwallah](https://pixabay.com/users/musicwallah-51797968/) · "Cinematic War" and "Trailer War" by [The_Mountain](https://pixabay.com/users/the_mountain-3616498/) · "Military - War Military" and "Epic - Epic Battle" by [YevhenAstafiev](https://pixabay.com/users/yevhenastafiev-52618283/) · "Hero Heroic Patriotic" by [NastelBom](https://pixabay.com/users/nastelbom-48128234/) · "Danger and Resolution" by [MUPHFI](https://pixabay.com/users/muphfi-36181755/) · "Remembering Our Veterans" by [Luis_Humanoide](https://pixabay.com/users/luis_humanoide-12661853/) · "Swing That Jazz - 1940s Big Band Dance Music" by [kaazoom](https://pixabay.com/users/kaazoom-448850/) · "Epic Military March – Heroic Snare Drum Theme" by [DesiFreeMusic](https://pixabay.com/users/desifreemusic-28163210/)
+- **Music** ([Pixabay Content Licence](https://pixabay.com/service/license-summary/)): "Freedom" by [jeremusic70](https://pixabay.com/users/jeremusic70-25199461/) · "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans" and "Battle Cry of the Brave" by [nocopyrightsound633](https://pixabay.com/users/nocopyrightsound633-47610058/) · "Cinematic Action Movie Music", "Epic Orchestral Music with Flute" and "Suspenseful Thriller Music" by [musicwallah](https://pixabay.com/users/musicwallah-51797968/) · "Cinematic War" and "Trailer War" by [The_Mountain](https://pixabay.com/users/the_mountain-3616498/) · "Military - War Military" and "Epic - Epic Battle" by [YevhenAstafiev](https://pixabay.com/users/yevhenastafiev-52618283/) · "Hero Heroic Patriotic" by [NastelBom](https://pixabay.com/users/nastelbom-48128234/) · "Danger and Resolution" by [MUPHFI](https://pixabay.com/users/muphfi-36181755/) · "Remembering Our Veterans" by [Luis_Humanoide](https://pixabay.com/users/luis_humanoide-12661853/) · "Swing That Jazz - 1940s Big Band Dance Music" by [kaazoom](https://pixabay.com/users/kaazoom-448850/) · "Epic Military March – Heroic Snare Drum Theme" by [DesiFreeMusic](https://pixabay.com/users/desifreemusic-28163210/)
 - **Terrain imagery:** [Sentinel-2 cloudless 2020](https://s2maps.eu) by EOX IT Services GmbH (CC BY 4.0), containing modified Copernicus Sentinel data 2020
 - **Land cover:** [ESA WorldCover 10 m 2021](https://esa-worldcover.org) (CC BY 4.0)
 - **Elevation:** [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/)
 - **Roads, rail, rivers, woods, towns:** © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors (ODbL)
 - **Water:** Ocean3D Lite by Justin Schroeder (MIT) · **Fonts:** Barlow by Jeremy Tribby (SIL OFL 1.1)
-- **Engine:** Godot (MIT), with AMD FidelityFX Super Resolution 2 (MIT).
+- **Voices:** AI text-to-speech by [ElevenLabs](https://elevenlabs.io)
+- **Engine:** made with the [Godot Engine](https://godotengine.org) (MIT licence), copyright (c) 2014-present Godot Engine contributors and (c) 2007-2014 Juan Linietsky, Ariel Manzur; upscaling by AMD FidelityFX Super Resolution 2 (MIT). Third-party engine components are listed in `docs/legal/CREDITS.txt`.
 
 ## ☕ Support
 
@@ -232,16 +234,10 @@ Enjoying it? There's a **Support me on PayPal** button in the top-right of the m
 This is a personal project. All rights reserved: see [LICENCE](LICENCE), and the in-game licence agreement
 and privacy policy (`docs/legal/`). Third-party data and audio carry their own licences, listed above.
 
+<div align="center">
+
 *Chocks away!* 🛫
 
----
+<sub>Built with AI assistance from [Claude](https://claude.com/claude-code) (Anthropic), using Claude Code.</sub>
 
-### Music and engine attribution
-
-**Music.** All in-game music is used under the [Pixabay Content Licence](https://pixabay.com/service/license-summary/). Composers: jeremusic70, nocopyrightsound633, musicwallah, The_Mountain, YevhenAstafiev, NastelBom, MUPHFI, Luis_Humanoide, kaazoom and DesiFreeMusic. Track titles and artist links are listed under Credits above and in [ATTRIBUTION.md](ATTRIBUTION.md). Radio and briefing voices are AI-generated with [ElevenLabs](https://elevenlabs.io).
-
-**Engine.** Made with the [Godot Engine](https://godotengine.org), built from the official source with double-precision coordinates. Copyright (c) 2014-present Godot Engine contributors; copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur. Licensed under the [MIT licence](https://godotengine.org/license/); third-party components are listed in the engine's own licence notices and in `docs/legal/CREDITS.txt`. Upscaling uses AMD FidelityFX Super Resolution 2 (MIT).
-
----
-
-*Built with AI assistance from [Claude](https://claude.com/claude-code) (Anthropic), using Claude Code.*
+</div>
