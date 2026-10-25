@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://d4cd4wm2sqtrv"
+path="res://.godot/imported/01.08. Victory Assured.mp3-cb78223277d75d6b1d8fee55091c9b00.mp3str"
+
+[deps]
+
+source_file="res://assets/music/ingame/01.08. Victory Assured.mp3"
+dest_files=["res://.godot/imported/01.08. Victory Assured.mp3-cb78223277d75d6b1d8fee55091c9b00.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bn1ah8mjupq5"
+path="res://.godot/imported/02.04. Civilian Tragedy.mp3-2f7574bf7fcdbb66aaf2442b17248e7d.mp3str"
+
+[deps]
+
+source_file="res://assets/music/ingame/02.04. Civilian Tragedy.mp3"
+dest_files=["res://.godot/imported/02.04. Civilian Tragedy.mp3-2f7574bf7fcdbb66aaf2442b17248e7d.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

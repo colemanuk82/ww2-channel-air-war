@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://xsu168s56ys3"
+path="res://.godot/imported/02.07. Personnal Tragedy.mp3-d484e30e0b1cde19685d152b79a46a52.mp3str"
+
+[deps]
+
+source_file="res://assets/music/ingame/02.07. Personnal Tragedy.mp3"
+dest_files=["res://.godot/imported/02.07. Personnal Tragedy.mp3-d484e30e0b1cde19685d152b79a46a52.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

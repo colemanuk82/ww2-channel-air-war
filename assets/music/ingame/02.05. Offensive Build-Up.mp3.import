@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://cwc5mso8t4hp3"
+path="res://.godot/imported/02.05. Offensive Build-Up.mp3-f9539d42c0551d1d5af8f0c1e5fd2cf2.mp3str"
+
+[deps]
+
+source_file="res://assets/music/ingame/02.05. Offensive Build-Up.mp3"
+dest_files=["res://.godot/imported/02.05. Offensive Build-Up.mp3-f9539d42c0551d1d5af8f0c1e5fd2cf2.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

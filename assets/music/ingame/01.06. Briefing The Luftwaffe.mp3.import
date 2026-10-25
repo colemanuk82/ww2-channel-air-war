@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://d11i68unxn32j"
+path="res://.godot/imported/01.06. Briefing The Luftwaffe.mp3-dd2b5df7b615b449e4adf2f4f281fdc5.mp3str"
+
+[deps]
+
+source_file="res://assets/music/ingame/01.06. Briefing The Luftwaffe.mp3"
+dest_files=["res://.godot/imported/01.06. Briefing The Luftwaffe.mp3-dd2b5df7b615b449e4adf2f4f281fdc5.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

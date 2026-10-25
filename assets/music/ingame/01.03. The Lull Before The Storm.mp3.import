@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://v6mny43lpj0n"
+path="res://.godot/imported/01.03. The Lull Before The Storm.mp3-fa86f1b8dd2441d846e5ae0366fb03d3.mp3str"
+
+[deps]
+
+source_file="res://assets/music/ingame/01.03. The Lull Before The Storm.mp3"
+dest_files=["res://.godot/imported/01.03. The Lull Before The Storm.mp3-fa86f1b8dd2441d846e5ae0366fb03d3.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://d3fkgfhans3vm"
+path="res://.godot/imported/02.03. Threat.mp3-3d434872f9022a33034b0bff4ddc3df3.mp3str"
+
+[deps]
+
+source_file="res://assets/music/ingame/02.03. Threat.mp3"
+dest_files=["res://.godot/imported/02.03. Threat.mp3-3d434872f9022a33034b0bff4ddc3df3.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

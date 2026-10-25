@@ -1434,7 +1434,7 @@ static func _add_lod_pair(root: Node, near_mesh: Mesh, far: Mesh, d: Dictionary,
 const TREE_NEAR: float = 2200.0
 const WOOD_TREE_NEAR: float = 700.0      # forest interior: full trees only this close ...
 const WOOD_TREE_VIS: float = 2400.0      # ... low-poly crowns out to here, then the clump blobs take over
-const WOOD_BLOB_BEGIN: float = 1900.0    # blobs fade in from here (overlapping the crowns) to the far limit
+const WOOD_BLOB_BEGIN: float = 0.0    # blobs show at every range (fill between the crowns up close, the whole canopy far off)
 const WOOD_EDGE_PROBE: float = 110.0     # a wood sample within this of non-wood land counts as the margin
 
 
