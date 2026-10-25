@@ -94,7 +94,8 @@ func _ready() -> void:
 
 
 func _on_flaps(_a: Aircraft, message: String) -> void:
-	show_message(message, 1.6)
+	# no on-screen text for flap changes (the flap icon shows the setting)
+	pass
 
 
 func _on_radio(sender: String, text: String, kind: int) -> void:
@@ -194,8 +195,8 @@ func bind_aircraft(a: Aircraft) -> void:
 
 
 func _on_engine_alert(text: String) -> void:
-	if text != "":
-		show_message(text, 2.5)
+	# engine overheat / high-G messages are shown by the bright red gauges instead of text
+	pass
 
 
 func bind_camera(c: Camera3D) -> void:
@@ -513,7 +514,7 @@ func _process(delta: float) -> void:
 	var low_fall: bool = not aircraft.on_ground and aircraft.altitude_agl < 260.0 and aircraft.velocity.y < -28.0
 	# only the low-altitude "PULL UP" warning remains; the old STALL text is gone (the airspeed needle still shows a stall)
 	_stall_lbl.text = "PULL UP"
-	_stall_lbl.visible = low_fall and int(Time.get_ticks_msec() / 250.0) % 2 == 0
+	_stall_lbl.visible = false   # no on-screen PULL UP text
 	_damage_callouts()
 	_hints.visible = GameState.show_hints and GameState.show_hud
 	_inst.queue_redraw()
@@ -595,15 +596,15 @@ func _draw_inst() -> void:
 	if GameState.engine_heat_on:
 		# engine temperature: outer arc on the airspeed dial (blue cold -> amber -> red), flashing when overheating
 		var hc: Color = Color(0.45, 0.75, 1.0).lerp(Color(1.0, 0.72, 0.2), clampf(a.engine_heat * 1.6, 0.0, 1.0)).lerp(Color(1.0, 0.22, 0.15), clampf((a.engine_heat - 0.7) / 0.3, 0.0, 1.0))
-		if a.overheated and int(Time.get_ticks_msec() / 250) % 2 == 0:
-			hc = Color(1.0, 0.9, 0.8)
+		if a.overheated or a.engine_heat > 0.85:
+			hc = Color(1.0, 0.04, 0.02)
 		_arc_meter(c, actr, r + 22.0, false, a.engine_heat, hc, "heat")
 		if a.engine_wear > 0.02:
 			_arc_meter(c, actr, r + 31.0, false, a.engine_wear, BAD if a.engine_wear > 0.6 else WARN, "wear")
 	if GameState.g_effects_on and maxf(a.g_gray, a.g_red) > 0.02:
-		_arc_meter(c, lctr, r + 22.0, false, maxf(a.g_gray, a.g_red), BAD if a.g_gray > 0.6 or a.g_red > 0.6 else WARN, "tol")
+		_arc_meter(c, lctr, r + 22.0, false, maxf(a.g_gray, a.g_red), Color(1.0, 0.04, 0.02) if a.g_gray > 0.6 or a.g_red > 0.6 else WARN, "tol")
 	var gf: float = clampf(absf(a.g_load) / 8.0, 0.0, 1.0) if not a.on_ground else 0.0
-	_arc_meter(c, lctr, r + 12.0, false, gf, BAD if a.g_load > 6.5 or a.g_load < -2.0 else (WARN if a.g_load > 4.5 else Color(0.6, 0.85, 1.0)), "g")
+	_arc_meter(c, lctr, r + 12.0, false, gf, Color(1.0, 0.04, 0.02) if a.g_load > 6.5 or a.g_load < -2.0 else (WARN if a.g_load > 4.5 else Color(0.6, 0.85, 1.0)), "g")
 	# ---- airspeed indicator
 	var vmax: float = ceilf((a.stats.max_speed + a.stats.boost_bonus) * 3.6 * 1.08 / 100.0) * 100.0
 	var kmh: float = a.speed * 3.6
