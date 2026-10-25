@@ -189,6 +189,7 @@ static func _make_prop(radius: float, blades: int, spinner_r: float, tip: Color,
 	dmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	dmat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	dmat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	dmat.render_priority = 40   # after the cloud volumes so clouds never cut the blur
 	disc.material_override = dmat
 	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	disc.visible = not primary

@@ -177,6 +177,7 @@ static func _disc_material() -> StandardMaterial3D:
 	dm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	dm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	dm.cull_mode = BaseMaterial3D.CULL_DISABLED
+	dm.render_priority = 40   # after the cloud volumes (20/21) so clouds never cut the blur
 	return dm
 
 
@@ -213,6 +214,7 @@ static func _tip_ring_material() -> StandardMaterial3D:
 	m.albedo_color = Color(COL_TIP.r, COL_TIP.g, COL_TIP.b, 0.55)
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.render_priority = 40
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return m
 
