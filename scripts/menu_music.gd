@@ -175,14 +175,17 @@ static func delete_track(path: String) -> bool:
 
 ## Shuffle bag: every track plays once, in a fresh random order, before any repeats (and the first track of a new
 ## bag is never the one that just played).
-var _bag: Array = []
+static var _bag: Array = []
+static var _last_path: String = ""
 func _bag_pick() -> int:
 	if _bag.is_empty():
 		for k in _tracks.size():
 			_bag.append(k)
 		_bag.shuffle()
-		if _bag.size() > 1 and int(_bag[_bag.size() - 1]) == _last:
+		if _bag.size() > 1 and String(_tracks[int(_bag[_bag.size() - 1])]) == _last_path:
 			var t: Variant = _bag[0]
 			_bag[0] = _bag[_bag.size() - 1]
 			_bag[_bag.size() - 1] = t
-	return int(_bag.pop_back()) % maxi(_tracks.size(), 1)
+	var idx: int = int(_bag.pop_back()) % maxi(_tracks.size(), 1)
+	_last_path = String(_tracks[idx])
+	return idx
