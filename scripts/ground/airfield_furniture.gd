@@ -21,7 +21,7 @@ const COL_DARK := Color(0.1, 0.1, 0.1)
 static func dress(container: Node3D, af: Airfield, axf: Transform3D, y: float, team: String, rng: RandomNumberGenerator) -> void:
 	var L: float = af.runway_length
 	_pens(container, af, y, team, rng)
-	_revetments(container, axf, y, team, rng, L)
+	_revetments(container, af, axf, y, team, rng, L)
 	_nissen_camp(container, axf, y, team, rng)
 	_hangars(container, axf, y, team, rng, L)
 	_dumps(container, axf, y, team, rng, L)
@@ -44,20 +44,27 @@ static func _pens(container: Node3D, af: Airfield, y: float, team: String, rng: 
 		for j in 3:
 			var a: float = TAU * float(j) / 3.0 + 0.7
 			var bp := Vector3(pad.x + cos(a) * 25.0, y, pad.z + sin(a) * 25.0)
+			var tang := Vector3(-sin(a), 0.0, cos(a)) * 11.0
+			if af.near_paved(bp, 4.0) or af.near_paved(bp + tang, 4.0) or af.near_paved(bp - tang, 4.0):
+				continue      # never across a taxiway stem or a neighbouring pad
 			banks.append(Transform3D(Basis(Vector3.UP, -a), bp))
 	if not banks.is_empty():
 		container.add_child(Scatter.multi(AirfieldAssets.revetment(team), banks, 5000.0))
 
 
 ## A low revetment line screening the paved area from the grass, on the east flank.
-static func _revetments(container: Node3D, axf: Transform3D, y: float, team: String, rng: RandomNumberGenerator, L: float) -> void:
+static func _revetments(container: Node3D, af: Airfield, axf: Transform3D, y: float, team: String, rng: RandomNumberGenerator, L: float) -> void:
 	var banks: Array = []
 	var n: int = int(L / 60.0)
 	for i in n:
 		var z: float = -L * 0.5 + 40.0 + float(i) * 60.0
 		if rng.randf() < 0.4:
 			continue
-		banks.append(_world(axf, Vector3(150.0 + rng.randf_range(-8.0, 8.0), 0.0, z), 0.0))
+		var bt: Transform3D = _world(axf, Vector3(150.0 + rng.randf_range(-8.0, 8.0), 0.0, z), 0.0)
+		var ax: Vector3 = axf.basis * Vector3(0, 0, 11.0)
+		if af.near_paved(bt.origin, 4.0) or af.near_paved(bt.origin + ax, 4.0) or af.near_paved(bt.origin - ax, 4.0):
+			continue
+		banks.append(bt)
 	if not banks.is_empty():
 		container.add_child(Scatter.multi(AirfieldAssets.revetment(team), banks, 5000.0))
 

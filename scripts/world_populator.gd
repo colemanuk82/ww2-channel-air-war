@@ -220,7 +220,7 @@ func _register_airfields() -> void:
 			y = float(terrain.call("add_flat_zone", pos, 1000.0, 500.0)) if terrain else 0.0
 		_exclude.append([pos, 1900.0])
 		var hdir: Vector3 = WorldCoords.heading_to_dir(float(d["heading_deg"]))
-		zones.append({"pos": pos, "heading": float(d["heading_deg"])})
+		zones.append({"pos": pos, "heading": float(d["heading_deg"]), "half": Vector2(820.0, 1000.0), "feather": 200.0})
 		RoadMesh.add_exclusion_box(Vector2(pos.x, pos.z), Vector2(hdir.x, hdir.z), 720.0, 780.0)
 		# a large army camp beside some fields: reserve its ground now so trees and buildings keep clear of it
 		var camp: Vector3 = Vector3.INF
