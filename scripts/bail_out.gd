@@ -45,6 +45,8 @@ func tick(delta: float, player: Aircraft) -> void:
 	if active:
 		_follow(delta)
 		return
+	if player != null and not is_instance_valid(player):
+		return
 	if player == null or not is_instance_valid(player) or player.state != Aircraft.State.ALIVE or player.on_ground:
 		_hold = 0.0
 		return
@@ -106,7 +108,7 @@ func _jump(player: Aircraft) -> void:
 
 func _follow(delta: float) -> void:
 	_t += delta
-	if _chute == null or not is_instance_valid(_chute):
+	if _chute == null or not is_instance_valid(_chute) or _t > 150.0:    # lost chute / never landed: never hang here
 		_resolve()
 		return
 	var cp: Vector3 = _chute.global_position
