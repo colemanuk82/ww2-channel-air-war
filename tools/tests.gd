@@ -30,6 +30,7 @@ func _ready() -> void:
 	_test_dams_build()
 	_test_pow_escape()
 	_test_airborne()
+	_test_realism_presets()
 	_test_city_balloons()
 	_test_balloon_cables_and_streams()
 	_test_decoy_kinds()
@@ -737,6 +738,25 @@ func _test_airborne() -> void:
 	var rig: TowRig = TowRig.make(null, "waco", Vector3.ZERO)
 	_check(rig.state == "towed", "tow rig starts towed")
 	rig.free()
+
+
+## G and engine-heat strength presets, gun layouts and per-type convergence.
+func _test_realism_presets() -> void:
+	print("-- realism presets")
+	_check(GameState.g_level == 2 and GameState.heat_level == 2, "G effects and overheating default to Medium")
+	var lo: Array = Aircraft.G_PRESETS[1]
+	var me: Array = Aircraft.G_PRESETS[2]
+	var hi: Array = Aircraft.G_PRESETS[3]
+	_check(float(lo[0]) > float(me[0]) and float(me[0]) > float(hi[0]), "G threshold falls from Low to High")
+	_check(float(lo[1]) < float(me[1]) and float(me[1]) < float(hi[1]), "G build-up rises from Low to High")
+	_check(float(Aircraft.HEAT_PRESETS[2][0]) == 1.0, "Medium heat is the original tuning")
+	_check(float(Aircraft.HEAT_PRESETS[1][0]) < 1.0 and float(Aircraft.HEAT_PRESETS[3][0]) > 1.0, "Low heats slower, High faster")
+	for id in GunLayouts.LAYOUTS.keys():
+		var d: Dictionary = GunLayouts.LAYOUTS[id]
+		_check(float(d["conv"]) >= 150.0 and float(d["conv"]) <= 500.0, "%s convergence is a realistic range" % id)
+		_check((d["mounts"] as Array).size() >= 2, "%s has gun mounts" % id)
+	_check(GunLayouts.convergence("spitfire", 450.0) < 260.0, "Spitfire guns converge near 250 yards")
+	_check(GunLayouts.convergence("lancaster", 450.0) == 450.0, "no layout falls back to the stat")
 
 
 ## Every dam id in the data builds a non-null GroundStructure("dam") wall AND DamKit scenery, each >= 1 mesh (P3).
@@ -1651,7 +1671,8 @@ func _test_realism() -> void:
 	ac._update_engine_heat(1.0)
 	_check(ac.engine_heat < 0.9 and ac._engine_power() == 1.0, "heat can be switched off in Options > Realism")
 	GameState.engine_heat_on = true
-	# G: sustained high G greys out then knocks the pilot out; he wakes and the vision returns slowly
+	# G: sustained high G greys out then knocks the pilot out; he wakes and the vision returns slowly (High strength)
+	GameState.g_level = 3
 	ac.g_load = 8.0
 	var greyed: bool = false
 	for i in 80:
@@ -1672,4 +1693,5 @@ func _test_realism() -> void:
 	ac._update_g_effects(1.0)
 	_check(ac.g_gray < 0.7 and ac.gloc_t == 0.0, "G effects can be switched off")
 	GameState.g_effects_on = true
+	GameState.g_level = 2
 	ac.queue_free()

@@ -6,6 +6,7 @@ extends Node
 
 const RATE := 22050
 const POOL := 28
+const GUN_TAKES := 3
 ## Sounds nearer the listener than this skip the per-name rate gate: a close flak burst or hit must never be dropped
 ## because a far one played a moment earlier.
 const NEAR_BYPASS := 450.0
@@ -14,29 +15,29 @@ const NEAR_BYPASS := 450.0
 ## cleanly). harm = number of harmonics, roll = harmonic roll-off, rasp = high mechanical hash, pulse = firing-order
 ## throb depth, whine = turbine tone (jets), db = loudness trim, plo/phi = pitch range from idle to full throttle.
 const ENGINES := {
-	"merlin": {"base": 84, "harm": 8, "roll": 1.0, "rasp": 0.02, "pulse": 0.15, "pulse_hz": 42, "db": 0.0, "plo": 0.65, "phi": 1.7},
-	"griffon": {"base": 80, "harm": 12, "roll": 0.9, "rasp": 0.05, "pulse": 0.13, "pulse_hz": 40, "db": 1.5, "plo": 0.62, "phi": 1.58},
-	"napier": {"base": 96, "harm": 12, "roll": 0.6, "rasp": 0.12, "pulse": 0.3, "pulse_hz": 48, "db": 3.0, "plo": 0.7, "phi": 1.8},
-	"db601": {"base": 76, "harm": 10, "roll": 0.9, "rasp": 0.06, "pulse": 0.1, "pulse_hz": 38, "db": 0.0, "plo": 0.65, "phi": 1.65},
-	"db605": {"base": 72, "harm": 11, "roll": 0.85, "rasp": 0.07, "pulse": 0.12, "pulse_hz": 36, "db": 1.0, "plo": 0.62, "phi": 1.62},
-	"jumo211": {"base": 70, "harm": 9, "roll": 1.0, "rasp": 0.04, "pulse": 0.2, "pulse_hz": 35 * 2, "db": 0.0, "plo": 0.6, "phi": 1.5},
-	"allison": {"base": 90, "harm": 7, "roll": 1.1, "rasp": 0.03, "pulse": 0.1, "pulse_hz": 30, "db": -1.0, "plo": 0.7, "phi": 1.75},
-	"radial_bmw": {"base": 54, "harm": 6, "roll": 0.7, "rasp": 0.08, "pulse": 0.5, "pulse_hz": 26, "db": 1.0, "plo": 0.6, "phi": 1.45},
-	"radial_pw": {"base": 46, "harm": 6, "roll": 0.6, "rasp": 0.06, "pulse": 0.55, "pulse_hz": 22, "db": 2.0, "plo": 0.6, "phi": 1.4},
-	"radial_mercury": {"base": 58, "harm": 6, "roll": 0.7, "rasp": 0.07, "pulse": 0.45, "pulse_hz": 28, "db": 1.0, "plo": 0.6, "phi": 1.5},
-	"gipsy": {"base": 104, "harm": 7, "roll": 0.8, "rasp": 0.05, "pulse": 0.22, "pulse_hz": 34, "db": -4.0, "plo": 0.7, "phi": 1.55},   # DH Gipsy Six: a quiet inverted in-line
+	"merlin": {"base": 84, "harm": 8, "roll": 1.0, "rasp": 0.02, "pulse": 0.15, "pulse_hz": 42, "db": 0.0, "plo": 0.65, "phi": 1.7, "pop": 0.10, "sc": 2400},
+	"griffon": {"base": 80, "harm": 12, "roll": 0.9, "rasp": 0.05, "pulse": 0.13, "pulse_hz": 40, "db": 1.5, "plo": 0.62, "phi": 1.58, "pop": 0.10, "sc": 2200},
+	"napier": {"base": 96, "harm": 12, "roll": 0.6, "rasp": 0.12, "pulse": 0.3, "pulse_hz": 48, "db": 3.0, "plo": 0.7, "phi": 1.8, "pop": 0.16, "sc": 2600},
+	"db601": {"base": 76, "harm": 10, "roll": 0.9, "rasp": 0.06, "pulse": 0.1, "pulse_hz": 38, "db": 0.0, "plo": 0.65, "phi": 1.65, "pop": 0.06},
+	"db605": {"base": 72, "harm": 11, "roll": 0.85, "rasp": 0.07, "pulse": 0.12, "pulse_hz": 36, "db": 1.0, "plo": 0.62, "phi": 1.62, "pop": 0.06},
+	"jumo211": {"base": 70, "harm": 9, "roll": 1.0, "rasp": 0.04, "pulse": 0.2, "pulse_hz": 35 * 2, "db": 0.0, "plo": 0.6, "phi": 1.5, "pop": 0.05},
+	"allison": {"base": 90, "harm": 7, "roll": 1.1, "rasp": 0.03, "pulse": 0.1, "pulse_hz": 30, "db": -1.0, "plo": 0.7, "phi": 1.75, "pop": 0.08, "sc": 2400},
+	"radial_bmw": {"base": 54, "harm": 6, "roll": 0.7, "rasp": 0.08, "pulse": 0.5, "pulse_hz": 26, "db": 1.0, "plo": 0.6, "phi": 1.45, "lump": 0.35, "pop": 0.05},
+	"radial_pw": {"base": 46, "harm": 6, "roll": 0.6, "rasp": 0.06, "pulse": 0.55, "pulse_hz": 22, "db": 2.0, "plo": 0.6, "phi": 1.4, "lump": 0.45, "pop": 0.06},
+	"radial_mercury": {"base": 58, "harm": 6, "roll": 0.7, "rasp": 0.07, "pulse": 0.45, "pulse_hz": 28, "db": 1.0, "plo": 0.6, "phi": 1.5, "lump": 0.4, "pop": 0.05},
+	"gipsy": {"base": 104, "harm": 7, "roll": 0.8, "rasp": 0.05, "pulse": 0.22, "pulse_hz": 34, "db": -4.0, "plo": 0.7, "phi": 1.55, "pop": 0.03},   # DH Gipsy Six: a quiet inverted in-line
 	"jet": {"base": 30, "harm": 3, "roll": 1.0, "rasp": 0.7, "pulse": 0.05, "pulse_hz": 12, "whine": 0.18, "db": 2.0, "plo": 0.5, "phi": 1.6},
 }
 
 ## Gun voices, one shot each: dur / lp / decay / thump_hz / thump_amt feed _noise_burst, db trims loudness.
 const GUNS := {
-	"browning303": {"dur": 0.07, "lp": 0.5, "decay": 60.0, "hz": 150.0, "amt": 0.35, "db": -2.0},
-	"hispano20": {"dur": 0.16, "lp": 0.22, "decay": 20.0, "hz": 75.0, "amt": 0.85, "db": 1.0},
-	"browning50": {"dur": 0.11, "lp": 0.3, "decay": 38.0, "hz": 95.0, "amt": 0.7, "db": 0.0},
-	"mg17": {"dur": 0.06, "lp": 0.65, "decay": 70.0, "hz": 200.0, "amt": 0.25, "db": -3.0},
-	"mg151": {"dur": 0.14, "lp": 0.24, "decay": 24.0, "hz": 85.0, "amt": 0.75, "db": 0.0},
-	"mk108": {"dur": 0.2, "lp": 0.16, "decay": 14.0, "hz": 55.0, "amt": 1.0, "db": 3.0},
-	"mg_defensive": {"dur": 0.07, "lp": 0.55, "decay": 65.0, "hz": 170.0, "amt": 0.3, "db": -4.0},
+	"browning303": {"dur": 0.07, "lp": 0.5, "decay": 60.0, "hz": 150.0, "amt": 0.35, "db": -2.0, "crack": 0.9, "ring": 1900.0, "tail": 0.09},     # the rifle-calibre ripping rattle
+	"hispano20": {"dur": 0.16, "lp": 0.22, "decay": 20.0, "hz": 75.0, "amt": 0.85, "db": 1.0, "crack": 0.6, "ring": 1100.0, "tail": 0.14},       # slow heavy 20 mm thump
+	"browning50": {"dur": 0.11, "lp": 0.3, "decay": 38.0, "hz": 95.0, "amt": 0.7, "db": 0.0, "crack": 0.8, "ring": 1400.0, "tail": 0.12},        # the deep .50 hammering
+	"mg17": {"dur": 0.06, "lp": 0.65, "decay": 70.0, "hz": 200.0, "amt": 0.25, "db": -3.0, "crack": 1.0, "ring": 2300.0, "tail": 0.07},          # fast, light, sharp
+	"mg151": {"dur": 0.14, "lp": 0.24, "decay": 24.0, "hz": 85.0, "amt": 0.75, "db": 0.0, "crack": 0.75, "ring": 1300.0, "tail": 0.12},          # 20 mm, faster and sharper than the Hispano
+	"mk108": {"dur": 0.2, "lp": 0.16, "decay": 14.0, "hz": 55.0, "amt": 1.0, "db": 3.0, "crack": 0.55, "ring": 800.0, "tail": 0.2},              # the 30 mm pom-pom: slow and very heavy
+	"mg_defensive": {"dur": 0.07, "lp": 0.55, "decay": 65.0, "hz": 170.0, "amt": 0.3, "db": -4.0, "crack": 0.85, "ring": 2000.0, "tail": 0.08},
 }
 
 var enabled: bool = true
@@ -88,7 +89,10 @@ func play(sfx_name: String, pos: Vector3, volume_db: float = 0.0, min_interval: 
 	var dist: float = _listener_dist(pos)
 	if min_interval > 0.0 and dist > NEAR_BYPASS and now - float(_last_play.get(sfx_name, -10.0)) < min_interval:
 		return
-	var s: AudioStream = _stream(sfx_name)
+	var take: String = sfx_name
+	if sfx_name.begins_with("gun:") and sfx_name.count(":") == 1:
+		take = "%s:%d" % [sfx_name, randi() % GUN_TAKES]        # no two rounds sound identical
+	var s: AudioStream = _stream(take)
 	if s == null:
 		return
 	var vol: float = volume_db + _vol_db() + _sfx_trim(sfx_name)
@@ -300,7 +304,8 @@ func prewarm() -> void:
 	for n in PREWARM_NAMES:
 		_pre_queue.append(n)
 	for g in GUNS:
-		_pre_queue.append("gun:" + g)
+		for k in GUN_TAKES:
+			_pre_queue.append("gun:%s:%d" % [g, k])
 	for e in ENGINES:
 		for v in [1, 2, 3]:
 			_pre_queue.append("engine:%s:%d" % [e, v])
@@ -326,8 +331,9 @@ func _stream(n: String) -> AudioStream:
 func _synth(n: String) -> AudioStreamWAV:
 	var s: AudioStreamWAV = null
 	if n.begins_with("gun:"):
-		var g: Dictionary = GUNS.get(n.substr(4), GUNS["browning50"])
-		return _noise_burst(float(g["dur"]), float(g["lp"]), float(g["decay"]), float(g["hz"]), float(g["amt"]))
+		var gp: PackedStringArray = n.substr(4).split(":")
+		var g: Dictionary = GUNS.get(gp[0], GUNS["browning50"])
+		return _gun_shot(g, hash(n))
 	if n.begins_with("hit_metal:"):
 		return _hit_metal(int(n.substr(10)))
 	if n.begins_with("hit_frag:"):
@@ -386,6 +392,52 @@ func _wav(samples: PackedFloat32Array, loop: bool = false) -> AudioStreamWAV:
 		w.loop_begin = 0
 		w.loop_end = samples.size()
 	return w
+
+
+## One round, layered the way a real gun report is: a hard bright crack on the front (the muzzle blast breaking the
+## air), the low-passed body of the blast, a thump that drops in pitch as the airframe and barrel ring, a short
+## metallic ring, a clank of the breech, and a little room / airframe echo behind it. Each take has its own noise.
+func _gun_shot(g: Dictionary, seed_v: int) -> AudioStreamWAV:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_v
+	var dur: float = float(g["dur"]) + float(g.get("tail", 0.1))
+	var n: int = int(dur * RATE)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var lp: float = float(g["lp"])
+	var decay: float = float(g["decay"])
+	var hz: float = float(g["hz"])
+	var amt: float = float(g["amt"])
+	var crack: float = float(g.get("crack", 0.7))
+	var ring_hz: float = float(g.get("ring", 1500.0)) * rng.randf_range(0.93, 1.07)
+	var body: float = 0.0
+	var hp: float = 0.0
+	var prev: float = 0.0
+	for i in n:
+		var t: float = float(i) / RATE
+		var w: float = rng.randf_range(-1.0, 1.0)
+		body += (w - body) * lp
+		var hi: float = w - prev                        # a crude high-pass: the crackling top of the blast
+		prev = w
+		hp += (hi - hp) * 0.6
+		var env: float = exp(-decay * t)
+		var v: float = body * 1.3 * env
+		v += hp * crack * exp(-(900.0 + decay * 4.0) * t)
+		var fall: float = hz * (1.0 + 0.9 * exp(-90.0 * t))      # the thump slides down
+		v += sin(TAU * fall * t) * amt * exp(-decay * 0.6 * t)
+		v += sin(TAU * ring_hz * t) * 0.1 * exp(-70.0 * t)
+		if t > 0.012 and t < 0.03:
+			v += w * 0.08 * exp(-(t - 0.012) * 300.0)       # breech / mechanism clank
+		out[i] = v * 0.7
+	# echo off the airframe and the ground: two quiet delays
+	for d_ms in [23.0, 58.0]:
+		var d: int = int(d_ms * 0.001 * RATE)
+		var gain: float = 0.28 if d_ms < 40.0 else 0.15
+		for i in range(n - 1, d - 1, -1):
+			out[i] += out[i - d] * gain
+	for i in n:
+		out[i] = tanh(out[i] * 1.25) * 0.85              # a little saturation: real recordings are compressed
+	return _wav(out)
 
 
 func _noise_burst(dur: float, lp: float, decay: float, thump_hz: float, thump_amt: float) -> AudioStreamWAV:
@@ -650,6 +702,13 @@ func _engine_loop_p(profile: String, voices: int) -> AudioStreamWAV:
 	for k in 14:
 		rf.append(float(rng.randi_range(100, 1400)) * 2.0)   # whole cycles in 0.5 s, so it loops cleanly
 		rp.append(rng.randf() * TAU)
+	var pop: float = float(e.get("pop", 0.0))        # exhaust crackle / burble
+	var sc_hz: float = float(e.get("sc", 0.0))       # supercharger whine
+	var lump: float = float(e.get("lump", 0.0))      # uneven firing: slow irregular beat (radials)
+	var pops: Array = []
+	if pop > 0.0:
+		for k in 9:
+			pops.append([rng.randf() * 0.46, rng.randf_range(0.5, 1.0)])
 	var nf: float = 0.0                        # one-pole low-pass state for the combustion roar
 	var peak: float = 0.0001
 	for i in n + fade:
@@ -668,6 +727,14 @@ func _engine_loop_p(profile: String, voices: int) -> AudioStreamWAV:
 		for k in 14:
 			r += sin(TAU * float(rf[k]) * t + float(rp[k]))
 		v += r * rasp * 0.05
+		if lump > 0.0:
+			v *= 1.0 + lump * (0.55 * sin(TAU * 4.0 * t + 0.3) + 0.35 * sin(TAU * 6.0 * t + 1.1) + 0.25 * sin(TAU * 10.0 * t))
+		if sc_hz > 0.0:
+			v += 0.018 * sin(TAU * sc_hz * t) * (0.6 + 0.4 * sin(TAU * 2.0 * t))
+		for pp in pops:
+			var dt: float = fposmod(t - float(pp[0]), 0.5)
+			if dt < 0.02:
+				v += pop * float(pp[1]) * (randf_range(-1.0, 1.0)) * exp(-dt * 260.0)
 		if whine > 0.0:
 			v += whine * (sin(TAU * 1800.0 * t) + 0.5 * sin(TAU * 3200.0 * t + 0.4) + 0.3 * sin(TAU * 4600.0 * t))
 		raw[i] = v
@@ -680,4 +747,6 @@ func _engine_loop_p(profile: String, voices: int) -> AudioStreamWAV:
 	for i in fade:
 		var w: float = float(i) / float(fade)
 		out[i] = (raw[n + i] * (1.0 - w) + raw[i] * w) * norm
+	for i in n:
+		out[i] = tanh(out[i] * 1.5) / tanh(1.5) * 0.8         # warm saturation: a loud engine compresses and thickens
 	return _wav(out, true)

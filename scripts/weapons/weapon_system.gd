@@ -15,6 +15,7 @@ var _warned_out: bool = false
 var _tracer_i: int = 0
 var _bomb_side: float = 1.0
 var _muzzles: Array[Node3D] = []
+var _mount_i: int = 0
 
 ## Player gunnery help. Both values were tuned by ear: `spread *= 0.5` with a 9 deg assist cone was far
 ## too easy, going all the way to 1.0 / 2.5 deg overshot the other way, so the middle ground is the small
@@ -91,15 +92,22 @@ func _on_fire(a: Aircraft) -> void:
 			return
 	_gun_cd = 1.0 / maxf(st.fire_rate, 0.5)
 	var fwd: Vector3 = a.get_forward()
-	var aim: Vector3 = a.global_position + fwd * st.gun_convergence
+	var aim: Vector3 = a.global_position + fwd * GunLayouts.convergence(st.model_id, st.gun_convergence)
 	var spread: float = st.gun_spread
 	if a.player_controlled:
 		aim = _assisted_aim(a, fwd, aim)
 		spread *= PLAYER_SPREAD_K
-	var per_bullet: float = st.gun_damage * float(maxi(st.gun_count, 1)) / float(_muzzles.size())
+	# a volley fires from at most four of the mounts, rotating through them; the damage and ammunition cost are the
+	# same as a two-gun volley's so the layouts only change where the stream comes from
+	var n_fire: int = mini(_muzzles.size(), 4)
+	var per_bullet: float = st.gun_damage * float(maxi(st.gun_count, 1)) / float(n_fire)
+	var ammo0: int = a.ammo
+	var first: int = _mount_i
+	_mount_i = (_mount_i + n_fire) % maxi(_muzzles.size(), 1)
 	var life: float = st.gun_range / st.gun_speed
 	var base_vel: Vector3 = a.velocity
-	for m in _muzzles:
+	for k in n_fire:
+		var m: Node3D = _muzzles[(first + k) % _muzzles.size()]
 		if a.ammo <= 0:
 			break
 		var mp: Vector3 = m.global_position
@@ -109,8 +117,8 @@ func _on_fire(a: Aircraft) -> void:
 		_tracer_i += 1
 		var tracer: bool = st.tracer_every <= 1 or _tracer_i % st.tracer_every == 0
 		Weapons.fire_bullet(mp + d * 1.5, base_vel + d * st.gun_speed, a.team, a, per_bullet, tracer, life)
-		a.ammo -= 1
 		FX.muzzle_flash(m)
+	a.ammo = maxi(ammo0 - mini(2, n_fire), 0)
 	if a.player_controlled:
 		_check_ammo(a)
 	var shot_sfx: String = ("gun:" + st.gun_sound) if st.gun_sound != "" else ("cannon" if st.gun_damage >= 2.0 else "gun")
