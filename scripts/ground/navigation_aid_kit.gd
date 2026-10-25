@@ -41,7 +41,7 @@ static func build(kind: String, pos: Vector3, heading_deg: float, size: int, see
 ## Terrain height at a local point of `root` (root is at the world origin's XZ with a yaw).
 static func _gh(root: Node3D, local: Vector3) -> float:
 	var w: Vector3 = root.transform * local
-	return GroundKit.ground_y(w.x, w.z)
+	return GroundKit.ground_y(w.x, w.z) - root.position.y
 
 
 ## A circular earth / concrete aerial mat (a flat disc) under an aerial array.
