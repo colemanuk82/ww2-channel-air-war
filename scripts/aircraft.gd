@@ -195,6 +195,7 @@ func _build_model() -> void:
 	_gear_l = _model.find_child("GearL", true, false) as Node3D
 	_gear_r = _model.find_child("GearR", true, false) as Node3D
 	_scan_ground_geometry()
+	_setup_wheels()
 	_canopy = _model.find_child("Canopy", true, false) as Node3D
 	_eye = _model.find_child("CockpitEye", true, false) as Node3D
 	_flap_l = _model.find_child("FlapL", true, false) as Node3D
@@ -1400,6 +1401,81 @@ func _update_visuals(delta: float) -> void:
 	if not is_equal_approx(_gear_amount, target_gear):
 		_gear_amount = move_toward(_gear_amount, target_gear, delta * 1.2)
 		_apply_gear_visual()
+	_spin_wheels(delta)
+
+
+# ---------------------------------------------------------------- rolling wheels
+# The tyres are plain black cylinders, so turning one shows nothing. Each gets a pale hub cross so the roll reads,
+# and then turns about its axle at ground speed / radius while the gear is down and the aircraft is on the ground.
+
+var _wheels: Array = []        # {node, axis (mesh-local), base (Basis), radius (metres)}
+var _wheel_angle: float = 0.0
+var _wheel_rate: float = 0.0   # rad/s, eases down after take-off
+
+
+func _setup_wheels() -> void:
+	_wheels.clear()
+	_wheel_angle = 0.0
+	if _model == null:
+		return
+	var hub := StandardMaterial3D.new()
+	hub.albedo_color = Color(0.62, 0.62, 0.65)
+	hub.roughness = 0.6
+	for n in _model.find_children("*", "MeshInstance3D", true, false):
+		var w: MeshInstance3D = n as MeshInstance3D
+		var nm: String = String(w.name)
+		if w.mesh == null or not (nm.begins_with("Wheel") or nm.begins_with("TailWheelTyre")):
+			continue
+		var sz: Vector3 = w.mesh.get_aabb().size
+		var ai: int = 0
+		for k in 3:
+			if sz[k] < sz[ai]:
+				ai = k
+		var axis: Vector3 = Vector3.ZERO
+		axis[ai] = 1.0
+		var oa: int = (ai + 1) % 3
+		var ob: int = (ai + 2) % 3
+		var d: float = maxf(sz[oa], sz[ob])
+		for flip in 2:
+			var bs := Vector3.ZERO
+			bs[ai] = sz[ai] * 1.06
+			bs[oa] = d * (0.84 if flip == 0 else 0.14)
+			bs[ob] = d * (0.14 if flip == 0 else 0.84)
+			var bm := BoxMesh.new()
+			bm.size = bs
+			var bi := MeshInstance3D.new()
+			bi.name = "HubMark"
+			bi.mesh = bm
+			bi.material_override = hub
+			bi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			bi.position = w.mesh.get_aabb().get_center()
+			w.add_child(bi)
+		var gs: Vector3 = w.global_transform.basis.get_scale()
+		_wheels.append({"node": w, "axis": axis, "base": w.transform.basis, "radius": d * 0.5 * (gs.x + gs.y + gs.z) / 3.0})
+
+
+func _spin_wheels(delta: float) -> void:
+	if _wheels.is_empty():
+		return
+	var rolling: bool = on_ground and _gear_amount > 0.95 and state != State.DEAD
+	if rolling:
+		_wheel_rate = speed
+	else:
+		_wheel_rate = move_toward(_wheel_rate, 0.0, delta * 40.0)
+	if _wheel_rate < 0.05:
+		return
+	_wheel_angle = fposmod(_wheel_angle + delta * _wheel_rate, 1.0e5)
+	var inv: Transform3D = global_transform.affine_inverse()
+	for w in _wheels:
+		var node: MeshInstance3D = w["node"] as MeshInstance3D
+		if not is_instance_valid(node) or not node.is_inside_tree():
+			continue
+		var axis: Vector3 = w["axis"]
+		var axle: Vector3 = ((inv * node.global_transform).basis * axis).normalized()
+		if absf(axle.x) < 0.5:
+			continue      # not a sideways axle (e.g. a tail wheel modelled edge-on): leave it
+		var ang: float = -signf(axle.x) * _wheel_angle / maxf(float(w["radius"]), 0.05)
+		node.transform.basis = (w["base"] as Basis) * Basis(axis, ang)
 
 
 func _apply_gear_visual() -> void:
