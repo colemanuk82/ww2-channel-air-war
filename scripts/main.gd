@@ -2071,6 +2071,23 @@ func _on_player_crashed(a: Aircraft, reason: String) -> void:
 		DitchRescue.start(self, a.global_position, hud)
 
 
+## Safety net: if the player's aircraft is a dead wreck, nothing is queued to replace it, and no bail-out is in
+## progress, start the respawn anyway - a missed crash signal must never leave the player stuck until restart.
+var _dead_watch: float = 0.0
+
+
+func _respawn_watchdog(delta: float) -> void:
+	var stuck: bool = player != null and (not is_instance_valid(player) or player.state == Aircraft.State.DEAD) \
+		and _respawn_timer < 0.0 and not (_bail != null and _bail.active) and not _manages_respawn() \
+		and not bool(config.get("career", false)) and not GameState.paused
+	if not stuck:
+		_dead_watch = 0.0
+		return
+	_dead_watch += delta
+	if _dead_watch > 7.0:
+		_dead_watch = 0.0
+		_respawn_timer = 0.5
+
 ## Pilot's Life: a free-flight sortie has no objective, so the pilot ends it himself once he is down.
 func _end_career_sortie() -> void:
 	if player == null or not is_instance_valid(player) or player.state != Aircraft.State.ALIVE:
@@ -2353,8 +2370,9 @@ func _process(delta: float) -> void:
 			_respawn_player_with_support()
 	if not _manages_respawn() and Input.is_action_just_pressed("respawn"):
 		_respawn_player_with_support()
-	if _bail != null and player != null:
+	if _bail != null and (player != null or _bail.active):
 		_bail.tick(delta, player)
+	_respawn_watchdog(delta)
 	_check_rearm()
 	_check_ceremony(delta)
 	if Input.is_action_just_pressed("start_mode_toggle"):

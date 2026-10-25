@@ -11,6 +11,7 @@ uniform float fade_end = 6500.0;
 uniform float near_start = 1300.0;   // fully gone inside this range
 uniform float near_end = 2300.0;    // fully back by this range
 uniform float strength = 0.5;
+global uniform float night_k;          // 0 day .. 1 night (FX): outlines show up closer in the dark
 
 varying float v_dist;
 varying vec3 o_p;
@@ -28,5 +29,5 @@ void fragment() {
 		discard;
 	}
 	ALBEDO = outline_color.rgb;
-	ALPHA = strength * (1.0 - smoothstep(fade_start, fade_end, v_dist)) * smoothstep(near_start, near_end, v_dist);
+	ALPHA = strength * (1.0 - smoothstep(fade_start, fade_end, v_dist)) * smoothstep(near_start, near_end, v_dist * (1.0 + 0.35 * night_k));
 }

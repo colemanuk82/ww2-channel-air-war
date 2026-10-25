@@ -574,11 +574,14 @@ func parachute(pos: Vector3, team: String = "", look: String = "") -> Parachute:
 			p = c
 			break
 	if p == null:
-		if _chutes.size() >= 10:
-			return null
-		p = Parachute.new()
-		add_child(p)
-		_chutes.append(p)
+		if _chutes.size() >= 24:
+			p = _chutes[0]      # pool full: recycle the oldest so a bail-out can never fail
+			_chutes.remove_at(0)
+			_chutes.append(p)
+		else:
+			p = Parachute.new()
+			add_child(p)
+			_chutes.append(p)
 	p.launch(pos, team, look)
 	return p
 
@@ -607,6 +610,7 @@ func _process(delta: float) -> void:
 		_light_k_t = 0.5
 		# smoke is drawn unshaded, so dim it with the light or it glows grey against a night sky
 		_puff_mat.set_shader_parameter("light_k", lerpf(1.0, 0.22, night_factor()))
+		RenderingServer.global_shader_parameter_set("night_k", night_factor())
 		var env: Environment = TimeOfDay.environment
 		if env != null:
 			var hc: Color = env.fog_light_color.darkened(0.94 * night_factor())
