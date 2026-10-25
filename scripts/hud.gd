@@ -595,7 +595,7 @@ func _draw_inst() -> void:
 	_arc_meter(c, lctr, r + 12.0, true, hull, BAD if hull < 0.35 else (WARN if hull < 0.65 else Color(0.85, 0.82, 0.66)), "hull")
 	if GameState.engine_heat_on:
 		# engine temperature: outer arc on the airspeed dial (blue cold -> amber -> red), flashing when overheating
-		var hc: Color = Color(0.45, 0.75, 1.0).lerp(Color(1.0, 0.72, 0.2), clampf(a.engine_heat * 1.6, 0.0, 1.0)).lerp(Color(1.0, 0.22, 0.15), clampf((a.engine_heat - 0.7) / 0.3, 0.0, 1.0))
+		var hc: Color = Color(0.45, 0.75, 1.0).lerp(Color(1.0, 0.72, 0.2), clampf(a.engine_heat * 1.6, 0.0, 1.0))
 		if a.overheated or a.engine_heat > 0.85:
 			hc = Color(1.0, 0.04, 0.02)
 		_arc_meter(c, actr, r + 22.0, false, a.engine_heat, hc, "heat")
