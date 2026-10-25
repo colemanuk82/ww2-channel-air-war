@@ -21,7 +21,7 @@ func _ready() -> void:
 	refresh_playlist()
 	finished.connect(_next)
 	var want: String = GameState.music_current("menu")
-	if want != "" and _tracks.has(want):     # Options > Music picked a specific opener
+	if not _shuffle and want != "" and _tracks.has(want):     # Options > Music picked a specific opener
 		play_path(want)
 	else:
 		_next()
@@ -75,9 +75,7 @@ func _next() -> void:
 	if _tracks.is_empty() or AudioManager.muted:
 		return
 	if _shuffle:
-		var i: int = randi() % _tracks.size()
-		if _tracks.size() > 1 and i == _last:
-			i = (i + 1) % _tracks.size()
+		var i: int = _bag_pick()
 		_last = i
 	else:
 		_last = (_last + 1) % _tracks.size()
@@ -174,3 +172,17 @@ static func delete_track(path: String) -> bool:
 	if not is_imported(path) or not FileAccess.file_exists(path):
 		return false
 	return DirAccess.remove_absolute(path) == OK
+
+## Shuffle bag: every track plays once, in a fresh random order, before any repeats (and the first track of a new
+## bag is never the one that just played).
+var _bag: Array = []
+func _bag_pick() -> int:
+	if _bag.is_empty():
+		for k in _tracks.size():
+			_bag.append(k)
+		_bag.shuffle()
+		if _bag.size() > 1 and int(_bag[_bag.size() - 1]) == _last:
+			var t: Variant = _bag[0]
+			_bag[0] = _bag[_bag.size() - 1]
+			_bag[_bag.size() - 1] = t
+	return int(_bag.pop_back()) % maxi(_tracks.size(), 1)
