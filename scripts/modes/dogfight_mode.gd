@@ -361,8 +361,11 @@ func _on_player_destroyed(_a: Aircraft, _killer: Node) -> void:
 
 func _respawn_player() -> void:
 	_player_dead = false
-	# a life was used: come back with more wingmen on the wing
-	wingmen_max = clampi(wingmen_max + 2, 3, ModeBase.WINGMEN_MAX)
+	# a life was used: lost wingmen are replaced, but any still flying stay as they are (none are added on top);
+	# a flight wiped out comes back a little bigger
+	wingmen = wingmen.filter(func(w: Aircraft) -> bool: return is_instance_valid(w) and w.state == Aircraft.State.ALIVE)
+	if wingmen.is_empty():
+		wingmen_max = clampi(wingmen_max + 2, 3, ModeBase.WINGMEN_MAX)
 	if world and world.has_method("respawn_player"):
 		world.call("respawn_player")
 	_top_up_wingmen()
