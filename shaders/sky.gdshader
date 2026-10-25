@@ -88,7 +88,7 @@ void sky() {
 	if (moon_vis > 0.001) {
 		float mdisc = smoothstep(0.9990, 0.9996, md);
 		float mhalo = pow(max(md, 0.0), 200.0);
-		col += vec3(0.86, 0.89, 1.0) * (mdisc * 1.4 + mhalo * 0.35) * moon_vis;
+		col += vec3(0.86, 0.89, 1.0) * (mdisc * 0.45 + mhalo * 0.10) * moon_vis;
 	}
 
 	// --- night sky: stars fading in as the sun drops, over a faint Milky Way band ---
@@ -107,9 +107,9 @@ void sky() {
 		float rnd = hash13(c);
 		float cell = hash12(c.xy + c.z * 1.7);
 		vec3 fr = fract(p) - 0.5;
-		float s = smoothstep(0.4, 0.04, length(fr)) * step(0.994, rnd);
+		float s = smoothstep(0.4, 0.04, length(fr)) * step(0.9985, rnd);
 		vec3 st_col = mix(vec3(0.82, 0.88, 1.0), vec3(1.0, 0.90, 0.76), cell);
-		col += st_col * s * (0.45 + 0.5 * cell) * night * above * 0.32;
+		col += st_col * s * (0.12 + 0.9 * cell * cell * cell) * night * above * 0.28;
 	}
 
 	// Sub-LSB dither so the smooth gradient does not show 8-bit banding rings.
