@@ -509,6 +509,8 @@ func take_damage(amount: float, source: Node = null) -> void:
 	if state != State.ALIVE or invulnerable:
 		return
 	health = maxf(health - amount, 0.0)
+	if source != null:
+		last_attacker = source
 	_regen_cd = 8.0        # pause the player's slow self-repair while under fire
 	if player_controlled and (_pending_hit != Vector3.ZERO or source != null):
 		FX.audio.player_hit("bullet", amount / maxf(stats.max_health, 1.0))     # a strike on the airframe, heard in the cockpit
@@ -522,7 +524,7 @@ func take_damage(amount: float, source: Node = null) -> void:
 	damaged.emit(self, amount, health)
 	if not player_controlled and WeaponWorld.is_player_source(source):
 		Weapons.player_hit.emit(self, amount)
-	if health <= 0.0:
+	if health <= 0.0 and state == State.ALIVE:
 		state = State.DYING
 		_dying_spin = randf_range(-1.5, 1.5)
 		# sometimes a kill detonates in the air rather than gliding down (fuel / ammo going up)
@@ -531,6 +533,49 @@ func take_damage(amount: float, source: Node = null) -> void:
 		destroyed.emit(self, source)
 		if not player_controlled and WeaponWorld.is_player_source(source):
 			Weapons.player_kill.emit(self)
+
+
+# ---------------------------------------------------------------- fire
+
+var last_attacker: Node = null
+
+
+## An engine or fuel fire has won: the aircraft is lost. `blow_up` sends it up in the air; otherwise it goes down
+## burning. `fuse` is the seconds before the explosion (random when negative).
+func fire_kill(blow_up: bool, fuse: float = -1.0) -> void:
+	if state != State.ALIVE:
+		return
+	health = 0.0
+	state = State.DYING
+	_dying_spin = randf_range(-1.5, 1.5)
+	if blow_up and not has_meta("bailed"):
+		_explode_t = fuse if fuse >= 0.0 else randf_range(0.4, 2.0)
+	destroyed.emit(self, last_attacker)
+	if not player_controlled and last_attacker != null and WeaponWorld.is_player_source(last_attacker):
+		Weapons.player_kill.emit(self)
+
+
+# ---------------------------------------------------------------- structural failure
+
+var breakup: String = ""      # "wing_l" / "wing_r" / "tail": the part that failed; the aircraft is now uncontrollable
+
+
+## A wing or the tail has come off: the aircraft is lost, spinning (wing) or tumbling (tail) out of control.
+func start_breakup(part: String, source: Node = null) -> void:
+	if state != State.ALIVE:
+		return
+	breakup = part
+	health = 0.0
+	state = State.DYING
+	if part == "wing_l":
+		_dying_spin = -1.0
+	elif part == "wing_r":
+		_dying_spin = 1.0
+	else:
+		_dying_spin = randf_range(-1.0, 1.0)
+	destroyed.emit(self, source)
+	if not player_controlled and WeaponWorld.is_player_source(source):
+		Weapons.player_kill.emit(self)
 
 
 # ---------------------------------------------------------------- process
@@ -545,12 +590,21 @@ func _process(delta: float) -> void:
 	_update_flaps(delta)
 	_update_g_effects(delta)
 	_update_engine_heat(delta)
+	if state == State.ALIVE and damage_model != null and not on_ground:
+		damage_model.structural_check(delta)
 	if state == State.ALIVE and player_controlled and gloc_t <= 0.0:
 		_read_input()
 	elif state == State.DYING:
 		cmd_pitch = -0.45   # nose drops: death spiral
 		cmd_roll = _dying_spin
 		cmd_yaw = 0.0
+		if breakup == "tail":
+			cmd_pitch = -1.0                  # no elevator or rudder: tumbles end over end
+			cmd_roll = _dying_spin * 0.6
+			cmd_yaw = _dying_spin * 0.5
+		elif breakup != "":
+			cmd_pitch = -0.2                  # a wing gone: a flat, fast spin
+			cmd_yaw = _dying_spin
 		cmd_boost = false
 		cmd_fire = false
 		throttle_target = 0.0
@@ -956,7 +1010,7 @@ func _update_rotation(delta: float) -> void:
 		pitch_auth *= dm.pitch_auth_k()
 		roll_auth *= dm.roll_auth_k()
 	if on_ground:
-		pitch_auth = clampf((ground_airspeed() - stats.stall_speed * 0.65) / (stats.stall_speed * 0.3), 0.0, 1.0)
+		pitch_auth = clampf((ground_airspeed() - stats.stall_speed * 0.8) / (stats.stall_speed * 0.25), 0.0, 1.0)
 		roll_auth = 0.0
 
 	# Pulling harder into a stall does nothing useful; pushing forward is always fully effective.
@@ -1044,7 +1098,8 @@ func _update_rotation(delta: float) -> void:
 	if not on_ground and turn_w > 0.0:
 		# Turn rate falls with speed (w = g*tan(bank)/v): tight at slow speed, wide when fast.
 		var turn_k: float = clampf(stats.max_speed * 0.55 / maxf(speed, 20.0), 0.7, 1.45)
-		rotate(Vector3.UP, global_transform.basis.x.y * stats.bank_turn_rate * turn_k * air_auth * turn_w * delta)
+		var dmg_turn: float = damage_model.turn_k() if damage_model != null else 1.0
+		rotate(Vector3.UP, global_transform.basis.x.y * stats.bank_turn_rate * turn_k * dmg_turn * air_auth * turn_w * delta)
 
 	orthonormalize()
 
@@ -1218,10 +1273,14 @@ func _move_and_ground(delta: float) -> void:
 			var tail_down: float = 1.0 - smoothstep(stats.stall_speed * 0.12, stats.stall_speed * 0.5, ground_airspeed())
 			var goal: float = _gg_rest * tail_down if ground_airspeed() < rotate_speed else 0.0
 			rotate_object_local(Vector3.RIGHT, (goal - pit) * clampf(5.0 * delta, 0.0, 1.0))
-		if fwd.y > 0.04 and ground_airspeed() > stats.stall_speed * (0.95 - 0.10 * flap_deploy):
+		# Lift-off: a real aircraft rotates at about 1.1 x the stall speed and only leaves the runway once the nose is
+		# at the attitude the wing needs to carry its weight. Leaving earlier (or with the flight path pointing
+		# below the horizon) made it sink straight back down: the bounce on take-off.
+		var vr_alpha: float = WingModel.trim_alpha(stats.stall_speed, maxf(ground_airspeed(), 20.0), flap_deploy)
+		if fwd.y > maxf(0.04, sin(vr_alpha * 0.85)) and ground_airspeed() > stats.stall_speed * (1.05 - 0.10 * flap_deploy):
 			on_ground = false
-			_path_dir = fwd.rotated(global_transform.basis.x, -WingModel.trim_alpha(stats.stall_speed, maxf(ground_airspeed(), 20.0), flap_deploy))
-			position.y += 0.6
+			_path_dir = fwd.rotated(global_transform.basis.x, -minf(vr_alpha, asin(clampf(fwd.y, 0.0, 1.0)) * 0.9))
+			position.y += 0.25
 			took_off.emit(self)
 		else:
 			position.y = lerpf(position.y, gh + ground_offset(_pitch_angle()), clampf(12.0 * delta, 0.0, 1.0)) if _gg_ok else floor_y
@@ -1316,6 +1375,8 @@ var _prop_blurred: bool = false
 func _update_visuals(delta: float) -> void:
 	if _prop:
 		var rate: float = lerpf(9.0, 70.0, throttle) if state != State.DEAD else 0.0
+		if damage_model != null and damage_model.is_feathered(_prop):
+			rate = 0.0
 		_prop.rotate_object_local(Vector3.BACK, rate * delta)
 		# A propeller turning this fast cannot be drawn as blades: they land on an unrelated angle every
 		# frame and strobe, which reads as the whole aircraft shaking (loudest in the cockpit view, where

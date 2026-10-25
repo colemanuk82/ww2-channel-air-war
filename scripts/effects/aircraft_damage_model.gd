@@ -32,6 +32,19 @@ var _cracks: Array = []                      # [{p: Vector2 (0..1 screen), seed}
 var _oil: float = 0.0
 var _wander_t: float = 0.0
 
+# ---- structural failure and engine loss
+var wing_lost: Dictionary = {"wing_l": 0, "wing_r": 0}      # 0 whole, 1 outer half gone, 2 whole wing gone
+var tail_lost: bool = false
+var eng_x: Array = []             # aircraft-local x of each engine (multi-engine types only)
+var eng_hp: Array = []            # damage to each engine, 0..1
+var eng_out: Array = []           # which engines have failed
+var eng_r: Array = []
+var eng_z: Array = []
+var _eng_fx: Array = []
+var _eng_ready: bool = false
+var _hidden: Array = []
+var _cut_cache: Vector3 = Vector3.ZERO
+
 
 func attach(a: Aircraft) -> void:
 	aircraft = a
@@ -40,7 +53,10 @@ func attach(a: Aircraft) -> void:
 # ------------------------------------------------------------------ handling (read by Aircraft every frame)
 
 func roll_auth_k() -> float:
-	var k: float = 1.0
+	var k: float = 1.0 - 0.22 * engines_out_frac()
+	for w in ["wing_l", "wing_r"]:
+		if int(wing_lost[w]) == 1:
+			k -= 0.25
 	for w in ["wing_l", "wing_r"]:
 		k -= 0.12 * float(parts[w])
 		if bool(aileron_lost[w]):
@@ -49,7 +65,37 @@ func roll_auth_k() -> float:
 
 
 func pitch_auth_k() -> float:
-	return clampf(1.0 - 0.45 * float(parts["tail"]), 0.45, 1.0)
+	return clampf((1.0 - 0.45 * float(parts["tail"])) * (1.0 - 0.18 * engines_out_frac()), 0.4, 1.0)
+
+
+## Turning ability: a one-engined twin or a wing with its tip gone will not turn as hard.
+func turn_k() -> float:
+	var k: float = 1.0 - 0.32 * engines_out_frac()
+	for w in ["wing_l", "wing_r"]:
+		if int(wing_lost[w]) == 1:
+			k -= 0.3
+	return clampf(k, 0.3, 1.0)
+
+
+func engines_out_frac() -> float:
+	if eng_out.is_empty():
+		return 0.0
+	var n: int = 0
+	for o in eng_out:
+		if bool(o):
+			n += 1
+	return float(n) / float(eng_out.size())
+
+
+## Net sideways thrust imbalance: + when the starboard engines are the ones that are out (the nose swings that way).
+func engine_asym() -> float:
+	if eng_out.is_empty():
+		return 0.0
+	var a: float = 0.0
+	for i in eng_out.size():
+		if bool(eng_out[i]):
+			a += signf(float(eng_x[i]))
+	return a / float(eng_out.size())
 
 
 ## Roll the damaged wing drops toward (rad/s at full authority). + = right.
@@ -59,11 +105,24 @@ func roll_bias() -> float:
 		d += 0.35
 	if bool(aileron_lost["wing_l"]):
 		d -= 0.35
-	return deg_to_rad(16.0) * clampf(d, -1.2, 1.2)
+	# half a wing gone: the aircraft rolls hard toward the missing side and the pilot cannot hold it
+	d += 3.4 * float(int(wing_lost["wing_r"]) == 1) - 3.4 * float(int(wing_lost["wing_l"]) == 1)
+	d += 0.35 * engine_asym()
+	return deg_to_rad(16.0) * clampf(d, -4.0, 4.0)
 
 
 ## A shot-up tail makes the nose hunt about a little.
 func yaw_wander(delta: float) -> float:
+	var asym: float = engine_asym()
+	if asym != 0.0:
+		var thr: float = clampf(aircraft.throttle, 0.2, 1.0)
+		var b: float = deg_to_rad(7.0) * asym * thr
+		if aircraft.state == Aircraft.State.ALIVE:
+			return b + _wander_yaw(delta)
+	return _wander_yaw(delta)
+
+
+func _wander_yaw(delta: float) -> float:
 	var t: float = float(parts["tail"])
 	if t < 0.2:
 		return 0.0
@@ -72,15 +131,24 @@ func yaw_wander(delta: float) -> float:
 
 
 func engine_k() -> float:
-	return clampf(1.0 - 0.45 * smoothstep(0.15, 1.0, float(parts["engine"])), 0.5, 1.0)
+	var k: float = clampf(1.0 - 0.45 * smoothstep(0.15, 1.0, float(parts["engine"])), 0.5, 1.0)
+	var f: float = engines_out_frac()
+	if f > 0.0:
+		k *= (1.0 - 0.7 * f) if f < 1.0 else 0.12        # each dead engine costs its share of the power
+	return k
 
 
 func drag_k() -> float:
 	var holes: float = float(parts["wing_l"]) + float(parts["wing_r"]) + 0.5 * float(parts["tail"])
-	return 1.0 + 0.12 * holes + (0.08 if bool(aileron_lost["wing_l"]) else 0.0) + (0.08 if bool(aileron_lost["wing_r"]) else 0.0)
+	var lost: float = 0.0
+	for w in ["wing_l", "wing_r"]:
+		lost += 0.2 * float(mini(int(wing_lost[w]), 1))
+	return 1.0 + 0.12 * holes + (0.08 if bool(aileron_lost["wing_l"]) else 0.0) + (0.08 if bool(aileron_lost["wing_r"]) else 0.0) + lost + 0.1 * engines_out_frac()
 
 
 func any_damage() -> bool:
+	if engines_out_frac() > 0.0 or int(wing_lost["wing_l"]) > 0 or int(wing_lost["wing_r"]) > 0 or tail_lost:
+		return true
 	for p in PARTS:
 		if float(parts[p]) > 0.0:
 			return true
@@ -90,7 +158,11 @@ func any_damage() -> bool:
 # ------------------------------------------------------------------ hits
 
 ## world_pos / dir: where the round struck and which way it was travelling (Vector3.ZERO when unknown: flak, blast).
+var _last_source: Node = null
+
+
 func on_hit(amount: float, source: Node, world_pos: Vector3, dir: Vector3) -> void:
+	_last_source = source
 	if aircraft == null or aircraft._model == null or not aircraft.is_inside_tree():
 		return
 	var smp: Dictionary = _get_samples()
@@ -119,6 +191,7 @@ func _hit_at(smp: Dictionary, i: int, dmg: float) -> void:
 	var nrm: Vector3 = smp["n"][i]
 	var part: String = _part_of(p, smp["ext"])
 	parts[part] = clampf(float(parts[part]) + dmg, 0.0, 1.0)
+	_hit_engines(p, dmg)
 	# bigger aircraft carry bigger holes, so they read at the distance you see a bomber from
 	var k: float = clampf(float((smp["ext"] as Vector3).x) / 8.0, 1.0, 2.2)
 	_add_hole(p, nrm, randf_range(0.6, 0.95) * k)
@@ -136,6 +209,7 @@ func _hit_at(smp: Dictionary, i: int, dmg: float) -> void:
 		if part == w and not bool(aileron_lost[w]) and float(parts[w]) >= AILERON_AT and randf() < 0.75:
 			_lose_aileron(w, smp)
 	_tell(part)
+	_check_breakup(part, _last_source)
 
 
 ## Which part a point (aircraft-local) belongs to. The aircraft faces -Z, +X is starboard.
@@ -474,6 +548,7 @@ func _draw_glass() -> void:
 # ------------------------------------------------------------------ repair
 
 func repair() -> void:
+	_reset_structure()
 	for p in PARTS:
 		parts[p] = 0.0
 	aileron_lost = {"wing_l": false, "wing_r": false}
@@ -486,3 +561,289 @@ func repair() -> void:
 	_told.clear()
 	if _glass != null:
 		_glass.queue_redraw()
+
+
+# ------------------------------------------------------------------ structural failure
+
+func _spec() -> Dictionary:
+	return ModelSpecs.get_spec(aircraft.stats.model_id)
+
+
+func _sc() -> float:
+	return float(_spec().get("scale", 1.0))
+
+
+func _half_span() -> float:
+	var sp: Dictionary = _spec()
+	if sp.is_empty():
+		return 5.5
+	return float(sp["wing"]["half"]) * _sc()
+
+
+func _big() -> float:
+	return 0.55 if aircraft.stats.max_health > 300.0 else 1.0       # bombers are built stronger
+
+
+## A wing or the tail that has taken heavy punishment can fail on a further hit.
+func _check_breakup(part: String, source: Node) -> void:
+	if aircraft == null or aircraft.state != Aircraft.State.ALIVE or aircraft.invulnerable:
+		return
+	var lv: float = aircraft.damage_level()
+	if part == "tail":
+		var t: float = float(parts["tail"])
+		if not tail_lost and t >= 0.6 and lv >= 0.35 and randf() < _big() * (0.10 + 0.35 * (t - 0.6) / 0.4 + 0.2 * lv):
+			lose_tail(source)
+	elif part == "wing_l" or part == "wing_r":
+		var w: float = float(parts[part])
+		if int(wing_lost[part]) < 2 and w >= 0.5 and lv >= 0.3 and randf() < _big() * (0.08 + 0.35 * (w - 0.5) / 0.5 + 0.2 * lv):
+			lose_wing(part, source)
+
+
+## Called every frame while the aircraft flies: a damaged wing or tail cannot take heavy G or a fast dive.
+func structural_check(delta: float) -> void:
+	if aircraft.invulnerable or not any_part_weak():
+		return
+	var g: float = absf(aircraft.g_load)
+	var over: float = maxf(aircraft.speed - aircraft.stats.max_speed * 1.08, 0.0) / maxf(aircraft.stats.max_speed, 1.0)
+	for w in ["wing_l", "wing_r"]:
+		var d: float = float(parts[w])
+		if d >= 0.45 and int(wing_lost[w]) < 2:
+			var limit: float = 7.2 - 6.0 * d
+			if g > limit or over > 0.0:
+				if randf() < (0.35 + 0.5 * (g - limit) / 4.0 + 6.0 * over) * delta * _big():
+					lose_wing(w, null)
+					return
+	var t: float = float(parts["tail"])
+	if t >= 0.55 and not tail_lost:
+		var tl: float = 7.0 - 5.0 * t
+		if g > tl or over > 0.0:
+			if randf() < (0.3 + 0.4 * (g - tl) / 4.0 + 6.0 * over) * delta * _big():
+				lose_tail(null)
+
+
+func any_part_weak() -> bool:
+	return float(parts["wing_l"]) >= 0.45 or float(parts["wing_r"]) >= 0.45 or float(parts["tail"]) >= 0.55
+
+
+func _say(msg: String) -> void:
+	if aircraft.player_controlled:
+		var hud: Node = get_tree().get_first_node_in_group("hud")
+		if hud != null and hud.has_method("show_message"):
+			hud.call("show_message", msg, 4.0)
+
+
+func lose_wing(w: String, source: Node) -> void:
+	var prev: int = int(wing_lost[w])
+	var lvl: int = prev + 1
+	if lvl == 1 and aircraft.damage_level() > 0.7 and randf() < 0.4:
+		lvl = 2
+	wing_lost[w] = lvl
+	_spawn_wing_piece(w, lvl, prev)
+	apply_cut()
+	var side: String = "PORT" if w == "wing_l" else "STARBOARD"
+	if lvl == 2:
+		_say("%s WING GONE!" % side)
+		_fail_engines_beyond(w, 0.35)
+		aircraft.start_breakup(w, source)
+	else:
+		_say("%s WING TIP SHEARED OFF - SHE WON'T HOLD" % side)
+		_fail_engines_beyond(w, _half_span() * 0.5)
+
+
+func lose_tail(source: Node) -> void:
+	if tail_lost:
+		return
+	tail_lost = true
+	_spawn_tail_pieces()
+	apply_cut()
+	_say("TAIL SHOT AWAY!")
+	aircraft.start_breakup("tail", source)
+
+
+func _fail_engines_beyond(w: String, x_thr: float) -> void:
+	_init_engines()
+	var sgn: float = 1.0 if w == "wing_r" else -1.0
+	for i in eng_x.size():
+		if not bool(eng_out[i]) and float(eng_x[i]) * sgn > x_thr:
+			_engine_fail(i, false)
+
+
+func _spawn_wing_piece(w: String, lvl: int, prev: int) -> void:
+	var sp: Dictionary = _spec()
+	if sp.is_empty() or aircraft.get_parent() == null:
+		return
+	var sc: float = _sc()
+	var half: float = _half_span()
+	var sgn: float = 1.0 if w == "wing_r" else -1.0
+	var root: float = maxf(half * 0.09, 0.4)
+	var inner: float = half * 0.5 if lvl == 1 else root          # the section that comes off runs from `inner` ...
+	var outer: float = half if prev == 0 else half * 0.5          # ... out to `outer` (the tip may already be gone)
+	var length: float = maxf(outer - inner, 0.8)
+	var chord: float = float(sp["wing"]["cr"]) * sc * 0.8
+	var xl: float = sgn * (inner + length * 0.5)
+	var zc: float = (float(sp["wing"]["le_z"]) + float(sp["wing"]["cr"]) * 0.5) * sc
+	var xf: Transform3D = aircraft.global_transform * Transform3D(Basis.IDENTITY, Vector3(xl, 0.2, zc))
+	var out: Vector3 = aircraft.global_transform.basis.x * sgn
+	var v: Vector3 = aircraft.velocity * 0.9 + out * 9.0 + Vector3(0.0, 5.0, 0.0)
+	FallingPart.make(aircraft.get_parent(), xf, Vector3(length, 0.14 * sc + 0.08, chord), Color(0.32, 0.34, 0.28), v,
+		Vector3(randf_range(-2.0, 2.0), randf_range(-1.0, 1.0), sgn * randf_range(2.0, 5.0)))
+	FX.debris(xf.origin, 6, 0.6, 16.0, Color(0.34, 0.36, 0.3))
+	FX.explosion(xf.origin, 0.5)
+
+
+func _spawn_tail_pieces() -> void:
+	var sp: Dictionary = _spec()
+	if sp.is_empty() or aircraft.get_parent() == null:
+		return
+	var sc: float = _sc()
+	var tl: Dictionary = sp["tail"]
+	var fin: Dictionary = sp["fin"]
+	var zt: float = float(tl["z"]) * sc
+	var gb: Transform3D = aircraft.global_transform
+	var v0: Vector3 = aircraft.velocity * 0.85
+	var xf: Transform3D = gb * Transform3D(Basis.IDENTITY, Vector3(0.0, float(tl["y"]) * sc, zt))
+	FallingPart.make(aircraft.get_parent(), xf, Vector3(float(tl["span"]) * sc * 2.0, 0.12 * sc + 0.06, float(tl["cr"]) * sc * 0.8),
+		Color(0.32, 0.34, 0.28), v0 + gb.basis.y * 4.0 + gb.basis.x * 3.0, Vector3(randf_range(-3.0, 3.0), randf_range(-2.0, 2.0), randf_range(-3.0, 3.0)))
+	var xf2: Transform3D = gb * Transform3D(Basis.IDENTITY, Vector3(0.0, float(fin["y"]) * sc + float(fin["h"]) * sc * 0.5, float(fin["z"]) * sc))
+	FallingPart.make(aircraft.get_parent(), xf2, Vector3(0.12 * sc + 0.06, float(fin["h"]) * sc, float(fin["cr"]) * sc * 0.8),
+		Color(0.32, 0.34, 0.28), v0 + gb.basis.y * 6.0 - gb.basis.x * 4.0, Vector3(randf_range(-3.0, 3.0), randf_range(-2.0, 2.0), randf_range(-3.0, 3.0)))
+	FX.debris(xf.origin, 8, 0.7, 18.0, Color(0.34, 0.36, 0.3))
+	FX.explosion(xf.origin, 0.6)
+
+
+## Push the current losses into the model: the skin shader discards what has been torn off, and the separate
+## parts (markings, flaps, propellers, hole decals) that lie in the lost region are hidden.
+func apply_cut() -> void:
+	if aircraft == null or aircraft._model == null:
+		return
+	var sp: Dictionary = _spec()
+	var half: float = _half_span()
+	var thr_r: float = _wing_thr("wing_r", half)
+	var thr_l: float = _wing_thr("wing_l", half)
+	var thr_t: float = 0.0
+	if tail_lost and not sp.is_empty():
+		var sc: float = _sc()
+		thr_t = float(sp["tail"]["z"]) * sc - float(sp["tail"]["cr"]) * sc * 0.9
+	var inv: Transform3D = aircraft.global_transform.affine_inverse()
+	for n in aircraft._model.find_children("*", "MeshInstance3D", true, false):
+		var mi: MeshInstance3D = n as MeshInstance3D
+		if mi == null:
+			continue
+		var mat: Material = mi.material_override
+		var pbr: bool = mat is ShaderMaterial and (mat as ShaderMaterial).shader != null and str((mat as ShaderMaterial).shader.resource_path).ends_with("aircraft_pbr.gdshader")
+		if pbr:
+			var mt: Transform3D = mi.global_transform.affine_inverse() * aircraft.global_transform
+			var lx_r: float = (mt * Vector3(thr_r, 0.0, 0.0)).x if thr_r > 0.0 else 0.0
+			var lx_l: float = -(mt * Vector3(-thr_l, 0.0, 0.0)).x if thr_l > 0.0 else 0.0
+			var lz_t: float = (mt * Vector3(0.0, 0.0, thr_t)).z if thr_t > 0.0 else 0.0
+			mi.set_instance_shader_parameter("cut", Vector4(maxf(lx_r, 0.001) if thr_r > 0.0 else 0.0, maxf(lx_l, 0.001) if thr_l > 0.0 else 0.0, lz_t if thr_t > 0.0 else 0.0, 0.0))
+		else:
+			var c: Vector3 = inv * (mi.global_transform * mi.get_aabb().get_center())
+			var gone: bool = (thr_r > 0.0 and c.x > thr_r) or (thr_l > 0.0 and c.x < -thr_l) or (thr_t > 0.0 and c.z > thr_t)
+			if gone and mi.visible:
+				mi.visible = false
+				_hidden.append(mi)
+	for d in _decals:
+		if is_instance_valid(d):
+			var dp: Vector3 = (d as Node3D).position
+			if (thr_r > 0.0 and dp.x > thr_r) or (thr_l > 0.0 and dp.x < -thr_l) or (thr_t > 0.0 and dp.z > thr_t):
+				(d as Node3D).visible = false
+
+
+func _wing_thr(w: String, half: float) -> float:
+	match int(wing_lost[w]):
+		1:
+			return half * 0.5
+		2:
+			return maxf(half * 0.09, 0.4)
+	return 0.0
+
+
+# ------------------------------------------------------------------ engines (multi-engined aircraft)
+
+func _init_engines() -> void:
+	if _eng_ready:
+		return
+	_eng_ready = true
+	if aircraft.stats.engine_count < 2:
+		return
+	var sp: Dictionary = _spec()
+	if sp.is_empty() or not sp.has("engines"):
+		return
+	var sc: float = _sc()
+	for e in sp["engines"]:
+		var ed: Dictionary = e
+		if absf(float(ed["x"])) < 0.3:
+			continue
+		eng_x.append(float(ed["x"]) * sc)
+		eng_z.append(Vector2(float(ed["z0"]), float(ed["z1"])) * sc)
+		eng_r.append(float(ed["r"]) * sc)
+		eng_hp.append(0.0)
+		eng_out.append(false)
+
+
+func _hit_engines(p: Vector3, dmg: float) -> void:
+	_init_engines()
+	for i in eng_x.size():
+		if bool(eng_out[i]):
+			continue
+		var zr: Vector2 = eng_z[i]
+		if absf(p.x - float(eng_x[i])) <= float(eng_r[i]) * 1.8 and p.z >= zr.x - 1.0 and p.z <= zr.y + 1.2:
+			eng_hp[i] = float(eng_hp[i]) + dmg * 1.5
+			if float(eng_hp[i]) >= 0.8 or (float(eng_hp[i]) >= 0.35 and randf() < 0.18):
+				_engine_fail(i, true)
+
+
+func _engine_fail(i: int, show_fx: bool) -> void:
+	if bool(eng_out[i]):
+		return
+	eng_out[i] = true
+	var left: bool = float(eng_x[i]) < 0.0
+	var nm: String = "PORT" if left else "STARBOARD"
+	if eng_x.size() > 2:
+		nm = "%s %s" % [("OUTER" if absf(float(eng_x[i])) > 4.0 else "INNER"), nm]
+	var all_out: bool = engines_out_frac() >= 1.0
+	_say("%s ENGINE OUT%s" % [nm, " - ALL ENGINES GONE" if all_out else " - FEATHERING"])
+	if show_fx and aircraft.is_inside_tree():
+		var zr: Vector2 = eng_z[i]
+		var burning: bool = randf() < 0.3
+		var em: Object = FX.trail(aircraft, "fire" if burning else "smoke", 1.2, Vector3(float(eng_x[i]), 0.1, zr.y))
+		if em != null:
+			_eng_fx.append(em)
+		FX.debris(aircraft.global_position + aircraft.global_transform.basis.x * float(eng_x[i]), 5, 0.5, 14.0, Color(0.15, 0.15, 0.14))
+
+
+## Is this propeller on a dead engine?
+func is_feathered(prop: Node3D) -> bool:
+	if eng_out.is_empty() or prop == null:
+		return false
+	var x: float = (aircraft.global_transform.affine_inverse() * prop.global_position).x
+	var best: int = -1
+	var bd: float = 1.0e9
+	for i in eng_x.size():
+		var d: float = absf(x - float(eng_x[i]))
+		if d < bd:
+			bd = d
+			best = i
+	return best >= 0 and bd < 2.0 and bool(eng_out[best])
+
+
+func _reset_structure() -> void:
+	wing_lost = {"wing_l": 0, "wing_r": 0}
+	tail_lost = false
+	for i in eng_out.size():
+		eng_out[i] = false
+		eng_hp[i] = 0.0
+	for em in _eng_fx:
+		if is_instance_valid(em) and em.has_method("stop"):
+			em.call("stop")
+	_eng_fx.clear()
+	for h in _hidden:
+		if is_instance_valid(h):
+			(h as Node3D).visible = true
+	_hidden.clear()
+	if aircraft != null and aircraft._model != null:
+		for n in aircraft._model.find_children("*", "MeshInstance3D", true, false):
+			var mi: MeshInstance3D = n as MeshInstance3D
+			if mi != null and mi.material_override is ShaderMaterial:
+				mi.set_instance_shader_parameter("cut", Vector4.ZERO)

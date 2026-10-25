@@ -13,14 +13,20 @@ uniform float near_end = 520.0;     // fully back by this range
 uniform float strength = 0.5;
 
 varying float v_dist;
+varying vec3 o_p;
+instance uniform vec4 cut = vec4(0.0);     // the same structural cut as the aircraft skin
 
 void vertex() {
 	float d = length((MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz);
 	v_dist = d;
+	o_p = VERTEX;
 	VERTEX += NORMAL * (thickness + min(d, fade_end) * dist_scale);
 }
 
 void fragment() {
+	if ((cut.x > 0.0 && o_p.x > cut.x) || (cut.y > 0.0 && o_p.x < -cut.y) || (cut.z > 0.0 && o_p.z > cut.z)) {
+		discard;
+	}
 	ALBEDO = outline_color.rgb;
 	ALPHA = strength * (1.0 - smoothstep(fade_start, fade_end, v_dist)) * smoothstep(near_start, near_end, v_dist);
 }

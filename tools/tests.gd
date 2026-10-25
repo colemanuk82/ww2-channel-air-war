@@ -31,6 +31,7 @@ func _ready() -> void:
 	_test_pow_escape()
 	_test_airborne()
 	_test_realism_presets()
+	_test_structural_damage()
 	_test_city_balloons()
 	_test_balloon_cables_and_streams()
 	_test_decoy_kinds()
@@ -738,6 +739,36 @@ func _test_airborne() -> void:
 	var rig: TowRig = TowRig.make(null, "waco", Vector3.ZERO)
 	_check(rig.state == "towed", "tow rig starts towed")
 	rig.free()
+
+
+## Structural failure: a lost wing or tail spins the aircraft out; a twin loses an engine but keeps flying.
+func _test_structural_damage() -> void:
+	print("-- structural damage")
+	var ac: Aircraft = AIFactory.spawn(self, "a20", "Allies", Vector3(0.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
+	ac.on_ground = false
+	var dm: AircraftDamageModel = ac.damage_model
+	_check(dm != null and dm.engines_out_frac() == 0.0, "no engines out at the start")
+	var k0: float = dm.engine_k()
+	dm._init_engines()
+	_check(dm.eng_x.size() == 2, "a twin has two engines tracked (%d)" % dm.eng_x.size())
+	dm._engine_fail(0, false)
+	_check(dm.engines_out_frac() == 0.5, "one of two engines out")
+	_check(dm.engine_k() < k0 * 0.75 and dm.engine_k() > 0.3, "one engine out: lower power, still flying (%.2f)" % dm.engine_k())
+	_check(dm.turn_k() < 1.0, "one engine out: lower turning ability")
+	_check(dm.engine_asym() != 0.0, "one engine out: the nose swings toward the dead side")
+	dm.wing_lost["wing_l"] = 1
+	_check(dm.roll_bias() < 0.0, "half the port wing gone: she rolls to port")
+	dm.repair()
+	_check(dm.engines_out_frac() == 0.0 and int(dm.wing_lost["wing_l"]) == 0, "repair restores engines and wings")
+	ac.start_breakup("wing_r", null)
+	_check(ac.state == Aircraft.State.DYING and ac.breakup == "wing_r" and ac._dying_spin > 0.0, "a lost starboard wing spins her to starboard")
+	ac.queue_free()
+	var f: Aircraft = AIFactory.spawn(self, "spitfire", "Allies", Vector3(500.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
+	f.damage_model.tail_lost = true
+	f.damage_model.apply_cut()
+	f.start_breakup("tail", null)
+	_check(f.state == Aircraft.State.DYING and f.breakup == "tail", "a lost tail puts her out of control")
+	f.queue_free()
 
 
 ## G and engine-heat strength presets, gun layouts and per-type convergence.

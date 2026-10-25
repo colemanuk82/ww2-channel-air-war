@@ -78,6 +78,8 @@ var _jink_up: float = 0.0
 var _weave: float = 0.0        # bomber formation weave: 0..0.5 lateral authority while under attack
 var _weave_t: float = 0.0
 var _bail_hp: float = 0.32
+var _stubborn: bool = false           # presses the attack until it is nearly finished
+var _decided: bool = false            # has already made the "go home or fight on" call for this damage
 var _aim_err: Vector3 = Vector3.ZERO
 var _aim_err_t: float = 0.0
 var _seen_tp: Vector3 = Vector3.ZERO
@@ -159,7 +161,8 @@ func set_difficulty(d: float) -> void:
 	aggression = clampf(lerpf(0.35, 0.9, difficulty) + jitter, 0.1, 1.0)
 	bullet_damage = lerpf(3.4, 6.0, difficulty)
 	turn_scale = lerpf(0.75, 1.0, difficulty)
-	_bail_hp = lerpf(0.35, 0.08, aggression)
+	_bail_hp = clampf(lerpf(0.35, 0.08, aggression) + randf_range(-0.07, 0.07), 0.05, 0.45)
+	_stubborn = randf() < 0.28 * aggression          # some pilots press on regardless of damage
 	# better pilots more often fight in the vertical rather than in the turn circle
 	energy_fighter = randf() < lerpf(0.25, 0.65, difficulty)
 
@@ -208,6 +211,38 @@ func set_order(o: int, tgt: Aircraft = null) -> void:
 		_:
 			if state == State.RETURN:
 				_set_state(State.FORMATION)
+
+
+## Does this pilot break off? Hurt past his own limit, or crippled (an engine out, a wing tip gone, on fire, the tail
+## shot about). Pilots who press on only turn for home when the aircraft is nearly finished.
+func _wants_home(hp_frac: float) -> bool:
+	var dm: AircraftDamageModel = ac.damage_model
+	var crippled: bool = ac.has_meta("on_fire") or (dm != null and (dm.engines_out_frac() > 0.0 or int(dm.wing_lost["wing_l"]) > 0 or int(dm.wing_lost["wing_r"]) > 0))
+	if _stubborn:
+		return hp_frac < 0.1
+	return hp_frac < _bail_hp or crippled
+
+
+func _nearest_friendly_field() -> Airfield:
+	var best: Airfield = null
+	var bd: float = INF
+	for n in ac.get_tree().get_nodes_in_group("airfield"):
+		var af: Airfield = n as Airfield
+		if af != null and af.team == ac.team:
+			var d: float = Vector2(af.global_position.x - ac.global_position.x, af.global_position.z - ac.global_position.z).length()
+			if d < bd:
+				bd = d
+				best = af
+	return best
+
+
+## A wingman of the player's side says what he is going to do about it.
+func _announce(going_home: bool) -> void:
+	if role != Role.WINGMAN or ac.team != GameState.player_side:
+		return
+	var lines: Array = ["Hit, I'm breaking off. Heading for home.", "I'm in a bad way, leader. Going home.", "Engine's gone, I'm turning back."] if going_home \
+		else ["Took some hits but I'm still with you.", "I can still fight. Staying on your wing.", "Scratched, not beaten. Press on."]
+	Radio.say("Wingman", lines[randi() % lines.size()], Radio.Kind.FRIENDLY, 0.0)
 
 
 func get_target() -> Aircraft:
@@ -293,6 +328,11 @@ func _process(delta: float) -> void:
 				_run_evade(delta)
 		State.RETURN:
 			var hp: Vector3 = home + Vector3.UP * 300.0
+			if _flat_dist(hp) < 3200.0 and land_af == null and role != Role.BOMBER_LEADER and not ac.has_meta("on_fire"):
+				var af: Airfield = _nearest_friendly_field()
+				if af != null and ac.altitude_agl > 120.0:
+					begin_landing(af)          # made it back: join the circuit and land
+					return
 			if _flat_dist(hp) < 700.0:
 				_dir = _dir_orbit(home, 1500.0, hp.y)
 			else:
@@ -527,11 +567,15 @@ func _think() -> void:
 			order_target = null
 			engage_radius = 4200.0
 	var hp_frac: float = ac.health / maxf(ac.stats.max_health, 1.0)
-	if hp_frac < _bail_hp and (role == Role.FIGHTER or role == Role.WINGMAN) and state != State.RETURN:
+	if (role == Role.FIGHTER or role == Role.WINGMAN) and state != State.RETURN and _wants_home(hp_frac):
 		_set_state(State.RETURN)      # badly damaged: break off and run for home
 		target = null
 		order = Order.RTB
+		_announce(true)
 		return
+	if (role == Role.FIGHTER or role == Role.WINGMAN) and not _decided and hp_frac < _bail_hp + 0.18:
+		_decided = true               # hurt but staying in the fight
+		_announce(false)
 	if state == State.RETURN:
 		return
 	var dr: float = detect_range * clampf(sqrt(_vis), 0.35, 1.0)
