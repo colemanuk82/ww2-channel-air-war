@@ -356,6 +356,8 @@ func _build_gameplay_page() -> VBoxContainer:
 		GameState.set_graphic("player_heal", i == 1))
 	_row(page, "Pitch ladder", ["Off", "On"], 1 if GameState.show_pitch_ladder else 0, func(i: int) -> void:
 		GameState.set_graphic("pitch_ladder", i == 1))
+	_row(page, "Lead marker on targets", ["Off", "On"], 1 if GameState.show_lead_marker else 0, func(i: int) -> void:
+		GameState.set_graphic("lead_marker", i == 1))
 	_row(page, "Control hints", ["Off", "On"], 1 if GameState.show_hints else 0, func(i: int) -> void:
 		GameState.set_graphic("show_hints", i == 1))
 	_row(page, "Camera shake", ["Normal", "Reduced"], 1 if GameState.reduce_shake else 0, func(i: int) -> void:

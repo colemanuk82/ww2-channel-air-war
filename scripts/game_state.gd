@@ -48,6 +48,7 @@ var g_level: int = 2              # 0 off, 1 low, 2 medium (default), 3 high
 var heat_level: int = 2           # 0 off, 1 low, 2 medium (default), 3 high
 var player_heal: bool = true   # the player's aircraft very slowly repairs itself in flight
 var show_pitch_ladder: bool = false   # pitch ladder drawn in the HUD
+var show_lead_marker: bool = false    # Options > Gameplay: the lead (aim-ahead) marker on a targeted aircraft; off by default
 var player_side: String = "Allies"
 var era_date: String = ""          # ISO date of the current mission / campaign day ("" = no date): decides which airfields are liberated
 var quality: int = 1  # 0 low, 1 medium, 2 high
@@ -211,6 +212,7 @@ func _load_settings() -> void:
 	engine_heat_on = heat_level > 0
 	g_effects_on = g_level > 0
 	show_pitch_ladder = bool(cf.get_value("gameplay", "pitch_ladder", show_pitch_ladder))
+	show_lead_marker = bool(cf.get_value("gameplay", "lead_marker", show_lead_marker))
 	completed_missions = cf.get_value("progress", "completed_missions", completed_missions)
 	time_speed = clampi(int(cf.get_value("ui", "time_speed", time_speed)), 0, TIME_SPEEDS.size() - 1)
 	radio_static = bool(cf.get_value("ui", "radio_static", radio_static))
@@ -278,6 +280,7 @@ func save_settings() -> void:
 	cf.set_value("realism", "heat_level", heat_level)
 	cf.set_value("realism", "g_level", g_level)
 	cf.set_value("gameplay", "pitch_ladder", show_pitch_ladder)
+	cf.set_value("gameplay", "lead_marker", show_lead_marker)
 	cf.set_value("progress", "completed_missions", completed_missions)
 	cf.set_value("ui", "time_speed", time_speed)
 	cf.set_value("ui", "radio_static", radio_static)
@@ -387,6 +390,8 @@ func set_graphic(key: String, value: Variant) -> void:
 			player_heal = bool(value)
 		"pitch_ladder":
 			show_pitch_ladder = bool(value)
+		"lead_marker":
+			show_lead_marker = bool(value)
 		"msaa":
 			msaa_level = int(value)
 		"post_fx":
