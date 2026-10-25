@@ -688,7 +688,7 @@ func _spawn_wing_piece(w: String, lvl: int, prev: int) -> void:
 	FallingPart.make(aircraft.get_parent(), xf, Vector3(length, 0.14 * sc + 0.08, chord), Color(0.32, 0.34, 0.28), v,
 		Vector3(randf_range(-2.0, 2.0), randf_range(-1.0, 1.0), sgn * randf_range(2.0, 5.0)))
 	FX.debris(xf.origin, 6, 0.6, 16.0, Color(0.34, 0.36, 0.3))
-	FX.explosion(xf.origin, 0.5)
+	FX.explosion(xf.origin, 0.5, false)
 
 
 func _spawn_tail_pieces() -> void:
@@ -708,7 +708,7 @@ func _spawn_tail_pieces() -> void:
 	FallingPart.make(aircraft.get_parent(), xf2, Vector3(0.12 * sc + 0.06, float(fin["h"]) * sc, float(fin["cr"]) * sc * 0.8),
 		Color(0.32, 0.34, 0.28), v0 + gb.basis.y * 6.0 - gb.basis.x * 4.0, Vector3(randf_range(-3.0, 3.0), randf_range(-2.0, 2.0), randf_range(-3.0, 3.0)))
 	FX.debris(xf.origin, 8, 0.7, 18.0, Color(0.34, 0.36, 0.3))
-	FX.explosion(xf.origin, 0.6)
+	FX.explosion(xf.origin, 0.6, false)
 
 
 ## Push the current losses into the model: the skin shader discards what has been torn off, and the separate

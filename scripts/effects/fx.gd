@@ -201,9 +201,10 @@ func _spawn_star(pos: Vector3, size: float, life: float, col: Color, core: Color
 
 # ------------------------------------------------------------------ public effects
 
-func explosion(pos: Vector3, size: float = 10.0) -> void:
+func explosion(pos: Vector3, size: float = 10.0, star: bool = true) -> void:
 	var s: float = maxf(size, 0.5)
-	_spawn_star(pos + Vector3(0, s * 0.3, 0), s * 3.4, 0.38, Color(1.0, 0.5, 0.08), Color(1.0, 0.95, 0.55), 9.0)
+	if star:
+		_spawn_star(pos + Vector3(0, s * 0.3, 0), s * 3.4, 0.38, Color(1.0, 0.5, 0.08), Color(1.0, 0.95, 0.55), 9.0)
 	# fireball
 	var n_fire: int = clampi(int(4.0 + s * 0.4), 4, 10)
 	for i in n_fire:
@@ -279,17 +280,23 @@ func _blast_column(pos: Vector3, s: float) -> void:
 func crash_explosion(pos: Vector3, on_water: bool = false) -> void:
 	if on_water:
 		water_splash(pos, 14.0)
-		explosion(pos + Vector3(0, 2, 0), 12.0)
+		explosion(pos + Vector3(0, 2, 0), 9.0, false)
 		return
-	# Hitting the ground is a far bigger event than a gun kill: a large fireball, a long-lived fire and
-	# smoke column, scattered debris, a crater and a loud low boom.
-	explosion(pos + Vector3(0, 2, 0), 26.0)
-	debris(pos, 16, 3.4, 80.0, Color(0.3, 0.32, 0.25))
-	fire(pos, 8.0, 60.0)
-	smoke_column(pos, 11.0, 50.0)
-	crater(pos, 11.0)
-	light_flash(pos + Vector3(0, 8.0, 0), 14.0, 110.0, 0.7, Color(1.0, 0.6, 0.24))
-	sfx("crash", pos, 15.0, 0.02)
+	# An aircraft hitting the ground: a quick, fuel-fed fireball (no cartoon starburst), a throw of earth and dust,
+	# wreckage scattered along the line of impact, a scar in the ground, and a wreck that burns and smokes for a
+	# minute or more.
+	explosion(pos + Vector3(0, 1.5, 0), 15.0, false)
+	for i in 12:        # soil and dust thrown up and out
+		var d: Vector3 = (_rv(1.0) + Vector3(0, 1.1, 0)).normalized()
+		puffs.spawn(pos + Vector3(0, 0.5, 0), d * randf_range(6.0, 18.0), randf_range(1.2, 2.6), 1.2, randf_range(4.0, 7.0),
+			Color(0.36, 0.28, 0.2, 0.8), Color(0.42, 0.36, 0.3, 0.0), 0.9, 9.0, 0.6)
+	debris(pos, 26, 0.9, 55.0, Color(0.3, 0.32, 0.25))
+	debris(pos, 8, 2.2, 30.0, Color(0.34, 0.35, 0.3))
+	fire(pos, 5.0, 90.0)
+	smoke_column(pos, 8.0, 70.0)
+	crater(pos, 6.0)
+	light_flash(pos + Vector3(0, 5.0, 0), 8.0, 60.0, 0.35, Color(1.0, 0.6, 0.24))
+	sfx("crash", pos, 12.0, 0.02)
 
 
 func smoke_column(pos: Vector3, size: float = 6.0, duration: float = 20.0) -> FXEmitter:
@@ -514,6 +521,7 @@ func water_plume(pos: Vector3, size: float = 8.0) -> void:
 
 
 func muzzle_flash(muzzle: Node3D) -> void:
+	return      # no starburst at the gun mounts: the tracers and the gun sound carry the fire
 	if muzzle == null or not is_instance_valid(muzzle):
 		return
 	var f: MeshInstance3D = null
