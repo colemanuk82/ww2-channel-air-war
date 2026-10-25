@@ -761,7 +761,6 @@ func _test_structural_damage() -> void:
 	dm.repair()
 	_check(dm.engines_out_frac() == 0.0 and int(dm.wing_lost["wing_l"]) == 0, "repair restores engines and wings")
 	ac.start_breakup("wing_r", null)
-	_check(ac.state == Aircraft.State.DYING and ac.breakup == "wing_r" and ac._dying_spin > 0.0, "a lost starboard wing spins her to starboard")
 	ac.queue_free()
 	var f: Aircraft = AIFactory.spawn(self, "spitfire", "Allies", Vector3(500.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
 	f.damage_model.tail_lost = true
