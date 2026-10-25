@@ -105,6 +105,7 @@ func _on_fire(a: Aircraft) -> void:
 	var first: int = _mount_i
 	_mount_i = (_mount_i + n_fire) % maxi(_muzzles.size(), 1)
 	var life: float = st.gun_range / st.gun_speed
+	_tracer_i += 1
 	var base_vel: Vector3 = a.velocity
 	for k in n_fire:
 		var m: Node3D = _muzzles[(first + k) % _muzzles.size()]
@@ -114,8 +115,10 @@ func _on_fire(a: Aircraft) -> void:
 		var d: Vector3 = (aim - mp).normalized()
 		d += Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * spread
 		d = d.normalized()
-		_tracer_i += 1
-		var tracer: bool = st.tracer_every <= 1 or _tracer_i % st.tracer_every == 0
+		# every Nth round of each gun is a tracer, the guns staggered so the streams come from both wings in turn (a
+		# single bullet counter always landed the tracer on the same mount)
+		var mount_i: int = (first + k) % _muzzles.size()
+		var tracer: bool = st.tracer_every <= 1 or (_tracer_i + mount_i * maxi(st.tracer_every / maxi(n_fire, 1), 1)) % st.tracer_every == 0
 		Weapons.fire_bullet(mp + d * 1.5, base_vel + d * st.gun_speed, a.team, a, per_bullet, tracer, life)
 		FX.muzzle_flash(m)
 	a.ammo = maxi(ammo0 - mini(2, n_fire), 0)

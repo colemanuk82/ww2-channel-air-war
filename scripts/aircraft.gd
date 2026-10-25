@@ -498,7 +498,7 @@ func _check_collisions(delta: float) -> void:
 		var dmg: float = clampf(25.0 + closing * 0.6, 35.0, 200.0)
 		_collide_cd = 1.0
 		o._collide_cd = 1.0
-		FX.explosion(global_position + d * 0.5, 2.0)
+		FX.explosion(global_position + d * 0.5, 2.0, false)
 		take_damage(dmg, o)
 		o.take_damage(dmg, self)
 		return
@@ -1090,6 +1090,19 @@ func _update_rotation(delta: float) -> void:
 		t_pitch += kick * deg_to_rad(9.0) * (sin(tt * 2.3 + ph * 0.7) * 0.6 + sin(tt * 5.1 + ph) * 0.4)
 		t_yaw += kick * deg_to_rad(4.0) * sin(tt * 1.3 + ph * 1.3)
 		shake_intensity = maxf(shake_intensity, kick * 0.18)
+	if state == State.DYING and not on_ground:
+		# A lost aircraft is no longer flown by its wings: it spins steadily about its roll axis while the nose settles
+		# onto the line it is falling along (no stability, trim or stall terms, which made it pitch up and down).
+		var spin: float = _dying_spin
+		if breakup == "tail":
+			t_pitch = -deg_to_rad(95.0)                           # no elevator or fin: it tumbles end over end
+			t_roll = spin * deg_to_rad(70.0)
+			t_yaw = spin * deg_to_rad(30.0)
+		else:
+			var path_pit: float = asin(clampf(_path_dir.y, -1.0, 1.0))
+			t_pitch = clampf((path_pit - _pitch_angle()) * 1.4 - 0.1, -0.8, 0.8)
+			t_roll = spin * deg_to_rad(stats.roll_rate_deg) * 1.1
+			t_yaw = spin * deg_to_rad(stats.yaw_rate_deg) * (0.5 if breakup != "" else 0.2)
 	var k: float = 1.0 - exp(-stats.rate_response * delta)
 	_pitch_rate = lerpf(_pitch_rate, t_pitch, k)
 	_roll_rate = lerpf(_roll_rate, t_roll, k)
@@ -1127,6 +1140,8 @@ func _roll_trim(a_trim: float) -> float:
 
 
 func _update_speed(delta: float) -> void:
+	if state == State.DYING and not on_ground:
+		return      # a falling wreck follows _update_flight_path's ballistic fall
 	var max_s: float = stats.max_speed
 	var target: float
 	if on_ground:
@@ -1195,6 +1210,18 @@ func _update_flight_path(delta: float) -> void:
 		if stalled:
 			stalled = false
 			stall_changed.emit(self, false)
+		return
+	if state == State.DYING:
+		# ballistic fall: gravity bends the path steadily down and the speed builds in the dive, with no wing lift to
+		# pull it back up again
+		var v: Vector3 = _path_dir * speed + Vector3.DOWN * stats.gravity_accel * delta
+		v *= 1.0 - clampf(0.35 * (v.length() / stats.max_speed) * delta, 0.0, 0.2)
+		speed = clampf(v.length(), 8.0, stats.max_speed * 1.45)
+		_path_dir = v.normalized()
+		_stall_amount = move_toward(_stall_amount, 0.0, 4.0 * delta)
+		g_load = 1.0
+		lift_fraction = 1.0
+		_aoa = acos(clampf(fwd.dot(_path_dir), -1.0, 1.0))
 		return
 	var alpha_s: float = _alpha_signed()
 	wing.evaluate(global_position, global_transform.basis, _path_dir, speed, alpha_s, _roll_rate, _yaw_rate, stats.stall_speed, flap_deploy)
@@ -1405,9 +1432,9 @@ func _spawn_crash_fx() -> void:
 ## A kill that goes up in the air: fireball and debris where the aircraft was, then it is gone.
 func _explode_in_air() -> void:
 	_explode_t = -1.0
-	FX.explosion(global_position, 13.0)
-	FX.debris(global_position, 10, 1.8, 32.0, Color(0.3, 0.31, 0.29))
-	FX.light_flash(global_position, 8.0, 70.0, 0.4, Color(1.0, 0.62, 0.25))
+	FX.explosion(global_position, 10.0, false)
+	FX.debris(global_position, 14, 1.2, 40.0, Color(0.3, 0.31, 0.29))
+	FX.light_flash(global_position, 6.0, 55.0, 0.3, Color(1.0, 0.62, 0.25))
 	FX.sfx("crash", global_position, 6.0, 0.05)
 	_crash("exploded")
 
