@@ -304,7 +304,7 @@ func _draw_overlay() -> void:
 		if tp != null:
 			var t: Vector2 = tp
 				# (no target box: the enemy outline already marks it; only the lead marker is drawn)
-			if _has_lead:
+			if _has_lead and GameState.show_lead_marker:
 				var lp: Variant = _screen(_lead)
 				if lp != null:
 					var lv: Vector2 = lp

@@ -964,7 +964,7 @@ func _draw_aim() -> void:
 		return
 	if GameState.show_pitch_ladder:
 		_draw_ladder()
-	_draw_hit_marker()
+	# (no hit-confirm cross: _draw_hit_marker is kept but no longer drawn)
 
 
 ## White cross when your rounds land, a larger red one when you destroy the target.
