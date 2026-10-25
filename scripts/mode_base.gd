@@ -380,7 +380,13 @@ func _rw_release(a: Variant, next: int) -> void:
 
 ## Losing a life brings in replacements: raise the flight size, then let the tick bring them in once.
 func reinforce_wingmen(extra: int = 2) -> void:
-	wingmen_wanted = clampi(wingmen_wanted + extra, 0, WINGMEN_MAX)
+	wingmen_list = wingmen_list.filter(func(w) -> bool:
+		return is_instance_valid(w) and (w as Aircraft).state == Aircraft.State.ALIVE)
+	# wingmen still alive stay as they are: only a flight with losses (or none at all) gets replacements
+	if not wingmen_list.is_empty() and wingmen_list.size() >= wingmen_wanted:
+		return
+	if wingmen_list.is_empty():
+		wingmen_wanted = clampi(wingmen_wanted + extra, 0, WINGMEN_MAX)
 	_wingmen_done = false
 
 

@@ -426,6 +426,15 @@ func reset_pose(pos: Vector3, heading_deg: float, airborne: bool, start_speed: f
 		damage_model.repair()
 	state = State.ALIVE
 	add_to_group("damageable")
+	# a fresh aircraft: no lingering engine wear or heat, break-up, pull to one side or credited attacker
+	engine_wear = 0.0
+	engine_heat = 0.0
+	overheated = false
+	_heat_warned = false
+	breakup = ""
+	last_attacker = null
+	_dmg_side = 0.0
+	_explode_t = -1.0
 	if weapons:
 		weapons.rockets_left = stats.rockets
 	health = stats.max_health
