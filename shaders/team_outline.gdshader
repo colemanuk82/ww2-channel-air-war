@@ -29,5 +29,5 @@ void fragment() {
 		discard;
 	}
 	ALBEDO = outline_color.rgb;
-	ALPHA = strength * (1.0 - smoothstep(fade_start, fade_end, v_dist)) * smoothstep(near_start, near_end, v_dist * (1.0 + 0.35 * night_k));
+	ALPHA = strength * (1.0 - smoothstep(fade_start, fade_end, v_dist)) * mix(smoothstep(near_start, near_end, v_dist), 1.0, night_k);
 }
