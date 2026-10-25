@@ -107,13 +107,6 @@ Pick a date for your sortie and the map shows that day of the war. Nothing is a 
 | ![Spitfire close-up: C1 roundel, codes and panel seams](docs/promo/aircraft/spitfire_skin.jpg) | ![Bf 109 close-up: mottled sides and outlined number](docs/promo/aircraft/bf109_skin.jpg) |
 | **Close up: C1 roundel, squadron codes, panel seams** | **Close up: Bf 109 mottled sides and outlined number** |
 
-<details>
-<summary><b>See all 25 aircraft</b></summary>
-
-![All 25 aircraft](docs/promo/aircraft/all_aircraft.jpg)
-
-    ww2-channel-air-war
-
 
 <Atribution>
 
