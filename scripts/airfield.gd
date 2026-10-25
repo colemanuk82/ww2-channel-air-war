@@ -148,6 +148,8 @@ func _runway_pivot(angle_deg: float, length: float, width: float, slab_mat: Mate
 	rw.position = at
 	rw.rotation.y = deg_to_rad(angle_deg)
 	add_child(rw)
+	var rdir := Vector3(sin(rw.rotation.y), 0.0, cos(rw.rotation.y)) * length * 0.5
+	_paved.append([at - rdir, at + rdir, width * 0.5])
 	_add_box(rw, Vector3(width, 0.6, length), Vector3(0, 0.0, 0), slab_mat)
 	# dim blacked-out runway lights: two edge rows (low amber-white), a red pair at each end
 	var nl_: int = int(length / 55.0)
@@ -427,6 +429,7 @@ func _pad(at: Vector3, r: float, mat: Material) -> void:
 	pad.material_override = mat
 	pad.position = at
 	add_child(pad)
+	_paved.append([at, at, r])
 
 
 ## Octagon of track corners (local), half sizes hx/hz, corners cut by ch, centred on x = cx.
@@ -508,6 +511,7 @@ func _runway_seg(from: Vector3, to: Vector3, width: float, mat: Material) -> voi
 	rw.rotation.y = atan2(d.x, d.z)
 	add_child(rw)
 	var length: float = d.length()
+	_paved.append([from, to, width * 0.5])
 	_add_box(rw, Vector3(width, 0.6, length), Vector3.ZERO, mat)
 	_edge_stripes(rw, length, width)
 	var n: int = int(length / 48.0)
@@ -518,6 +522,7 @@ func _runway_seg(from: Vector3, to: Vector3, width: float, mat: Material) -> voi
 ## Three-lobed clover-leaf hardstanding with earth blast walls between the lobes; each lobe takes one aircraft.
 func _clover(hub: Vector3, ang: float, mat: Material, earth: Material) -> void:
 	_box(Vector3(10.0, 0.5, 10.0), hub, mat)
+	_paved.append([hub, hub, 7.0])
 	for j in 3:
 		var a: float = ang + TAU * float(j) / 3.0 + 0.5
 		var lp: Vector3 = hub + Vector3(sin(a), 0, cos(a)) * 22.0
@@ -532,6 +537,7 @@ func _clover(hub: Vector3, ang: float, mat: Material, earth: Material) -> void:
 		pad.material_override = mat
 		pad.position = lp
 		add_child(pad)
+		_paved.append([lp, lp, 12.0])
 		_link(hub, lp, 7.0, mat)
 		_dispersal_local.append(Vector3(lp.x, 0.0, lp.z))
 		_add_box(self, Vector3(3.5, 3.2, 8.0), hub + Vector3(sin(a + 1.05), 0, cos(a + 1.05)) * 26.0, earth, a + 1.05)
@@ -554,12 +560,32 @@ func _perimeter_track(mat: Material) -> void:
 
 ## Straight taxiway link between two local points.
 var _link_n: int = 0
+var _paved: Array = []     # [from, to, half_width] local segments / discs of everything paved (taxiways, pads, runways)
+
+
+## True if a world point lies within `margin` m of any paved surface of this field (used to keep earth banks,
+## props and parked clutter off the taxiways and pads).
+func near_paved(world_pos: Vector3, margin: float) -> bool:
+	var xf: Transform3D = global_transform if is_inside_tree() else transform
+	var p: Vector3 = xf.affine_inverse() * world_pos
+	for seg in _paved:
+		var a: Vector3 = seg[0]
+		var b: Vector3 = seg[1]
+		var ab: Vector3 = b - a
+		ab.y = 0.0
+		var ap: Vector3 = p - a
+		ap.y = 0.0
+		var t: float = 0.0 if ab.length_squared() < 0.001 else clampf(ap.dot(ab) / ab.length_squared(), 0.0, 1.0)
+		if (ap - ab * t).length() < float(seg[2]) + margin:
+			return true
+	return false
 
 
 func _link(from: Vector3, to: Vector3, width: float, mat: Material) -> void:
 	var mid := (from + to) * 0.5
 	var d := to - from
 	_link_n += 1
+	_paved.append([from, to, width * 0.5])
 	# each taxiway sits a hair below the runways and at its own height, so overlaps never shimmer
 	_box(Vector3(width, 0.5, d.length()), Vector3(mid.x, -0.04 - 0.03 * float(_link_n % 3), mid.z), mat, atan2(d.x, d.z))
 
@@ -581,6 +607,7 @@ func _dispersal(pos: Vector3, ang: float, mat: Material, earth: Material) -> voi
 	pad.material_override = mat
 	pad.position = Vector3(0, 0.0, 0)
 	pivot.add_child(pad)
+	_paved.append([pos, pos, 22.0])
 	var r := 29.0
 	for i in 7:
 		var a: float = PI * (0.5 + float(i) / 6.0)          # outboard arc
