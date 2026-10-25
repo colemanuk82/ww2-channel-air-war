@@ -44,6 +44,8 @@ var ingame_music_current: String = ""
 var show_hints: bool = true    # control hints panel on the right of the HUD (Options > Control hints)
 var engine_heat_on: bool = true   # Options > Realism: engine overheating (player and AI)
 var g_effects_on: bool = true     # Options > Realism: G grey-out, blackout and G-LOC (player and AI)
+var g_level: int = 2              # 0 off, 1 low, 2 medium (default), 3 high
+var heat_level: int = 2           # 0 off, 1 low, 2 medium (default), 3 high
 var player_heal: bool = true   # the player's aircraft very slowly repairs itself in flight
 var show_pitch_ladder: bool = false   # pitch ladder drawn in the HUD
 var player_side: String = "Allies"
@@ -204,8 +206,10 @@ func _load_settings() -> void:
 	fps_cap = clampi(int(cf.get_value("gfx", "fps_cap", fps_cap)), 0, 1000)
 	show_hints = bool(cf.get_value("ui", "show_hints", show_hints))
 	player_heal = bool(cf.get_value("gameplay", "player_heal", player_heal))
-	engine_heat_on = bool(cf.get_value("realism", "engine_heat", engine_heat_on))
-	g_effects_on = bool(cf.get_value("realism", "g_effects", g_effects_on))
+	heat_level = clampi(int(cf.get_value("realism", "heat_level", (2 if bool(cf.get_value("realism", "engine_heat", true)) else 0))), 0, 3)
+	g_level = clampi(int(cf.get_value("realism", "g_level", (2 if bool(cf.get_value("realism", "g_effects", true)) else 0))), 0, 3)
+	engine_heat_on = heat_level > 0
+	g_effects_on = g_level > 0
 	show_pitch_ladder = bool(cf.get_value("gameplay", "pitch_ladder", show_pitch_ladder))
 	completed_missions = cf.get_value("progress", "completed_missions", completed_missions)
 	time_speed = clampi(int(cf.get_value("ui", "time_speed", time_speed)), 0, TIME_SPEEDS.size() - 1)
@@ -271,6 +275,8 @@ func save_settings() -> void:
 	cf.set_value("gameplay", "player_heal", player_heal)
 	cf.set_value("realism", "engine_heat", engine_heat_on)
 	cf.set_value("realism", "g_effects", g_effects_on)
+	cf.set_value("realism", "heat_level", heat_level)
+	cf.set_value("realism", "g_level", g_level)
 	cf.set_value("gameplay", "pitch_ladder", show_pitch_ladder)
 	cf.set_value("progress", "completed_missions", completed_missions)
 	cf.set_value("ui", "time_speed", time_speed)
@@ -414,9 +420,11 @@ func set_graphic(key: String, value: Variant) -> void:
 		"radio_subtitles":
 			radio_subtitles = bool(value)
 		"engine_heat":
-			engine_heat_on = bool(value)
+			heat_level = clampi(int(value), 0, 3)
+			engine_heat_on = heat_level > 0
 		"g_effects":
-			g_effects_on = bool(value)
+			g_level = clampi(int(value), 0, 3)
+			g_effects_on = g_level > 0
 		"reduce_shake":
 			reduce_shake = bool(value)
 		"colorblind":

@@ -320,7 +320,15 @@ func get_altitude_m() -> float:
 	return global_position.y / WorldCoords.VERTICAL_SCALE
 
 
+var _gun_marks: Array[Node3D] = []
+
+
 func get_muzzles() -> Array[Node3D]:
+	if _gun_marks.is_empty() and _model != null and stats != null:
+		var spec: Dictionary = ModelSpecs.get_spec(stats.model_id)
+		_gun_marks = GunLayouts.make_marks(_model, stats.model_id, float(spec.get("scale", 1.0)))
+	if not _gun_marks.is_empty() and is_instance_valid(_gun_marks[0]):
+		return _gun_marks
 	var out: Array[Node3D] = []
 	for n in ["MuzzleL", "MuzzleR"]:
 		var m: Node3D = _model.get_node_or_null(n) as Node3D
@@ -1406,6 +1414,12 @@ func _engine_power() -> float:
 	return maxf(k, 0.2)
 
 
+## Engine heat strength presets by GameState.heat_level (1 low, 2 medium = the original tuning, 3 high): [heating, cooling, wear]
+const HEAT_PRESETS: Array = [[1.0, 1.0, 1.0], [0.6, 1.3, 0.6], [1.0, 1.0, 1.0], [1.5, 0.85, 1.5]]
+## G strength presets by GameState.g_level: [threshold G, grey-out rate, G-LOC length] (high is the original tuning)
+const G_PRESETS: Array = [[4.6, 1.0, 1.0], [6.4, 0.45, 0.6], [5.4, 0.72, 0.8], [4.6, 1.0, 1.0]]
+
+
 func _update_engine_heat(delta: float) -> void:
 	if not GameState.engine_heat_on or state == State.DEAD:
 		engine_heat = move_toward(engine_heat, 0.0, 0.2 * delta)
@@ -1413,6 +1427,7 @@ func _update_engine_heat(delta: float) -> void:
 		return
 	var airflow: float = clampf(speed / maxf(stats.max_speed, 1.0), 0.0, 1.2)
 	var gen: float = 0.0
+	var hk: Array = HEAT_PRESETS[clampi(GameState.heat_level, 1, 3)]       # [heat, cooling, wear]
 	if state == State.ALIVE:
 		if throttle > 0.75:
 			gen += pow((throttle - 0.75) / 0.25, 1.5) * 0.016          # full power alone: about a minute to red-line
@@ -1421,18 +1436,20 @@ func _update_engine_heat(delta: float) -> void:
 	var cool: float = 0.010 + 0.022 * (1.0 - throttle)                 # throttled back it cools
 	cool += clampf(-_path_dir.y, 0.0, 1.0) * airflow * 0.05            # a dive pushes cold air through the radiator
 	cool *= (0.5 + 0.5 * minf(airflow, 1.0)) * clampf(air_density, 0.55, 1.0)
+	gen *= float(hk[0])
+	cool *= float(hk[1])
 	if on_ground and throttle > 0.5:
 		cool *= 0.5                                                    # no airflow standing on the runway
 	engine_heat = clampf(engine_heat + (gen - cool) * delta, 0.0, 1.0)
 	if engine_heat >= 0.98 and not overheated:
 		overheated = true
-		engine_wear = minf(engine_wear + 0.08, 1.0)                    # each overheat does a little lasting harm
+		engine_wear = minf(engine_wear + 0.08 * float(hk[2]), 1.0)     # each overheat does a little lasting harm
 		if player_controlled:
 			engine_alert.emit("ENGINE OVERHEATING - throttle back or dive!")
 	elif overheated and engine_heat < 0.8:
 		overheated = false
 	if overheated:
-		engine_wear = minf(engine_wear + 0.025 * delta, 1.0)           # and the longer it stays hot the worse
+		engine_wear = minf(engine_wear + 0.025 * float(hk[2]) * delta, 1.0)  # and the longer it stays hot the worse
 	elif engine_heat < 0.5 and player_controlled and GameState.player_heal and engine_wear > 0.0:
 		engine_wear = maxf(engine_wear - 0.0015 * delta, 0.0)          # the ground crew's patching, very slowly
 	if player_controlled:
@@ -1468,23 +1485,24 @@ func _update_g_effects(delta: float) -> void:
 				blackout_alert.emit("")
 		return
 	var g: float = g_load
-	var gthr: float = 4.6 * tol
+	var gp: Array = G_PRESETS[clampi(GameState.g_level, 1, 3)]
+	var gthr: float = float(gp[0]) * tol
 	var was_gray: float = g_gray
 	if g > gthr:
-		g_gray += (g - gthr) * 0.12 * delta / tol
+		g_gray += (g - gthr) * 0.12 * float(gp[1]) * delta / tol
 	elif g < gthr - 1.2:
 		g_gray -= 0.28 * delta                                    # fades back in slowly once the pull is off
 	g_gray = clampf(g_gray, 0.0, 1.0)
 	var nthr: float = -2.0 * tol
 	if g < nthr:
-		g_red += (nthr - g) * 0.15 * delta / tol
+		g_red += (nthr - g) * 0.15 * float(gp[1]) * delta / tol
 	else:
 		g_red -= 0.4 * delta
 	g_red = clampf(g_red, 0.0, 1.0)
 	if player_controlled and was_gray < 0.45 and g_gray >= 0.45:
 		blackout_alert.emit("EASE OFF THE G!")
 	if (g_gray >= 1.0 or g_red >= 1.0) and _gloc_grace <= 0.0:
-		gloc_t = randf_range(2.5, 5.0)
+		gloc_t = randf_range(2.5, 5.0) * float(gp[2])
 		g_gray = 1.0
 		g_red = 0.0
 		if player_controlled:

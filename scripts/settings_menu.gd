@@ -382,12 +382,12 @@ func _note(page: VBoxContainer, text: String) -> void:
 
 func _build_realism_page() -> VBoxContainer:
 	var page := _new_page()
-	_row(page, "Engine overheating", ["Off", "On"], 1 if GameState.engine_heat_on else 0, func(i: int) -> void:
-		GameState.set_graphic("engine_heat", i == 1))
-	_note(page, "Full power and boost heat the engine (new HEAT gauge). Throttle back or dive to cool it. Overheating too much, too often wears the engine: less power, then smoke and fire. Enemy pilots are affected too.")
-	_row(page, "G-force blackouts", ["Off", "On"], 1 if GameState.g_effects_on else 0, func(i: int) -> void:
-		GameState.set_graphic("g_effects", i == 1))
-	_note(page, "Sustained high G greys your vision out (red-out on negative G); ease off and it returns slowly. Keep pulling and you lose consciousness - the controls go slack until you wake. Enemy pilots can black out too.")
+	_row(page, "Engine overheating", ["Off", "Low", "Medium", "High"], GameState.heat_level, func(i: int) -> void:
+		GameState.set_graphic("engine_heat", i))
+	_note(page, "Strength: Low heats slowly and cools quickly, Medium is the standard, High overheats sooner and wears the engine faster. Full power and boost heat the engine (HEAT gauge). Throttle back or dive to cool it. Overheating too much, too often wears the engine: less power, then smoke and fire. Enemy pilots are affected too.")
+	_row(page, "G-force blackouts", ["Off", "Low", "Medium", "High"], GameState.g_level, func(i: int) -> void:
+		GameState.set_graphic("g_effects", i))
+	_note(page, "Strength: Low needs a long hard pull to grey out, Medium is in between, High is the most severe. Sustained high G greys your vision out (red-out on negative G); ease off and it returns slowly. Keep pulling and you lose consciousness - the controls go slack until you wake. Enemy pilots can black out too.")
 	return page
 
 
