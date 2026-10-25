@@ -2511,6 +2511,8 @@ func _parse_debug_args() -> void:
 			frt.autostart = true
 			add_child(frt)
 			frt.timeout.connect(ft)
+		elif a.begins_with("--break="):   # debug: damage the player's aircraft shortly after the start (wing | tip | tail | engine | fire)
+			get_tree().create_timer(2.5).timeout.connect(_debug_break.bind(a.substr(8)))
 		elif a == "--breach-now":   # debug: breach the dam wall of a Dam Busters day at once (flood visual check)
 			get_tree().create_timer(1.5).timeout.connect(func() -> void:
 				for n in get_tree().get_nodes_in_group("damageable"):
@@ -3041,3 +3043,22 @@ func _take_photo() -> void:
 	if hud != null and hud.has_method("show_message"):
 		hud.show_message(("Photo saved: " + path) if err == OK else "Could not save the photo", 3.5)
 	_photo_busy = false
+
+
+func _debug_break(how: String) -> void:
+	var dm: AircraftDamageModel = player.damage_model
+	if how == "wing":
+		dm.wing_lost["wing_r"] = 1
+		dm.lose_wing("wing_r", null)
+	elif how == "tip":
+		dm.lose_wing("wing_l", null)
+	elif how == "tail":
+		dm.lose_tail(null)
+	elif how == "engine":
+		dm._init_engines()
+		dm._engine_fail(0, true)
+	elif how == "fire":
+		player.health = player.stats.max_health * 0.3
+		for c in player.get_children():
+			if c is AircraftDamageFX:
+				(c as AircraftDamageFX)._ignite()

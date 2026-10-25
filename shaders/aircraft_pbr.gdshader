@@ -23,6 +23,9 @@ uniform vec4 mottle_b : source_color = vec4(0.25, 0.29, 0.21, 1.0);   // RLM 71
 
 varying vec3 o_p;
 varying vec3 o_n;
+// Structural loss (see AircraftDamageModel): fragments past these object-space limits are cut away.
+// x = starboard wing from this |x| outward, y = port wing, z = everything aft of this z (the tail); 0 = intact.
+instance uniform vec4 cut = vec4(0.0);
 
 void vertex() {
 	o_p = VERTEX;
@@ -60,6 +63,9 @@ float rivet_row(float a, float c, float spacing, float off, float pitch) {
 }
 
 void fragment() {
+	if ((cut.x > 0.0 && o_p.x > cut.x) || (cut.y > 0.0 && o_p.x < -cut.y) || (cut.z > 0.0 && o_p.z > cut.z)) {
+		discard;
+	}
 	vec3 n = o_n;
 	vec3 an = abs(n);
 	// triplanar camouflage with sharp blend weights so patches stay crisp over curved skin
