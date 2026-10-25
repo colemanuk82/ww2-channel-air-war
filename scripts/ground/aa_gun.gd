@@ -32,6 +32,8 @@ var _burst_left: int = 0
 var _burst_gap: float = 0.0
 var _yaw: float = 0.0
 var _pitch: float = 0.0
+var _attentive: bool = true       # is the crew at the gun and watching the sky? Crews wander off, doze, or look the wrong way
+var _attn_t: float = 0.0
 var _barrage: bool = false      # night: firing a predicted barrage at an aircraft it can hear but not see
 
 ## Shared geometry cache: merged ArrayMeshes keyed by type/team, built once and reused by every gun.
@@ -158,6 +160,8 @@ static func _flash_mesh() -> SphereMesh:
 
 func _post_ready() -> void:
 	add_to_group("aa_gun")
+	_attentive = randf() < 0.55
+	_attn_t = randf_range(15.0, 80.0)
 
 
 func _build_intact(root: Node3D) -> void:
@@ -216,10 +220,23 @@ func _process(delta: float) -> void:
 		_flash_t -= delta
 		if _flash_t <= 0.0:
 			_flash.visible = false
+	# Not every gun is manned or watching: each crew spends long spells away from the gun or looking elsewhere, and
+	# even an alert one is slow to pick an aircraft out of the sky.
+	_attn_t -= delta
+	if _attn_t <= 0.0:
+		_attentive = randf() < 0.55
+		_attn_t = randf_range(20.0, 90.0)
+		if _attentive:
+			_cool = maxf(_cool, randf_range(2.0, 6.0))        # running back to the gun
+	if not _attentive:
+		_target = null
+		_burst_left = 0
+		return
 	_scan_t -= delta
 	if _scan_t <= 0.0:
 		_scan_t = 0.3
-		_acquire()
+		if randf() < 0.45:
+			_acquire()
 	if _target != null and (not GroundKit.aircraft_alive(_target) or _target.global_position.distance_to(global_position) > _eff_range() * 1.05):
 		_target = null
 	var aim: Vector3 = Vector3.ZERO
@@ -276,7 +293,7 @@ func _acquire() -> void:
 			best = n3
 			best_barrage = barrage
 	if best != null and _target == null:
-		_cool = maxf(_cool, 1.3)        # reaction time before the first shot
+		_cool = maxf(_cool, randf_range(1.3, 3.5))        # reaction time before the first shot
 	_target = best
 	_barrage = best_barrage
 
