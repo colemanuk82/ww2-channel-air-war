@@ -5,7 +5,6 @@
 ### *"Scramble! Bandits over Dover, angels fifteen!"*
 
 **A free, WW2 flight game over a real-scale slice of Europe.**<br>
-Take off from Kent. Cross the Channel. Come home. Maybe.
 
 Any suggestions or feedback? Let me know!
 
@@ -21,7 +20,6 @@ Any suggestions or feedback? Let me know!
 
 ### [⬇️ Download the free installer](../../releases/latest)
 
-**New in v2.4: [the war on the ground](#%EF%B8%8F-the-war-on-the-ground).** Pick a date and the map shows that day of the war: Blitz damage, the 1944 build-up, Normandy with the Mulberry harbours, floods, the Westwall, and farmland that changes with the region and the season. It runs faster too, up to 40% more FPS over London and the Ruhr.
 
 </div>
 
@@ -33,12 +31,13 @@ Any suggestions or feedback? Let me know!
 |---|---|
 | 🌍 **Real-scale Europe** | **954 × 453 km** of England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports. Fly from Kent to the Ruhr and it actually takes a while. |
 | ✈️ **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
-| ⚔️ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and free flight. Or just go sightseeing over the white cliffs. |
+| ⚔️ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and dynamic missions in free flight.  |
 | 🌊 **Dam Busters** | A seven-day campaign. Skim low, hit your marks, put the bomb on the dam. |
 | 🪂 **D-Day airborne** | In a C-47: drop sticks of paratroopers onto the zones, or tow a Horsa or Waco glider with the rope in view and cast it off in reach of the landing zone. |
 | 🕯️ **POW escape** | What-if clandestine ops: scout a camp by day, then fly a civil Dragon Rapide in low and slow at night under cloud, land on a field strip, pick up the escapers and get home quietly. |
 | 🎖️ **A war that moves** | Dynamic campaign and Pilot's Life: ranks, medals, telegrams, newsreels, and the occasional letter home you hope you never have to send. |
-| 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, rain squalls, searchlights and flak at night. |
+| 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds,rain squalls, searchlights and flak at night.
+Use clouds as cover!|
 | 🧑‍✈️ **Bail out and live** | Hold `J` to jump. A detailed pilot (RAF or Luftwaffe kit, cloth and leather textures) swings under the canopy with rag-doll motion, and every man aboard gets his own parachute. Look around with the right stick, warp time with `]` / `[`, and skip to respawn when you've seen enough. Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
 | 🌡️ **Realism options** | Engine overheating with its own HEAT gauge, and G-forces that grey out your vision and can knock you out. Enemy pilots suffer too. On by default, switch off any time in Options > Realism. |
 | 🗓️ **The map follows the war** | Choose your sortie date and the ground changes with it: bomb damage that builds up through the Blitz and the bombing of Germany, the 1944 invasion build-up, Normandy after D-Day, flooded valleys, the Westwall, and bridges that fall on the day they did. Bocage, open fields, polders and the Weald, with the seasons on the farmland. [More below](#%EF%B8%8F-the-war-on-the-ground). |
@@ -107,8 +106,9 @@ Prisoner-of-war and labour camps stay where they were, as static scenery, never 
 ## 🎮 Play it in 3 steps
 
 1. Download **`WW2ChannelAirWar_Setup_v2.14.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+
 2. Run it. It installs just for you, with no admin rights needed.
-3. Read the photosensitivity warning (it matters), accept the licence, and take off.
+
 
 **Upscaling:** the game uses AMD FSR 2 (Options > Render) to render at a lower resolution and sharpen it back up, which works on any modern graphics card. Turn it off for native resolution.
 
@@ -150,30 +150,8 @@ All 25 aircraft were rebuilt for v2.0 and checked against photographs and the pu
 - **Fighters that fight like fighters:** AI pilots choose their moves from range, angle, closure, height and energy: **boom-and-zoom** dives from the high side, **high and low yo-yos** to stop an overshoot or cut a corner, **barrel-roll attacks**, **Immelmanns**, **split-S** and **wingovers**, and **energy fighting** (extend, climb, come back from above). When you're on their tail they **break turn**, **barrel roll** so you overshoot, fly **scissors** when both are slow and close, **unload and extend**, or **spiral** away when they've run out of energy. Learn to read them.
 - **Bomber streams and convoys:** bombers fly staggered-V formations with real defensive turrets. Each gun has an arc, so the gaps between them are genuine blind spots, and the underside is the safe way in against all but the heavies. Under attack the leader **weaves** and the whole stream follows. At sea, **ship convoys** (freighters, colliers, trawlers, landing craft, destroyers, cruisers and battleships) sail in columns along real routes, with wakes and slow sinkings, and road convoys, trains and tank columns roll on land. Missions ask you to cover them, or to wreck them.
 - **Bailing out:** abandoned aircraft fly on out of control and crash. Multi-seat aircraft drop the right number of parachutes. Shoot or ram enemy parachutists if you can stomach it.
-- **Smarter dogfights:** the first wave comes later and from further out, and some waves are patrols that haven't spotted you, so you can sneak up on them.
-- **Safer airfields:** AI aircraft are protected until they have climbed to 50 m, and nothing is placed on the runways.
-- **Cockpit, chase, orbit and overhead cameras,** and a clean no-HUD view (`H`) for screenshots.
-- **Full gamepad support.** 🕹️
 
-## ⌨️ Controls
-
-| | Keyboard | Gamepad |
-|---|---|---|
-| Pitch / roll | `W` `S` / `A` `D` | Left stick |
-| Yaw | `Q` `E` | Right stick look |
-| Throttle | `Shift` / `Ctrl` | Triggers |
-| Boost | `Tab` | `RB` |
-| Bail out (hold) | `J` | |
-| Time warp (in flight or under the parachute) | `]` `[` | |
-| Fire / drop bomb | `Space` | `A` |
-| Switch weapon | `X` / `B` | `B` |
-| Gear | `G` | `Y` |
-| Camera | `C` | `X` |
-| Auto-level | `R` | `LB` (assist) |
-| Time of day / weather | `T` / `Y` | D-pad |
-| Outlines / HUD / hints | `O` / `H` / `F1` | D-pad |
-| Photo (clean screenshot, saved to Pictures) | `F12` | |
-| Pause / respawn | | `Start` / `Back` |
+- **Full gamepad support.**
 
 ## 🗺️ Roadmap
 
