@@ -8,8 +8,8 @@ uniform float thickness = 0.05;
 uniform float dist_scale = 0.0009;
 uniform float fade_start = 4000.0;
 uniform float fade_end = 6500.0;
-uniform float near_start = 1800.0;   // fully gone inside this range
-uniform float near_end = 3000.0;    // fully back by this range
+uniform float near_start = 1300.0;   // fully gone inside this range
+uniform float near_end = 2300.0;    // fully back by this range
 uniform float strength = 0.5;
 
 varying float v_dist;
