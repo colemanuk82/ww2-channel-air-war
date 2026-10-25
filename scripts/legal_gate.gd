@@ -8,7 +8,7 @@ signal done
 
 const SAVE_PATH := "user://legal.cfg"
 const EULA_VERSION := 1
-const WARNING_SECONDS := 5.0
+const WARNING_SECONDS := 10.0
 
 static var session_done: bool = false     # the warning has been shown this launch: do not repeat it on returning to the menu
 
