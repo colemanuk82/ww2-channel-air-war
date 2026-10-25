@@ -6,13 +6,13 @@
 
 Any suggestions or feedback? Let me know!
 
-![Free](https://img.shields.io/badge/price-100%25%20free-2ea44f) ![Windows](https://img.shields.io/badge/platform-Windows%2064--bit-0078d4) ![Engine](https://img.shields.io/badge/engine-Godot%204-478cbf) !
+![Free](https://img.shields.io/badge/price-100%25%20free-2ea44f) ![Windows](https://img.shields.io/badge/platform-Windows%2064--bit-0078d4) ![Engine](https://img.shields.io/badge/engine-Godot%204-478cbf) 
 
 [![WW2 Channel Air War in-game highlights](docs/promo/highlights.gif)](docs/promo/highlights.mp4)
 
 **▶ [Watch the in-game highlights reel](docs/promo/highlights.mp4)** (real gameplay: day, sunset and night flying, combat, G effects and bailing out)
 
-### [⬇️ Download the free installer](../../releases/latest)
+### [⬇️ Download the installer](../../releases/latest)
 
 
 </div>
@@ -26,10 +26,6 @@ Any suggestions or feedback? Let me know!
 | 🌍 **Real-scale Europe** | England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports.|
 | ✈️ **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
 | ⚔️ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and dynamic missions in free flight.  |
-| 🌊 **Dam Busters** | A seven-day campaign. Skim low, hit your marks, put the bomb on the dam. |
-| 🪂 **D-Day airborne** | In a C-47: drop sticks of paratroopers onto the zones, or tow a Horsa or Waco glider with the rope in view and cast it off in reach of the landing zone. |
-| 🕯️ **POW escape** | What-if clandestine ops: scout a camp by day, then fly a civil Dragon Rapide in low and slow at night under cloud, land on a field strip, pick up the escapers and get home quietly. |
-| 🎖️ **A war that moves** | Dynamic campaign and Pilot's Life: ranks, medals, telegrams, newsreels. |
 | 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds, rain squalls, searchlights and flak at night.
 Use clouds as cover!|
 | 🧑‍✈️ **Bail out and live** |  Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
