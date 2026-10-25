@@ -106,7 +106,7 @@ Prisoner-of-war and labour camps stay where they were, as static scenery, never 
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.15.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.16.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 2. Run it. It installs just for you, with no admin rights needed.
 3. Read the photosensitivity warning (it matters), accept the licence, and take off.
 
@@ -233,6 +233,14 @@ This is a personal project. All rights reserved: see [LICENCE](LICENCE), and the
 and privacy policy (`docs/legal/`). Third-party data and audio carry their own licences, listed above.
 
 *Chocks away!* 🛫
+
+---
+
+### Music and engine attribution
+
+**Music.** All in-game music is used under the [Pixabay Content Licence](https://pixabay.com/service/license-summary/). Composers: jeremusic70, nocopyrightsound633, musicwallah, The_Mountain, YevhenAstafiev, NastelBom, MUPHFI, Luis_Humanoide, kaazoom and DesiFreeMusic. Track titles and artist links are listed under Credits above and in [ATTRIBUTION.md](ATTRIBUTION.md). Radio and briefing voices are AI-generated with [ElevenLabs](https://elevenlabs.io).
+
+**Engine.** Made with the [Godot Engine](https://godotengine.org), built from the official source with double-precision coordinates. Copyright (c) 2014-present Godot Engine contributors; copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur. Licensed under the [MIT licence](https://godotengine.org/license/); third-party components are listed in the engine's own licence notices and in `docs/legal/CREDITS.txt`. Upscaling uses AMD FidelityFX Super Resolution 2 (MIT).
 
 ---
 
