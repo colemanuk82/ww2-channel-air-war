@@ -110,9 +110,7 @@ func _process(delta: float) -> void:
 	if _wait > 0.0:
 		return
 	if _shuffle:
-		var i: int = randi() % _tracks.size()
-		if _tracks.size() > 1 and i == _last:
-			i = (i + 1) % _tracks.size()
+		var i: int = _bag_pick()
 		_last = i
 	else:
 		_last = (_last + 1) % _tracks.size()
@@ -125,3 +123,17 @@ func _process(delta: float) -> void:
 	volume_db = linear_to_db(0.0001)
 	play()
 	_wait = 1.0e9      # set again when the track finishes
+
+## Shuffle bag: every track plays once, in a fresh random order, before any repeats (and the first track of a new
+## bag is never the one that just played).
+var _bag: Array = []
+func _bag_pick() -> int:
+	if _bag.is_empty():
+		for k in _tracks.size():
+			_bag.append(k)
+		_bag.shuffle()
+		if _bag.size() > 1 and int(_bag[_bag.size() - 1]) == _last:
+			var t: Variant = _bag[0]
+			_bag[0] = _bag[_bag.size() - 1]
+			_bag[_bag.size() - 1] = t
+	return int(_bag.pop_back()) % maxi(_tracks.size(), 1)

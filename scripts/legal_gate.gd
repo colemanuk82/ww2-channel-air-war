@@ -8,7 +8,7 @@ signal done
 
 const SAVE_PATH := "user://legal.cfg"
 const EULA_VERSION := 1
-const WARNING_SECONDS := 4.0
+const WARNING_SECONDS := 5.0
 
 static var session_done: bool = false     # the warning has been shown this launch: do not repeat it on returning to the menu
 
@@ -66,13 +66,10 @@ func _step_warning() -> void:
 	_root.add_child(title)
 	_root.add_child(UIKit.rule(0.8))
 	_root.add_child(_wrapped(LegalMenu.text_for("epilepsy").replace("PHOTOSENSITIVITY WARNING\n\n", ""), 19))
-	var b: Button = UIKit.button("I understand - continue", _after_warning, 22, true)
-	b.disabled = true
-	_root.add_child(b)
 	var t := get_tree().create_timer(WARNING_SECONDS)
 	t.timeout.connect(func() -> void:
-		if is_instance_valid(b):
-			b.disabled = false)
+		if is_inside_tree():
+			_after_warning())
 
 
 func _after_warning() -> void:
