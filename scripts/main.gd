@@ -2628,6 +2628,11 @@ func _parse_debug_args() -> void:
 			_perf_secs = float(pp[0])
 			_perf_settle = float(pp[1]) if pp.size() > 1 else 10.0
 			RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
+		elif a.begins_with("--audit-float="):   # debug: after SECS list visible scenery floating well above the ground, then quit
+			var asecs: float = float(a.substr(14))
+			get_tree().create_timer(asecs).timeout.connect(func() -> void:
+				_audit_floating()
+				get_tree().quit())
 		elif a.begins_with("--quit-after="):
 			var secs: float = float(a.substr(13))
 			get_tree().create_timer(secs).timeout.connect(func() -> void:
@@ -3062,3 +3067,82 @@ func _debug_break(how: String) -> void:
 		for c in player.get_children():
 			if c is AircraftDamageFX:
 				(c as AircraftDamageFX)._ignite()
+
+
+## Debug (--audit-float=SECS): scenery whose origin sits far above the terrain under it, grouped by where it lives.
+func _audit_floating() -> void:
+	var terrain: Node = get_tree().get_first_node_in_group("terrain")
+	if terrain == null:
+		print("[audit] no terrain")
+		return
+	var skip: Array = ["cloud", "star", "sun", "moon", "sky", "rain", "bird", "balloon", "chute", "tracer", "bullet", "fx", "smoke", "camera", "hud", "contrail", "searchlight", "beam", "flak", "flare", "projectile", "bomb", "missile", "rocket", "airship", "kite", "intact_balloon", "zeppelin", "blimp"]
+	var agg: Dictionary = {}
+	var checked: int = 0
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	var cp: Vector3 = cam.global_position if cam != null else Vector3.ZERO
+	for n in find_children("*", "Node3D", true, false):
+		var n3: Node3D = n as Node3D
+		var is_mi: bool = n3 is MeshInstance3D
+		var is_mm: bool = n3 is MultiMeshInstance3D
+		if not (is_mi or is_mm) or not n3.is_visible_in_tree():
+			continue
+		var bad: bool = false
+		var path: String = ""
+		var q: Node = n3
+		var depth: int = 0
+		while q != null and q != self:
+			var ln: String = String(q.name).to_lower()
+			for k in skip:
+				if ln.contains(String(k)):
+					bad = true
+			if q is Aircraft or q is Camera3D or q is CanvasItem or q is BarrageBalloon:
+				bad = true
+			if depth < 5:
+				var nm: String = String(q.name)
+				var j: int = nm.length()
+				while j > 0 and (nm[j - 1].is_valid_int() or nm[j - 1] == "@"):
+					j -= 1
+				path = nm.substr(0, j) + "/" + path
+			depth += 1
+			q = q.get_parent()
+		if bad:
+			continue
+		var pts: Array = []
+		if is_mi:
+			var mesh: Mesh = (n3 as MeshInstance3D).mesh
+			if mesh == null:
+				continue
+			var bb: AABB = mesh.get_aabb()
+			var lowest: Vector3 = n3.global_position
+			for ci in 8:
+				var cp2: Vector3 = n3.global_transform * bb.get_endpoint(ci)
+				if cp2.y < lowest.y:
+					lowest = cp2
+			pts.append(lowest)
+		else:
+			var mm: MultiMesh = (n3 as MultiMeshInstance3D).multimesh
+			if mm == null:
+				continue
+			var step: int = maxi(mm.instance_count / 600, 1)
+			for i in range(0, mm.instance_count, step):
+				pts.append(n3.global_transform * mm.get_instance_transform(i).origin + Vector3(0.0, mm.mesh.get_aabb().position.y * mm.get_instance_transform(i).basis.get_scale().y if mm.mesh != null else 0.0, 0.0))
+		for p in pts:
+			var pv: Vector3 = p
+			checked += 1
+			var dy: float = pv.y - float(terrain.call("get_height_at", pv))
+			if dy > 6.0:
+				var key: String = path + (" [multimesh]" if is_mm else "")
+				if not agg.has(key):
+					agg[key] = [0, 0.0, pv, pv.distance_to(cp)]
+				var e: Array = agg[key]
+				e[0] = int(e[0]) + 1
+				if dy > float(e[1]):
+					e[1] = dy
+					e[2] = pv
+	print("[audit] checked ", checked, " points; floating groups: ", agg.size())
+	var keys: Array = agg.keys()
+	keys.sort_custom(func(x: Variant, y: Variant) -> bool: return float((agg[x] as Array)[1]) > float((agg[y] as Array)[1]))
+	for k in keys:
+		var e2: Array = agg[k]
+		var wp: Vector3 = e2[2]
+		print("[audit] %s  n=%d  max_above=%.0f  at=(%.0f, %.0f, %.0f)  dist=%.0f" % [k, int(e2[0]), float(e2[1]), wp.x, wp.y, wp.z, float(e2[3])])

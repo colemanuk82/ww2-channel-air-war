@@ -1768,11 +1768,12 @@ static func _field_edge_props(p: Vector2, exclude: Array, hedges: Array, trees_c
 	# The bisector between two field centres is an infinite line, but the real boundary stops at the field corners.
 	# Only keep a segment whose ends and middle all still lie on a boundary, so hedges never cut across a field.
 	var half: float = 0.0
-	for cand in [13.0, 8.0, 4.0]:
+	for cand in [11.0, 7.0, 3.5]:
 		var ok_seg: bool = true
 		for t in [-1.0, -0.5, 0.5, 1.0]:
 			var pe: Dictionary = field_edge(q + tg * (cand * t))
-			if pe.is_empty() or float(pe["dist"]) > 2.2:
+			# the same boundary all the way along (same pair of fields), within 1.6 m of the straight line
+			if pe.is_empty() or float(pe["dist"]) > 1.6 or int(pe["eid"]) != int(e["eid"]):
 				ok_seg = false
 				break
 		if ok_seg:
