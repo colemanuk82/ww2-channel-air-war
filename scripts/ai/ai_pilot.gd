@@ -641,7 +641,7 @@ func _target_valid(t: Aircraft, max_range: float) -> bool:
 	var cf: CloudField = _cloud_field()
 	if cf != null and cf.blocks_los(ac.global_position, t.global_position):
 		return false
-	if role == Role.WINGMAN and is_instance_valid(leader) and t != order_target and t.global_position.distance_to(leader.global_position) > engage_radius:
+	if role == Role.WINGMAN and is_instance_valid(leader) and t != order_target and t.global_position.distance_to(leader.global_position) > engage_radius * (2.0 if t.is_in_group("bomber") else 1.0):
 		return false
 	return true
 
@@ -662,11 +662,14 @@ func _find_target(max_range: float) -> Aircraft:
 			continue
 		if cf != null and cf.blocks_los(ac.global_position, o.global_position):
 			continue
-		if role == Role.WINGMAN and is_instance_valid(leader) and o.global_position.distance_to(leader.global_position) > engage_radius:
+		var is_bomber: bool = o.is_in_group("bomber")
+		if role == Role.WINGMAN and is_instance_valid(leader) and o.global_position.distance_to(leader.global_position) > engage_radius * (2.0 if is_bomber else 1.0):
 			continue
 		var score: float = d
 		if o.player_controlled:
 			score *= 0.6 + 0.4 * (1.0 - aggression)
+		if is_bomber and role == Role.WINGMAN:
+			score *= 0.4          # wingmen go for the bombers first: they are the point of the sortie
 		if score < best_score:
 			best_score = score
 			best = o
@@ -1424,11 +1427,23 @@ func _avoid_collisions(delta: float) -> void:
 				continue
 			var rel: Vector3 = pos - o.global_position
 			var d: float = rel.length()
-			if d < (r + o.stats.radius) * span and d > 0.1:
+			if d <= 0.1:
+				continue
+			var reach: float = (r + o.stats.radius) * span
+			if role == Role.WINGMAN and o.player_controlled:
+				# never crowd the player: a wide berth, widened further by how fast the gap is closing
+				var closing: float = maxf((o.velocity - ac.velocity).dot(rel / d), 0.0)
+				reach = (r + o.stats.radius) * 3.2 + closing * 1.1
+				if d < reach:
+					_sep_dir += rel / d * 2.0
+				continue
+			if d < reach:
 				_sep_dir += rel / d
 	if _sep_dir != Vector3.ZERO:
 		var away: Vector3 = (_sep_dir.normalized() + Vector3.UP * 0.25).normalized()
 		var w: float = 0.2 if role == Role.WINGMAN else 0.65
+		if role == Role.WINGMAN and _sep_dir.length() > 1.5:
+			w = 0.7          # about to crowd the player: break away hard
 		_dir = (_dir * (1.0 - w) + away * w).normalized()
 
 

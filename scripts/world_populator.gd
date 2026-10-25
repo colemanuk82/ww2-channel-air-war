@@ -2374,6 +2374,10 @@ func _land_ring(center: Vector3, count: int, r_min: float, r_max: float, rng: Ra
 
 ## Shelled, burning buildings with black smoke around an action site (fewer where the site is intact).
 func _ruins(parent: Node3D, center: Vector3, count: int, r_min: float, r_max: float, seed_v: int) -> void:
+	# burning buildings are rare: only at a site that is already wrecked, or in ground the war date shows freshly bombed
+	if count < 5 and WarDamage.level_in(WarDamage.areas_near(Vector2(center.x, center.z), 800.0), center.x, center.z) < 0.3:
+		return
+	count = mini(count, 3)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
 	for p in _land_ring(center, count, r_min, r_max, rng):

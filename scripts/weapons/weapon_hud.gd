@@ -268,8 +268,8 @@ func _update_aids() -> void:
 		if _impact_root != null and is_instance_valid(_impact_root) and _ring != null:
 			var gh: float = _terrain_height(_impact)
 			_impact_root.position = Vector3(_impact.x, gh + 0.5, _impact.z)
-			var r: float = st.bomb_radius * 0.5
-			_ring.scale = Vector3(r, r, 1.0)
+			var r: float = clampf(st.bomb_radius * 0.22, 2.5, 12.0)      # a small mark: the ring lies flat on the ground
+			_ring.scale = Vector3(r, 1.0, r)
 			var col: Color = COL_HIT if _on_target else COL_BOMB
 			if _ring_mat != null:
 				_ring_mat.set_shader_parameter("albedo", col)
@@ -295,9 +295,8 @@ func _draw_overlay() -> void:
 		# own graticule); the HUD crosshair must not appear in the chase or cockpit views.
 		if aircraft.bombsight_only:
 			return
-		_draw_bomb_reticle()
-		if _bomb_show:
-			_draw_bombsight(cam, st)
+		# no on-screen crosshair or impact circle: bombing aims by the small impact mark laid on the ground
+		# (BombImpactMarker), nothing else
 		return
 	# target bracket + lead
 	if _target != null and is_instance_valid(_target):

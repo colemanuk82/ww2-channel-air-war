@@ -7,6 +7,7 @@ extends CanvasLayer
 ##   hud.register_minimap_marker(node3d, color)    # dots on the minimap (auto-removed when freed)
 ##   hud.set_readout_extra("AMMO 600")             # extra line in the bottom-left panel
 
+const BOMBER_MERGE_DIST: float = 1500.0     # bombers closer than this (world units) share one minimap icon
 const MAP_RANGE: float = 22000.0     # world units from centre to edge of the minimap
 const MAP_RES: int = 256             # internal map texture resolution
 const MAP_MOVE: float = 1500.0       # world units of travel before the map re-centres
@@ -1214,10 +1215,29 @@ func _draw_minimap() -> void:
 			var ly := mp2.y + 4.0
 			if lx >= rect.position.x and lx + tw <= rect.end.x and ly - 11.0 >= rect.position.y and ly + 3.0 <= rect.end.y:
 				_minimap.draw_string(font, Vector2(lx, ly), name, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.95, 0.95, 0.9, 0.9))
+	# taskings against moving enemy aircraft / ships (intercepts) give only a general area: enemy contacts show on
+	# the minimap once they are close (mode.minimap_fog_range), and bombers flying together share ONE icon
+	var gm0: Node = get_tree().get_first_node_in_group("game_mode")
+	var fog_r: float = float(gm0.call("minimap_fog_range")) if gm0 != null and gm0.has_method("minimap_fog_range") else 0.0
+	var apos: Vector3 = aircraft.global_position
+	var bomber_spots: Array = []
 	for m in _markers:
 		var n = m[0]  # untyped: a typed Node3D assignment errors when the node was freed
 		if is_instance_valid(n):
-			var mpp: Vector2 = to_map.call((n as Node3D).global_position)
+			var wpos: Vector3 = (n as Node3D).global_position
+			if fog_r > 0.0 and (n is Aircraft or n.is_in_group("ship")) and str(n.get("team")) != GameState.player_side \
+					and Vector2(wpos.x - apos.x, wpos.z - apos.z).length() > fog_r:
+				continue
+			if n is Aircraft and (n as Node3D).is_in_group("bomber"):
+				var close: bool = false
+				for bp in bomber_spots:
+					if Vector2(wpos.x - (bp as Vector3).x, wpos.z - (bp as Vector3).z).length() < BOMBER_MERGE_DIST:
+						close = true
+						break
+				if close:
+					continue
+				bomber_spots.append(wpos)
+			var mpp: Vector2 = to_map.call(wpos)
 			if rect.has_point(mpp):
 				if n is Aircraft:
 					# little plane silhouette in the aircraft's colour, pointing the way it flies (bombers: bigger wings)
@@ -1234,7 +1254,14 @@ func _draw_minimap() -> void:
 			var op: Vector2 = to_map.call(onp as Vector3)
 			var oc := Color(1.0, 0.82, 0.25)
 			var pulse: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.006)
-			if rect.grow(-6.0).has_point(op):
+			var fog_area: float = float(gm.call("minimap_fog_area")) if gm.has_method("minimap_fog_area") else 0.0
+			if fog_area > 0.0 and rect.grow(-6.0).has_point(op):
+				# a general area, not a fix: a soft search circle
+				var ar: float = maxf((to_map.call((onp as Vector3) + Vector3(fog_area, 0.0, 0.0)) as Vector2).distance_to(op), 8.0)
+				_minimap.draw_circle(op, ar, Color(oc, 0.10))
+				_minimap.draw_arc(op, ar, 0.0, TAU, 48, Color(0, 0, 0, 0.55), 3.0)
+				_minimap.draw_arc(op, ar, 0.0, TAU, 48, Color(oc, 0.55 + 0.25 * pulse), 1.5)
+			elif rect.grow(-6.0).has_point(op):
 				var r0: float = 5.0 + 2.0 * pulse
 				var dia := PackedVector2Array([op + Vector2(0, -r0), op + Vector2(r0, 0), op + Vector2(0, r0), op + Vector2(-r0, 0)])
 				_minimap.draw_colored_polygon(dia, Color(oc, 0.85))
@@ -1270,6 +1297,9 @@ func _draw_minimap() -> void:
 	for sh in get_tree().get_nodes_in_group("ship"):
 		var sn := sh as Node3D
 		if sn == null or bool(sh.get("is_dead")) or float(sh.get("speed")) < 0.5:
+			continue
+		if fog_r > 0.0 and str(sh.get("team")) != GameState.player_side \
+				and Vector2(sn.global_position.x - apos.x, sn.global_position.z - apos.z).length() > fog_r:
 			continue
 		var smp: Vector2 = to_map.call(sn.global_position)
 		if not rect.grow(-3.0).has_point(smp):

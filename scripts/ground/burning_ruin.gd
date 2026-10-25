@@ -54,18 +54,7 @@ func _ready() -> void:
 			char_c, Vector3(rng.randf_range(-35, 35), rng.randf_range(0, 180), rng.randf_range(-25, 25)), false)
 	GroundKit.box(self, Vector3(w * 0.7, 0.3, d * 0.6), Vector3(rng.randf_range(-1, 1), 1.0, rng.randf_range(-1, 1)), Color(0.12, 0.1, 0.09), Vector3(rng.randf_range(-14, 14), 0, rng.randf_range(-14, 14)), false)
 	_emit = FX.blaze(self, _scale, rng.randf_range(0.8, 1.25))
-	_light = OmniLight3D.new()
-	_light.light_color = Color(1.0, 0.5, 0.18)
-	_light.light_energy = 1.4
-	_light.omni_range = 26.0 * _scale
-	_light.omni_attenuation = 2.0
-	_light.position = Vector3(0, 3.0 * _scale, 0)
-	_light.shadow_enabled = false
-	_light.distance_fade_enabled = true
-	_light.distance_fade_begin = 1800.0
-	_light.distance_fade_length = 500.0
-	add_child(_light)
-	_glow = GroundGlow.create(self, 22.0 * _scale)
+	# no red omni light or ground glow: it flickered as blinking red squares from a distance
 
 
 func _process(delta: float) -> void:
