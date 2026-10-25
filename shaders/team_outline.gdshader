@@ -6,10 +6,10 @@ render_mode cull_front, unshaded, shadows_disabled, blend_mix, depth_draw_never;
 uniform vec4 outline_color : source_color = vec4(1.0, 0.15, 0.1, 1.0);
 uniform float thickness = 0.05;
 uniform float dist_scale = 0.0009;
-uniform float fade_start = 700.0;
-uniform float fade_end = 2600.0;
-uniform float near_start = 140.0;   // fully gone inside this range
-uniform float near_end = 520.0;     // fully back by this range
+uniform float fade_start = 1500.0;
+uniform float fade_end = 3200.0;
+uniform float near_start = 600.0;   // fully gone inside this range
+uniform float near_end = 1100.0;    // fully back by this range
 uniform float strength = 0.5;
 
 varying float v_dist;
