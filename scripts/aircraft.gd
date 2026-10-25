@@ -1293,13 +1293,46 @@ func _move_and_ground(delta: float) -> void:
 			position.y += 0.25
 			took_off.emit(self)
 		else:
-			position.y = lerpf(position.y, gh + ground_offset(_pitch_angle()), clampf(12.0 * delta, 0.0, 1.0)) if _gg_ok else floor_y
+			if _gg_ok:
+				position.y = lerpf(position.y, _rest_height(gh + _pave_bonus(position)), clampf(12.0 * delta, 0.0, 1.0))
+			else:
+				position.y = floor_y
 			if over_water and state == State.ALIVE:
 				_crash("ditched")
 			elif state == State.DYING:
 				_crash("crash")
 	elif clearance <= 0.0:
 		_ground_contact(floor_y)
+
+
+## Raised thickness of the airfield tarmac above the flattened ground (runway slabs stand 0.3 m, taxiways about 0.2 m).
+func _pave_bonus(pos: Vector3) -> float:
+	for n in get_tree().get_nodes_in_group("airfield"):
+		var af: Airfield = n as Airfield
+		if af != null and af.global_position.distance_squared_to(pos) < 6.25e6 and af.near_paved(pos, 0.0):
+			return 0.26
+	return 0.0
+
+
+## Height the aircraft origin should have for its tyres to rest on a surface at height `surf`. Measured from the
+## real wheel positions (bottom of each tyre) so the stance matches what is drawn at every pitch; falls back to the
+## scanned-geometry estimate when the wheels are not available. The propeller tips keep their clearance.
+func _rest_height(surf: float) -> float:
+	var est: float = surf + ground_offset(_pitch_angle())
+	if _wheels.is_empty() or _gear_amount < 0.95:
+		return est
+	var lowest: float = INF
+	for w in _wheels:
+		var node: MeshInstance3D = w["node"] as MeshInstance3D
+		if is_instance_valid(node) and node.is_inside_tree():
+			lowest = minf(lowest, node.global_position.y - float(w["radius"]))
+	if lowest == INF:
+		return est
+	var y: float = position.y + (surf - lowest)
+	if _gg_pr > 0.0:
+		var pit: float = _pitch_angle()
+		y = maxf(y, surf + (_gg_pr - _gg_py) * cos(pit) + _gg_pz * sin(pit) + 0.45)
+	return y
 
 
 func _ground_contact(floor_y: float) -> void:
