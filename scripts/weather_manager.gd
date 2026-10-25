@@ -232,10 +232,10 @@ func _apply() -> void:
 		var ll: float = TimeOfDay.light_level
 		var dark: float = float(_cur["cloud_dark"])
 		var base: Color = TimeOfDay.sun_color.lerp(Color.WHITE, 0.6)
-		var shade: Color = TimeOfDay.horizon_color.lerp(Color(0.5, 0.58, 0.72), 0.5)
-		cloud_field.mat.set_shader_parameter("cloud_color", base.lerp(Color(0.72, 0.74, 0.78), dark))
-		cloud_field.mat.set_shader_parameter("shade_color", shade.lerp(Color(0.45, 0.47, 0.53), dark))
-		cloud_field.mat.set_shader_parameter("light_level", lerpf(0.18, 1.0, ll))
+		var shade: Color = TimeOfDay.horizon_color.lerp(Color(0.5, 0.58, 0.72), 0.5 * ll)
+		cloud_field.mat.set_shader_parameter("cloud_color", base.lerp(Color(0.40, 0.42, 0.47), dark))
+		cloud_field.mat.set_shader_parameter("shade_color", shade.lerp(Color(0.22, 0.23, 0.28), dark))
+		cloud_field.mat.set_shader_parameter("light_level", lerpf(0.05, 1.0, ll * ll) * (1.0 - dark * 0.3))
 		cloud_field.mat.set_shader_parameter("density_scale", 1.0 + dark * 1.2)
 
 
