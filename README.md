@@ -30,8 +30,7 @@ Any suggestions or feedback? Let me know!
 | 🌍 **Real-scale Europe** | England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports.|
 | ✈️ **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
 | ⚔️ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and dynamic missions in free flight.  |
-| 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds, rain squalls, searchlights and flak at night.
-Use clouds as cover!|
+| 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds, rain squalls, searchlights and flak at night.|
 | 🧑‍✈️ **Bail out and live** |  Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
 | 🌡️ **Realism options** | Engine overheating with its own HEAT gauge, and G-forces that grey out your vision and can knock you out. Enemy pilots suffer too. On by default, switch off any time in Options > Realism. |
 | 🗓️ **The map follows the war** | Choose your sortie date and the ground changes with it: bomb damage that builds up through the Blitz and the bombing of Germany, the 1944 invasion build-up, Normandy after D-Day, flooded valleys, the Westwall, and bridges that fall on the day they did. Bocage, open fields, polders and the Weald, with the seasons on the farmland. |
