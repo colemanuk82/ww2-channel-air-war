@@ -2373,6 +2373,9 @@ func _process(delta: float) -> void:
 	if _bail != null and (player != null or _bail.active):
 		_bail.tick(delta, player)
 	_respawn_watchdog(delta)
+	if Input.is_action_just_pressed("next_music"):
+		for gm in get_tree().get_nodes_in_group("game_music"):
+			gm.call("next_track")
 	_check_rearm()
 	_check_ceremony(delta)
 	if Input.is_action_just_pressed("start_mode_toggle"):

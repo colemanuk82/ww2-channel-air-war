@@ -818,6 +818,7 @@ const BINDINGS := [
 	["Wheel brake (landing)", "V", "brake", "Left trigger"],
 	["Flaps (up / 15 / 35)", "F", "flaps", ""],
 	["Bail out (hold)", "J", "bail_out", ""],
+	["Next music track", ".", "next_music", ""],
 	["WEAPONS", "", "", ""],
 	["Fire / drop bomb", "Space", "fire", ""],
 	["Switch guns / bombs", "X or B", "weapon_toggle", ""],
