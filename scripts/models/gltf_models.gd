@@ -169,6 +169,199 @@ static func _rewire(root: Node3D, model_id: String, nation: String) -> void:
 
 	if root.find_child("Pilot", true, false) == null:
 		_add_pilot(root, pilot)
+	_paint_markings(root, skin, model_id, nation)
+
+
+# ------------------------------------------------------------------ markings painted into the skin
+# Each group of Decal* meshes at one place (a roundel's rings, a cross and its outline, a fin flash) is baked into a
+# 128x128 slot of one atlas texture by projecting its triangles onto the group's own plane, and the skin shader
+# paints it back on through a planar projector. The decal meshes are then hidden. Groups that are not flat
+# (bands wrapped round the fuselage) stay as meshes. One bake per model + nation (cached).
+
+const DECAL_RES := 128
+const MAX_DECALS := 8
+static var _decal_cache: Dictionary = {}     # "id|nation" -> {"tex", "c", "u", "v", "n", "count", "painted": names}
+static var _decal_re: RegEx
+
+
+static func _rel_xf(n: Node3D, stop: Node) -> Transform3D:
+	var xf: Transform3D = Transform3D.IDENTITY
+	var cur: Node = n
+	while cur != null and cur != stop and cur is Node3D:
+		xf = (cur as Node3D).transform * xf
+		cur = cur.get_parent()
+	return xf
+
+
+static func _decal_color(nm: String) -> Color:
+	var mat: Material = _decal_material(nm)
+	if mat is ShaderMaterial:
+		return (mat as ShaderMaterial).get_shader_parameter("albedo")
+	return Color(0.8, 0.8, 0.8)
+
+
+static func _paint_markings(root: Node3D, skin: ShaderMaterial, model_id: String, nation: String) -> void:
+	var body: Node3D = root.find_child("Body", true, false) as Node3D
+	if body == null:
+		return
+	# skin parts: where they sit in Body space
+	for n in root.find_children("*", "MeshInstance3D", true, false):
+		var mi: MeshInstance3D = n as MeshInstance3D
+		if mi.material_override == skin:
+			mi.set_instance_shader_parameter("body_off", _rel_xf(mi, body).origin)
+	var key: String = model_id + "|" + nation
+	if not _decal_cache.has(key):
+		_decal_cache[key] = _bake_markings(root, body)
+	var d: Dictionary = _decal_cache[key]
+	if int(d["count"]) == 0:
+		return
+	skin.set_shader_parameter("decal_atlas", d["tex"])
+	skin.set_shader_parameter("decal_count", int(d["count"]))
+	skin.set_shader_parameter("decal_c", d["c"])
+	skin.set_shader_parameter("decal_u", d["u"])
+	skin.set_shader_parameter("decal_v", d["v"])
+	skin.set_shader_parameter("decal_n", d["n"])
+	var painted: Dictionary = d["painted"]
+	for n in root.find_children("Decal*", "MeshInstance3D", true, false):
+		if painted.has(String(n.name)):
+			(n as MeshInstance3D).visible = false
+
+
+static func _bake_markings(root: Node3D, body: Node3D) -> Dictionary:
+	if _decal_re == null:
+		_decal_re = RegEx.new()
+		_decal_re.compile("^Decal(Fus|Wing|Fin)(Blue|Red|White|Black|Yellow|Green)[A-Za-z]*?(_\\d+)?$")
+	var groups: Dictionary = {}       # key -> Array of [name, color, tris PackedVector3Array (body space)]
+	for n in root.find_children("Decal*", "MeshInstance3D", true, false):
+		var mi: MeshInstance3D = n as MeshInstance3D
+		var nm: String = String(mi.name)
+		if nm.findn("Band") >= 0 or mi.mesh == null:
+			continue                      # bands wrap round the fuselage: they stay as meshes
+		var m: RegExMatch = _decal_re.search(nm)
+		if m == null:
+			continue
+		var gkey: String = m.get_string(1) + m.get_string(3)
+		var xf: Transform3D = _rel_xf(mi, body)
+		var tris := PackedVector3Array()
+		for si in mi.mesh.get_surface_count():
+			var arr: Array = mi.mesh.surface_get_arrays(si)
+			var vv: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var ii: Variant = arr[Mesh.ARRAY_INDEX]
+			if ii == null or (ii as PackedInt32Array).is_empty():
+				for k in vv.size():
+					tris.append(xf * vv[k])
+			else:
+				for k in (ii as PackedInt32Array):
+					tris.append(xf * vv[k])
+		if tris.size() < 3:
+			continue
+		if not groups.has(gkey):
+			groups[gkey] = []
+		(groups[gkey] as Array).append([nm, _decal_color(nm), tris])
+	var c := PackedVector4Array()
+	var u := PackedVector4Array()
+	var v := PackedVector4Array()
+	var nn := PackedVector4Array()
+	var img := Image.create(DECAL_RES * MAX_DECALS, DECAL_RES, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var painted: Dictionary = {}
+	var slot: int = 0
+	for gkey in groups.keys():
+		if slot >= MAX_DECALS:
+			break
+		var items: Array = groups[gkey]
+		# plane of the group: area-weighted normal; skip groups that are not flat enough to project
+		var nsum := Vector3.ZERO
+		var asum: float = 0.0
+		var psum := Vector3.ZERO
+		var pc: int = 0
+		for it in items:
+			var t: PackedVector3Array = it[2]
+			for k in range(0, t.size() - 2, 3):
+				var cr: Vector3 = (t[k + 1] - t[k]).cross(t[k + 2] - t[k])
+				var a: float = cr.length()
+				if a < 1e-9:
+					continue
+				# both faces of a double-sided decal cancel: orient every triangle to the first one's side
+				if nsum != Vector3.ZERO and cr.dot(nsum) < 0.0:
+					cr = -cr
+				nsum += cr
+				asum += a
+			for k in t.size():
+				psum += t[k]
+				pc += 1
+		if asum <= 0.0 or nsum.length() / asum < 0.8:
+			continue
+		var n3: Vector3 = nsum.normalized()
+		var p0: Vector3 = psum / float(pc)
+		var ref: Vector3 = Vector3.UP if absf(n3.y) < 0.8 else Vector3.BACK
+		var ua: Vector3 = ref.cross(n3).normalized()
+		var va: Vector3 = n3.cross(ua).normalized()
+		var lo := Vector2(INF, INF)
+		var hi := Vector2(-INF, -INF)
+		var depth: float = 0.0
+		for it in items:
+			var t2: PackedVector3Array = it[2]
+			for k in t2.size():
+				var q: Vector3 = t2[k] - p0
+				var pu := Vector2(q.dot(ua), q.dot(va))
+				lo = lo.min(pu)
+				hi = hi.max(pu)
+				depth = maxf(depth, absf(q.dot(n3)))
+		var half: Vector2 = (hi - lo) * 0.5 * 1.04 + Vector2(0.01, 0.01)
+		var mid: Vector2 = (hi + lo) * 0.5
+		var centre: Vector3 = p0 + ua * mid.x + va * mid.y
+		# paint the biggest pieces first so the inner rings / outlines land on top
+		items.sort_custom(func(a1: Array, b1: Array) -> bool: return _tri_area(a1[2]) > _tri_area(b1[2]))
+		for it in items:
+			var t3: PackedVector3Array = it[2]
+			var col: Color = it[1]
+			for k in range(0, t3.size() - 2, 3):
+				_raster_tri(img, slot, _to_px(t3[k], centre, ua, va, half), _to_px(t3[k + 1], centre, ua, va, half),
+					_to_px(t3[k + 2], centre, ua, va, half), col)
+			painted[String(it[0])] = true
+		var two_sided: float = 1.0 if String(gkey).begins_with("Fin") else 0.0
+		c.append(Vector4(centre.x, centre.y, centre.z, depth + 0.22))
+		u.append(Vector4(ua.x / half.x, ua.y / half.x, ua.z / half.x, two_sided))
+		v.append(Vector4(va.x / half.y, va.y / half.y, va.z / half.y, 0.0))
+		nn.append(Vector4(n3.x, n3.y, n3.z, 0.25))
+		slot += 1
+	while c.size() < MAX_DECALS:
+		c.append(Vector4.ZERO)
+		u.append(Vector4.ZERO)
+		v.append(Vector4.ZERO)
+		nn.append(Vector4.ZERO)
+	return {"tex": ImageTexture.create_from_image(img), "c": c, "u": u, "v": v, "n": nn, "count": slot, "painted": painted}
+
+
+static func _tri_area(t: PackedVector3Array) -> float:
+	var a: float = 0.0
+	for k in range(0, t.size() - 2, 3):
+		a += (t[k + 1] - t[k]).cross(t[k + 2] - t[k]).length()
+	return a
+
+
+static func _to_px(p: Vector3, centre: Vector3, ua: Vector3, va: Vector3, half: Vector2) -> Vector2:
+	var q: Vector3 = p - centre
+	return Vector2((q.dot(ua) / half.x * 0.5 + 0.5) * float(DECAL_RES), (q.dot(va) / half.y * 0.5 + 0.5) * float(DECAL_RES))
+
+
+static func _raster_tri(img: Image, slot: int, a: Vector2, b: Vector2, c2: Vector2, col: Color) -> void:
+	var x0: int = clampi(floori(minf(a.x, minf(b.x, c2.x))), 0, DECAL_RES - 1)
+	var x1: int = clampi(ceili(maxf(a.x, maxf(b.x, c2.x))), 0, DECAL_RES - 1)
+	var y0: int = clampi(floori(minf(a.y, minf(b.y, c2.y))), 0, DECAL_RES - 1)
+	var y1: int = clampi(ceili(maxf(a.y, maxf(b.y, c2.y))), 0, DECAL_RES - 1)
+	var den: float = (b.y - c2.y) * (a.x - c2.x) + (c2.x - b.x) * (a.y - c2.y)
+	if absf(den) < 1e-9:
+		return
+	for y in range(y0, y1 + 1):
+		for x in range(x0, x1 + 1):
+			var px := Vector2(float(x) + 0.5, float(y) + 0.5)
+			var w1: float = ((b.y - c2.y) * (px.x - c2.x) + (c2.x - b.x) * (px.y - c2.y)) / den
+			var w2: float = ((c2.y - a.y) * (px.x - c2.x) + (a.x - c2.x) * (px.y - c2.y)) / den
+			var w3: float = 1.0 - w1 - w2
+			if w1 >= -0.01 and w2 >= -0.01 and w3 >= -0.01:
+				img.set_pixel(slot * DECAL_RES + x, y, Color(col.r, col.g, col.b, 1.0))
 
 
 static func _disc_material() -> StandardMaterial3D:
@@ -266,7 +459,18 @@ static func _decal_material(nm: String) -> Material:
 		c = Color(0.06, 0.06, 0.07)
 	elif n.findn("green") >= 0:
 		c = Color(0.12, 0.20, 0.12)
-	return _paint(c, 0.62)
+	var key: String = c.to_html()
+	if _decal_mats.has(key):
+		return _decal_mats[key]
+	var m := ShaderMaterial.new()
+	m.shader = load("res://shaders/decal_paint.gdshader") as Shader
+	m.set_shader_parameter("albedo", c)
+	m.set_shader_parameter("roughness_v", 0.62)
+	_decal_mats[key] = m
+	return m
+
+
+static var _decal_mats: Dictionary = {}
 
 
 ## Fallback head + shoulders, placed at the CockpitEye so _test_markings always finds a pilot.
