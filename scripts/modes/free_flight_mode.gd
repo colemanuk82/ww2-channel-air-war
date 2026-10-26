@@ -27,7 +27,7 @@ func configure(cfg: Dictionary) -> void:
 
 
 ## Most AI aircraft alive at once in free flight (all dynamic traffic shares it; wingmen count too).
-const AI_CAP: int = 22
+const AI_CAP: int = 30
 
 
 func start() -> void:

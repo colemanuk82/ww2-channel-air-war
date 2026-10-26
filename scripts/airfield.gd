@@ -719,7 +719,7 @@ func _build_night_lights() -> void:
 	mi.name = "NightLamps"
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.extra_cull_margin = 200.0
-	mi.visible = lights_active
+	mi.visible = false          # lit only when an aircraft needs them (see _update_lamps)
 	add_child(mi)
 	_night_lights = mi
 
@@ -728,5 +728,43 @@ func _build_night_lights() -> void:
 ## stay dark at night). Safe to call before the lamps are built.
 func set_lights_active(v: bool) -> void:
 	lights_active = v
-	if _night_lights != null and is_instance_valid(_night_lights):
-		_night_lights.visible = v
+	_lamp_t = 0.0
+	_update_lamps()
+
+
+## Cutscenes: light the field regardless of traffic.
+var force_lights: bool = false:
+	set(v):
+		force_lights = v
+		_update_lamps()
+var _lamp_t: float = 0.0
+const LAMP_RADIUS := 3500.0          # aircraft within this (horizontally) ...
+const LAMP_HEIGHT := 700.0           # ... and this low over the field (world units, about 350 m) switch them on
+
+
+## The flare path is lit only for traffic: an aircraft landing, taking off or flying low near the field.
+func _process(delta: float) -> void:
+	if _night_lights == null:
+		return
+	_lamp_t -= delta
+	if _lamp_t > 0.0:
+		return
+	_lamp_t = 1.0
+	_update_lamps()
+
+
+func _update_lamps() -> void:
+	if _night_lights == null or not is_instance_valid(_night_lights) or not is_inside_tree():
+		return
+	var on: bool = force_lights
+	if lights_active and not on:
+		var c: Vector3 = global_position
+		for n in get_tree().get_nodes_in_group("aircraft"):
+			var a: Node3D = n as Node3D
+			if a == null or not a.is_inside_tree() or (a is Aircraft and (a as Aircraft).state != Aircraft.State.ALIVE):
+				continue
+			var p: Vector3 = a.global_position
+			if Vector2(p.x - c.x, p.z - c.z).length() < LAMP_RADIUS and p.y - surface_y < LAMP_HEIGHT:
+				on = true
+				break
+	_night_lights.visible = on

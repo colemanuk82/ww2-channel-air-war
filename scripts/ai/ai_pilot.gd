@@ -656,7 +656,7 @@ func _find_target(max_range: float) -> Aircraft:
 		if o == null or o == ac or o.state != Aircraft.State.ALIVE or o.team == ac.team or o.team == "Neutral":
 			continue
 		var d: float = o.global_position.distance_to(pos)
-		if d > max_range:
+		if d > max_range * sun_glare(pos, o.global_position):     # coming out of the sun: seen much later
 			continue
 		if not _has_los(o):
 			continue
@@ -676,6 +676,20 @@ func _find_target(max_range: float) -> Aircraft:
 	return best
 
 
+## 1 = clear view; down to 0.25 when `to` sits close to the sun as seen from `from` (an attacker "out of the sun").
+## Only while the sun is up; strongest when it is high enough to dazzle and not behind cloud cover.
+static func sun_glare(from: Vector3, to: Vector3) -> float:
+	var sd: Vector3 = TimeOfDay.sun_dir
+	if sd.y < 0.03:
+		return 1.0
+	var dir: Vector3 = (to - from).normalized()
+	var c: float = dir.dot(sd)
+	var glare: float = smoothstep(0.94, 0.995, c)                      # within ~20 degrees, full inside ~6
+	glare *= smoothstep(0.03, 0.15, sd.y)                              # sun clear of the horizon haze
+	glare *= 1.0 - 0.7 * clampf(WeatherManager.cloud_field.cover - 0.6, 0.0, 0.4) / 0.4 if WeatherManager.cloud_field != null else 1.0
+	return 1.0 - 0.75 * glare
+
+
 func _is_threatened() -> bool:
 	var pos: Vector3 = ac.global_position
 	for n in get_tree().get_nodes_in_group("aircraft"):
@@ -684,7 +698,8 @@ func _is_threatened() -> bool:
 			continue
 		var rel: Vector3 = pos - o.global_position
 		var d: float = rel.length()
-		if d < 650.0 and d > 1.0 and o.get_forward().dot(rel / d) > 0.93 and (o.cmd_fire or d < 220.0):
+		var seen_at: float = 650.0 * sun_glare(pos, o.global_position)
+		if d < seen_at and d > 1.0 and o.get_forward().dot(rel / d) > 0.93 and (o.cmd_fire or d < 220.0):
 			_threat = o
 			return true
 	return false

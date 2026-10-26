@@ -35,12 +35,22 @@ var _radii: PackedVector3Array     # ellipsoid radii (rx, ry, rz) in world units
 var _kinds: PackedInt32Array
 var _ranks: PackedFloat32Array     # random 0..1 appearance rank
 var _yaws: PackedFloat32Array
+var _wraps: PackedFloat32Array     # wrap period per cloud (the dense near-field cumulus repeat over a smaller square)
+var _cur_wrap: float = 100000.0
 var _nodes: Array = []             # MeshInstance3D per cloud (same order as the arrays)
 var _wind_yaw: float = 0.6
 var _rainonly: PackedByteArray      # 1 = low ragged scud that only exists while it rains
 var _flag_next: bool = false
 var _shaft_mat: ShaderMaterial
 var rain_level: float = 0.0         # 0..1, fed by WeatherManager
+var low_cloud: float = 0.0:         # 0..1, a very low broken deck under the weather (WeatherManager rolls it per day)
+	set(v):
+		low_cloud = clampf(v, 0.0, 1.0)
+		if not _nodes.is_empty():
+			_apply_cover()
+var _flag_low: bool = false
+var _dbg_on: bool = OS.get_cmdline_user_args().has("--cloud-debug")
+var _dbg_t: float = 0.0
 var rain_here: float = 0.0          # rain from a cloud directly overhead of the camera (0..1)
 var _shaft_amount_set: float = -1.0
 
@@ -84,11 +94,35 @@ func _ready() -> void:
 	for f in 26:
 		_scud(rng, Vector2(rng.randf_range(-half, half), rng.randf_range(-half, half)))
 	# lone cumulus between the formations
-	for i in 40:
+	for i in 150:
 		var cc := Vector2(rng.randf_range(-half, half), rng.randf_range(-half, half))
 		for j in rng.randi_range(1, 4):
 			var off := Vector2(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0)) * rng.randf_range(600.0, 3500.0)
 			_add(rng, Kind.CUMULUS, cc + off, 0.4 + 1.5 * pow(rng.randf(), 1.7), rng.randf() * TAU, rng.randf_range(900.0, 1500.0))
+	# dense fair-weather cumulus: a 32 km square that repeats, so a scattered sky has clouds every kilometre or two
+	# around the camera instead of a handful (the 100 km field is too sparse for that on its own)
+	_cur_wrap = 32000.0
+	var hn: float = _cur_wrap * 0.5
+	for i in 110:
+		var dc := Vector2(rng.randf_range(-hn, hn), rng.randf_range(-hn, hn))
+		for j in rng.randi_range(1, 4):
+			var doff := Vector2(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0)) * rng.randf_range(500.0, 2600.0)
+			# ranked high, so they fill in as cover rises: few on a clear day, nearly all when scattered
+			_add(rng, Kind.CUMULUS, dc + doff, 0.35 + 1.3 * pow(rng.randf(), 1.8), rng.randf() * TAU, rng.randf_range(900.0, 1700.0), 0.3 + 0.7 * rng.randf())
+	_cur_wrap = wrap_size
+	# big heaps: the occasional much larger cumulus / congestus among the others
+	for i in 22:
+		var bk: int = Kind.CUMULUS if rng.randf() < 0.6 else Kind.CONGESTUS
+		_add(rng, bk, Vector2(rng.randf_range(-half, half), rng.randf_range(-half, half)), rng.randf_range(1.6, 2.5), rng.randf() * TAU)
+	# very low broken deck (only on the days WeatherManager rolls low_cloud): ragged stratocumulus a few hundred
+	# metres up, in wide patches with breaks between them
+	_flag_low = true
+	for i in 70:
+		var lc := Vector2(rng.randf_range(-half, half), rng.randf_range(-half, half))
+		var lbase: float = rng.randf_range(300.0, 470.0)
+		for j in 3:
+			_add(rng, Kind.STRATO, lc + Vector2(rng.randfn(0.0, 5000.0), rng.randfn(0.0, 5000.0)), rng.randf_range(1.4, 2.4), rng.randf() * TAU, lbase + rng.randf_range(-40.0, 40.0))
+	_flag_low = false
 	# v7.23 cloud types: their own generator so the original sky above stays exactly where it was
 	var rng2 := RandomNumberGenerator.new()
 	rng2.seed = 1940
@@ -219,7 +253,8 @@ func _add(rng: RandomNumberGenerator, kind: int, xz: Vector2, size_k: float, yaw
 	_kinds.append(kind)
 	_ranks.append(rank if rank >= 0.0 else rng.randf())
 	_yaws.append(yaw)
-	_rainonly.append(1 if _flag_next else 0)
+	_wraps.append(_cur_wrap)
+	_rainonly.append(1 if _flag_next else (2 if _flag_low else 0))     # 1 = rain scud only, 2 = low-cloud days only
 
 
 ## Fair-weather cumulus field: a loose elongated cluster, often drawn out into streets along the wind.
@@ -395,7 +430,7 @@ func _kind_visible(kind: int, rank: float, c_override: float = -1.0) -> bool:
 	var c: float = cover if c_override < 0.0 else c_override
 	match kind:
 		Kind.CUMULUS:
-			return rank < clampf(c * 1.15 + 0.06, 0.0, 1.0) * (1.0 if c < 0.7 else 0.55)   # thins out again under overcast
+			return rank < clampf(c * 1.2 + 0.08, 0.0, 1.0) * (1.0 if c < 0.85 else 0.55)   # thins out again under overcast
 		Kind.TOWER:
 			return rank < clampf((c - 0.45) * 1.6, 0.0, 1.0) * 0.9
 		Kind.STRATO:
@@ -421,6 +456,8 @@ func _apply_cover() -> void:
 	for i in _nodes.size():
 		if _rainonly[i] == 1:
 			(_nodes[i] as Node3D).visible = _ranks[i] < rain_level * 1.1 and rain_level > 0.2
+		elif _rainonly[i] == 2:
+			(_nodes[i] as Node3D).visible = _ranks[i] < low_cloud
 		else:
 			(_nodes[i] as Node3D).visible = _kind_visible(_kinds[i], _ranks[i])
 
@@ -441,8 +478,11 @@ func _front_visibility(cp: Vector3) -> void:
 	for i in _nodes.size():
 		if _rainonly[i] == 1:
 			continue
+		if _rainonly[i] == 2:
+			(_nodes[i] as Node3D).visible = _ranks[i] < low_cloud
+			continue
 		var c: Vector3 = _centers[i] + Vector3(drift.x, 0.0, drift.y)
-		var wp := Vector3(cp.x + fposmod(c.x - cp.x + half, wrap_size) - half, c.y, cp.z + fposmod(c.z - cp.z + half, wrap_size) - half)
+		var wp := Vector3(cp.x + fposmod(c.x - cp.x + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5, c.y, cp.z + fposmod(c.z - cp.z + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5)
 		var cv: float = WeatherManager.cover_at(wp)
 		(_nodes[i] as Node3D).visible = _kind_visible(_kinds[i], _ranks[i], cv)     # (cv < 0: front not placed yet -> global cover)
 
@@ -475,8 +515,8 @@ func sample_rain(p: Vector3) -> void:
 		var c: Vector3 = _centers[i] + Vector3(dr.x, 0.0, dr.y)
 		if p.y > c.y:
 			continue      # above the cloud's heart: not under its rain
-		var wx: float = p.x + fposmod(c.x - p.x + half, wrap_size) - half
-		var wz: float = p.z + fposmod(c.z - p.z + half, wrap_size) - half
+		var wx: float = p.x + fposmod(c.x - p.x + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5
+		var wz: float = p.z + fposmod(c.z - p.z + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5
 		var rh: float = (_radii[i].x + _radii[i].z) * 0.5 * 0.55
 		var d: float = Vector2(p.x - wx, p.z - wz).length() / rh
 		if d < 1.0:
@@ -516,6 +556,32 @@ func _process(delta: float) -> void:
 	if _front_vis_t <= 0.0:
 		_front_vis_t = 1.0
 		_front_visibility(cam.global_position)
+	if _dbg_on:
+		_dbg_t -= delta
+		if _dbg_t <= 0.0:
+			_dbg_t = 2.0
+			var vis: int = 0
+			var low_vis: int = 0
+			var near: int = 0
+			for i in _nodes.size():
+				if (_nodes[i] as Node3D).visible:
+					vis += 1
+					if _rainonly[i] == 2:
+						low_vis += 1
+					if (_nodes[i] as Node3D).global_position.distance_to(cam.global_position) < 15000.0:
+						near += 1
+			var bestd: float = INF
+			var bi: int = -1
+			for i in _nodes.size():
+				if _rainonly[i] == 2 and (_nodes[i] as Node3D).visible:
+					var dd: float = (_nodes[i] as Node3D).global_position.distance_to(cam.global_position)
+					if dd < bestd:
+						bestd = dd
+						bi = i
+			if bi >= 0:
+				var nn: Node3D = _nodes[bi]
+				print("[clouddbg] nearest low: pos=%s scale=%s cam=%s in_tree=%s vis_in_tree=%s" % [nn.global_position, nn.scale, cam.global_position, nn.is_inside_tree(), nn.is_visible_in_tree()])
+			print("[clouddbg] nodes=%d visible=%d low_visible=%d within15km=%d cover=%.2f low_cloud=%.2f" % [_nodes.size(), vis, low_vis, near, cover, low_cloud])
 	var cp: Vector3 = cam.global_position
 	var half: float = wrap_size * 0.5
 	var drift: Vector2 = WeatherManager.cloud_drift     # clouds move with the wind
@@ -528,9 +594,9 @@ func _process(delta: float) -> void:
 			continue
 		var c: Vector3 = _centers[i] + Vector3(drift.x, 0.0, drift.y)
 		n.global_position = Vector3(
-			cp.x + fposmod(c.x - cp.x + half, wrap_size) - half,
+			cp.x + fposmod(c.x - cp.x + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5,
 			c.y,
-			cp.z + fposmod(c.z - cp.z + half, wrap_size) - half)
+			cp.z + fposmod(c.z - cp.z + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5)
 	mat.set_shader_parameter("sun_dir", TimeOfDay.sun_dir)
 
 
@@ -548,8 +614,8 @@ func blocks_los(p1: Vector3, p2: Vector3) -> bool:
 		if _kinds[i] == Kind.CIRRUS or _kinds[i] == Kind.CIRROCU or not (_nodes[i] as Node3D).visible:
 			continue
 		var c: Vector3 = _centers[i] + Vector3(WeatherManager.cloud_drift.x, 0.0, WeatherManager.cloud_drift.y)
-		var wx: float = mid.x + fposmod(c.x - mid.x + half, wrap_size) - half
-		var wz: float = mid.z + fposmod(c.z - mid.z + half, wrap_size) - half
+		var wx: float = mid.x + fposmod(c.x - mid.x + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5
+		var wz: float = mid.z + fposmod(c.z - mid.z + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5
 		var r: Vector3 = _radii[i]
 		var rh: float = (r.x + r.z) * 0.5 * 0.7
 		var ry: float = r.y * 0.7
@@ -574,8 +640,8 @@ func density_at(p: Vector3) -> float:
 		var dy: float = (p.y - c.y) / (r.y * 0.75)
 		if absf(dy) >= 1.0:
 			continue
-		var wx: float = p.x + fposmod(c.x - p.x + half, wrap_size) - half
-		var wz: float = p.z + fposmod(c.z - p.z + half, wrap_size) - half
+		var wx: float = p.x + fposmod(c.x - p.x + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5
+		var wz: float = p.z + fposmod(c.z - p.z + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5
 		var rh: float = (r.x + r.z) * 0.5 * 0.75
 		var dx: float = (p.x - wx) / rh
 		var dz: float = (p.z - wz) / rh

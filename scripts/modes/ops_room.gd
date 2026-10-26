@@ -34,11 +34,11 @@ extends Node
 signal tasking_started(info: Dictionary)
 signal tasking_finished(info: Dictionary, success: bool)
 
-const KINDS := ["strike", "airfield", "convoy", "train", "shipping", "eboats", "intercept", "cover", "sweep", "rescue", "recce", "escort", "intruder"]
-const GROUND_KINDS := ["convoy", "train", "shipping", "eboats"]
+const KINDS := ["strike", "airfield", "convoy", "train", "shipping", "eboats", "intercept", "cover", "sweep", "rescue", "recce", "escort", "intruder", "tanks"]
+const GROUND_KINDS := ["convoy", "train", "shipping", "eboats", "tanks"]
 const AIR_KINDS := ["intercept", "cover", "sweep", "escort"]
-const MIN_RANGE: float = 12000.0       # world units (= metres horizontally)
-const MAX_RANGE: float = 90000.0       # preferred band; beyond it the nearest candidate (up to FAR_LIMIT) is used
+const MIN_RANGE: float = 6000.0        # world units (= metres horizontally)
+const MAX_RANGE: float = 50000.0       # preferred band (jobs close to hand); beyond it the nearest candidate (up to FAR_LIMIT) is used
 const FAR_LIMIT: float = 180000.0
 const STALE_AFTER: float = 900.0       # at the next call, a tasking older than 15 minutes (plus the transit time to it) is replaced
 const TRANSIT_SPEED: float = 70.0      # u/s, slow cruise: the transit allowance added to a far tasking's stale time
@@ -292,9 +292,11 @@ func _weights() -> Dictionary:
 		"bomber":
 			w = {"strike": 5, "shipping": 3, "airfield": 2, "train": 1, "recce": 1}
 		"fighter_bomber":
-			w = {"strike": 3, "airfield": 2, "convoy": 2, "train": 2, "shipping": 2, "eboats": 1, "intercept": 2, "cover": 1, "sweep": 1, "rescue": 1, "recce": 1, "escort": 1}
+			w = {"strike": 3, "airfield": 2, "convoy": 2, "train": 2, "shipping": 2, "eboats": 1, "intercept": 2, "cover": 1, "sweep": 1, "rescue": 1, "recce": 1, "escort": 1, "tanks": 3}
 		_:
-			w = {"intercept": 4, "cover": 2, "sweep": 3, "convoy": 2, "train": 2, "airfield": 1, "eboats": 2, "rescue": 2, "recce": 2, "escort": 3}
+			w = {"intercept": 4, "cover": 2, "sweep": 3, "convoy": 2, "train": 2, "airfield": 1, "eboats": 2, "rescue": 2, "recce": 2, "escort": 3, "tanks": 1}
+	if enemy != "Axis":
+		w.erase("tanks")              # German armour on the continent: an Allied pilot's job
 	if _is_night():
 		# by night: no photographs, no dinghy searches, intruders over their airfields instead
 		w.erase("recce")
@@ -358,6 +360,7 @@ func _issue_inner(scramble: bool, followup: bool) -> void:
 			"escort": info = _make_escort()
 			"intruder": info = _make_intruder()
 			"convoy": info = _make_convoy()
+			"tanks": info = _make_tanks()
 			"train": info = _make_train()
 			"shipping": info = _make_shipping()
 			"eboats": info = _make_eboats()
@@ -639,6 +642,30 @@ func _make_convoy() -> Dictionary:
 		"track": cv, "goal": "destroy", "nodes": [cv], "root": root, "points": 900}
 
 
+## Tanks: a German armoured column on the move behind the coast of France, Belgium or Germany, with flak riding
+## along. Rockets, bombs or cannon on the column.
+func _make_tanks() -> Dictionary:
+	var towns: Array = _cities.filter(func(c: Dictionary) -> bool:
+		var ll: Vector2 = WorldCoords.world_to_latlon(c["pos"])
+		return ll.y > 1.55 and _held_by(c["pos"]) == "Axis" and GroundKit.side_at(c["pos"]) == "Axis" and GroundKit.raw_y(c["pos"].x, c["pos"].z) > 1.0)
+	var town: Variant = _choose(towns, func(c: Dictionary) -> Vector3: return c["pos"])
+	if town == null:
+		return {}
+	var c: Vector3 = town["pos"]
+	var rp: RoutePath = _route_near("roads", c, 12000.0)
+	if rp == null:
+		var ang: float = _rng.randf() * TAU
+		rp = _synthetic_route(c + Vector3(cos(ang), 0, sin(ang)) * 3000.0, Vector3(cos(ang + 1.6), 0, sin(ang + 1.6)), 5000.0)
+	var cl: Vector2 = rp.closest(c)
+	var cv: Convoy = Convoy.create("Axis", rp, false, "tanks", cl.x, _rng.randf_range(5.0, 8.0))
+	cv.spacing = 26.0
+	var root: Node3D = _container("tanks")
+	root.add_child(cv)
+	_pop._defences(root, _ground_pt(cv.get_center()), "Axis", 0, 2, 0, 0, 160.0, _rng.randi())
+	return {"title": "Armour: tank column", "what": "Panzer column", "pos": cv.get_center(), "place": _place_name(cv.get_center()),
+		"track": cv, "goal": "destroy", "nodes": [cv], "root": root, "points": 1200}
+
+
 func _make_train() -> Dictionary:
 	var c: Vector3 = Vector3.ZERO
 	var near_name: String = ""
@@ -800,7 +827,10 @@ func _make_raid(cover: bool) -> Dictionary:
 		AIFactory.add_marker(hud, m, Color(1.0, 0.25, 0.2))
 	# escort fighters weaving above the bombers
 	var fpool: Array = AircraftCatalog.fighters_for_side(enemy).filter(func(i: String) -> bool: return i != "me262")
-	var esc_n: int = mini((0 if difficulty < 0.3 else 2) + mini(air_threat, 3), AIFactory.ai_room(get_tree()))
+	var esc_n: int = (0 if difficulty < 0.3 else 2) + mini(air_threat, 3)
+	if _rng.randf() < 0.3:
+		esc_n += _rng.randi_range(4, 8)               # a big escort: the sky full of fighters
+	esc_n = mini(esc_n, AIFactory.ai_room(get_tree()))
 	for k in esc_n:
 		if fpool.is_empty() or form.leader == null:
 			break
@@ -830,7 +860,11 @@ func _make_sweep() -> Dictionary:
 	var pool: Array = AircraftCatalog.fighters_for_side(enemy).filter(func(i: String) -> bool: return i != "me262")
 	if pool.is_empty():
 		return {}
-	var n: int = mini(2 if difficulty < 0.35 else (3 if difficulty < 0.7 else 4), maxi(1, AIFactory.ai_room(get_tree())))
+	var n: int = 2 if difficulty < 0.35 else (3 if difficulty < 0.7 else 4)
+	var big: bool = _rng.randf() < 0.3                 # now and then a whole Staffel / squadron is up, not a pair
+	if big:
+		n = _rng.randi_range(6, 12)
+	n = mini(n, maxi(1, AIFactory.ai_room(get_tree())))
 	var alt_y: float = _rng.randf_range(1200.0, 2600.0) * WorldCoords.VERTICAL_SCALE
 	var nodes: Array = []
 	var lead: Aircraft = null
@@ -847,8 +881,8 @@ func _make_sweep() -> Dictionary:
 		nodes.append(ac)
 		if lead == null:
 			lead = ac
-	return {"title": "Fighter sweep", "what": "%d %s" % [n, AircraftCatalog.display_name(String(lead.stats.id))], "pos": p, "place": _place_name(p),
-		"track": lead, "goal": "kills_of", "nodes": nodes, "need": n, "points": 1000, "angels": int(round(alt_y / WorldCoords.VERTICAL_SCALE * 3.281 / 1000.0))}
+	return {"title": "Fighter sweep" if not big else "Fighter sweep: large formation", "what": "%d %s" % [n, AircraftCatalog.display_name(String(lead.stats.id))], "pos": p, "place": _place_name(p),
+		"track": lead, "goal": "kills_of", "nodes": nodes, "need": mini(n, 4) if big else n, "points": 1000 if not big else 1600, "angels": int(round(alt_y / WorldCoords.VERTICAL_SCALE * 3.281 / 1000.0))}
 
 
 func _make_rescue() -> Dictionary:
@@ -1203,7 +1237,7 @@ func _intel_scan(delta: float) -> void:
 # ------------------------------------------------------------------ pressure: V-1s and flak
 
 func _pressure_flak(info: Dictionary) -> void:
-	if supply <= 0 or not (str(info["kind"]) in ["strike", "airfield", "convoy", "train", "recce", "intruder"]):
+	if supply <= 0 or not (str(info["kind"]) in ["strike", "airfield", "convoy", "train", "recce", "intruder", "tanks"]):
 		return
 	var root: Node3D = _container("flak")
 	_pop._defences(root, _ground_pt(info["pos"]), enemy, 1 if supply >= 3 else 0, mini(supply, 4), 0, 0, 450.0, _rng.randi())
@@ -1362,7 +1396,7 @@ func _twist() -> void:
 				_say("Change of plan - the raid has turned. They're heading for %s now." % str(best["name"]), 0.0, "twist_raid_turn_1")
 			else:
 				_say("The convoy's taking a real pasting down there. Hurry!", 0.0, "twist_convoy_hurry_2")
-		"convoy", "train":
+		"convoy", "train", "tanks":
 			_say("It's getting close to cover - once it's in there we've lost it. Get a move on!", 0.0, "twist_deadline_2")
 		"shipping", "eboats":
 			_say("They're making for the shore batteries. Catch them before they're under the guns.", 0.0, "twist_shore_2")
@@ -1741,6 +1775,7 @@ const FOLLOWUPS := {
 
 ## The spoken headline for each kind (voiced; "ops/<side>/brief_<kind>_N"), then the details as text.
 const HEADLINES := {
+	"tanks": ["Armour on the move behind their lines. Go and stop those tanks.", "The army wants that Panzer column stopped before it reaches the front.", "Tanks reported on the road. Rockets and cannon on them."],
 	"strike": ["Priority target for you. Bombs on it, please.", "Intelligence wants a target put out of action. Go and stop it.", "We've a target that needs knocking out. Expect flak.", "Bombing job. Get in, put them on the target, and get out.", "Group want that target flattened. Off you go.", "Target for tonight's photographs. Make it a good one.", "We've a target that wants hitting. Make every bomb count.", "Intelligence have found something juicy. Go and hit it.", "Target for you. Get in under the flak and let them have it.", "Bombs on the target, please. Then straight home.", "Something needs flattening. That's your job."],
 	"airfield": ["Their fighters are on the ground refuelling. Go and catch them there.", "An enemy airfield is full of aircraft. Shoot it up.", "We want an airfield put out of business. Anything you can hit.", "Catch them on the ground. Strafe the dispersals.", "Their airfield's busy. Go and make a mess of it.", "Fighters refuelling on that field. Hit them now.", "Their aircraft are lined up on the field. Shoot them up.", "An airfield needs a visit. Strafe anything you see.", "Catch their fighters before they get off the ground.", "Shoot up their airfield. Aircraft first, then anything else.", "Their field's full. Go and empty it."],
 	"convoy": ["A road convoy has been seen on the move. Find it and stop it.", "The Resistance reports a convoy heading for the front. Hit it.", "There's a column on the road. Strafe the lot.", "Lorries on the move. Shoot them up.", "Transport column on the road. Stop it.", "Vehicles moving to the coast. Catch them in the open.", "A column of lorries is heading for the front. Stop it.", "Road traffic reported. Shoot up the lot.", "Convoy on the move. Go for the leading vehicle first.", "Vehicles on the road. Make a mess of them.", "Hit that column before it reaches cover."],
@@ -1757,6 +1792,7 @@ const HEADLINES := {
 }
 
 const DETAILS := {
+	"tanks": "A {what} {place}, with flak riding along.",
 	"strike": "Target: the {what}, {place}.",
 	"airfield": "Target: {what}, {place}.",
 	"convoy": "A {what} {place}.",
@@ -1815,7 +1851,7 @@ func _announce(info: Dictionary) -> void:
 		var rv: Vector3 = info["rv"]
 		_say("Rendezvous first with %s %s - steer %03d, %d km. They'll go in with you." % [str(info["section"]) if kind != "escort" else "the bombers",
 			_place_name(rv), _bearing(rv), int(round(_dist_km(rv)))], 0.8, "rv_set_%d" % (1 + _rng.randi() % 2))
-	if supply > 0 and kind in ["strike", "airfield", "convoy", "train", "recce", "intruder"]:
+	if supply > 0 and kind in ["strike", "airfield", "convoy", "train", "recce", "intruder", "tanks"]:
 		_say("Expect more flak than usual - they've been well supplied lately.", 1.0, "pressure_flak_1")
 	if hud and hud.has_method("show_message"):
 		hud.call("show_message", ("SCRAMBLE: " if bool(info.get("scramble", false)) else "NEW TASKING: ") + str(info["title"]).to_upper(), 5.0)

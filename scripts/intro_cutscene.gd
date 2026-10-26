@@ -245,10 +245,12 @@ func _env(t: float) -> void:
 	if idx != _env_i:
 		_env_i = idx
 		WeatherManager.set_weather(String(e[2]), 0.1)
+		if OS.get_environment("WW2_LOW_CLOUD") == "":
+			WeatherManager.low_cloud = 0.0         # the film keeps its sky clear of the very low deck
 		var night: bool = float(e[1]) > 20.5
 		for a in get_tree().get_nodes_in_group("airfield"):
-			if a.has_method("set_lights_active"):
-				a.call("set_lights_active", night)
+			if "force_lights" in a:
+				a.set("force_lights", night)
 	TimeOfDay.set_time(float(e[1]) + (t - float(e[0])) * 0.03)
 
 
@@ -900,8 +902,8 @@ func _end() -> void:
 	set_process(false)
 	_clear_fx()
 	for a in get_tree().get_nodes_in_group("airfield"):
-		if a.has_method("set_lights_active"):
-			a.call("set_lights_active", false)
+		if "force_lights" in a:
+			a.set("force_lights", false)
 	if is_instance_valid(_lamp):
 		_lamp.queue_free()
 	if _terr != null and is_instance_valid(_terr) and _terr_old.size() == 2:

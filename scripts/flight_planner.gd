@@ -46,6 +46,8 @@ var _date_slider: HSlider
 var _date_label: Label
 var _env_label: Label
 var _forecast: String = "clear"
+## Weather picked in the menu's Conditions (a preset, not Random): it overrides the day's forecast. "" = random day.
+var weather_choice: String = ""
 
 
 class MapView extends Control:
@@ -243,8 +245,10 @@ func _ready() -> void:
 	_date_slider.min_value = 0.0
 	_date_slider.max_value = float(MoonWeather.DATE_SPAN_DAYS)
 	_date_slider.step = 1.0
-	_date_slider.value = float(MoonWeather.offset_of(MoonWeather.DEFAULT_DATE))
-	_date_slider.value_changed.connect(func(_v: float) -> void: _refresh())
+	# no date / weather slider any more: the sortie is flown on a random day with that day's forecast
+	# (a fixed weather is chosen in the menu's Conditions instead of Random)
+	_date_slider.value = float(randi_range(0, MoonWeather.DATE_SPAN_DAYS))
+	_date_slider.visible = false
 	vb.add_child(_date_slider)
 	_env_label = UIKit.label("", 15, UIKit.TEXT_DIM)
 	_env_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -318,7 +322,7 @@ func _refresh_env() -> void:
 	var lon: float = float(_sel["lon"]) if not _sel.is_empty() else 1.3
 	var illum: float = MoonWeather.illumination(date)
 	_date_label.text = "Date: %s   Moon: %s, %d%% lit" % [date, MoonWeather.moon_name(date), int(round(illum * 100.0))]
-	_forecast = MoonWeather.forecast(date, lat, lon)
+	_forecast = MoonWeather.forecast(date, lat, lon) if weather_choice == "" else weather_choice
 	var pen: float = MoonWeather.nav_penalty(_forecast)
 	var nav_note: String = "Clear: full map detail."
 	if pen >= 0.5:
@@ -332,7 +336,7 @@ func _refresh_env() -> void:
 		moon_note = "Bright moon: bombers easier to spot for searchlights and night fighters."
 	elif illum < 0.25:
 		moon_note = "Dark moon: bombers harder to spot at night."
-	_env_label.text = "Forecast on route: %s. %s\n%s" % [_forecast.capitalize(), nav_note, moon_note]
+	_env_label.text = "%s: %s. %s\n%s" % ["Forecast for the day" if weather_choice == "" else "Weather (set in Conditions)", _forecast.capitalize(), nav_note, moon_note]
 
 
 func _is_runway() -> bool:
