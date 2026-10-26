@@ -21,19 +21,19 @@ const GRID := Color(0.2, 0.26, 0.3, 0.55)
 ## [title, duration seconds, [[start second, caption], ...]]
 const CHAPTERS := [
 	["Welcome", 9.0, [[0.0, "Your flying school: how the instruments work and how to win a dogfight."], [4.5, "Use Left / Right to change chapter, Space to pause, Esc to leave."]]],
-	["Flying: pitch, roll, yaw", 22.0, [[0.0, "W / S pitches the nose up and down. Pull back to climb or turn."], [7.0, "A / D rolls the wings. Roll first, then pull: that is how you turn."], [14.0, "Q / E yaws the nose left and right. Small corrections to line up a shot."], [19.0, "Let go of the stick and press R: the auto-level assist rights the aircraft."]]],
-	["Throttle, boost, energy", 20.0, [[0.0, "The green arc on the left of the airspeed dial is your throttle. Shift raises it, Ctrl lowers it."], [7.0, "The orange arc on the right is boost. Hold Tab for a burst of extra power."], [13.0, "When boost runs dry the arc turns red and it is locked until it recharges."], [17.0, "Speed is energy. Keep it high: it buys you climbs, turns and escapes."]]],
+	["Flying: pitch, roll, yaw", 22.0, [[0.0, "Left stick forward and back (W / S) pitches the nose. Pull back to climb or turn."], [7.0, "Left stick left and right (A / D) rolls the wings. Roll first, then pull: that is how you turn."], [14.0, "Q / E on the keyboard yaws the nose left and right. Small corrections to line up a shot."], [19.0, "Let go of the stick and press D-pad up (R): the auto-level assist rights the aircraft."]]],
+	["Throttle, boost, energy", 20.0, [[0.0, "The green arc on the left of the airspeed dial is your throttle. The right trigger raises it, the left trigger lowers it (Shift / Ctrl)."], [7.0, "The orange arc on the right is boost. Hold the right bumper (Tab) for a burst of extra power."], [13.0, "When boost runs dry the arc turns red and it is locked until it recharges."], [17.0, "Speed is energy. Keep it high: it buys you climbs, turns and escapes."]]],
 	["Airspeed and stall", 18.0, [[0.0, "The airspeed dial reads in km/h. The needle sweeps round as you speed up."], [5.0, "Red zone: stall. The wings stop flying and the nose drops. Keep the needle out of it."], [10.0, "Green zone: normal flying. Amber: faster than the aircraft's top speed, a dive only."], [14.5, "Never pull hard at low speed: you will stall and spin."]]],
-	["Altitude, climb, gear, flaps", 18.0, [[0.0, "The altimeter shows height above the sea in metres."], [6.0, "Climbing or diving shows on the climb readout. Height is safety and speed in the bank."], [11.0, "G raises or lowers the undercarriage. F steps the flaps. V is the wheel brake."], [15.0, "Landing: gear down, flaps down, slow, and keep the nose up at the end."]]],
+	["Altitude, climb, gear, flaps", 18.0, [[0.0, "The altimeter shows height above the sea in metres."], [6.0, "Climbing or diving shows on the climb readout. Height is safety and speed in the bank."], [11.0, "D-pad down (G) raises or lowers the undercarriage. D-pad left (F) steps the flaps. The left trigger (V) brakes the wheels."], [15.0, "Landing: gear down, flaps down, slow, and keep the nose up at the end."]]],
 	["Engine heat and wear", 20.0, [[0.0, "The outer arc on the right of the airspeed dial is engine temperature. Blue is cold, amber is warm."], [7.0, "Too long at full power or boost, and it flashes bright red: the engine is overheating."], [13.0, "Ease the throttle and stop boosting to cool it. There is no warning text, only the gauge."], [17.0, "The thin outer arc is wear: it builds up when you abuse the engine."]]],
 	["G-force and blackouts", 20.0, [[0.0, "The G arc on the altimeter shows how hard you are pulling, in G."], [7.0, "Above about 6.5 G, or below -2 G, the arc turns bright red."], [11.0, "Hold it too long and your vision greys out from the edges, then you black out."], [16.0, "Ease off the stick and your sight returns. Enemy pilots black out too: make them pull hard."]]],
-	["Hull and damage", 14.0, [[0.0, "The hull arc on the altimeter is your aircraft's health."], [5.0, "Pale gold is healthy. Amber is hurt. Red is critical: one more burst and you are going down."], [10.0, "If it is hopeless, hold J to bail out, with enough height for the parachute."]]],
+	["Hull and damage", 14.0, [[0.0, "The hull arc on the altimeter is your aircraft's health."], [5.0, "Pale gold is healthy. Amber is hurt. Red is critical: one more burst and you are going down."], [10.0, "If it is hopeless, hold D-pad right (J) to bail out, with enough height for the parachute."]]],
 	["Dogfight 1: lead pursuit", 24.0, [[0.0, "Never aim at the enemy. A bullet takes time to arrive, and he is moving."], [6.0, "Aim where he WILL be: put the nose in front of him along his flight path. That is lead."], [13.0, "The tighter he turns, the more lead you need. Fire when the target flies into your stream."], [19.0, "Staying inside his turning circle lets you keep him in your sight."]]],
 	["Dogfight 2: boom and zoom", 22.0, [[0.0, "Start high. Height is energy you can trade for speed."], [6.0, "Dive on him from behind, fast. Fire one short burst as you close."], [13.0, "Do not stay and turn. Use your speed to zoom back up to height."], [18.0, "Repeat. He can never turn with you, and you pick when to fight."]]],
 	["Dogfight 3: turns and scissors", 24.0, [[0.0, "Fighting in a turn costs speed. The slower fighter gets stuck in the circle."], [7.0, "If he gets on your tail, reverse your turn each time he is about to shoot."], [14.0, "Each reversal makes him swing wide. Crossing paths are the scissors."], [19.0, "The first to overshoot loses. Keep your speed and your nerve."]]],
 	["Dogfight 4: break and overshoot", 24.0, [[0.0, "He is on your tail. Do not fly straight: that gets you shot."], [6.0, "Break hard INTO him with a tight turn. Roll and pull as hard as you can."], [13.0, "Close in fast, he overshoots and ends up in front of you."], [19.0, "Throttle back a little to make it worse for him, then take the shot."]]],
 	["Dogfight 5: Immelmann and split-S", 20.0, [[0.0, "Immelmann: a half loop up, then roll upright. You gain height and turn round."], [9.0, "Split-S: roll upside down and pull through a half loop. You lose height but gain speed."], [15.0, "Use the Immelmann when you have speed to spare, the split-S to escape."]]],
-	["Tips and controls", 16.0, [[0.0, "K: target view locks the camera onto the nearest aircraft."], [4.0, "M: map. [ and ]: time warp on long flights. . (full stop): next music track."], [8.0, "Space: fire. X or B: switch guns, rockets and bombs. N: bombsight. L: gunner view."], [12.0, "Options > Gameplay turns the lead marker on if you want help aiming."]]],
+	["Gamepad controls", 18.0, [[0.0, "Left stick flies, right stick looks around, the triggers set the throttle."], [5.0, "D-pad: up auto-level, down gear, left flaps, hold right to bail out."], [10.0, "Keyboard keys are shown in grey. Options > Controls lets you move any gamepad button."], [14.5, "Options > Gameplay turns the lead marker on if you want help aiming."]]],
 ]
 
 var start_chapter: int = 0
@@ -363,8 +363,8 @@ func _scene_throttle() -> void:
 	_meter(ctr, r + 14.0, false, boost, BAD if locked else (Color(1.0, 0.86, 0.4) if boosting else WARN))
 	_needle(ctr, r, 0.2 + thr * 0.7)
 	_txt(ctr + Vector2(-r, r + 52.0), "AIRSPEED DIAL", 18, DIM, HORIZONTAL_ALIGNMENT_CENTER, r * 2.0)
-	_callout(ctr + Vector2(-(r + 14.0), 0.0), ctr + Vector2(-(r + 60.0), -r - 20.0), "THROTTLE  (Shift / Ctrl)", GOOD, _show(_t, 0.5))
-	_callout(ctr + Vector2(r + 14.0, 0.0), ctr + Vector2(r + 60.0, -r * 0.5), "BOOST  (hold Tab)", WARN, _show(_t, 7.0))
+	_callout(ctr + Vector2(-(r + 14.0), 0.0), ctr + Vector2(-(r + 60.0), -r - 20.0), "THROTTLE  (RT / LT)", GOOD, _show(_t, 0.5))
+	_callout(ctr + Vector2(r + 14.0, 0.0), ctr + Vector2(r + 60.0, -r * 0.5), "BOOST  (hold RB)", WARN, _show(_t, 7.0))
 	_callout(ctr + Vector2(r + 10.0, 40.0), ctr + Vector2(r + 60.0, r * 0.35), "RED = locked, recharging", BAD, _show(_t, 13.0) * (1.0 if _t < 17.0 else 0.0))
 	_side_panel("ENERGY", ["Speed + height = energy.", "Spend it: dive to gain speed,", "zoom to turn speed into height.", "Never waste it on slow turns."], _show(_t, 17.0))
 
@@ -740,16 +740,26 @@ func _scene_loops() -> void:
 
 
 func _scene_tips() -> void:
-	var rows: Array = [["K", "target view: lock on nearest"], ["M", "tactical map"], ["[  ]", "time warp on long transits"],
-		[".", "skip to the next music track"], ["Space", "fire"], ["X / B", "switch guns / rockets / bombs"], ["N", "bombsight"], ["L", "gunner view (bombers)"],
-		["Tab", "boost"], ["G / F / V", "gear / flaps / wheel brake"], ["R", "auto-level"], ["Hold J", "bail out"]]
+	# [pad glyphs, what it does, keyboard]
+	var rows: Array = [
+		[["LS"], "fly: pitch and roll", "W S A D"], [["RS"], "look around", "mouse"],
+		[["LT", "RT"], "throttle down / up", "Ctrl / Shift"], [["RB"], "boost", "Tab"],
+		[["LB"], "lock on nearest enemy", "K"], [["A"], "fire / drop bomb", "Space"],
+		[["B"], "switch weapon", "X / B"], [["X"], "chase / cockpit view", "C"],
+		[["Y"], "tactical map", "M"], [["UP"], "auto-level", "R"],
+		[["DOWN"], "landing gear", "G"], [["LEFT"], "flaps", "F"],
+		[["RIGHT"], "bail out  (hold)", "J"], [["BACK"], "bombsight / chart", "N"],
+		[["L3"], "bomber gunner position", "L"], [["START"], "pause", "Esc"]]
 	var cols: int = 2
 	var cw: float = _stage.size.x / float(cols)
+	var rh: float = minf(54.0, (_stage.size.y - 40.0) / ceilf(float(rows.size()) / float(cols)))
 	for i in rows.size():
-		var a: float = _show(_t, 0.25 * float(i), 0.5)
-		var p := _stage.position + Vector2(24.0 + float(i % cols) * cw, 50.0 + float(i / cols) * 62.0)
-		var kw: float = 120.0
-		draw_rect(Rect2(p, Vector2(kw, 42.0)), Color(0.12, 0.14, 0.15, a), true)
-		draw_rect(Rect2(p, Vector2(kw, 42.0)), Color(UIKit.ACCENT, a), false, 2.0)
-		_txt(p + Vector2(0, 29.0), String(rows[i][0]), 22, Color(UIKit.ACCENT_HOT, a), HORIZONTAL_ALIGNMENT_CENTER, kw)
-		_txt(p + Vector2(kw + 16.0, 29.0), String(rows[i][1]), 19, Color(INK, a))
+		var a: float = _show(_t, 0.2 * float(i), 0.5)
+		var p := _stage.position + Vector2(30.0 + float(i % cols) * cw, 30.0 + float(i / cols) * rh)
+		var gx: float = p.x
+		for gk in rows[i][0]:
+			var gw: float = PadGlyph.width_for(String(gk), 32.0)
+			PadGlyph.draw_glyph(self, String(gk), Vector2(gx + gw * 0.5, p.y + 20.0), 32.0, a)
+			gx += gw + 6.0
+		_txt(Vector2(p.x + 118.0, p.y + 28.0), String(rows[i][1]), 20, Color(INK, a))
+		_txt(Vector2(p.x + cw - 160.0, p.y + 28.0), String(rows[i][2]), 16, Color(DIM, a), HORIZONTAL_ALIGNMENT_RIGHT, 110.0)

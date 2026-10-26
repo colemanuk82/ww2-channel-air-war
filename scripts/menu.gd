@@ -237,13 +237,29 @@ void fragment() {
 	qb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(qb)
 
-	var hint := UIKit.label("Keyboard: W/S pitch  A/D roll  Q/E yaw  Shift/Ctrl throttle  Space fire  B weapon  Esc pause\nGamepad: left stick fly  right stick look  triggers throttle  A fire  B weapon", 14, Color(0.85, 0.83, 0.75))
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	# gamepad quick reference, bottom-right beside (never over) the bottom button row; full list in Options > Controls
+	var hint := GridContainer.new()
+	hint.columns = 2
+	hint.add_theme_constant_override("h_separation", 22)
+	hint.add_theme_constant_override("v_separation", 8)
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	hint.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	hint.offset_right = -36.0
-	hint.offset_bottom = -26.0
+	hint.offset_bottom = -24.0
+	for item in [[["LS"], "Fly"], [["RS"], "Look"], [["LT", "RT"], "Throttle"], [["A"], "Fire"],
+			[["B"], "Weapon"], [["RB"], "Boost"], [["LB"], "Lock on"], [["START"], "Pause"]]:
+		var cell := HBoxContainer.new()
+		cell.add_theme_constant_override("separation", 5)
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for gk in item[0]:
+			cell.add_child(PadGlyph.make(String(gk), 24.0))
+		var cl: Label = UIKit.label(String(item[1]), 14, Color(0.88, 0.86, 0.78))
+		cl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
+		cl.add_theme_constant_override("outline_size", 4)
+		cell.add_child(cl)
+		hint.add_child(cell)
 	root.add_child(hint)
 	# engine and release version (Godot from Engine.get_version_info(), game from project.godot
 	# application/config/version), small and quiet in the top-right corner

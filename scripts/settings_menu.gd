@@ -15,11 +15,12 @@ const PAGE_LABELS := {"video": "VIDEO", "render": "RENDER", "audio": "AUDIO", "m
 ## Controls pages are slices of BINDINGS (header row included). Keep these in step with the table below:
 ##   FLIGHT 0-11   WEAPONS+BOMBERS 12-21   CAMERA 22-28   RADIO+WORLD 29-37   SYSTEM 38-43
 const CONTROL_PAGES := [
+	["pad", "CONTROLLER", -1, -1],     # the controller diagram
 	["flight", "FLIGHT", 0, 12],
 	["weapons", "WEAPONS", 12, 22],
 	["camera", "CAMERA", 22, 29],
-	["radio", "RADIO", 29, 38],
-	["system", "SYSTEM", 38, 44],
+	["radio", "RADIO / WORLD", 29, 38],
+	["system", "SYSTEM", 38, 45],
 ]
 
 const MUSIC_PER_PAGE := 12
@@ -46,6 +47,8 @@ var _ui_scale: OptionButton
 var _ctl_pages: Dictionary = {}
 var _ctl_btns: Dictionary = {}
 var _binding_buttons: Dictionary = {}
+var _binding_glyphs: Dictionary = {}
+var _ctl_hint: Label
 var _listening_action: String = ""
 var _diagram: ControllerDiagram
 var _current_page: String = "video"
@@ -397,10 +400,7 @@ func _build_realism_page() -> VBoxContainer:
 
 func _build_controls_page() -> VBoxContainer:
 	var page := _new_page()
-	page.alignment = BoxContainer.ALIGNMENT_CENTER
-	_diagram = ControllerDiagram.new()
-	_diagram.set_bindings(_diagram_map())
-	page.add_child(_diagram)
+	page.alignment = BoxContainer.ALIGNMENT_BEGIN
 	var nav := HBoxContainer.new()
 	nav.alignment = BoxContainer.ALIGNMENT_CENTER
 	nav.add_theme_constant_override("separation", 8)
@@ -411,18 +411,30 @@ func _build_controls_page() -> VBoxContainer:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nav.add_child(b)
 		_ctl_btns[String(spec[0])] = b
-	_hint = UIKit.label("Gamepad: click a binding, then press a button. Esc cancels, Delete unbinds.", 13, UIKit.TEXT_DIM)
-	page.add_child(_hint)
+	_ctl_hint = UIKit.label("Click a gamepad binding, then press the new button.  Esc cancels,  Delete unbinds.", 13, UIKit.TEXT_DIM)
+	page.add_child(_ctl_hint)
 	var host := VBoxContainer.new()
 	host.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	page.add_child(host)
+	var pad_page := CenterContainer.new()
+	pad_page.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_diagram = ControllerDiagram.new()
+	_diagram.set_bindings(_diagram_map())
+	pad_page.add_child(_diagram)
+	pad_page.visible = false
+	host.add_child(pad_page)
+	_ctl_pages["pad"] = pad_page
 	for spec in CONTROL_PAGES:
+		if String(spec[0]) == "pad":
+			continue
 		var sub: VBoxContainer = _build_controls_sub(int(spec[2]), int(spec[3]))
 		sub.visible = false
 		host.add_child(sub)
 		_ctl_pages[String(spec[0])] = sub
-	page.add_child(UIKit.button("Reset gamepad bindings", func() -> void: _reset_bindings(), 15))
-	_show_ctl("flight")
+	var reset: Button = UIKit.button("Reset pad", func() -> void: _reset_bindings(), 14)
+	reset.tooltip_text = "Put every gamepad button back to its default"
+	nav.add_child(reset)
+	_show_ctl("pad" if OS.get_environment("WW2_CONTROLS_SUB") == "" else OS.get_environment("WW2_CONTROLS_SUB"))   # env: capture runs
 	return page
 
 
@@ -434,7 +446,16 @@ func _diagram_map() -> Dictionary:
 		var action := String(row[2])
 		if action != "":
 			for ev in InputMap.action_get_events(action):
-				_add_pad_key(out, _event_key(ev), name_s)
+				var pk: String = _event_key(ev)
+				if pk == "DPAD":
+					if action.begins_with("sight_"):
+						name_s = "bombsight dials"
+					else:
+						var dir: String = String({JOY_BUTTON_DPAD_UP: "Up", JOY_BUTTON_DPAD_DOWN: "Down", JOY_BUTTON_DPAD_LEFT: "Left",
+							JOY_BUTTON_DPAD_RIGHT: "Right"}.get((ev as InputEventJoypadButton).button_index, ""))
+						var short: String = String({"assist_toggle": "auto-level", "gear": "gear", "flaps": "flaps", "bail_out": "bail out (hold)"}.get(action, String(row[0])))
+						name_s = "%s %s" % [dir, short]
+				_add_pad_key(out, pk, name_s)
 		else:
 			var txt := String(row[3]).to_lower()
 			for pair in [["left stick", "LS"], ["right stick", "RS"], ["right trigger", "RT"], ["left trigger", "LT"], ["left shoulder", "LB"], ["right shoulder", "RB"], ["d-pad", "DPAD"]]:
@@ -477,6 +498,8 @@ func _show_ctl(key: String) -> void:
 		(_ctl_pages[k] as Control).visible = k == key
 	for k in _ctl_btns.keys():
 		(_ctl_btns[k] as Button).button_pressed = k == key
+	if _ctl_hint != null:
+		_ctl_hint.visible = key != "pad"
 
 
 ## One controls page: rows from_i..to_i of BINDINGS (the header row of the first section included).
@@ -503,13 +526,27 @@ func _build_controls_sub(from_i: int, to_i: int) -> VBoxContainer:
 		gr.add_child(name_l)
 		gr.add_child(UIKit.label(String(row[1]), sz, col if head else Color(0.8, 0.9, 1.0)))
 		var action: String = String(row[2])
+		var cell := HBoxContainer.new()
+		cell.add_theme_constant_override("separation", 10)
+		gr.add_child(cell)
 		if action != "":
-			var b: Button = UIKit.button(_pad_label(action), func() -> void: _start_listening(action, _binding_buttons[action]), 14)
-			b.custom_minimum_size = Vector2(150, 0)
+			var e: InputEvent = GameState.pad_event_for(action)
+			var g: PadGlyph = PadGlyph.make(PadGlyph.key_for_event(e) if e != null else "", 22.0)
+			g.custom_minimum_size.x = 40.0
+			cell.add_child(g)
+			_binding_glyphs[action] = g
+			var b: Button = UIKit.button(_pad_label(action), func() -> void: _start_listening(action, _binding_buttons[action]), 13)
+			b.custom_minimum_size = Vector2(170, 24)
 			_binding_buttons[action] = b
-			gr.add_child(b)
-		else:
-			gr.add_child(UIKit.label(String(row[3]), sz, col if head else Color(0.8, 0.9, 1.0)))
+			cell.add_child(b)
+		elif not head:
+			var txt: String = String(row[3])
+			var keys: Array = _text_glyphs(txt)
+			for gk in keys:
+				var g2: PadGlyph = PadGlyph.make(String(gk), 22.0)
+				g2.custom_minimum_size.x = maxf(g2.custom_minimum_size.x, 44.0 if keys.size() == 1 else g2.custom_minimum_size.x)
+				cell.add_child(g2)
+			cell.add_child(UIKit.label(txt, sz, Color(0.8, 0.9, 1.0) if txt != "-" else UIKit.TEXT_DIM))
 	return vb
 
 
@@ -812,13 +849,12 @@ const BINDINGS := [
 	["Yaw (rudder)", "Q / E", "", "-"],
 	["Throttle", "Shift / Ctrl", "", "Right trigger up, left trigger down"],
 	["Boost", "Tab", "boost", ""],
-	["Target view (hold)", "K", "padlock", "Left shoulder"],
+	["Lock view on nearest enemy (hold)", "K", "padlock", ""],
 	["Auto-level assist", "R", "assist_toggle", ""],
 	["Landing gear", "G", "gear", ""],
-	["Wheel brake (landing)", "V", "brake", "Left trigger"],
+	["Wheel brake", "V", "brake", ""],
 	["Flaps (up / 15 / 35)", "F", "flaps", ""],
 	["Bail out (hold)", "J", "bail_out", ""],
-	["Next music track", ".", "next_music", ""],
 	["WEAPONS", "", "", ""],
 	["Fire / drop bomb", "Space", "fire", ""],
 	["Switch guns / bombs", "X or B", "weapon_toggle", ""],
@@ -833,7 +869,7 @@ const BINDINGS := [
 	["Chase / cockpit view", "C", "camera", ""],
 	["Free-look", "-", "", "Right stick"],
 	["Centre view", "Right mouse", "center_view", ""],
-	["Target view (nearest aircraft)", "K", "padlock", ""],
+	["Tactical map", "M", "tac_map", ""],
 	["Hide HUD", "H", "", "-"],
 	["Hide controls hint", "F1", "", "-"],
 	["RADIO ORDERS (friendly aircraft)", "", "", ""],
@@ -850,6 +886,7 @@ const BINDINGS := [
 	["Respawn", "Backspace", "", "-"],
 	["Time warp up (x1 / x2 / x4)", "] or F5", "warp_up", ""],
 	["Time warp down (x2 / x1)", "[", "warp_down", ""],
+	["Next music track", ".", "next_music", ""],
 	["Start airborne toggle / swap airfield", "F2 / F3", "", "-"],
 ]
 
@@ -871,18 +908,34 @@ const JOY_AXIS_NAMES := {
 func _start_listening(action: String, btn: Button) -> void:
 	_listening_action = action
 	btn.text = "Press a button..."
-	_hint.text = "Listening for %s - press a gamepad button or move a stick/trigger (Esc cancels, Delete unbinds)." % action
+	_ctl_hint.visible = true
+	_ctl_hint.text = "Listening for %s - press a gamepad button or move a stick/trigger (Esc cancels, Delete unbinds)." % action
 
 
 func _stop_listening() -> void:
 	_listening_action = ""
-	_hint.text = "Gamepad: click a binding, then press a button. Esc cancels, Delete unbinds."
+	_ctl_hint.text = "Click a gamepad binding, then press the new button.  Esc cancels,  Delete unbinds."
 	_refresh_bindings()
+
+
+## Pad icons for the fixed (not remappable) rows, from their description text.
+func _text_glyphs(txt: String) -> Array:
+	var t: String = txt.to_lower()
+	var out: Array = []
+	for pair in [["right trigger", "RT"], ["left trigger", "LT"], ["left stick", "LS"], ["right stick", "RS"], ["d-pad", "DPAD"]]:
+		if t.find(String(pair[0])) >= 0:
+			out.append(pair[1])
+	return out
 
 
 func _refresh_bindings() -> void:
 	for action in _binding_buttons.keys():
 		(_binding_buttons[action] as Button).text = _pad_label(action)
+		if _binding_glyphs.has(action):
+			var g: PadGlyph = _binding_glyphs[action]
+			var e: InputEvent = GameState.pad_event_for(action)
+			g.key = PadGlyph.key_for_event(e) if e != null else ""
+			g.queue_redraw()
 	if _diagram != null:
 		_diagram.set_bindings(_diagram_map())
 

@@ -84,8 +84,11 @@ func _ready() -> void:
 	for f in 26:
 		_scud(rng, Vector2(rng.randf_range(-half, half), rng.randf_range(-half, half)))
 	# lone cumulus between the formations
-	for i in 90:
-		_add(rng, Kind.CUMULUS, Vector2(rng.randf_range(-half, half), rng.randf_range(-half, half)), rng.randf_range(0.6, 1.0), rng.randf() * TAU)
+	for i in 40:
+		var cc := Vector2(rng.randf_range(-half, half), rng.randf_range(-half, half))
+		for j in rng.randi_range(1, 4):
+			var off := Vector2(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0)) * rng.randf_range(600.0, 3500.0)
+			_add(rng, Kind.CUMULUS, cc + off, 0.4 + 1.5 * pow(rng.randf(), 1.7), rng.randf() * TAU, rng.randf_range(900.0, 1500.0))
 	# v7.23 cloud types: their own generator so the original sky above stays exactly where it was
 	var rng2 := RandomNumberGenerator.new()
 	rng2.seed = 1940
@@ -94,9 +97,9 @@ func _ready() -> void:
 		var fc2 := Vector2(rng2.randf_range(-half, half), rng2.randf_range(-half, half))
 		var r2: float = rng2.randf()
 		if r2 < 0.18:
-			_lens_group(rng2, fc2)
+			_cumulus_field(rng2, fc2)
 		elif r2 < 0.38:
-			_castle_patch(rng2, fc2)
+			_congestus_group(rng2, fc2)
 		elif r2 < 0.58:
 			_cirrocu_sheet(rng2, fc2)
 		elif r2 < 0.82:
@@ -237,8 +240,8 @@ func _cumulus_field(rng: RandomNumberGenerator, fc: Vector2) -> void:
 			v = snappedf(v, 0.5) + rng.randf_range(-0.07, 0.07)   # parallel rows
 		var p: Vector2 = fc + dir * u * along + side * v * across
 		# bigger in the middle of the field, smaller wisps at the ragged edge
-		var k: float = lerpf(1.25, 0.55, clampf(Vector2(u, v).length(), 0.0, 1.0)) * rng.randf_range(0.85, 1.15)
-		_add(rng, Kind.CUMULUS, p, k, rng.randf() * TAU, field_base + rng.randf_range(-60.0, 60.0))
+		var k: float = lerpf(1.35, 0.45, clampf(Vector2(u, v).length(), 0.0, 1.0)) * (0.55 + 0.9 * pow(rng.randf(), 1.4))
+		_add(rng, Kind.CUMULUS, p, k, rng.randf() * TAU, field_base + rng.randf_range(-90.0, 140.0))
 	if rng.randf() < 0.22:
 		_add(rng, Kind.TOWER, fc + dir * rng.randf_range(-0.3, 0.3) * along, rng.randf_range(0.7, 1.0), rng.randf() * TAU)
 
@@ -320,8 +323,8 @@ func _alto_patch(rng: RandomNumberGenerator, fc: Vector2) -> void:
 	var side := Vector2(-along.y, along.x)
 	var base: float = rng.randf_range(4600.0, 6400.0)
 	for i in n:
-		var p: Vector2 = fc + along * rng.randf_range(-9000.0, 9000.0) + side * snappedf(rng.randf_range(-7000.0, 7000.0), 2300.0) + side * rng.randf_range(-400.0, 400.0)
-		_add(rng, Kind.ALTO, p, rng.randf_range(0.7, 1.3), rng.randf() * TAU, base + rng.randf_range(-120.0, 120.0))
+		var p: Vector2 = fc + along * rng.randfn(0.0, 4500.0) + side * rng.randfn(0.0, 3200.0)
+		_add(rng, Kind.ALTO, p, 0.35 + 0.85 * pow(rng.randf(), 1.6), rng.randf() * TAU, base + rng.randf_range(-350.0, 350.0))
 
 
 ## Storm cell: one to three big cumulonimbus ringed by cumulus and a skirt of strato.

@@ -52,9 +52,9 @@ func tick(delta: float, player: Aircraft) -> void:
 		return
 	if not InputMap.has_action("bail_out"):
 		return
-	if Input.is_action_pressed("bail_out"):
+	if Input.is_action_pressed("bail_out") and not (GameState.sight_dials and GameState.dpad_held()):
 		if _hold == 0.0:
-			_msg("BAIL OUT - keep holding J", 1.2)
+			_msg("BAIL OUT - keep holding", 1.2)
 		_hold += delta
 		if _hold >= HOLD_TIME:
 			_hold = 0.0
