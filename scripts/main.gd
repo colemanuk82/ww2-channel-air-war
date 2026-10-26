@@ -1446,7 +1446,11 @@ func _ui_shot() -> void:
 	for a in _args:
 		if a.begins_with("--ui-shot="):
 			var path: String = a.substr(10)
-			get_tree().create_timer(5.0, true, false, true).timeout.connect(func() -> void:
+			var shot_delay: float = 5.0
+			for da in _args:
+				if da.begins_with("--shot-delay="):
+					shot_delay = float(da.substr(13))
+			get_tree().create_timer(shot_delay, true, false, true).timeout.connect(func() -> void:
 				# the image must be taken after a frame has been drawn: grabbing it straight from a timer
 				# callback returns an empty (black) texture
 				await RenderingServer.frame_post_draw
@@ -1477,10 +1481,16 @@ func _show_menu() -> void:
 	# the start menu (and its music) is only built once the warning / licence screens have been dealt with
 	if _legal_gate_needed():
 		await _run_legal_gate()
+	if _intro_start() >= 0.0:
+		await _run_intro(_intro_start())
 	_menu = (load(MENU_SCENE) as PackedScene).instantiate() as StartMenu
 	add_child(_menu)
 	_menu.start_requested.connect(start_game)
 	_menu.quit_requested.connect(func() -> void: get_tree().quit())
+	for fa in _args:
+		if fa.begins_with("--film="):    # debug: --film=<chapter>[,<seconds>] opens the training film on that frame
+			var fp: PackedStringArray = fa.substr(7).split(",")
+			_menu.call_deferred("open_film", int(fp[0]), float(fp[1]) if fp.size() > 1 else 0.0)
 	if _args.has("--menu-test"):    # debug: pick missions in the start menu and print the side / aircraft it selects
 		_menu_test.call_deferred()
 
@@ -1491,6 +1501,34 @@ func _legal_gate_needed() -> bool:
 	if DisplayServer.get_name() == "headless" or _args.has("--menu-test") or _args.has("--skip-legal"):
 		return false
 	return not LegalGate.session_done
+
+
+## Opening cinematic once per launch (before the menu). --intro=<seconds> forces it from that point (debug);
+## --skip-intro / --skip-legal / headless runs never show it. Returns -1 for "do not play".
+var _intro_running: bool = false
+
+
+func _intro_start() -> float:
+	for a in _args:
+		if a.begins_with("--intro="):
+			return float(a.substr(8))
+	if DisplayServer.get_name() == "headless" or _args.has("--menu-test") or _args.has("--skip-legal") or _args.has("--skip-intro"):
+		return -1.0
+	return -1.0 if IntroCutscene.shown else 0.0
+
+
+func _run_intro(start_at: float) -> void:
+	IntroCutscene.shown = true
+	_intro_running = true
+	var intro := IntroCutscene.new()
+	add_child(intro)
+	intro.freeze = _args.has("--intro-freeze")
+	intro.play(_menu_cam, _menu_anchor, start_at)
+	await intro.finished
+	_intro_running = false
+	TimeOfDay.set_preset("noon")
+	WeatherManager.set_weather("clear", 0.1)
+	_update_menu_cam(0.0)
 
 
 func _run_legal_gate() -> void:
@@ -1505,6 +1543,8 @@ func _run_legal_gate() -> void:
 
 
 func _update_menu_cam(delta: float) -> void:
+	if _intro_running:
+		return
 	_menu_t += delta * 0.06
 	var c: Vector3 = WorldCoords.latlon_to_world(51.13, 1.31)
 	var p: Vector3 = c + Vector3(cos(_menu_t), 0.0, sin(_menu_t)) * 3200.0

@@ -224,6 +224,9 @@ void fragment() {
 	var lb := UIKit.button("Logbook", _open_logbook, 20)
 	lb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(lb)
+	var tf := UIKit.button("Training Film", func() -> void: open_film(), 20)
+	tf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(tf)
 	var ob := UIKit.button("Options", func() -> void: add_child(SettingsMenu.new()), 20)
 	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(ob)
@@ -588,6 +591,18 @@ func _open_career() -> void:
 		pm.queue_free()
 		start_requested.emit(cfg))
 	add_child(pm)
+
+
+## The animated training film (instruments + dogfight technique). Public so a debug run can jump to a frame.
+func open_film(chapter: int = 0, at: float = 0.0) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 80
+	add_child(layer)
+	var tf := TrainingFilm.new()
+	tf.start_chapter = chapter
+	tf.start_time = at
+	tf.closed.connect(func() -> void: layer.queue_free())
+	layer.add_child(tf)
 
 
 func _open_logbook() -> void:
