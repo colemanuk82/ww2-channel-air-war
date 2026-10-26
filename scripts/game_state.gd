@@ -592,6 +592,7 @@ func _setup_input() -> void:
 	_key("flaps", KEY_F)
 	_key("bail_out", KEY_J)    # hold: bail out of the aircraft (see scripts/bail_out.gd)
 	_key("bombsight", KEY_N)
+	_key("next_music", KEY_PERIOD)   # skip to the next in-flight music track
 	_key("gunner_view", KEY_L)   # bombers: step through the defensive gun positions (autopilot while gunning)
 	_key("tac_map", KEY_M)
 	_key("sight_alt_up", KEY_UP)
