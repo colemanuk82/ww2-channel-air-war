@@ -20,6 +20,8 @@ var reduce_shake: bool = false   # calmer camera: gust, engine and hit shake cut
 var colorblind: bool = false     # red/green friend-foe colours swapped for blue/yellow (Options > Colour-blind colours)
 var radio_subtitles: bool = false  # radio call log on screen (Options > Radio subtitles)
 var radio_static: bool = true   # background radio hiss / crackle between calls
+## Swastikas on Luftwaffe fins (historical markings). Off by default; the Gameplay settings show a disclaimer when on.
+var historical_markings: bool = false
 const TIME_SPEEDS := [0.0, 1.0, 6.0, 12.0, 30.0, 120.0]
 const TIME_SPEED_NAMES := ["Frozen", "Real time", "6x", "12x", "30x", "120x"]
 var time_speed: int = 2        # day/night cycle speed (index into TIME_SPEEDS; Options > Time passes)
@@ -226,6 +228,7 @@ func _load_settings() -> void:
 	completed_missions = cf.get_value("progress", "completed_missions", completed_missions)
 	time_speed = clampi(int(cf.get_value("ui", "time_speed", time_speed)), 0, TIME_SPEEDS.size() - 1)
 	radio_static = bool(cf.get_value("ui", "radio_static", radio_static))
+	historical_markings = bool(cf.get_value("ui", "historical_markings", historical_markings))
 	radio_subtitles = bool(cf.get_value("ui", "radio_subtitles", radio_subtitles))
 	reduce_shake = bool(cf.get_value("ui", "reduce_shake", reduce_shake))
 	colorblind = bool(cf.get_value("ui", "colorblind", colorblind))
@@ -294,6 +297,7 @@ func save_settings() -> void:
 	cf.set_value("progress", "completed_missions", completed_missions)
 	cf.set_value("ui", "time_speed", time_speed)
 	cf.set_value("ui", "radio_static", radio_static)
+	cf.set_value("ui", "historical_markings", historical_markings)
 	cf.set_value("ui", "radio_subtitles", radio_subtitles)
 	cf.set_value("ui", "reduce_shake", reduce_shake)
 	cf.set_value("ui", "colorblind", colorblind)
@@ -432,6 +436,9 @@ func set_graphic(key: String, value: Variant) -> void:
 			time_speed = clampi(int(value), 0, TIME_SPEEDS.size() - 1)
 		"radio_static":
 			radio_static = bool(value)
+		"historical_markings":
+			historical_markings = bool(value)
+			AircraftModels.apply_historical_markings(get_tree().root, historical_markings)
 		"radio_subtitles":
 			radio_subtitles = bool(value)
 		"engine_heat":

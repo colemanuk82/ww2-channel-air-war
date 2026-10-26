@@ -67,6 +67,19 @@ static func _make_realistic(root: Node3D, model_id: String, nation: String) -> v
 		mi.material_override = plain[key]
 	# the painted livery texture (assets/liveries), with the markings and codes painted in, when there is one
 	Livery.apply(root, model_id, nation, skin)
+	apply_historical_markings(root, GameState.historical_markings)
+
+
+## Show or hide the swastika on Luftwaffe fins (and the white disc it sits on) under `root`, following the
+## "Historical markings" setting. These stay separate meshes, never painted into the livery, so they can be
+## switched off; with them off the fin is left in its camouflage.
+static func apply_historical_markings(root: Node, on: bool) -> void:
+	if root == null:
+		return
+	for n in root.find_children("DecalFin*", "Node3D", true, false):
+		var nm: String = String(n.name)
+		if nm.contains("Swastika") or nm.contains("FinDisc"):
+			(n as Node3D).visible = on
 
 
 const TIP_COL := Color(0.86, 0.72, 0.16)

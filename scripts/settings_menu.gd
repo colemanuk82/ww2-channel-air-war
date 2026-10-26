@@ -373,7 +373,18 @@ func _build_gameplay_page() -> VBoxContainer:
 		GameState.set_graphic("radio_static", i == 1))
 	_row(page, "Radio voice", ["Off", "On"], 1 if GameState.radio_voice else 0, func(i: int) -> void:
 		GameState.radio_voice = i == 1)
+	var hist_note: Label = UIKit.label(HISTORICAL_DISCLAIMER, 14, UIKit.TEXT_DIM)
+	hist_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hist_note.custom_minimum_size = Vector2(900, 0)
+	hist_note.visible = GameState.historical_markings
+	_row(page, "Fin swastikas", ["Off", "On"], 1 if GameState.historical_markings else 0, func(i: int) -> void:
+		GameState.set_graphic("historical_markings", i == 1)
+		hist_note.visible = i == 1)
+	page.add_child(hist_note)
 	return page
+
+
+const HISTORICAL_DISCLAIMER := "Disclaimer: with this on, Luftwaffe aircraft carry the swastika on the tail fin, as they did in 1940-45, purely for historical accuracy. Its use here does not endorse or glorify National Socialism, its ideology or its crimes, and it is shown only on the aircraft as a historical record. Showing this symbol is restricted by law in some countries (for example Germany and Austria): leave it off where that applies."
 
 
 # ---------------------------------------------------------------- Realism
