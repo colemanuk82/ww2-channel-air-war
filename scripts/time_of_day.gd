@@ -299,7 +299,7 @@ func _apply() -> void:
 
 	environment.ambient_light_color = amb
 	environment.ambient_light_energy = amb_e
-	environment.fog_light_color = fogc.lerp(Color(0.52, 0.47, 0.40), 0.55 * haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0))
+	environment.fog_light_color = fogc.lerp(Color(0.52, 0.47, 0.40), 0.3 * haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0))
 	# light shafts: thicken the (high-preset) volumetric haze while the sun is low, so a dawn or dusk sun throws
 	# visible rays through the gaps between clouds; thin again by day so the noon air stays clear
 	if environment.volumetric_fog_enabled:
@@ -308,7 +308,7 @@ func _apply() -> void:
 		environment.volumetric_fog_albedo = Color(0.92, 0.94, 1.0).lerp(lc, 0.45 * low)
 		environment.volumetric_fog_anisotropy = 0.65 + 0.2 * low
 		sun.light_volumetric_fog_energy = 1.0 + 0.8 * low
-	environment.fog_density = float(s[9]) * fog_mul * (1.0 + 1.0 * haze_k) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
+	environment.fog_density = float(s[9]) * fog_mul * (1.0 + 0.4 * haze_k) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
 	sun_color = lc
 	horizon_color = hor
 	light_level = clampf(sun_e / 1.3 + moon_e * 0.3 + 0.12, 0.0, 1.0)

@@ -40,6 +40,9 @@ var _finished: bool = false
 ## Bomber streams are bigger than they were: every formation is scaled by this (1 = the old sizes).
 static var size_mult: float = 2.0
 const MAX_BOMBERS: int = 18
+const MAX_BIG_RAID: int = 30          # the occasional big raid: several more vics stacked up and back
+## Chance that a formation is a big raid (more vics in a deeper stacked box). 0 in tests (deterministic sizes).
+static var big_raid_chance: float = 0.3
 
 ## Vic positions inside a combat box, in units of `spacing` (x, z) and world units (y): the lead vic, then vics
 ## stepped out to each side, up and down, and back, so a big formation reads as a stacked box, not one long V.
@@ -69,6 +72,8 @@ static func slot_offset(i: int, spacing: float) -> Vector3:
 
 static func spawn(parent: Node, stats_id: String, p_team: String, count: int, start_pos: Vector3, heading_deg: float, waypoints: Array[Vector3], p_difficulty: float = 0.5, spacing: float = 95.0) -> BomberFormation:
 	count = scaled(count)
+	if count >= 6 and randf() < big_raid_chance:
+		count = mini(int(round(float(count) * randf_range(1.5, 1.9))) / 3 * 3, MAX_BIG_RAID)   # whole vics
 	var f := BomberFormation.new()
 	f.name = "BomberFormation"
 	f.team = p_team
@@ -158,8 +163,74 @@ func _promote_leader() -> void:
 			return
 
 
+# ------------------------------------------------------------------ defensive reactions
+# Most of the time the bombers hold the box (mutual protection from the gunners). Now and then, under attack, one
+# crew does something unpredictable for a few seconds: dives away, climbs, or breaks out to one side, then rejoins.
+# Rarely a whole vic (three aircraft) does it together.
+var _def_t: float = 2.0
+var _home_off: Dictionary = {}      # AIPilot -> its normal formation offset while it is out of the box
+var _back_t: Dictionary = {}        # AIPilot -> seconds until it rejoins
+
+
+func _tick_defence(delta: float, enemies: Array[Aircraft]) -> void:
+	for p in _back_t.keys():
+		_back_t[p] = float(_back_t[p]) - delta
+		if float(_back_t[p]) <= 0.0 or not is_instance_valid(p):
+			if is_instance_valid(p):
+				(p as AIPilot).formation_offset = _home_off[p]
+			_back_t.erase(p)
+			_home_off.erase(p)
+	_def_t -= delta
+	if _def_t > 0.0:
+		return
+	_def_t = randf_range(2.5, 5.0)
+	# under attack: an enemy fighter close to any of us
+	var hot: bool = false
+	for e in enemies:
+		for m in members:
+			if is_instance_valid(m) and m.state == Aircraft.State.ALIVE and e.global_position.distance_to(m.global_position) < 900.0:
+				hot = true
+				break
+		if hot:
+			break
+	if not hot or randf() > 0.35:
+		return
+	var followers: Array = []
+	for i in members.size():
+		var m2: Aircraft = members[i]
+		if is_instance_valid(m2) and m2.state == Aircraft.State.ALIVE and m2 != leader:
+			var p2: AIPilot = AIFactory.pilot_of(m2)
+			if p2 != null and p2.role == AIPilot.Role.BOMBER_FOLLOWER and not _back_t.has(p2):
+				followers.append([i, p2])
+	if followers.is_empty():
+		return
+	var pick: Array = followers[randi() % followers.size()]
+	var group: Array = [pick]
+	if randf() < 0.2:                  # the whole vic goes together
+		var vic: int = int(pick[0]) / 3
+		for f in followers:
+			if int(f[0]) / 3 == vic and f != pick:
+				group.append(f)
+	var move: int = randi() % 3        # 0 dive, 1 climb, 2 break out to a side
+	var shift := Vector3.ZERO
+	match move:
+		0: shift = Vector3(randf_range(-80.0, 80.0), -randf_range(180.0, 420.0), randf_range(0.0, 150.0))
+		1: shift = Vector3(randf_range(-80.0, 80.0), randf_range(140.0, 300.0), randf_range(60.0, 220.0))
+		_: shift = Vector3((1.0 if randf() < 0.5 else -1.0) * randf_range(300.0, 650.0), randf_range(-120.0, 60.0), randf_range(-60.0, 180.0))
+	var dur: float = randf_range(4.0, 9.0)
+	for g in group:
+		var pp: AIPilot = g[1]
+		_home_off[pp] = pp.formation_offset
+		_back_t[pp] = dur
+		pp.formation_offset = pp.formation_offset + shift + Vector3(randf_range(-30, 30), randf_range(-20, 20), randf_range(-30, 30))
+
+
+var _def_enemies: Array[Aircraft] = []
+
+
 func _process(delta: float) -> void:
 	_tick_stream()
+	_tick_defence(delta, _def_enemies)
 	_gun_t -= delta
 	if _gun_t > 0.0:
 		return
@@ -174,6 +245,7 @@ func _process(delta: float) -> void:
 		var e: Aircraft = n as Aircraft
 		if e != null and e.team != team and e.team != "Neutral" and e.state == Aircraft.State.ALIVE and not e.is_in_group("bomber"):
 			enemies.append(e)
+	_def_enemies = enemies
 	if enemies.is_empty():
 		return
 	for m in members:

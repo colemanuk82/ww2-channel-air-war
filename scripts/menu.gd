@@ -324,11 +324,6 @@ void fragment() {
 	_refresh_mode()
 	_show_page(_initial_page())
 	start.grab_focus()
-	if not NewsreelCard.shown_this_launch:
-		var news: Array = NewsreelCard.headline_from_log()      # the player's own news leads the reel when there is any
-		if news.is_empty():
-			news = ["THE CHANNEL HOLDS", "Weekly Review, item one: the coastal fighter stations stand by through the night. Original commentary, no archive footage."]
-		NewsreelCard.play_once(self, String(news[0]), String(news[1]))
 	# decorations not yet presented (earned in a sortie that ended in a hurry) are shown once the card has gone
 	get_tree().create_timer(5.5).timeout.connect(func() -> void:
 		if is_inside_tree() and not MedalCeremony.show_pending(self, "Allies"):
@@ -593,11 +588,20 @@ func _refresh_mode() -> void:
 
 func _open_campaign() -> void:
 	var cm := CampaignMenu.new()
+	# the newsreel plays only for the campaign: when it is opened, and between its missions (returning from a sortie)
+	var news: Array = NewsreelCard.headline_from_log()      # the player's own news leads the reel when there is any
+	if news.is_empty():
+		news = ["THE CHANNEL HOLDS", "Weekly Review, item one: the coastal fighter stations stand by through the night. Original commentary, no archive footage."]
+	call_deferred("_newsreel", String(news[0]), String(news[1]))
 	cm.closed.connect(func() -> void: cm.queue_free())
 	cm.start_requested.connect(func(cfg: Dictionary) -> void:
 		cm.queue_free()
 		start_requested.emit(cfg))
 	add_child(cm)
+
+
+func _newsreel(headline: String, sub: String) -> void:
+	NewsreelCard.play(self, headline, sub)
 
 
 func _open_career() -> void:
@@ -657,6 +661,7 @@ func _open_dam_busters() -> void:
 func _open_planner() -> void:
 	var fp := FlightPlanner.new()
 	fp.side = _side.get_item_text(_side.selected)
+	fp.weather_choice = _weather_names[_weather.selected] if _weather.selected < _weather_names.size() else ""
 	fp.cancelled.connect(func() -> void: fp.queue_free())
 	fp.confirmed.connect(func(plan: Dictionary) -> void:
 		_plan = plan

@@ -8,7 +8,7 @@ signal weather_changed(weather_name: String)
 const PRESETS := {
 	# cover: cloud puff fraction, fog: fog density multiplier, light: sun strength, desat, dim: sky dimming, cloud_dark
 	"clear": {"precip": 0.0, "cover": 0.30, "fog": 1.0, "light": 1.0, "desat": 0.0, "dim": 0.0, "cloud_dark": 0.0, "wind_lo": 2.0, "wind_hi": 7.0},
-	"scattered": {"precip": 0.0, "cover": 0.62, "fog": 1.2, "light": 0.95, "desat": 0.08, "dim": 0.03, "cloud_dark": 0.05, "wind_lo": 5.0, "wind_hi": 11.0},
+	"scattered": {"precip": 0.0, "cover": 0.76, "fog": 1.0, "light": 0.95, "desat": 0.08, "dim": 0.03, "cloud_dark": 0.05, "wind_lo": 5.0, "wind_hi": 11.0},
 	"overcast": {"precip": 0.04, "cover": 1.0, "fog": 2.2, "light": 0.55, "desat": 0.55, "dim": 0.18, "cloud_dark": 0.35, "wind_lo": 8.0, "wind_hi": 14.0},
 	"rain": {"precip": 0.7, "cover": 1.0, "fog": 3.5, "light": 0.42, "desat": 0.65, "dim": 0.28, "cloud_dark": 0.5, "wind_lo": 10.0, "wind_hi": 17.0},
 	"storm": {"precip": 1.0, "cover": 1.0, "fog": 4.5, "light": 0.3, "desat": 0.7, "dim": 0.42, "cloud_dark": 0.7, "wind_lo": 16.0, "wind_hi": 27.0},
@@ -131,6 +131,7 @@ func set_weather(weather_name: String, blend_time: float = 4.0) -> void:
 		push_warning("WeatherManager: unknown weather '%s'" % weather_name)
 		return
 	base_weather = weather_name
+	_roll_low_cloud(weather_name)
 	if front_active and weather_name in ["fog", "storm"]:
 		cancel_front()
 	if front_active:
@@ -138,6 +139,21 @@ func set_weather(weather_name: String, blend_time: float = 4.0) -> void:
 		_front_check = 0.0
 		return
 	_blend_to(weather_name, blend_time)
+
+
+## Some days bring a very low broken cloud deck (a few hundred feet up, not fog) under the weather's own clouds.
+var low_cloud: float = 0.0
+const LOW_CLOUD_CHANCE := {"clear": 0.04, "scattered": 0.18, "overcast": 0.45, "rain": 0.5, "storm": 0.3, "fog": 0.0}
+
+
+func _roll_low_cloud(weather_name: String) -> void:
+	var forced: String = OS.get_environment("WW2_LOW_CLOUD")      # capture runs: "1" forces it on, "0" off
+	if forced != "":
+		low_cloud = 0.9 if forced == "1" else 0.0
+	else:
+		low_cloud = randf_range(0.5, 1.0) if randf() < float(LOW_CLOUD_CHANCE.get(weather_name, 0.0)) else 0.0
+	if cloud_field:
+		cloud_field.low_cloud = low_cloud
 
 
 func cancel_front() -> void:
@@ -229,6 +245,8 @@ func _apply() -> void:
 	TimeOfDay.set_weather_modifiers(float(_cur["fog"]) * (1.0 + rain * 1.1), _cur["light"], _cur["desat"] + rain * 0.1, _cur["dim"])
 	if cloud_field:
 		cloud_field.cover = _cur["cover"]
+		if absf(cloud_field.low_cloud - low_cloud) > 0.001:
+			cloud_field.low_cloud = low_cloud
 		var ll: float = TimeOfDay.light_level
 		var dark: float = float(_cur["cloud_dark"])
 		var base: Color = TimeOfDay.sun_color.lerp(Color.WHITE, 0.6)
