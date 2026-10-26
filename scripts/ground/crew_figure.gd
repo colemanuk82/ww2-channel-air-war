@@ -18,7 +18,7 @@ static func make(team: String, pose: int, dress: int = 0) -> MeshInstance3D:
 	mi.mesh = mesh(team, pose, dress)
 	mi.visibility_range_end = 1600.0
 	mi.visibility_range_end_margin = 150.0
-	mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED   # (FADE_SELF draws it after the clouds: seen through cloud)
 	return mi
 
 

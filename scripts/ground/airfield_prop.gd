@@ -96,7 +96,7 @@ func _build_intact(root: Node3D) -> void:
 		var vr: float = float(VIS_RANGE.get(pkind, 7000.0))
 		mi.visibility_range_end = vr
 		mi.visibility_range_end_margin = vr * 0.12
-		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED   # (FADE_SELF draws it after the clouds: seen through cloud)
 		root.add_child(mi)
 
 
