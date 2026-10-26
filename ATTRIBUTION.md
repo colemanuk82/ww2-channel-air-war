@@ -2,6 +2,8 @@
 
 All Stage 1 art (aircraft, terrain, sea, sky, clouds, HUD) is generated procedurally in code. No imported assets.
 
+Engine: **Godot Engine** (https://godotengine.org), (c) Juan Linietsky, Ariel Manzur and the Godot Engine contributors, MIT licence (https://godotengine.org/license/).
+
 Imported assets (CC0 / CC-BY) must be listed here as: name, author, licence, source URL.
 
 - Sentinel-2 cloudless 2020 (terrain colour imagery, `data/heightmap/region_color.png`), EOX IT Services GmbH — "contains modified Copernicus Sentinel data 2020", licence CC BY 4.0, https://s2maps.eu (tiles via https://tiles.maps.eox.at).
