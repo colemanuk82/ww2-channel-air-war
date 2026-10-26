@@ -67,6 +67,10 @@ Any suggestions or feedback? Let me know!
 
 Aircraft, terrain, sea, sky, clouds and HUD are generated procedurally in code. The sources below are the third-party tools, data and sound that the game uses. The complete, per-file list (with every dataset source) is in [ATTRIBUTION.md](ATTRIBUTION.md).
 
+### How it was made
+- **Vibe-coded with [Claude](https://claude.ai)** (Anthropic's AI assistant, via [Claude Code](https://claude.com/claude-code)). The game's code, procedural art and tooling were written by Claude working to my direction and testing, not hand-coded line by line.
+- **The source is open and in this repository** so anyone can read it, build it and check for themselves what it does. If you spot something wrong or unsafe, please open an issue.
+
 ### Engine
 - **[Godot Engine](https://godotengine.org)** — the game engine this is built on. © Juan Linietsky, Ariel Manzur and the Godot Engine contributors, [MIT licence](https://godotengine.org/license/).
 - **[Ocean3D Lite](https://store.godotengine.org/asset/ocean3d/ocean3d-lite/)** — Gerstner wave field for the sea, by Justin Schroeder, MIT licence (bundled in `addons/ocean3d_lite/`).
