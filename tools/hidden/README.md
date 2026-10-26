@@ -31,3 +31,10 @@ console exe for picture runs: all of them still flash a window or take focus.
 
 Notes: the first second after launch runs slowly while shaders compile, so real-time captures need about
 15-20 s extra `--shot-delay`. Results land in `build/mis/` (git-ignored).
+
+## Liveries
+
+* `livery_build.ps1 [-Only spitfire,bf109]` - export the unwrapped skin geometry (headless), paint the liveries
+  (python, numpy + Pillow) and re-import. `livery_geo.ps1` does only the export.
+* `galshot.ps1 -Name x -GalArgs "--ids=bf109 --view=three"` - one model gallery shot on the hidden desktop;
+  `livgal_all.ps1 [-View three] [-Ids a,b]` - one shot per aircraft (`build/gal/L_<id>_<view>.png`).

@@ -42,6 +42,17 @@ static func _make_realistic(root: Node3D, model_id: String, nation: String) -> v
 		var dpar: Node = mi.get_parent()
 		var decal: bool = String(mi.name).contains("Decal") or (dpar != null and String(dpar.name).contains("Decal"))
 		var key: String = "%s|%s|%s" % [col.to_html(), str(em), str(decal)]
+		if decal and (em == null or Color(em) == Color(0, 0, 0, 1) or Color(em) == Color(0, 0, 0, 0)):
+			# markings: matt paint drawn a hair towards the camera, so the curved wing / fuselage skin can never
+			# cut through a roundel, cross or code (shaders/decal_paint.gdshader)
+			if not plain.has(key):
+				var dm := ShaderMaterial.new()
+				dm.shader = load("res://shaders/decal_paint.gdshader") as Shader
+				dm.set_shader_parameter("albedo", col)
+				dm.set_shader_parameter("roughness_v", 0.78)
+				plain[key] = dm
+			mi.material_override = plain[key]
+			continue
 		if not plain.has(key):
 			var sm := StandardMaterial3D.new()
 			sm.albedo_color = col
@@ -54,6 +65,8 @@ static func _make_realistic(root: Node3D, model_id: String, nation: String) -> v
 				sm.emission_energy_multiplier = float(ee) if ee != null else 1.0
 			plain[key] = sm
 		mi.material_override = plain[key]
+	# the painted livery texture (assets/liveries), with the markings and codes painted in, when there is one
+	Livery.apply(root, model_id, nation, skin)
 
 
 const TIP_COL := Color(0.86, 0.72, 0.16)

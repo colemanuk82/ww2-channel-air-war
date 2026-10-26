@@ -344,7 +344,12 @@ func _test_markings() -> void:
 					fus_ok = false
 			elif not all.grow(0.6).encloses(a):
 				out_ok = false
-		_check(n_dec > 0, "%s has national markings" % mid)
+		_check(n_dec > 0 or Livery.has_livery(mid, "RAF"), "%s has national markings" % mid)
+		if Livery.has_livery(mid, "RAF"):
+			var fz: MeshInstance3D = m.find_child("Fuselage", true, false) as MeshInstance3D
+			var sk: ShaderMaterial = fz.material_override as ShaderMaterial if fz != null else null
+			_check(sk != null and bool(sk.get_shader_parameter("use_livery")), "%s wears its painted livery" % mid)
+			_check(fz != null and fz.mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV] != null, "%s skin is unwrapped for the livery" % mid)
 		_check(fus_ok, "%s fuselage roundels stay on the fuselage" % mid)
 		_check(out_ok, "%s wing and fin markings stay on the airframe" % mid)
 		m.free()

@@ -29,7 +29,7 @@ const PBR_SHADER := "res://shaders/aircraft_pbr.gdshader"
 const CAMO := {
 	"spitfire": "raf_day", "hurricane": "raf_day", "typhoon": "raf_day", "tempest": "raf_day",
 	"defiant": "raf_night", "mosquito": "raf_day", "blenheim": "raf_day", "lancaster": "raf_night",
-	"p51": "usaaf_od", "p47": "usaaf_od", "p38": "bare_metal", "b25": "usaaf_od", "b26": "usaaf_od",
+	"p51": "bare_metal", "p47": "usaaf_od", "p38": "bare_metal", "b25": "usaaf_od", "b26": "usaaf_od",
 	"a20": "usaaf_od", "c47": "usaaf_od", "dh89": "civil_silver",
 	"bf109": "lw_fighter", "bf110": "lw_fighter", "fw190": "lw_fighter", "me262": "lw_fighter",
 	"he111": "lw_splinter", "ju88": "lw_splinter", "ju87": "lw_splinter", "do17": "lw_splinter",
