@@ -26,6 +26,16 @@ varying vec3 o_n;
 // Structural loss (see AircraftDamageModel): fragments past these object-space limits are cut away.
 // x = starboard wing from this |x| outward, y = port wing, z = everything aft of this z (the tail); 0 = intact.
 instance uniform vec4 cut = vec4(0.0);
+// National markings painted into the skin (GltfModels bakes each marking group into a slot of decal_atlas and a
+// planar projector here): no separate decal meshes, so nothing can sink into or float off the airframe.
+const int MAX_DECALS = 8;
+uniform sampler2D decal_atlas : source_color, filter_linear, repeat_disable;
+uniform int decal_count = 0;
+uniform vec4 decal_c[MAX_DECALS];   // projector centre (Body space), w = depth tolerance
+uniform vec4 decal_u[MAX_DECALS];   // u axis / half extent, w = 1 for two-sided (fin flash)
+uniform vec4 decal_v[MAX_DECALS];   // v axis / half extent
+uniform vec4 decal_n[MAX_DECALS];   // plane normal, w = minimum facing
+instance uniform vec3 body_off = vec3(0.0);   // this mesh's origin in Body space (skin parts are only translated)
 
 void vertex() {
 	o_p = VERTEX;
@@ -141,6 +151,23 @@ void fragment() {
 
 	float micro = (vnoise2(o_p.xy * 6.0) - 0.5) + (vnoise2(o_p.zy * 6.0) - 0.5);
 	NORMAL = normalize(NORMAL + vec3(micro * 0.015 * wear));
+
+	// painted national markings
+	vec3 bp = o_p + body_off;
+	for (int i = 0; i < MAX_DECALS; i++) {
+		if (i >= decal_count) { break; }
+		vec3 dd = bp - decal_c[i].xyz;
+		if (abs(dot(dd, decal_n[i].xyz)) > decal_c[i].w) { continue; }
+		float face = dot(o_n, decal_n[i].xyz);
+		if (decal_u[i].w > 0.5) { face = abs(face); }
+		if (face < decal_n[i].w) { continue; }
+		vec2 duv = vec2(dot(dd, decal_u[i].xyz), dot(dd, decal_v[i].xyz));
+		if (abs(duv.x) > 1.0 || abs(duv.y) > 1.0) { continue; }
+		vec2 suv = clamp(duv * 0.5 + 0.5, vec2(0.006), vec2(0.994));
+		vec4 dc = textureLod(decal_atlas, vec2((suv.x + float(i)) / float(MAX_DECALS), suv.y), 0.0);
+		// paint, but keep a trace of the panel lines and grime under it
+		col = mix(col, dc.rgb * (0.9 + 0.1 * smoothstep(0.0, 0.6, dot(col, vec3(0.33)))), dc.a);
+	}
 
 	col *= 1.0 - 0.18 * wetness;
 	ALBEDO = col;
