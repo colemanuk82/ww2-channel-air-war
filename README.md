@@ -66,7 +66,7 @@ Use clouds as cover!|
 
 <div align="center">
 
-<Atribution>
+# Atribution
 
 All Stage 1 art (aircraft, terrain, sea, sky, clouds, HUD) is generated procedurally in code. No imported assets.
 
