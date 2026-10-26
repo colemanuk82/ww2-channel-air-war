@@ -319,6 +319,18 @@ func _test_catalogue() -> void:
 ## and every cockpit must have a pilot head visible through the glazing.
 func _test_markings() -> void:
 	print("-- decals and pilots")
+	# fin swastikas follow the Historical markings setting (off by default)
+	var was_hist: bool = GameState.historical_markings
+	for want in [false, true]:
+		GameState.historical_markings = want
+		var lw: Node3D = AircraftModels.build("bf109", "Luftwaffe")
+		var sw: Array = lw.find_children("DecalFinSwastika*", "Node3D", true, false)
+		var vis_ok: bool = not sw.is_empty()
+		for n in sw:
+			vis_ok = vis_ok and (n as Node3D).visible == want
+		_check(vis_ok, "Bf 109 fin swastika %s with Historical markings %s" % ["shown" if want else "hidden", "on" if want else "off"])
+		lw.free()
+	GameState.historical_markings = was_hist
 	var ids: Array = ["spitfire"] + ModelSpecs.IDS
 	for id in ids:
 		var mid: String = String(id)
