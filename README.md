@@ -39,53 +39,6 @@ Use clouds as cover!|
 | 🎵 **Soundtrack** | 15 royalty-free orchestral and big-band tracks, separate Allied and Axis victory music, or import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
 | 💸 **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
 
-<div align="center">
-<table>
-<tr>
-<td><img src="screenshots/g_time_dawn.jpg" alt="Dawn over Kent" width="320"></td>
-<td><img src="screenshots/g_weather_storm.jpg" alt="Storm over the Channel" width="320"></td>
-<td><img src="screenshots/g_cockpit_spitfire.jpg" alt="Spitfire cockpit" width="320"></td>
-</tr>
-<tr>
-<td><img src="screenshots/g_fight_a.jpg" alt="Dogfight over Kent" width="320"></td>
-<td><img src="screenshots/g_bomb_night.jpg" alt="Night raid" width="320"></td>
-<td><img src="screenshots/g_menu.jpg" alt="Main menu" width="320"></td>
-</tr>
-</table>
-<sub>Dawn over Kent · Storm · Spitfire cockpit · Dogfight · Night raid · Main menu</sub>
-</div>
-
-<div align="center">
-<img src="docs/promo/map/army_camp.jpg" alt="Army camp beside a south-coast airfield" width="640"><br>
-<img src="docs/promo/map/pow_camp.jpg" alt="Stalag VI-A, Hemer" width="640"><br>
-<sub>A wired army camp beside a south-coast fighter station · Stalag VI-A at Hemer</sub>
-</div>
-
-## 🗓️ The war on the ground
-
-Pick a date for your sortie and the map shows that day of the war. Nothing is a static backdrop:
-
-<div align="center">
-<table>
-<tr>
-<td><img src="docs/promo/map/war_docks_aug1940.jpg" alt="London docks, August 1940" width="420"></td>
-<td><img src="docs/promo/map/war_docks_oct1940.jpg" alt="London docks, October 1940" width="420"></td>
-</tr>
-<tr>
-<td><img src="docs/promo/map/war_caen_jul1944.jpg" alt="Caen, July 1944" width="420"></td>
-<td><img src="docs/promo/map/war_mulberry_b.jpg" alt="Mulberry B at Arromanches" width="420"></td>
-</tr>
-<tr>
-<td><img src="docs/promo/map/war_merderet_flood.jpg" alt="The flooded Merderet valley" width="420"></td>
-<td><img src="docs/promo/map/war_seasons_kent.jpg" alt="Kent in May, August, October and January" width="420"></td>
-</tr>
-<tr>
-<td><img src="docs/promo/map/war_bocage.jpg" alt="Normandy bocage" width="420"></td>
-<td><img src="docs/promo/map/war_open_fields.jpg" alt="Open fields in Picardy" width="420"></td>
-</tr>
-</table>
-<sub>London docks in August and October 1940 · Caen in July 1944 · Mulberry B · the flooded Merderet · Kent through the seasons · Normandy bocage · open fields in Picardy</sub>
-</div>
 
 ## 🎮 Play it in 3 steps
 
@@ -111,6 +64,7 @@ Pick a date for your sortie and the map shows that day of the war. Nothing is a 
 | ![Spitfire close-up: C1 roundel, codes and panel seams](docs/promo/aircraft/spitfire_skin.jpg) | ![Bf 109 close-up: mottled sides and outlined number](docs/promo/aircraft/bf109_skin.jpg) |
 | **Close up: C1 roundel, squadron codes, panel seams** | **Close up: Bf 109 mottled sides and outlined number** |
 
+<div align="center">
 
 <Atribution>
 
