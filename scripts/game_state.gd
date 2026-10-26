@@ -112,6 +112,16 @@ const FPS_CAPS := [0, 30, 60, 120, 144, 165, 240]    # Options > Render "Frame r
 const UNBOUND := "unbound"        # pad_bindings value for an action deliberately left with no pad button
 var _pad_defaults: Dictionary = {}
 var pad_bindings: Dictionary = {}
+var sight_dials: bool = false     # the bombsight is up: the D-pad sets its dials, not gear / flaps / auto-level / bail
+
+
+## True while any D-pad direction is held on any connected pad.
+func dpad_held() -> bool:
+	for d in Input.get_connected_joypads():
+		for b in [JOY_BUTTON_DPAD_UP, JOY_BUTTON_DPAD_DOWN, JOY_BUTTON_DPAD_LEFT, JOY_BUTTON_DPAD_RIGHT]:
+			if Input.is_joy_button_pressed(d, b):
+				return true
+	return false
 
 
 func _ready() -> void:
@@ -620,7 +630,7 @@ func _setup_input() -> void:
 	_axis("look_down", JOY_AXIS_RIGHT_Y, 1.0)
 	_btn("fire", JOY_BUTTON_A)
 	_btn("weapon_toggle", JOY_BUTTON_B)
-	_btn("gear", JOY_BUTTON_Y)
+	_btn("tac_map", JOY_BUTTON_Y)               # tactical map
 	_btn("camera", JOY_BUTTON_X)
 	_btn("boost", JOY_BUTTON_RIGHT_SHOULDER)
 	_btn("padlock", JOY_BUTTON_LEFT_SHOULDER)   # hold to point the view at the nearest aircraft
@@ -629,7 +639,13 @@ func _setup_input() -> void:
 	_btn("sight_alt_down", JOY_BUTTON_DPAD_DOWN)
 	_btn("sight_spd_down", JOY_BUTTON_DPAD_LEFT)
 	_btn("sight_spd_up", JOY_BUTTON_DPAD_RIGHT)
-	_btn("flaps", JOY_BUTTON_LEFT_STICK)         # flaps: UP -> 15 -> 35 (L3)
+	# D-pad: up auto-level, down gear, left flaps (UP -> 15 -> 35), right bail out (hold). While the bombsight is
+	# up the same D-pad sets its dials instead (aircraft.gd / bail_out.gd ignore it then: sight_dials).
+	_btn("assist_toggle", JOY_BUTTON_DPAD_UP)
+	_btn("gear", JOY_BUTTON_DPAD_DOWN)
+	_btn("flaps", JOY_BUTTON_DPAD_LEFT)
+	_btn("bail_out", JOY_BUTTON_DPAD_RIGHT)
+	_btn("gunner_view", JOY_BUTTON_LEFT_STICK)  # bombers: step through the gun positions (L3)
 	_btn("brake", JOY_BUTTON_RIGHT_STICK)       # wheel brake (R3). Left stick click no longer does anything.
 	_btn("center_view", JOY_BUTTON_RIGHT_STICK) # R3 also snaps the free-look camera back ahead
 	_mouse("center_view", MOUSE_BUTTON_RIGHT)   # ...and so does the right mouse button

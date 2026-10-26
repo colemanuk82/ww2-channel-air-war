@@ -72,6 +72,10 @@ static func attach(p_world: Node, a: Aircraft, p_rig: CameraRig, p_hud: Node) ->
 	return b
 
 
+func _exit_tree() -> void:
+	GameState.sight_dials = false
+
+
 func _ready() -> void:
 	layer = 12
 	add_to_group("bombsight")
@@ -320,6 +324,7 @@ func _process(delta: float) -> void:
 		_debug_step()
 	for s in _splashes:
 		s["t"] = float(s["t"]) + delta
+	GameState.sight_dials = active
 	if active:
 		if aircraft.state != Aircraft.State.ALIVE or aircraft.on_ground or aircraft.altitude_agl < 120.0:
 			if aircraft.state == Aircraft.State.ALIVE and not aircraft.on_ground:

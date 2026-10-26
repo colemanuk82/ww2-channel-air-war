@@ -63,8 +63,19 @@ float cloud_density(vec3 p, float sd, float ty, vec3 sc) {
 	if (ty < 0.5) {
 		// cumulus humilis/mediocris: flat base, domed lumpy top
 		float flat_k = mix(1.0, 1.55, fract(sd * 0.173));      // per cloud: rounder mediocris .. flat humilis
-		vec3 q = vec3(p.x, p.y < 0.0 ? p.y * 1.55 : p.y * 1.05 * flat_k, p.z);   // softer, rounder underside
-		float shape = 1.0 - length(q);
+		// low-frequency warp so the outline is never a clean ellipse
+		vec3 wp = p + (vec3(t_vnoise3(p * 1.6 + off), 0.0, t_vnoise3(p * 1.6 + off + 4.1)) - 0.5) * 0.3;
+		vec3 q = vec3(wp.x, wp.y < 0.0 ? wp.y * 1.55 : wp.y * 1.05 * flat_k, wp.z);   // softer, rounder underside
+		float shape = 1.0 - length(q) * 1.12;
+		// two extra lumps, placed and sized per cloud: a heap of billows rather than one dome
+		for (int li = 0; li < 2; li++) {
+			float fi = float(li);
+			vec2 h = vec2(fract(sin(sd * 12.9 + fi * 78.2) * 43758.5), fract(sin(sd * 39.3 + fi * 11.7) * 24634.6));
+			vec3 lc = vec3((h.x - 0.5) * 0.7, 0.05 + h.y * 0.25, (h.y - 0.5) * 0.6 * (fi < 0.5 ? 1.0 : -1.0));
+			float lr = 0.36 + 0.2 * h.x;
+			vec3 lq = (q - lc * vec3(1.0, flat_k, 1.0)) / lr;
+			shape = max(shape, (1.0 - length(lq)) * lr * 1.25);
+		}
 		if (shape <= -0.35) { return 0.0; }
 		float n = fbm3(p * sc / 300.0 + off);
 		float d0 = shape * 1.45 - 0.30 + (n - 0.5) * 1.15;
@@ -84,11 +95,13 @@ float cloud_density(vec3 p, float sd, float ty, vec3 sc) {
 		return clamp(d1, 0.0, 1.0);
 	} else if (ty < 2.5) {
 		// stratocumulus: broad low deck broken into lumpy rolls with gaps
-		float shape = min(1.0 - length(p.xz) * 0.97, 1.0 - abs(p.y) * 1.15);
-		if (shape <= -0.3) { return 0.0; }
-		vec3 np = p * sc / vec3(650.0, 300.0, 650.0) + off;
+		vec2 ws = p.xz + (vec2(t_vnoise3(p * 1.3 + off), t_vnoise3(p * 1.3 + off + 3.3)) - 0.5) * 0.4;
+		float shape = min(1.0 - length(ws) * 1.08, 1.0 - abs(p.y) * 1.15);
+		if (shape <= -0.35) { return 0.0; }
+		vec3 np = p * sc / vec3(480.0, 260.0, 480.0) + off;
 		float n = fbm3(np);
-		return clamp(shape * 1.1 - 0.12 + (n - 0.5) * 1.4, 0.0, 1.0);
+		float rolls = t_vnoise3(p * sc / vec3(1300.0, 400.0, 1300.0) + off * 1.3);   // broken into rolls with gaps
+		return clamp(shape * 1.1 - 0.2 + (n - 0.5) * 1.5 + (rolls - 0.5) * 1.1, 0.0, 1.0);
 	}
 	if (ty > 4.5) {
 		if (ty < 5.5) {
@@ -164,11 +177,13 @@ float cloud_density(vec3 p, float sd, float ty, vec3 sc) {
 	}
 	if (ty > 3.5) {
 		// altocumulus: flat mid-level cloudlets in small cells
-		float sh = min(1.0 - length(p.xz) * 0.95, 1.0 - abs(p.y) * 1.2);
-		if (sh <= -0.25) { return 0.0; }
-		vec3 npa = p * sc / vec3(300.0, 130.0, 300.0) + off;
+		vec2 wa = p.xz + (vec2(t_vnoise3(p * 1.4 + off), t_vnoise3(p * 1.4 + off + 2.7)) - 0.5) * 0.4;
+		float sh = min(1.0 - length(wa) * 1.1, 1.0 - abs(p.y) * 1.2);
+		if (sh <= -0.35) { return 0.0; }
+		vec3 npa = p * sc / vec3(260.0, 120.0, 260.0) + off;
 		float na = fbm3(npa);
-		return clamp(sh * 1.15 - 0.15 + (na - 0.5) * 1.8, 0.0, 1.0);
+		float lumps = t_vnoise3(p * sc / vec3(520.0, 200.0, 520.0) + off * 1.7);
+		return clamp(sh * 1.05 - 0.2 + (na - 0.5) * 1.8 + (lumps - 0.5) * 0.9, 0.0, 1.0);
 	}
 	// cirrus: thin wispy streaks stretched along the cloud's long axis
 	float shape = 1.0 - length(vec3(p.x * 0.85, p.y * 1.3, p.z));

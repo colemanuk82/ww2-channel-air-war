@@ -877,11 +877,12 @@ func _read_input() -> void:
 	elif cmd_fire and state == State.ALIVE:
 		fire_requested.emit(self)
 	brake_on = Input.is_action_pressed("brake")
-	if Input.is_action_just_pressed("flaps") and state == State.ALIVE:
+	var pad_sight: bool = GameState.sight_dials and GameState.dpad_held()   # D-pad is working the bombsight dials
+	if Input.is_action_just_pressed("flaps") and state == State.ALIVE and not pad_sight:
 		cycle_flaps()
-	if Input.is_action_just_pressed("gear"):
+	if Input.is_action_just_pressed("gear") and not pad_sight:
 		set_gear(not gear_down)
-	if Input.is_action_just_pressed("assist_toggle"):
+	if Input.is_action_just_pressed("assist_toggle") and not pad_sight:
 		auto_level = not auto_level
 		GameState.auto_level = auto_level
 	if sight_hold and not on_ground:
