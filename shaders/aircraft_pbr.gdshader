@@ -21,6 +21,11 @@ uniform int scheme_mode = 0;
 uniform vec4 mottle_a : source_color = vec4(0.43, 0.43, 0.36, 1.0);   // RLM 02
 uniform vec4 mottle_b : source_color = vec4(0.25, 0.29, 0.21, 1.0);   // RLM 71
 
+// Painted livery (scripts/models/livery.gd): one texture over the unwrapped skin carrying the scheme, markings,
+// codes and weathering of the real aircraft. Panel seams, rivets and grime are still added on top here.
+uniform bool use_livery = false;
+uniform sampler2D livery_tex : source_color, filter_linear_mipmap_anisotropic, repeat_disable;
+
 varying vec3 o_p;
 varying vec3 o_n;
 // Structural loss (see AircraftDamageModel): fragments past these object-space limits are cut away.
@@ -78,6 +83,10 @@ void fragment() {
 	}
 	vec3 n = o_n;
 	vec3 an = abs(n);
+	vec3 col;
+	if (use_livery) {
+		col = texture(livery_tex, UV).rgb;
+	} else {
 	// triplanar camouflage with sharp blend weights so patches stay crisp over curved skin
 	vec3 w3 = pow(an, vec3(4.0));
 	w3 /= max(w3.x + w3.y + w3.z, 1e-4);
@@ -85,7 +94,7 @@ void fragment() {
 	vec3 cx = texture(camo_tex, o_p.zy * s).rgb;
 	vec3 cy = texture(camo_tex, o_p.xz * s).rgb;
 	vec3 cz = texture(camo_tex, o_p.xy * s).rgb;
-	vec3 col = cx * w3.x + cy * w3.y + cz * w3.z;
+	col = cx * w3.x + cy * w3.y + cz * w3.z;
 
 	if (scheme_mode == 1) {
 		// top surfaces carry the splinter; the sides are the pale underside blue with soft dark mottles
@@ -103,6 +112,7 @@ void fragment() {
 		// hard-edged (sprayed) demarcation low on the fuselage side; wing undersides fully painted
 		float down = 1.0 - smoothstep(-0.40, -0.30, n.y);
 		col = mix(col, underside_color.rgb, down * under_amount);
+	}
 	}
 	col *= tint.rgb;
 

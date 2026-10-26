@@ -70,7 +70,7 @@ static func _mi(parent: Node3D, mesh: Mesh, m: Material, pos: Vector3, nm: Strin
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if nm != "":
 		mi.name = nm
-	parent.add_child(mi)
+	parent.add_child(mi, true)
 	return mi
 
 
@@ -584,7 +584,7 @@ static func _code_text(body: Node3D, txt: String, h: float, col: Color, side: fl
 	lb.position = Vector3(side * x, y, z)
 	# the label faces +Z: turn it to face outboard, then lean it with the taper so it lies on the skin
 	lb.rotation.y = (PI * 0.5 + taper) if side > 0.0 else (-PI * 0.5 + taper)
-	body.add_child(lb)
+	body.add_child(lb, true)
 
 
 static func fuselage_codes(body: Node3D, id: String, dims: Callable, mz: float, mark_r: float) -> void:

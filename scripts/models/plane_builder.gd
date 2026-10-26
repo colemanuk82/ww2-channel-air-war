@@ -36,7 +36,7 @@ static func _mi(parent: Node3D, mesh: Mesh, mat: Material, pos: Vector3 = Vector
 	m.position = pos
 	if nm != "":
 		m.name = nm
-	parent.add_child(m)
+	parent.add_child(m, true)
 	return m
 
 
@@ -101,14 +101,14 @@ static func _add_flaps(body: Node3D, w: Dictionary, mat: Material) -> void:
 		var zle: float = (float(a["zle"]) + float(b["zle"])) * 0.5
 		var yc: float = (float(a["yc"]) + float(b["yc"])) * 0.5 - (float(a["t"]) + float(b["t"])) * 0.22
 		pivot.position = Vector3(side * (float(a["x"]) + float(b["x"])) * 0.5, yc, zle + chord * 0.72)
-		body.add_child(pivot)
+		body.add_child(pivot, true)
 		var bm := BoxMesh.new()
 		bm.size = Vector3(absf(float(b["x"]) - float(a["x"])), 0.05, chord * 0.30)
 		var mi := MeshInstance3D.new()
 		mi.mesh = bm
 		mi.material_override = mat
 		mi.position = Vector3(0.0, 0.0, chord * 0.15)
-		pivot.add_child(mi)
+		pivot.add_child(mi, true)
 
 
 static func _wing_mesh(w: Dictionary, side: float) -> ArrayMesh:
@@ -167,11 +167,11 @@ static func _make_prop(radius: float, blades: int, spinner_r: float, tip: Color,
 	# shaking, worst in the cockpit view where the prop fills the screen.
 	var blades_root := Node3D.new()
 	blades_root.name = "Blades"
-	prop.add_child(blades_root)
+	prop.add_child(blades_root, true)
 	for i in blades:
 		var pivot := Node3D.new()
 		pivot.rotation.z = TAU * float(i) / float(blades)
-		blades_root.add_child(pivot)
+		blades_root.add_child(pivot, true)
 		_mi(pivot, PlaneParts.blade_mesh(radius, spinner_r), blade_mat)
 		var tipm := _mi(pivot, _box(0.13 * rs, 0.2 * rs, 0.03), _flat(tip), Vector3(0, radius - 0.12 * rs, 0))
 		tipm.rotation.y = deg_to_rad(-12.0)
@@ -193,7 +193,7 @@ static func _make_prop(radius: float, blades: int, spinner_r: float, tip: Color,
 	disc.material_override = dmat
 	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	disc.visible = not primary
-	prop.add_child(disc)
+	prop.add_child(disc, true)
 	return prop
 
 
@@ -314,7 +314,7 @@ static func bake_marking_onto(m: Node3D, wing: MeshInstance3D, up: Vector3) -> v
 		dm.mesh = (by_mat[k] as SurfaceTool).commit()
 		dm.material_override = dm.mesh.surface_get_material(0)
 		dm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		wing.add_child(dm)
+		wing.add_child(dm, true)
 	m.get_parent().remove_child(m)
 	m.free()
 
@@ -326,7 +326,7 @@ static func marking(parent: Node3D, nation: String, pos: Vector3, normal: Vector
 	m.position = pos
 	var up: Vector3 = Vector3.FORWARD if absf(normal.y) > 0.9 else Vector3.UP
 	m.basis = Basis(Vector3(1, 0, 0), pitch) * Basis(Vector3(0, 0, 1), tilt) * Basis.looking_at(-normal, up)
-	parent.add_child(m)
+	parent.add_child(m, true)
 	match nation:
 		"Luftwaffe":
 			var white := Color(0.93, 0.93, 0.93)
@@ -405,7 +405,7 @@ static func canopy_frame(parent: Node3D, rings: Array, mat: Material, style: Str
 static func pilot(canopy: Node3D, eye: Vector3) -> void:
 	var root := Node3D.new()
 	root.name = "Pilot"
-	canopy.add_child(root)
+	canopy.add_child(root, true)
 	var skin: Material = ToonUtil.make_toon(Color(0.78, 0.60, 0.48), {"outline": false, "rim": 0.0})
 	var helmet: Material = ToonUtil.make_toon(Color(0.32, 0.28, 0.20), {"outline": false, "rim": 0.0})
 	var kit: Material = ToonUtil.make_toon(Color(0.30, 0.32, 0.26), {"outline": false, "rim": 0.0})
@@ -739,7 +739,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	var body := Node3D.new()
 	body.name = "Body"
 	body.scale = Vector3.ONE * sc
-	model.add_child(body)
+	model.add_child(body, true)
 
 	var col: Dictionary = spec["colors"]
 	var ot: float = spec.get("outline", 0.014)
@@ -773,7 +773,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	# over a dark frame of hoop ribs and a top spine so the cockpit reads as framed glass.
 	var canopy := Node3D.new()
 	canopy.name = "Canopy"
-	body.add_child(canopy)
+	body.add_child(canopy, true)
 	var glass := ToonUtil.make_glass({"opacity": 0.2, "rim": 0.9, "tint": Color(0.58, 0.70, 0.76)})
 	# frames are painted in the airframe colours on the outside (photos), so they use the camouflage skin
 	var cid: String = String(spec.get("id", ""))
@@ -819,13 +819,13 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 			PlaneParts.nacelle_fittings(body, String(spec.get("id", "")), e, col["top"], col["under"])
 			var prop: Node3D = _make_prop(e["prop_r"], int(e.get("blades", 3)), float(e["r"]) * 0.32, tip, prop_idx == 0 and not spec.has("nose_prop"), prop_idx)
 			prop.position = Vector3(x, e["y"], float(e["z0"]) - 0.08)
-			body.add_child(prop)
+			body.add_child(prop, true)
 			prop_idx += 1
 	if spec.has("nose_prop"):
 		var n: Dictionary = spec["nose_prop"]
 		var np: Node3D = _make_prop(n["r"], int(n.get("blades", 3)), float(n.get("spinner", 0.3)), tip, true, 0)
 		np.position = Vector3(0, float(n.get("y", 0.0)), n["z"])
-		body.add_child(np)
+		body.add_child(np, true)
 
 	# Extras
 	for ex in spec.get("extras", []):
@@ -855,7 +855,9 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 					sm.rings = 4
 					_mi(body, sm, mat, ex["pos"])
 			"slice":
-				_mi(body, _fus_slice(f, ex["z0"], ex["z1"]), mat)
+				# a coloured band round the fuselage is paint (a cowling band or an anti-glare panel)
+				var band_nm: String = "" if mat == dark or mat == camo else ("DecalAntiGlare" if String(ex.get("col", "")) == "olive" else "DecalBand")
+				_mi(body, _fus_slice(f, ex["z0"], ex["z1"]), mat, Vector3.ZERO, band_nm)
 			"spat":      # a streamlined wheel fairing: a long body round the wheel, stretched tall
 				var sp_mi := _mi(body, _nacelle_mesh(ex["z0"], ex["z1"], ex["r"], false), camo, Vector3(ex["x"], ex["y"], 0.0), "WheelSpat")
 				sp_mi.scale = Vector3(0.62, 1.75, 1.0)
@@ -888,7 +890,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		var pivot := Node3D.new()
 		pivot.name = "GearR" if side > 0.0 else "GearL"
 		pivot.position = Vector3(side * float(g["x"]), g["y"], g["z"])
-		body.add_child(pivot)
+		body.add_child(pivot, true)
 		var wr: float = float(g["r"])
 		var ww: float = 0.14 + wr * 0.3
 		# narrow-track types (Bf 109, Spitfire) have legs canted outward: the leg and wheel hang off a splay node inside
@@ -896,7 +898,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		var splay := Node3D.new()
 		splay.name = "Splay"
 		splay.rotation.z = side * deg_to_rad(float(g.get("splay", 0.0)))
-		pivot.add_child(splay)
+		pivot.add_child(splay, true)
 		PlaneParts.gear_leg(splay, side, float(g["len"]), leg_w, wr, ww, String(spec.get("id", "")) != "ju87")
 		PlaneParts.wheel(splay, wr, ww, Vector3(0, -float(g["len"]) - 0.02, 0))
 	if spec.has("tail_wheel"):
@@ -973,7 +975,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		var zs: float = float(f["z1"]) - (float(f["z1"]) - float(f["z0"])) * 0.36
 		for i in 5:
 			var cs: Color = Color(0.95, 0.95, 0.95) if i % 2 == 0 else Color(0.05, 0.05, 0.05)
-			_mi(body, _fus_slice(f, zs + 0.34 * float(i), zs + 0.34 * float(i + 1)), _flat(cs))
+			_mi(body, _fus_slice(f, zs + 0.34 * float(i), zs + 0.34 * float(i + 1)), _flat(cs), Vector3.ZERO, "DecalStripeFus")
 		# wing bands wrap the chord, top and bottom, laid on the skin (5 equal bands, white-black-white-black-white)
 		var wing_cb: Callable = func(t: float) -> Dictionary: return wing_section(w, t)
 		var tm0: float = 0.09
@@ -991,7 +993,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		var mk := Marker3D.new()
 		mk.name = "MuzzleR" if side > 0.0 else "MuzzleL"
 		mk.position = Vector3(side * float(gs[0]), gs[1], gs[2]) * sc
-		model.add_child(mk)
+		model.add_child(mk, true)
 	var eye := Marker3D.new()
 	eye.name = "CockpitEye"
 	var eye_v: Vector3 = spec["eye"] as Vector3
@@ -1001,7 +1003,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	if String(fus_d.get("profile", "")) == "bomber":
 		eye_v.y = maxf(eye_v.y, float(fus_d.get("cy", 0.0)) + float(fus_d.get("hh", 1.0)) + 0.5)
 	eye.position = eye_v * sc
-	model.add_child(eye)
+	model.add_child(eye, true)
 	return model
 
 

@@ -52,7 +52,7 @@ static func _add(parent: Node3D, mesh: Mesh, mat: Material, pos: Vector3, nm: St
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	if nm != "":
 		mi.name = nm
-	parent.add_child(mi)
+	parent.add_child(mi, true)
 	return mi
 
 
@@ -247,7 +247,7 @@ static func _fit(root: Node3D, rings: Array, size: Vector3, c: Vector3, mat: Mat
 static func cockpit(canopy: Node3D, eye: Vector3, bomber: bool = false, rings: Array = []) -> void:
 	var root := Node3D.new()
 	root.name = "CockpitInterior"
-	canopy.add_child(root)
+	canopy.add_child(root, true)
 	var steel: Material = _mat(Color(0.22, 0.24, 0.20))
 	var dark: Material = _mat(Color(0.08, 0.08, 0.09))
 	var seat_col: Material = _mat(Color(0.19, 0.21, 0.14))

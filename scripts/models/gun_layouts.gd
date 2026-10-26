@@ -56,6 +56,6 @@ static func make_marks(model: Node3D, model_id: String, sc: float) -> Array[Node
 			mk.name = "Gun%d" % n
 			n += 1
 			mk.position = Vector3(float(x), base.position.y + float(e[1]) * sc, base.position.z + float(e[2]) * sc)
-			model.add_child(mk)
+			model.add_child(mk, true)
 			out.append(mk)
 	return out

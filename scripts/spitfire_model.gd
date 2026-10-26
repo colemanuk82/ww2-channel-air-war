@@ -113,7 +113,7 @@ static func _decal(parent: Node3D, mesh: Mesh, color: Color, pos: Vector3, nm: S
 	mi.position = pos
 	mi.name = nm
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(mi)
+	parent.add_child(mi, true)
 
 
 static func _roundel(parent: Node3D, pos: Vector3, axis: Vector3, r: float, nation: String, nm: String = "DecalWing") -> void:
@@ -140,7 +140,7 @@ static func build(nation: String = "RAF") -> Node3D:
 	var body := Node3D.new()
 	body.name = "Body"
 	body.scale = Vector3.ONE * SCALE
-	model.add_child(body)
+	model.add_child(body, true)
 
 	var camo := ToonUtil.make_toon(COL_TOP, {"underside": COL_UNDER, "patch": COL_PATCH, "patch_scale": 0.55, "outline_thickness": 0.014, "detail": 5, "gloss": 0.7})
 	var dark := ToonUtil.make_toon(COL_DARK, {"outline_thickness": 0.012})
@@ -149,14 +149,14 @@ static func build(nation: String = "RAF") -> Node3D:
 	fus.name = "Fuselage"
 	fus.mesh = _fuselage_mesh()
 	fus.material_override = camo
-	body.add_child(fus)
+	body.add_child(fus, true)
 
 	for side in [-1.0, 1.0]:
 		var w := MeshInstance3D.new()
 		w.name = "WingR" if side > 0.0 else "WingL"
 		w.mesh = _wing_mesh(side)
 		w.material_override = camo
-		body.add_child(w)
+		body.add_child(w, true)
 		# inboard flap panel (pivot FlapL / FlapR, driven by the aircraft script)
 		var sa: Dictionary = _wing_section(0.10)
 		var sb: Dictionary = _wing_section(0.52)
@@ -164,35 +164,35 @@ static func build(nation: String = "RAF") -> Node3D:
 		fl.name = "FlapR" if side > 0.0 else "FlapL"
 		var fchord: float = (float(sa["chord"]) + float(sb["chord"])) * 0.5
 		fl.position = Vector3(side * (float(sa["x"]) + float(sb["x"])) * 0.5, (float(sa["yc"]) + float(sb["yc"])) * 0.5 - 0.06, (float(sa["zle"]) + float(sb["zle"])) * 0.5 + fchord * 0.72)
-		body.add_child(fl)
+		body.add_child(fl, true)
 		var fbm := BoxMesh.new()
 		fbm.size = Vector3(absf(float(sb["x"]) - float(sa["x"])), 0.05, fchord * 0.30)
 		var fmi := MeshInstance3D.new()
 		fmi.mesh = fbm
 		fmi.material_override = camo
 		fmi.position = Vector3(0.0, 0.0, fchord * 0.15)
-		fl.add_child(fmi)
+		fl.add_child(fmi, true)
 		var tp := MeshInstance3D.new()
 		tp.name = "TailplaneR" if side > 0.0 else "TailplaneL"
 		tp.mesh = _tailplane_mesh(side)
 		tp.material_override = camo
-		body.add_child(tp)
+		body.add_child(tp, true)
 
 	var fin := MeshInstance3D.new()
 	fin.name = "Fin"
 	fin.mesh = _fin_mesh()
 	fin.material_override = camo
-	body.add_child(fin)
+	body.add_child(fin, true)
 
 	# Canopy: transparent glazing over a dark frame (grouped so it can be hidden in cockpit view)
 	var canopy := Node3D.new()
 	canopy.name = "Canopy"
-	body.add_child(canopy)
+	body.add_child(canopy, true)
 	var gmi := MeshInstance3D.new()
 	gmi.mesh = _canopy_mesh()
 	gmi.material_override = ToonUtil.make_glass({"opacity": 0.2, "rim": 0.9, "tint": Color(0.58, 0.70, 0.76)})
 	gmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	canopy.add_child(gmi)
+	canopy.add_child(gmi, true)
 	PlaneBuilder.canopy_frame(canopy, CANOPY_RINGS, camo, "bubble")
 	PlaneParts.mirror(canopy, Vector3(0.0, float(CANOPY_RINGS[1][3]) + float(CANOPY_RINGS[1][2]) + 0.01, float(CANOPY_RINGS[1][0]) + 0.05))
 	PlaneBuilder.pilot(canopy, Vector3(0.0, 1.12, 0.45))
@@ -242,7 +242,7 @@ static func build(nation: String = "RAF") -> Node3D:
 		lmi.mesh = lm
 		lmi.material_override = ToonUtil.make_toon(lc, {"outline": false, "rim": 0.0, "emission": lc, "emission_energy": 1.1})
 		lmi.position = Vector3(side * float(wt["x"]), float(wt["yc"]), float(wt["zle"]) + float(wt["chord"]) * 0.5)
-		body.add_child(lmi)
+		body.add_child(lmi, true)
 
 	# Markings: the fuselage roundel is laid on the skin curve so it fits the tapered rear fuselage
 	var fx: float = 0.30
@@ -266,7 +266,7 @@ static func build(nation: String = "RAF") -> Node3D:
 		piv.name = "DecalWing"
 		piv.position = Vector3(side * float(ws["x"]), top_y, float(ws["zle"]) + float(ws["chord"]) * 0.42)
 		piv.rotation.z = side * atan(WING_DIHEDRAL / WING_HALF)
-		body.add_child(piv)
+		body.add_child(piv, true)
 		_roundel(piv, Vector3.ZERO, Vector3.UP, 0.46, nation)
 	# Fin flash (RAF): bands lofted along the fin skin so they follow its sweep and thickness
 	if nation != "Luftwaffe":
@@ -299,12 +299,12 @@ static func build(nation: String = "RAF") -> Node3D:
 		var pivot := Node3D.new()
 		pivot.name = "GearR" if side > 0.0 else "GearL"
 		pivot.position = Vector3(side * 1.35, WING_Y + WING_DIHEDRAL * 0.17 - 0.05, -1.2)
-		body.add_child(pivot)
+		body.add_child(pivot, true)
 		var splay := Node3D.new()
 		splay.name = "Splay"
 		splay.rotation.z = side * deg_to_rad(9.0)
 		splay.rotation.x = deg_to_rad(8.0)
-		pivot.add_child(splay)
+		pivot.add_child(splay, true)
 		PlaneParts.gear_leg(splay, side, 0.8, 0.14, 0.3, 0.14)
 		PlaneParts.wheel(splay, 0.3, 0.14, Vector3(0, -0.82, 0))
 	PlaneParts.tail_wheel(body, -0.12, 4.5, 0.12)
@@ -313,11 +313,11 @@ static func build(nation: String = "RAF") -> Node3D:
 	var prop := Node3D.new()
 	prop.name = "Propeller"
 	prop.position = Vector3(0, 0, -3.8)
-	body.add_child(prop)
+	body.add_child(prop, true)
 	var spinner := MeshInstance3D.new()
 	spinner.mesh = PlaneParts.spinner_mesh(0.34)
 	spinner.material_override = ToonUtil.make_toon(Color(0.12, 0.12, 0.13), {"outline_thickness": 0.012, "gloss": 0.8})
-	prop.add_child(spinner)
+	prop.add_child(spinner, true)
 	PlaneParts.hub_plate(prop, 0.34)
 	var blade_mat := ToonUtil.make_toon(Color(0.07, 0.07, 0.07), {"outline": false})
 	# The blades hang off one node so a fast-spinning prop can swap them for the PropDisc blur (see
@@ -325,22 +325,22 @@ static func build(nation: String = "RAF") -> Node3D:
 	# shaking, worst in the cockpit view where the prop fills the screen.
 	var blades := Node3D.new()
 	blades.name = "Blades"
-	prop.add_child(blades)
+	prop.add_child(blades, true)
 	for i in 3:
 		var pivot := Node3D.new()
 		pivot.rotation.z = TAU * float(i) / 3.0
-		blades.add_child(pivot)
+		blades.add_child(pivot, true)
 		var blade := MeshInstance3D.new()
 		blade.mesh = PlaneParts.blade_mesh(1.75, 0.34)
 		blade.material_override = blade_mat
-		pivot.add_child(blade)
+		pivot.add_child(blade, true)
 		# yellow tip
 		var tip := MeshInstance3D.new()
 		tip.mesh = _box(0.13, 0.2, 0.03)
 		tip.material_override = ToonUtil.make_toon(Color(0.9, 0.75, 0.15), {"outline": false})
 		tip.position = Vector3(0, 1.65, 0)
 		tip.rotation.y = deg_to_rad(-12.0)
-		pivot.add_child(tip)
+		pivot.add_child(tip, true)
 	var disc := MeshInstance3D.new()
 	disc.name = "PropDisc"
 	var dm := CylinderMesh.new()
@@ -359,16 +359,16 @@ static func build(nation: String = "RAF") -> Node3D:
 	disc.material_override = dmat
 	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	disc.visible = false
-	prop.add_child(disc)
+	prop.add_child(disc, true)
 
 	# Markers (in Model space; Body is scaled so convert)
 	for side in [-1.0, 1.0]:
 		var m := Marker3D.new()
 		m.name = "MuzzleR" if side > 0.0 else "MuzzleL"
 		m.position = Vector3(side * 1.9, -0.22, -1.9) * SCALE
-		model.add_child(m)
+		model.add_child(m, true)
 	var eye := Marker3D.new()
 	eye.name = "CockpitEye"
 	eye.position = Vector3(0.0, 1.12, 0.45) * SCALE
-	model.add_child(eye)
+	model.add_child(eye, true)
 	return model
