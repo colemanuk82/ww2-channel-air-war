@@ -222,6 +222,9 @@ func _register_airfields() -> void:
 		var hdir: Vector3 = WorldCoords.heading_to_dir(float(d["heading_deg"]))
 		zones.append({"pos": pos, "heading": float(d["heading_deg"]), "half": Vector2(820.0, 1000.0), "feather": 200.0})
 		RoadMesh.add_exclusion_box(Vector2(pos.x, pos.z), Vector2(hdir.x, hdir.z), 720.0, 780.0)
+		# no river / canal ribbons, canal locks or power lines across the field either
+		RiverMesh.add_exclusion_disc(Vector2(pos.x, pos.z), 1050.0)
+		PylonMesh.add_exclusion_disc(Vector2(pos.x, pos.z), 1200.0)
 		# a large army camp beside some fields: reserve its ground now so trees and buildings keep clear of it
 		var camp: Vector3 = Vector3.INF
 		if ArmyCampKit.wants_camp(id):

@@ -392,7 +392,7 @@ static func build_tile(origin: Vector2, size: float) -> Node3D:
 		var s: float = float(j) * FURN_SPAN
 		while s <= s_hi:
 			var p: Vector2 = _sample(pts, cum, s)
-			if rect.has_point(p) and GroundKit.raw_y(p.x, p.y) > 0.5:
+			if rect.has_point(p) and GroundKit.raw_y(p.x, p.y) > 0.5 and not RiverMesh._excluded(p):
 				var d: Vector2 = _tangent(pts, cum, s)
 				var head: float = rad_to_deg(atan2(d.x, d.y))
 				var kind: String = _classify(li, j, p, s)

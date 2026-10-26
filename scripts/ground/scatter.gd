@@ -558,7 +558,9 @@ static func multi(mesh: Mesh, xforms: Array, vis_end: float = 0.0) -> MultiMeshI
 		vis_end *= vis_scale
 		mi.visibility_range_end = vis_end
 		mi.visibility_range_end_margin = minf(vis_end * 0.12, 900.0)
-		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		# no FADE_SELF: a fading object is drawn in the transparent pass, after the clouds, so woods and houses
+		# showed through cloud decks. Plain range cut-off instead (the margin keeps it from flickering).
+		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	return mi
 
 
@@ -1571,7 +1573,9 @@ static func multi_from_data(mesh: Mesh, d: Dictionary, vis_end: float = 0.0) -> 
 	if vis_end > 0.0:
 		mi.visibility_range_end = vis_end
 		mi.visibility_range_end_margin = minf(vis_end * 0.12, 900.0)
-		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		# no FADE_SELF: a fading object is drawn in the transparent pass, after the clouds, so woods and houses
+		# showed through cloud decks. Plain range cut-off instead (the margin keeps it from flickering).
+		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	return mi
 
 

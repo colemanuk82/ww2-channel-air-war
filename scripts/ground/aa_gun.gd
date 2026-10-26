@@ -203,7 +203,7 @@ func _build_intact(root: Node3D) -> void:
 	for mi in [stat, yaw, pitch]:
 		(mi as MeshInstance3D).visibility_range_end = vr
 		(mi as MeshInstance3D).visibility_range_end_margin = vr * 0.12
-		(mi as MeshInstance3D).visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		(mi as MeshInstance3D).visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED   # (FADE_SELF draws it after the clouds: seen through cloud)
 
 
 func _build_wreck(root: Node3D) -> void:
