@@ -63,9 +63,7 @@ Any suggestions or feedback? Let me know!
 | ![Spitfire close-up: C1 roundel, codes and panel seams](docs/promo/aircraft/spitfire_skin.jpg) | ![Bf 109 close-up: mottled sides and outlined number](docs/promo/aircraft/bf109_skin.jpg) |
 | **Close up: C1 roundel, squadron codes, panel seams** | **Close up: Bf 109 mottled sides and outlined number** |
 
-<div align="center">
-
-# Atribution
+## 🙏 Credits & attribution
 
 Aircraft, terrain, sea, sky, clouds and HUD are generated procedurally in code. The sources below are the third-party tools, data and sound that the game uses. The complete, per-file list (with every dataset source) is in [ATTRIBUTION.md](ATTRIBUTION.md).
 
