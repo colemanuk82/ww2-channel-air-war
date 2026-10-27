@@ -1896,40 +1896,43 @@ func _build_label() -> void:
 
 
 func _refresh_label() -> void:
+	## Short and glanceable: the job and how far away it is ("AIRFIELD ATTACK   30 km"); a second line only when
+	## something needs doing now (scramble countdown, photos taken). The full briefing is on the Ops board / radio.
 	if _label == null or not is_instance_valid(_label):
 		return
-	var c: Dictionary = PilotLog.career(side)
-	var t: String = "OPS ROOM   done %d   missed %d   %s" % [completed, failed, PilotLog.rank_of(side, int(c["points"]))]
+	var t: String
 	if active.is_empty():
-		t += "\nNext tasking in %d:%02d" % [int(_next_t) / 60, int(_next_t) % 60]
-		if not _intel.is_empty():
-			t += "   intel reports: %d" % _intel.size()
+		t = "NEXT TASKING   %d:%02d" % [int(_next_t) / 60, int(_next_t) % 60]
 	else:
-		var stage: String = str(active.get("stage", ""))
-		t += "\n" + (("RV WITH " + str(active.get("section", "THE BOMBERS")).to_upper() + " - THEN ") if stage == "rv" else "") + str(active["title"]).to_upper()
-		t += "   (P: skip)"
-		if bool(active.get("scramble", false)):
-			t += "\nSCRAMBLE  %d s" % int(active["scramble_t"])
+		t = short_title(active).to_upper()
 		var np: Variant = nav_point()
 		if np != null:
-			t += "\n%03d  %.1f km" % [_bearing(np), _dist_km(np)]
-		match str(active["goal"]):
-			"orbit":
-				t += "   fix %d%%" % int(100.0 * float(active["got_t"]) / float(active["need_t"]))
-			"escort":
-				if active.has("form"):
-					var alive: int = 0
-					for m in active["friends"]:
-						if is_instance_valid(m) and (m as Aircraft).state == Aircraft.State.ALIVE:
-							alive += 1
-					t += "   bombers %d" % alive
-			"photo":
-				t += "   " + ("photos taken - land at base" if stage == "home" else "low pass, wings level")
-			_:
-				t += "   one hit will do"
-	if supply > 0 or air_threat > 0 or v1_threat > 0:
-		t += "\nFRONT  flak +%d   fighters +%d%s" % [supply, air_threat, ("   V-1 ALERTS" if v1_threat > 0 and side == "Allies" else "")]
+			t += "   %.0f km" % _dist_km(np) if _dist_km(np) >= 10.0 else "   %.1f km" % _dist_km(np)
+		if bool(active.get("scramble", false)):
+			t += "\nSCRAMBLE  %d s" % int(active["scramble_t"])
+		elif str(active.get("goal", "")) == "photo" and str(active.get("stage", "")) == "home":
+			t += "\nPhotos taken - land at base"
+		elif str(active.get("stage", "")) == "rv":
+			t += "\nJoin " + str(active.get("section", "the bombers"))
 	_label.text = t
+
+
+## The kind of job in a word or two: "Convoy cover", "Airfield attack", "Fighter sweep"...
+static func short_title(m: Dictionary) -> String:
+	var title: String = str(m.get("title", "Mission"))
+	if title.contains(" leaving "):
+		return title.split(" leaving ")[0]
+	var head: String = title.split(":")[0].strip_edges()
+	match head:
+		"Armour":
+			return "Tank column"
+		"Train":
+			return "Train attack"
+		"Convoy":
+			return "Convoy attack"
+		"Intercept":
+			return "Intercept raid"
+	return head
 
 
 # ------------------------------------------------------------------ logbook (key J)

@@ -13,6 +13,29 @@ const AXIS_DIVE := ["ju87", "bf109", "ju87", "bf110"]
 const AXIS_BOMBERS := ["he111", "ju88", "do17", "ju52", "fw200"]
 
 static var _cache: Dictionary = {}
+static var _static_shader: Shader
+static var _static_mats: Dictionary = {}
+
+
+## The flying skin shader carries per-instance uniforms (structural cut-aways); every mesh drawn with it reserves a
+## slot in a global buffer, and a few hundred parked aircraft across the loaded airfields overflowed it. A parked
+## aircraft never loses a wing in flight, so it wears the same skin with those turned into plain uniforms.
+static func _static_mat(mat: Material) -> Material:
+	var sm := mat as ShaderMaterial
+	if sm == null or sm.shader != GltfModels.shader():
+		return mat
+	if _static_mats.has(sm):
+		return _static_mats[sm]
+	if _static_shader == null:
+		_static_shader = Shader.new()
+		_static_shader.code = GltfModels.shader().code.replace("instance uniform", "uniform")
+	var d := ShaderMaterial.new()
+	d.shader = _static_shader
+	for u in sm.shader.get_shader_uniform_list():
+		var nm: String = String(u["name"])
+		d.set_shader_parameter(nm, sm.get_shader_parameter(nm))
+	_static_mats[sm] = d
+	return d
 
 
 ## Mesh for one aircraft type (cached). Nose at -Z, lowest point (wheels) at y = 0.
@@ -66,7 +89,7 @@ static func _collect(n: Node3D, parent_xf: Transform3D, out: Array) -> void:
 		var mi: MeshInstance3D = n
 		if mi.mesh != null:
 			for s in mi.mesh.get_surface_count():
-				var mat: Material = mi.material_override if mi.material_override != null else mi.get_active_material(s)
+				var mat: Material = _static_mat(mi.material_override if mi.material_override != null else mi.get_active_material(s))
 				out.append([mi.mesh, s, t, mat])
 	for c in n.get_children():
 		if c is Node3D:

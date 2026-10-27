@@ -82,7 +82,7 @@ func _ready() -> void:
 	_build()
 	Radio.message.connect(_on_radio)
 	Weapons.player_hit.connect(func(_n: Node, _a: float) -> void: _hit_t = 0.25)
-	Weapons.player_kill.connect(func(_n: Node) -> void: _kill_t = 0.8)
+	Weapons.player_kill.connect(_on_player_kill)
 	_load_color_map()
 	_load_spots()
 	_map_img = Image.create(MAP_RES, MAP_RES, false, Image.FORMAT_RGBA8)
@@ -91,6 +91,11 @@ func _ready() -> void:
 	TimeOfDay.time_changed.connect(func(_h: float) -> void: _update_info())
 	WeatherManager.weather_changed.connect(func(_w: String) -> void: _update_info())
 	_update_info()
+	if OS.get_cmdline_user_args().has("--tally-test"):     # debug: one of every tally mark (screenshots)
+		get_tree().create_timer(6.0).timeout.connect(func() -> void:
+			for k in ["fighter", "fighter", "bomber", "v1", "parked", "tank", "vehicle", "ship", "train", "flak", "balloon", "building"]:
+				_tally.append({"kind": k, "t": -10.0})
+			_layout_tally())
 
 
 func _on_flaps(_a: Aircraft, message: String) -> void:
@@ -108,12 +113,12 @@ func _draw_radio() -> void:
 	if not GameState.radio_subtitles:
 		return
 	var now: float = Time.get_ticks_msec() * 0.001
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = UIKit.font(true)
 	# Long call-outs ("bombers taking off from RAF Manston, their target in Calais") are wrapped to at
-	# most two lines at a smaller size so they always stay on screen.
-	var max_w: float = 468.0
-	var fs: int = 13
-	var lh: float = 16.0
+	# most two lines so they always stay on screen.
+	var max_w: float = 500.0
+	var fs: int = 17
+	var lh: float = 21.0
 	var y: float = 0.0
 	for m in _radio_msgs:
 		var age: float = now - float(m["t"])
@@ -128,11 +133,12 @@ func _draw_radio() -> void:
 			wmax = maxf(wmax, font.get_string_size(ln, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
 		var h: float = lh * float(lines.size()) + 8.0
 		var w: float = wmax + 22.0
-		_radio.draw_rect(Rect2(0, y, w, h), Color(0.04, 0.05, 0.04, 0.38 * a))
+		_radio.draw_rect(Rect2(0, y, w, h), Color(0.035, 0.04, 0.035, 0.66 * a))
 		_radio.draw_rect(Rect2(0, y, 3, h), Color(who_col, a))
 		for i in lines.size():
 			var col: Color = Color(who_col, a) if i == 0 else Color(0.95, 0.95, 0.9, a)
-			_txt(_radio, lines[i], Vector2(10, y + 12.0 + lh * float(i)), fs, col)
+			_radio.draw_string(font, Vector2(11, y + 17.0 + lh * float(i) + 1.0), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.8 * a))
+			_radio.draw_string(font, Vector2(10, y + 17.0 + lh * float(i)), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 		y += h + 4.0
 
 
@@ -178,6 +184,7 @@ func _apply_minimap_size() -> void:
 		return
 	var s: float = float(MINIMAP_SIZES[minimap_stage])
 	_minimap.custom_minimum_size = Vector2(s, s)
+	_layout_tally()
 	_minimap.offset_left = -s - 16.0
 	_minimap.offset_top = -s - 16.0
 	_minimap.offset_right = -16.0
@@ -186,6 +193,9 @@ func _apply_minimap_size() -> void:
 
 
 func bind_aircraft(a: Aircraft) -> void:
+	if a != aircraft and aircraft != null:
+		_tally.clear()
+		_layout_tally()
 	aircraft = a
 	if a != null and not a.flaps_changed.is_connected(_on_flaps):
 		a.flaps_changed.connect(_on_flaps)
@@ -209,14 +219,322 @@ func show_message(text: String, seconds: float = 2.5) -> void:
 
 
 func add_widget(c: Control) -> void:
-	# keep the mode readouts (wave, score, targets...) small and quiet so they don't cover the view
+	# A mode readout (a Label the mode keeps writing its text to) is shown as a mission card: a dark glass plate
+	# with a brass edge, the first line as a heading, the rest wrapped in the body face (see _draw_card). The Label
+	# itself stays hidden inside the card as the text source, so every mode works unchanged.
 	if c is Label:
 		var l := c as Label
-		var fs: int = l.get_theme_font_size("font_size") if l.has_theme_font_size_override("font_size") else 16
-		l.add_theme_font_size_override("font_size", mini(fs, 15))
-		l.add_theme_constant_override("outline_size", 3)
-		l.modulate.a = 0.85
+		var card := Control.new()
+		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.set_meta("src", l)
+		l.visible = false
+		card.add_child(l)
+		card.draw.connect(_draw_card.bind(card))
+		_cards.append(card)
+		_extra_box.add_child(card)
+		return
 	_extra_box.add_child(c)
+
+
+# ---------------------------------------------------------------- mission cards (top-left readouts)
+
+const CARD_W: float = 540.0          # widest a card grows before its lines wrap
+const CARD_HEAD: int = 20
+const CARD_BODY: int = 18
+const CARD_LINE: float = 23.0
+const CARD_PAD := Vector2(14.0, 9.0)
+const SEG_GAP: float = 18.0
+var _cards: Array = []
+
+
+## Text of a card split into rows of segments: [[text, kind]...] per row. Segments are the parts of a line the
+## modes separate with three spaces ("done 0   missed 0"); kind 0 normal, 1 heading title, 2 hint "(P: skip)",
+## 3 warning (SCRAMBLE, ALERT, V-1).
+func _card_rows(text: String, head_font: Font, body_font: Font) -> Array:
+	var rows: Array = []
+	var lines: PackedStringArray = text.strip_edges().split("\n")
+	for li in lines.size():
+		var segs: PackedStringArray = lines[li].strip_edges().split("   ", false)
+		var row: Array = []
+		var w: float = 0.0
+		for si in segs.size():
+			var t: String = segs[si].strip_edges()
+			if t == "":
+				continue
+			var kind: int = 0
+			if li == 0 and si == 0:
+				kind = 1
+			elif t.begins_with("(") and t.ends_with(")"):
+				kind = 2
+			elif t.contains("SCRAMBLE") or t.contains("ALERT") or t.contains("OUT OF"):
+				kind = 3
+			var f: Font = head_font if kind == 1 else body_font
+			var fs: int = CARD_HEAD if kind == 1 else (CARD_BODY - 3 if kind == 2 else CARD_BODY)
+			var sw: float = f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+			if not row.is_empty() and w + SEG_GAP + sw > CARD_W:
+				rows.append(row)
+				row = []
+				w = 0.0
+			if sw > CARD_W:
+				# one very long segment (a mission title): wrap it by words
+				for wl in _wrap_text(t, f, fs, CARD_W, 3):
+					if not row.is_empty():
+						rows.append(row)
+					row = [[wl, kind, f, fs]]
+				w = f.get_string_size(String(row[0][0]), HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+				continue
+			row.append([t, kind, f, fs])
+			w += (SEG_GAP if row.size() > 1 else 0.0) + sw
+		if not row.is_empty():
+			rows.append(row)
+	return rows
+
+
+func _layout_card(card: Control) -> void:
+	var l: Label = card.get_meta("src")
+	var text: String = l.text if is_instance_valid(l) else ""
+	if card.has_meta("last") and String(card.get_meta("last")) == text:
+		return
+	card.set_meta("last", text)
+	var rows: Array = _card_rows(text, UIKit.display_font(), UIKit.font(true))
+	card.set_meta("rows", rows)
+	var w: float = 0.0
+	for row in rows:
+		var rw: float = 0.0
+		for sg in row:
+			rw += (SEG_GAP if rw > 0.0 else 0.0) + (sg[2] as Font).get_string_size(String(sg[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, int(sg[3])).x
+		w = maxf(w, rw)
+	var h: float = CARD_LINE * float(rows.size()) + (6.0 if rows.size() > 1 else 0.0)
+	card.custom_minimum_size = Vector2(w + CARD_PAD.x * 2.0 + 4.0, h + CARD_PAD.y * 2.0) if not rows.is_empty() else Vector2.ZERO
+	card.queue_redraw()
+
+
+func _draw_card(card: Control) -> void:
+	var rows: Array = card.get_meta("rows", [])
+	if rows.is_empty():
+		return
+	var l: Label = card.get_meta("src")
+	var body_col: Color = l.get_theme_color("font_color") if is_instance_valid(l) and l.has_theme_color_override("font_color") else TEXT_COL
+	var r := Rect2(Vector2.ZERO, card.size)
+	card.draw_rect(r, Color(0.035, 0.04, 0.035, 0.80))
+	card.draw_rect(Rect2(0, 0, 4.0, r.size.y), Color(ACCENT, 0.95))            # brass edge, like the menu cards
+	card.draw_rect(r, Color(BRASS, 0.30), false, 1.0)
+	var y: float = CARD_PAD.y
+	for ri in rows.size():
+		var x: float = CARD_PAD.x + 4.0
+		var base: float = y + CARD_LINE * 0.5 + 7.0
+		for sg in rows[ri]:
+			var t: String = sg[0]
+			var kind: int = sg[1]
+			var f: Font = sg[2]
+			var fs: int = sg[3]
+			var col: Color = body_col
+			match kind:
+				1:
+					col = ACCENT
+				2:
+					col = Color(body_col, 0.55)
+				3:
+					col = WARN
+			card.draw_string(f, Vector2(x + 1.0, base + 1.5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(0, 0, 0, 0.85))
+			card.draw_string(f, Vector2(x, base), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+			x += f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + SEG_GAP
+		y += CARD_LINE
+		if ri == 0 and rows.size() > 1:
+			card.draw_line(Vector2(CARD_PAD.x + 4.0, y + 1.0), Vector2(r.size.x - CARD_PAD.x, y + 1.0), Color(BRASS, 0.45), 1.0)
+			y += 6.0
+
+
+# ---------------------------------------------------------------- kill tally (this life)
+
+const TALLY_PER_ROW: int = 10
+const TALLY_CELL := Vector2(30.0, 24.0)
+## Tally mark colours by what was destroyed.
+const TALLY_COLS := {
+	"fighter": Color(1.0, 0.36, 0.30), "bomber": Color(1.0, 0.58, 0.24), "v1": Color(1.0, 0.34, 0.72),
+	"parked": Color(0.92, 0.66, 0.52), "tank": Color(0.72, 0.86, 0.36), "vehicle": Color(0.98, 0.86, 0.36),
+	"ship": Color(0.45, 0.76, 1.0), "train": Color(0.80, 0.68, 1.0), "flak": Color(1.0, 0.74, 0.30),
+	"balloon": Color(0.86, 0.92, 0.98), "building": Color(0.92, 0.82, 0.62),
+}
+var _tally: Array = []          # {"kind": String, "t": seconds when scored}
+var _tally_c: Control
+var _was_alive: bool = true
+
+
+## What a kill was, for its tally mark: fighter, bomber, v1, parked, tank, vehicle, ship, train, flak, balloon, building.
+func _kill_kind(n: Node) -> String:
+	if n is Aircraft:
+		var ac: Aircraft = n
+		if ac.stats != null and AircraftCatalog.is_bomber(ac.stats.id):
+			return "bomber"
+		return "fighter"
+	if n is FlyingBomb:
+		return "v1"
+	if n is Parachute:
+		return ""
+	if n is GroundShip:
+		return "ship"
+	if n is BarrageBalloon:
+		return "balloon"
+	if n is AAGun or n is Searchlight:
+		return "flak"
+	var k: String = String(n.get("kind")) if n.get("kind") != null else ""
+	if k.begins_with("train"):
+		return "train"
+	if k.begins_with("aa_"):
+		return "flak"
+	if n is GroundVehicle:
+		return "tank" if k in ["sherman", "panzer4", "tiger"] else "vehicle"
+	if n is AirfieldProp:
+		match (n as AirfieldProp).pkind:
+			"parked":
+				return "parked"
+			"tank":
+				return "tank"
+			"truck":
+				return "vehicle"
+			"gun":
+				return "flak"
+		return "building"
+	if k.contains("ship") or k.contains("boat") or k.contains("barge"):
+		return "ship"
+	return "building"
+
+
+func _on_player_kill(n: Node) -> void:
+	_kill_t = 0.8
+	if n == null or not is_instance_valid(n):
+		return
+	var kind: String = _kill_kind(n)
+	if kind == "":
+		return
+	_tally.append({"kind": kind, "t": Time.get_ticks_msec() * 0.001})
+	_layout_tally()
+
+
+func _layout_tally() -> void:
+	if _tally_c == null:
+		return
+	# top right, just under the time / weather panel; the control hints move down below it
+	var n: int = _tally.size()
+	var rows: int = int(ceil(float(mini(n, TALLY_PER_ROW * 3)) / float(TALLY_PER_ROW)))
+	var h: float = float(rows) * TALLY_CELL.y
+	_tally_c.offset_right = -16.0
+	_tally_c.offset_left = -16.0 - float(TALLY_PER_ROW) * TALLY_CELL.x
+	_tally_c.offset_top = 66.0
+	_tally_c.offset_bottom = 66.0 + h
+	_tally_c.visible = n > 0
+	if _hints != null:
+		var hy: float = 70.0 + (h + 6.0 if n > 0 else 0.0)
+		_hints.offset_top = hy
+		_hints.offset_bottom = hy + HINT_ROW * float(HINTS.size()) + 16.0
+	_tally_c.queue_redraw()
+
+
+func _draw_tally() -> void:
+	var n: int = _tally.size()
+	if n == 0:
+		return
+	var c: Control = _tally_c
+	var now: float = Time.get_ticks_msec() * 0.001
+	# newest marks first in reading order would shuffle them; marks are painted in the order scored, like the
+	# kill markings under a cockpit. Past three rows the earliest ones scroll off (the count stays exact).
+	var first: int = maxi(0, n - TALLY_PER_ROW * 3)
+	for i in range(first, n):
+		# right-aligned rows: the newest mark at the right-hand end of the last row
+		var k: int = i - first
+		var row: int = k / TALLY_PER_ROW
+		var in_row: int = mini(n - first - row * TALLY_PER_ROW, TALLY_PER_ROW)
+		var slot: int = TALLY_PER_ROW - in_row + (k % TALLY_PER_ROW)
+		var ctr := Vector2(TALLY_CELL.x * (float(slot) + 0.5), TALLY_CELL.y * (float(row) + 0.5))
+		var age: float = now - float(_tally[i]["t"])
+		var pop: float = 1.0 + 0.9 * (1.0 - smoothstep(0.0, 0.35, age))
+		var kind: String = String(_tally[i]["kind"])
+		var col: Color = TALLY_COLS.get(kind, TEXT_COL)
+		col = col.lerp(Color.WHITE, 1.0 - smoothstep(0.2, 1.2, age))       # flashes white as it is scored
+		_tally_icon(c, kind, ctr, pop, col)
+
+
+## Small stencil silhouettes, about 24 x 16 px at k = 1: a dark drop shadow, then the paint colour.
+func _tally_icon(c: Control, kind: String, p: Vector2, k: float, col: Color) -> void:
+	var polys: Array = []
+	match kind:
+		"fighter", "parked", "v1":
+			# plan view, nose up: fuselage, wings, tailplane
+			polys.append([Vector2(-1.4, -8), Vector2(1.4, -8), Vector2(1.6, 7), Vector2(-1.6, 7)])
+			polys.append([Vector2(-11, -1), Vector2(11, -1), Vector2(10, 2.5), Vector2(-10, 2.5)])
+			polys.append([Vector2(-5, 5.5), Vector2(5, 5.5), Vector2(4.5, 7.5), Vector2(-4.5, 7.5)])
+			if kind == "v1":
+				polys.append([Vector2(-1.2, 3), Vector2(1.2, 3), Vector2(1.2, 9), Vector2(-1.2, 9)])
+		"bomber":
+			polys.append([Vector2(-1.8, -8), Vector2(1.8, -8), Vector2(1.6, 7.5), Vector2(-1.6, 7.5)])
+			polys.append([Vector2(-12, -1.5), Vector2(12, -1.5), Vector2(11, 2.5), Vector2(-11, 2.5)])
+			polys.append([Vector2(-6.5, -5), Vector2(-3.5, -5), Vector2(-3.5, 2), Vector2(-6.5, 2)])
+			polys.append([Vector2(3.5, -5), Vector2(6.5, -5), Vector2(6.5, 2), Vector2(3.5, 2)])
+			polys.append([Vector2(-5.5, 6), Vector2(5.5, 6), Vector2(5, 8), Vector2(-5, 8)])
+		"tank":
+			# side view: tracks, hull, turret, gun
+			polys.append([Vector2(-10, 3), Vector2(10, 3), Vector2(8, 7), Vector2(-8, 7)])
+			polys.append([Vector2(-9, -1), Vector2(9, -1), Vector2(10, 3), Vector2(-10, 3)])
+			polys.append([Vector2(-5, -5.5), Vector2(3, -5.5), Vector2(4, -1), Vector2(-6, -1)])
+			polys.append([Vector2(3, -4.2), Vector2(12, -4.2), Vector2(12, -2.8), Vector2(3, -2.8)])
+		"vehicle":
+			# lorry: cab and canvas tilt, wheels
+			polys.append([Vector2(-10, -5), Vector2(3, -5), Vector2(3, 3), Vector2(-10, 3)])
+			polys.append([Vector2(4, -2), Vector2(8, -2), Vector2(10, 1), Vector2(10, 3), Vector2(4, 3)])
+			polys.append(_disc_pts(Vector2(-6, 5), 2.4))
+			polys.append(_disc_pts(Vector2(6, 5), 2.4))
+		"ship":
+			polys.append([Vector2(-12, 1), Vector2(12, 1), Vector2(8, 6), Vector2(-9, 6)])
+			polys.append([Vector2(-5, -3), Vector2(4, -3), Vector2(4, 1), Vector2(-5, 1)])
+			polys.append([Vector2(-1.5, -8), Vector2(1, -8), Vector2(1, -3), Vector2(-1.5, -3)])
+		"train":
+			polys.append([Vector2(-11, -3), Vector2(4, -3), Vector2(4, 4), Vector2(-11, 4)])
+			polys.append([Vector2(4, -7), Vector2(10, -7), Vector2(10, 4), Vector2(4, 4)])
+			polys.append([Vector2(-8, -8), Vector2(-5, -8), Vector2(-5, -3), Vector2(-8, -3)])
+			polys.append(_disc_pts(Vector2(-7, 5.5), 2.2))
+			polys.append(_disc_pts(Vector2(-1, 5.5), 2.2))
+			polys.append(_disc_pts(Vector2(6, 5.5), 2.2))
+		"flak":
+			# gun on a cruciform mount, barrel raised
+			polys.append([Vector2(-9, 5), Vector2(9, 5), Vector2(9, 7.5), Vector2(-9, 7.5)])
+			polys.append([Vector2(-4, 0), Vector2(4, 0), Vector2(5, 5), Vector2(-5, 5)])
+			polys.append([Vector2(-1, 1), Vector2(1.5, -0.5), Vector2(9, -9), Vector2(7, -10)])
+		"balloon":
+			# barrage balloon: fat envelope with three tail fins
+			polys.append(_disc_pts(Vector2(-2, 0), 7.5, 0.6))
+			polys.append([Vector2(3, -2), Vector2(10, -8), Vector2(11, -6), Vector2(6, -1)])
+			polys.append([Vector2(3, 2), Vector2(10, 8), Vector2(11, 6), Vector2(6, 1)])
+			polys.append([Vector2(4, -1), Vector2(11, -1), Vector2(11, 1), Vector2(4, 1)])
+		_:
+			# building: walls and a pitched roof
+			polys.append([Vector2(-9, -1), Vector2(9, -1), Vector2(9, 7), Vector2(-9, 7)])
+			polys.append([Vector2(-11, -1), Vector2(0, -8), Vector2(11, -1)])
+	# no backing plate: a dark outline all round (and a drop shadow) keeps the marks readable on sky or ground
+	var shadow := Color(0, 0, 0, 0.8)
+	var offs: Array = [Vector2(1.6, 1.6), Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1), Vector2.ZERO]
+	for pass_i in offs.size():
+		var off: Vector2 = offs[pass_i]
+		var last: bool = pass_i == offs.size() - 1
+		var pc: Color = col if last else shadow
+		if kind == "parked" and last:
+			pc = col
+		for poly in polys:
+			var pts := PackedVector2Array()
+			for v in poly:
+				pts.append(p + (v as Vector2) * k + off)
+			c.draw_colored_polygon(pts, pc)
+	if kind == "parked":
+		# parked: a ground bar under the plan view
+		c.draw_rect(Rect2(p + Vector2(-11, 9.5) * k, Vector2(22, 1.6) * k), col)
+
+
+func _disc_pts(ctr: Vector2, r: float, squash: float = 1.0) -> Array:
+	var out: Array = []
+	for i in 12:
+		var a: float = TAU * float(i) / 12.0
+		out.append(ctr + Vector2(cos(a) * r, sin(a) * r * squash))
+	return out
 
 
 func set_readout_extra(text: String) -> void:
@@ -319,7 +637,7 @@ func _build() -> void:
 	tl.add_theme_constant_override("margin_top", 16)
 	_root.add_child(tl)
 	_extra_box = VBoxContainer.new()
-	_extra_box.add_theme_constant_override("separation", 2)
+	_extra_box.add_theme_constant_override("separation", 6)
 	tl.add_child(_extra_box)
 	# Simulation time warp (] / [ in flight): a quiet line in the same column as the mode readouts,
 	# hidden at 1x so the HUD is unchanged in normal play.
@@ -404,9 +722,18 @@ func _build() -> void:
 	_minimap.draw.connect(_draw_minimap)
 	_root.add_child(_minimap)
 
+	# Kill tally for this life, top right under the time / weather: one coloured mark per kill (plane, bomber, tank, lorry, ship...)
+	_tally_c = Control.new()
+	_tally_c.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_tally_c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tally_c.draw.connect(_draw_tally)
+	_tally_c.visible = false
+	_root.add_child(_tally_c)
+	_layout_tally()
+
 	# Ease the instruments, compass and readouts back so the view leads. The minimap, the message
 	# banner, the aim markers and the warnings are deliberately left at full strength.
-	for c in [_inst, _extra_lbl, _radio, _compass, _tr_box, _hints]:
+	for c in [_inst, _extra_lbl, _compass, _tr_box, _hints]:     # the radio log and mission cards stay at full strength to be readable
 		if c is CanvasItem:
 			(c as CanvasItem).modulate.a = HUD_FADE
 
@@ -483,12 +810,26 @@ func _process(delta: float) -> void:
 	_radio.visible = show
 	if _tr_box:
 		_tr_box.visible = show
-	for c in _extra_box.get_children():
-		if c is Label:
-			(c as Label).visible = show
+	for card in _cards:
+		if is_instance_valid(card):
+			var src: Label = (card as Control).get_meta("src")
+			_layout_card(card)
+			(card as Control).visible = show and is_instance_valid(src) and src.text.strip_edges() != ""
+	# the radio log sits just under the top-left column, however tall the mission card has grown
+	var col_bottom: float = _extra_box.get_global_rect().end.y if _extra_box.get_child_count() > 0 else 16.0
+	_radio.offset_top = maxf(col_bottom + 12.0, 120.0)
+	_radio.offset_bottom = _radio.offset_top + 200.0
+	# kill tally: cleared when a new life starts
+	if aircraft != null and is_instance_valid(aircraft):
+		var alive: bool = aircraft.state == Aircraft.State.ALIVE
+		if alive and not _was_alive and not _tally.is_empty():
+			_tally.clear()
+			_layout_tally()
+		_was_alive = alive
+	if _tally_c != null and not _tally.is_empty():
+		_tally_c.queue_redraw()
 	# simulation time warp readout: hidden at 1x (and with the HUD hidden), so normal play looks unchanged
-	_warp_lbl.text = "TIME %s" % GameState.SIM_WARP_NAMES[GameState.sim_warp_index()]
-	_warp_lbl.visible = show and GameState.sim_warp > 1
+	_warp_lbl.text = ("TIME %s" % GameState.SIM_WARP_NAMES[GameState.sim_warp_index()]) if GameState.sim_warp > 1 else ""
 	if Input.is_action_just_pressed("hud_toggle"):
 		GameState.show_hud = not GameState.show_hud
 	if _msg_timer > 0.0:
