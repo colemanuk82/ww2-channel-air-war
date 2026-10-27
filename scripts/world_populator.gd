@@ -2143,14 +2143,19 @@ func _stream_tiles() -> void:
 		var res: Dictionary = jb["res"]
 		var jc := Vector2((float(jk.x) + 0.5) * TILE, (float(jk.y) + 0.5) * TILE)
 		if int(jb.get("gen", 0)) == _tile_gen and not _tiles.has(jk) and res.has("data") and jc.distance_to(Vector2(fp.x, fp.z)) < TILE_RADIUS + TILE:
-			var ft0: int = Time.get_ticks_msec()
-			var jn: Node3D = _finish_tile(jk, res["data"])
-			add_child(jn)
-			if Time.get_ticks_msec() - ft0 > 30 and not boost:
-				print("[slow] tile %s finished in %d ms" % [str(jk), Time.get_ticks_msec() - ft0])
-			_tiles[jk] = jn
+			# the scattered trees / houses go in now; roads, rivers, pylons, canals and railways follow over the
+			# next frames (see _advance_finishing), so no single frame carries a whole tile
+			var f := {"k": jk, "org": Vector2(float(jk.x) * TILE, float(jk.y) * TILE), "res": res, "stage": 0, "node": null}
+			_finish_stage(f)
+			_tiles[jk] = f["node"]
+			if boost:
+				while int(f["stage"]) < FINISH_STAGES:
+					_finish_stage(f)
+			else:
+				_finishing.append(f)
 			built += 1
 			finished += 1
+	_advance_finishing()
 	if boost and LandCover.ready():
 		# loading screen: compute the next tiles' beach defences on all cores at once
 		var pre: Array = []
@@ -2227,8 +2232,115 @@ func _start_tile_job(k: Vector2i) -> void:
 		RiverMesh.prepare_block(org, TILE)
 		res["data"] = Scatter.tile_landcover_data(org, TILE, seed_v, ex)
 		RiverMesh.clear_block()
-		RoadMesh.clear_block())
+		RoadMesh.clear_block()
+		# the road and river ribbons are pure geometry: built here too, only the mesh upload is left for the main thread
+		res["roads"] = RoadMesh.tile_arrays(org, TILE) if RoadMesh.has_roads() else []
+		res["rivers"] = RiverMesh.tile_arrays(org, TILE) if RiverMesh.has_rivers() else [])
 	_tile_jobs.append({"k": k, "task": task, "res": res, "gen": _tile_gen})
+
+
+const FINISH_STAGES: int = 6
+const FINISH_BUDGET_MS: float = 5.0
+var _orphan_flat: Array = []  # merges whose tile was unloaded first: [task, holder], freed once done
+var _finishing: Array = []    # tiles whose scenery is going in a stage per frame: {"k", "org", "res", "stage", "node"}
+
+
+## Finish streamed tiles a stage at a time inside a small per-frame budget.
+func _advance_finishing() -> void:
+	for oi in range(_orphan_flat.size() - 1, -1, -1):
+		var ob: Array = _orphan_flat[oi]
+		if int(ob[0]) < 0 or WorkerThreadPool.is_task_completed(int(ob[0])):
+			if int(ob[0]) >= 0:
+				WorkerThreadPool.wait_for_task_completion(int(ob[0]))
+			var o: Variant = (ob[1] as Array)[0]
+			if o != null and is_instance_valid(o):
+				(o as Node).free()
+			_orphan_flat.remove_at(oi)
+	var t0: int = Time.get_ticks_usec()
+	while not _finishing.is_empty() and float(Time.get_ticks_usec() - t0) < FINISH_BUDGET_MS * 1000.0:
+		var f: Dictionary = _finishing[0]
+		var node: Variant = f["node"]
+		if node == null or not is_instance_valid(node) or _tiles.get(f["k"]) != node:
+			_finishing.pop_front()        # unloaded again before it was finished: its merges are freed when they finish
+			_orphan_flat.append_array(f.get("flat", []))
+			continue
+		var st0: int = Time.get_ticks_usec()
+		var before: int = int(f["stage"])
+		_finish_stage(f)
+		if int(f["stage"]) == before:
+			break                         # waiting on a worker: carry on next frame
+		var ms: float = float(Time.get_ticks_usec() - st0) / 1000.0
+		if ms > 12.0:
+			print("[slow] tile %s stage %d took %.1f ms" % [str(f["k"]), int(f["stage"]) - 1, ms])
+		if int(f["stage"]) >= FINISH_STAGES:
+			_finishing.pop_front()
+
+
+## One stage of putting a streamed tile in: 0 scatter nodes (and the tile into the scene), 1 roads and traffic,
+## 2 rivers and pylons, 3 canals, 4 railways, 5 the merged canal / railway furniture once its workers are done.
+func _finish_stage(f: Dictionary) -> void:
+	var k: Vector2i = f["k"]
+	var org: Vector2 = f["org"]
+	var res: Dictionary = f["res"]
+	match int(f["stage"]):
+		0:
+			var node: Node3D = Scatter.build_tile_nodes(res["data"])
+			node.name = "tile_%d_%d" % [k.x, k.y]
+			add_child(node)
+			f["node"] = node
+		1:
+			var rm: MeshInstance3D = RoadMesh.node_from_arrays(res.get("roads", []))
+			if rm != null:
+				(f["node"] as Node3D).add_child(rm)
+			if RoadMesh.has_roads():
+				_tile_traffic(f["node"], k, org)
+		2:
+			var rvm: MeshInstance3D = RiverMesh.node_from_arrays(res.get("rivers", []))
+			if rvm != null:
+				(f["node"] as Node3D).add_child(rvm)
+			if PylonMesh.active():
+				var pyn: Node3D = PylonMesh.build_tile(org, TILE)
+				if pyn != null:
+					(f["node"] as Node3D).add_child(pyn)
+		3:
+			# canal and railway furniture: placed here (about 1 ms), merged into a few meshes on a worker (the merge
+			# was 20-25 ms on the main thread), put in by stage 5
+			if CanalKit.canal_count() > 0:
+				_flatten_async(f, CanalKit.build_tile(org, TILE))
+		4:
+			if RailKit.rail_count() > 0:
+				_flatten_async(f, RailKit.build_tile(org, TILE))
+		5:
+			var jobs: Array = f.get("flat", [])
+			for jb in jobs:
+				if int(jb[0]) >= 0 and not WorkerThreadPool.is_task_completed(int(jb[0])):
+					return            # not merged yet: try again next frame (the stage does not advance)
+			for jb2 in jobs:
+				if int(jb2[0]) >= 0:
+					WorkerThreadPool.wait_for_task_completion(int(jb2[0]))      # already finished: just collects it
+				var out: Variant = (jb2[1] as Array)[0]
+				if out != null:
+					(f["node"] as Node3D).add_child(out as Node3D)
+			f["flat"] = []
+	f["stage"] = int(f["stage"]) + 1
+
+
+## Merge a kit's loose furniture (GroundKit.flatten) on a worker thread; the node is still outside the tree.
+func _flatten_async(f: Dictionary, container: Node3D) -> void:
+	if container == null:
+		return
+	var holder: Array = [null]
+	var vis: float = 6000.0 * Scatter.vis_scale
+	if not f.has("flat"):
+		f["flat"] = []
+	if boost:
+		# loading screen: merge right here. (The main thread must never wait on a merge worker: the worker can itself
+		# be waiting for the main thread to flush rendering commands.)
+		holder[0] = GroundKit.flatten(container, vis)
+		(f["flat"] as Array).append([-1, holder])
+		return
+	var tid: int = WorkerThreadPool.add_task(func() -> void: holder[0] = GroundKit.flatten(container, vis))
+	(f["flat"] as Array).append([tid, holder])
 
 
 func _finish_tile(k: Vector2i, data: Dictionary) -> Node3D:

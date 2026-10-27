@@ -38,6 +38,18 @@ static func _static_mat(mat: Material) -> Material:
 	return d
 
 
+## Loading-screen jobs: every parked type's mesh, so an airfield coming into view builds none in flight.
+static func warm_jobs() -> Array:
+	var out: Array = []
+	var seen: Dictionary = {}
+	for lst in [ALLIED_FIGHTERS, ALLIED_US_FIGHTERS, ALLIED_BOMBERS, AXIS_FIGHTERS, AXIS_DIVE, AXIS_BOMBERS]:
+		for id in lst:
+			if not seen.has(id):
+				seen[id] = true
+				out.append(Callable(ParkedAircraft, "mesh_for").bind(String(id)))
+	return out
+
+
 ## Mesh for one aircraft type (cached). Nose at -Z, lowest point (wheels) at y = 0.
 static func mesh_for(model_id: String) -> ArrayMesh:
 	if _cache.has(model_id):

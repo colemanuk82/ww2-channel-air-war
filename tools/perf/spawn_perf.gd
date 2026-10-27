@@ -28,4 +28,16 @@ func _ready() -> void:
 	var a2: int = Time.get_ticks_usec()
 	print("[perf] he111 raw build %.1f ms, realistic+livery %.1f ms" % [(a1 - a0) / 1000.0, (a2 - a1) / 1000.0])
 	raw.free()
+	for id2 in ["spitfire", "bf109", "he111", "lancaster"]:
+		var p0: int = Time.get_ticks_usec()
+		ParkedAircraft.mesh_for(id2)
+		print("[perf] parked mesh %s %.1f ms" % [id2, (Time.get_ticks_usec() - p0) / 1000.0])
+	for kind in ["nissen", "blister", "truck", "tent"]:
+		var q0: int = Time.get_ticks_usec()
+		var gs: GroundStructure = GroundStructure.create("hangar", "Allies", Vector3.ZERO, 0.0)
+		add_child(gs)
+		print("[perf] hangar structure into tree %.1f ms" % [(Time.get_ticks_usec() - q0) / 1000.0])
+		gs.free()
+		break
+	AircraftModels.free_prototypes()
 	get_tree().quit()
