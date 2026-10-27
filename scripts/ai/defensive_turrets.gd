@@ -161,7 +161,8 @@ func _update_view_cam() -> void:
 	var up: Vector3 = Vector3.UP
 	if absf(aim_world.dot(up)) > 0.98:
 		up = aircraft.global_transform.basis.y
-	_cam.look_at(_cam.global_position + aim_world, up)
+	if aim_world.length_squared() > 0.0001:
+		_cam.look_at(_cam.global_position + aim_world, up)
 
 
 ## Aim the manned gun with the mouse, or the right stick on a pad. Offsets are clamped to the turret arc.
