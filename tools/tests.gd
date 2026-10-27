@@ -16,6 +16,7 @@ func _ready() -> void:
 	_test_aircraft_models()
 	_test_catalogue()
 	_test_markings()
+	_test_obstacles()
 	_test_turret_mounts()
 	_test_scatter_masks()
 	_test_music()
@@ -317,6 +318,28 @@ func _test_catalogue() -> void:
 
 ## Every aircraft: the national markings must sit on the airframe (fuselage roundels inside the fuselage box),
 ## and every cockpit must have a pilot head visible through the glazing.
+## Scenery is solid: a tree registered with Obstacles is hit when flown through, missed above or beside it.
+func _test_obstacles() -> void:
+	print("-- obstacles")
+	Obstacles.clear()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 3.0
+	cyl.bottom_radius = 3.0
+	cyl.height = 16.0
+	var mmi: MultiMeshInstance3D = Scatter.multi(cyl, [Transform3D(Basis(), Vector3(5000.0, 8.0, 7000.0))])
+	add_child(mmi)
+	var at := Vector3(5000.0, 10.0, 7000.0)
+	_check(not Obstacles.hit(at, 1.5, at.y - 1.0, at.y + 1.0).is_empty() or _resolve_again(at), "flying into a tree hits it")
+	_check(Obstacles.hit(at + Vector3(0, 30, 0), 1.5, at.y + 29.0, at.y + 31.0).is_empty(), "flying over a tree misses it")
+	_check(Obstacles.hit(at + Vector3(20, 0, 0), 1.5, at.y - 1.0, at.y + 1.0).is_empty(), "flying beside a tree misses it")
+	mmi.queue_free()
+
+
+func _resolve_again(at: Vector3) -> bool:
+	Obstacles._next_resolve = 0
+	return not Obstacles.hit(at, 1.5, at.y - 1.0, at.y + 1.0).is_empty()
+
+
 func _test_markings() -> void:
 	print("-- decals and pilots")
 	# fin swastikas follow the Historical markings setting (off by default)

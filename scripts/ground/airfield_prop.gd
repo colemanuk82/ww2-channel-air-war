@@ -50,6 +50,7 @@ static func create(p_kind: String, p_team: String, p_mesh: Mesh, world_xforms: A
 	if p_mesh != null:
 		var bb: AABB = p_mesh.get_aabb()
 		g._wreck_size = Vector3(maxf(bb.size.x, 2.0), 0.5, maxf(bb.size.z, 2.0)) * 0.8
+	Obstacles.register(g)
 	return g
 
 

@@ -563,6 +563,7 @@ static func multi(mesh: Mesh, xforms: Array, vis_end: float = 0.0) -> MultiMeshI
 	var pad := Vector3(60.0, 60.0, 60.0)
 	mi.custom_aabb = AABB(lo - c - pad, (hi - lo) + pad * 2.0)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	Obstacles.register(mi)
 	if vis_end > 0.0:
 		vis_end *= vis_scale
 		mi.visibility_range_end = vis_end
@@ -1369,6 +1370,7 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 	var ch_d: Variant = d.get("church")
 	if ch_d != null:
 		var ch: Node3D = Landmarks.church(float(ch_d[2]))
+		Obstacles.register(ch)
 		ch.position = ch_d[0]
 		ch.rotation.y = float(ch_d[1])
 		root.add_child(ch)
@@ -1436,7 +1438,7 @@ static func _add_lod_pair(root: Node, near_mesh: Mesh, far: Mesh, d: Dictionary,
 	a.visibility_range_end_margin = 150.0
 	a.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	root.add_child(a)
-	var b: MultiMeshInstance3D = multi_from_data(far, d, vis_end)
+	var b: MultiMeshInstance3D = multi_from_data(far, d, vis_end, false)     # same instances as `a`: solid once
 	b.visibility_range_begin = ne
 	b.visibility_range_begin_margin = 150.0
 	root.add_child(b)
@@ -1562,7 +1564,7 @@ static func multi_data(xforms: Array) -> Dictionary:
 
 
 ## ... and the node (main thread): one buffer upload instead of a set_instance_transform() per instance.
-static func multi_from_data(mesh: Mesh, d: Dictionary, vis_end: float = 0.0) -> MultiMeshInstance3D:
+static func multi_from_data(mesh: Mesh, d: Dictionary, vis_end: float = 0.0, solid: bool = true) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = mesh
@@ -1579,6 +1581,8 @@ static func multi_from_data(mesh: Mesh, d: Dictionary, vis_end: float = 0.0) -> 
 	var pad := Vector3(60.0, 60.0, 60.0)
 	mi.custom_aabb = AABB(lo - c - pad, (hi - lo) + pad * 2.0)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if solid:
+		Obstacles.register(mi)
 	if vis_end > 0.0:
 		mi.visibility_range_end = vis_end
 		mi.visibility_range_end_margin = minf(vis_end * 0.12, 900.0)
