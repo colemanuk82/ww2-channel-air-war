@@ -27,6 +27,17 @@ static func _build(parts: Array) -> ArrayMesh:
 	return out
 
 
+## Loading-screen jobs: the airfield and camp props for both sides (each mesh is cached on first build).
+static func warm_jobs() -> Array:
+	var out: Array = []
+	for f0 in ["fuel_tank", "bomb_bank", "chance_light", "e_pen", "boundary_marker", "landing_t"]:
+		out.append(Callable(AirfieldAssets, f0))
+	for team in ["Allies", "Axis"]:
+		for f in ["truck", "blister", "nissen", "tent", "t2_hangar", "t1_hangar", "revetment", "dummy_aircraft", "camo_net", "tank", "halftrack", "field_gun", "marquee"]:
+			out.append(Callable(AirfieldAssets, f).bind(team))
+	return out
+
+
 static func truck(team: String) -> ArrayMesh:
 	var key: String = "truck2_" + team
 	if _cached(key) != null:

@@ -341,6 +341,12 @@ static func _poly_near(pts: PackedVector2Array, c: Vector2, radius: float) -> bo
 
 
 static func build_tile(origin: Vector2, size: float) -> MeshInstance3D:
+	return node_from_arrays(tile_arrays(origin, size))
+
+
+## The ribbon geometry for one tile as mesh arrays (empty when there is nothing here). Pure maths on the loaded,
+## read-only line data and the terrain heights, so the tile streamer runs it on a worker thread.
+static func tile_arrays(origin: Vector2, size: float) -> Array:
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
 	var uvs := PackedVector2Array()
@@ -367,7 +373,7 @@ static func build_tile(origin: Vector2, size: float) -> MeshInstance3D:
 		var rg: Vector2i = ranges[li]
 		_add_line(lines[li], rg.x, rg.y, rect, verts, norms, uvs, cols, idx)
 	if verts.is_empty():
-		return null
+		return []
 	var arr: Array = []
 	arr.resize(Mesh.ARRAY_MAX)
 	arr[Mesh.ARRAY_VERTEX] = verts
@@ -375,6 +381,13 @@ static func build_tile(origin: Vector2, size: float) -> MeshInstance3D:
 	arr[Mesh.ARRAY_TEX_UV] = uvs
 	arr[Mesh.ARRAY_COLOR] = cols
 	arr[Mesh.ARRAY_INDEX] = idx
+	return arr
+
+
+## Main thread: the tile's mesh node from tile_arrays() (null when there is nothing).
+static func node_from_arrays(arr: Array) -> MeshInstance3D:
+	if arr.is_empty():
+		return null
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	var mi := MeshInstance3D.new()
