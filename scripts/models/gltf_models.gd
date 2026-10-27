@@ -132,12 +132,12 @@ static func _paint(col: Color, rough: float = 0.6) -> StandardMaterial3D:
 
 static func _glass() -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
-	m.albedo_color = Color(0.72, 0.80, 0.86, 0.24)
+	m.albedo_color = Color(0.72, 0.80, 0.86, 0.20)
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.roughness = 0.05
+	m.roughness = 0.38
 	m.metallic = 0.0
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
-	m.metallic_specular = 0.9
+	m.metallic_specular = 0.35
 	return m
 
 

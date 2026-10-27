@@ -190,7 +190,7 @@ static func build(nation: String = "RAF") -> Node3D:
 	body.add_child(canopy, true)
 	var gmi := MeshInstance3D.new()
 	gmi.mesh = _canopy_mesh()
-	gmi.material_override = ToonUtil.make_glass({"opacity": 0.2, "rim": 0.9, "tint": Color(0.58, 0.70, 0.76)})
+	gmi.material_override = ToonUtil.make_glass({"opacity": 0.2, "rim": 0.5, "tint": Color(0.58, 0.70, 0.76)})
 	gmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	canopy.add_child(gmi, true)
 	PlaneBuilder.canopy_frame(canopy, CANOPY_RINGS, camo, "bubble")

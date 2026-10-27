@@ -774,7 +774,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	var canopy := Node3D.new()
 	canopy.name = "Canopy"
 	body.add_child(canopy, true)
-	var glass := ToonUtil.make_glass({"opacity": 0.2, "rim": 0.9, "tint": Color(0.58, 0.70, 0.76)})
+	var glass := ToonUtil.make_glass({"opacity": 0.2, "rim": 0.5, "tint": Color(0.58, 0.70, 0.76)})
 	# frames are painted in the airframe colours on the outside (photos), so they use the camouflage skin
 	var cid: String = String(spec.get("id", ""))
 	for c in spec.get("canopies", []):

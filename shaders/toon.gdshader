@@ -8,7 +8,7 @@ uniform vec4 albedo : source_color = vec4(0.7, 0.7, 0.7, 1.0);
 // Buildings (flat-shaded, detail_mode 1) are graded down a shade so the dense wartime housing stock reads
 // as darker built-up mass against the fields instead of glowing pale. Applies to every flat-shaded pass,
 // i.e. the buildings, and to nothing else.
-const float BUILDING_DARKEN = 0.74;
+const float BUILDING_DARKEN = 0.62;
 uniform vec4 underside_color : source_color = vec4(0.7, 0.7, 0.7, 1.0);
 uniform float underside_amount : hint_range(0.0, 1.0) = 0.0;
 uniform vec4 patch_color : source_color = vec4(0.4, 0.3, 0.2, 1.0);
