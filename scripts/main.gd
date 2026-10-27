@@ -2136,19 +2136,32 @@ func _on_player_crashed(a: Aircraft, reason: String) -> void:
 
 ## Safety net: if the player's aircraft is a dead wreck, nothing is queued to replace it, and no bail-out is in
 ## progress, start the respawn anyway - a missed crash signal must never leave the player stuck until restart.
+## This also covers modes that claim to manage respawn but leave the wreck unreplaced while the sortie runs on.
 var _dead_watch: float = 0.0
+var _dead_warned: bool = false
 
 
 func _respawn_watchdog(delta: float) -> void:
-	var stuck: bool = player != null and (not is_instance_valid(player) or player.state == Aircraft.State.DEAD) \
-		and _respawn_timer < 0.0 and not (_bail != null and _bail.active) and not _manages_respawn() \
-		and not bool(config.get("career", false)) and not GameState.paused
+	var mode_running: bool = mode == null or not is_instance_valid(mode) or bool(mode.get("running"))
+	var wrecked: bool = player != null and (not is_instance_valid(player) or player.state == Aircraft.State.DEAD)
+	var stuck: bool = wrecked and _respawn_timer < 0.0 and not (_bail != null and _bail.active) \
+		and not bool(config.get("career", false)) and not GameState.paused \
+		and (not _manages_respawn() or mode_running)
 	if not stuck:
 		_dead_watch = 0.0
+		_dead_warned = false
 		return
+	if not _dead_warned:
+		_dead_warned = true
+		if hud != null and is_instance_valid(hud):
+			hud.show_message("AIRCRAFT LOST - respawning...", 3.0)
 	_dead_watch += delta
-	if _dead_watch > 7.0:
+	# managed modes get longer: theirs normally replaces the aircraft well inside this, so only an unhandled
+	# wreck waits for the net
+	var limit: float = 8.0 if _manages_respawn() else 5.0
+	if _dead_watch > limit:
 		_dead_watch = 0.0
+		_dead_warned = false
 		_respawn_timer = 0.5
 
 ## Pilot's Life: a free-flight sortie has no objective, so the pilot ends it himself once he is down.
