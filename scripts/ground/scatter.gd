@@ -43,6 +43,15 @@ static func _merge(parts: Array) -> ArrayMesh:
 				vm.set_shader_parameter("albedo", Color.WHITE)
 				vm.set_shader_parameter("use_vcol", true)
 				_vmats[key] = vm
+		elif mat is ShaderMaterial and (mat as ShaderMaterial).shader == GroundKit.paint_shader():
+			var pm: ShaderMaterial = mat
+			key = "paint|%s" % str(pm.get_shader_parameter("roughness_v"))
+			col = pm.get_shader_parameter("albedo")
+			if not _vmats.has(key):
+				var pv: ShaderMaterial = pm.duplicate()
+				pv.set_shader_parameter("albedo", Color.WHITE)
+				pv.set_shader_parameter("use_vcol", true)
+				_vmats[key] = pv
 		if not groups.has(key):
 			groups[key] = {"mat": _vmats.get(key, mat), "v": PackedVector3Array(), "n": PackedVector3Array(), "uv": PackedVector2Array(), "c": PackedColorArray(), "i": PackedInt32Array()}
 			order.append(key)

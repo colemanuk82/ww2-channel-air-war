@@ -34,8 +34,12 @@ func _ready() -> void:
 	var built: Array[Node3D] = []
 	for i in ids.size():
 		var id: String = ids[i]
-		var st: AircraftStats = AircraftCatalog.load_stats(id)
-		var m: Node3D = AircraftModels.build(st.model_id, st.nation)
+		var m: Node3D
+		if id.begins_with("ground_"):     # --ids=ground_nissen,ground_parked_spitfire ... (airfield props)
+			m = _ground_prop(id.substr(7))
+		else:
+			var st2: AircraftStats = AircraftCatalog.load_stats(id)
+			m = AircraftModels.build(st2.model_id, st2.nation)
 		m.position = Vector3(float(i % cols - 2) * spacing, 0, float(i / cols) * spacing * 1.1) if ids.size() > 1 else Vector3.ZERO
 		add_child(m)
 		built.append(m)
@@ -95,3 +99,26 @@ func _bounds_of(nodes: Array[Node3D]) -> AABB:
 			else:
 				out = out.merge(a)
 	return out
+
+
+## Airfield props for the gallery: nissen, blister, truck, tent, fuel_tank, parked_<aircraft id>.
+func _ground_prop(what: String) -> Node3D:
+	var mesh: Mesh
+	match what:
+		"nissen":
+			mesh = AirfieldAssets.nissen("Allies")
+		"blister":
+			mesh = AirfieldAssets.blister("Allies")
+		"truck":
+			mesh = AirfieldAssets.truck("Allies")
+		"tent":
+			mesh = AirfieldAssets.tent("Allies")
+		"fuel_tank":
+			mesh = AirfieldAssets.fuel_tank()
+		_:
+			mesh = ParkedAircraft.mesh_for(what.trim_prefix("parked_"))
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	var n := Node3D.new()
+	n.add_child(mi)
+	return n

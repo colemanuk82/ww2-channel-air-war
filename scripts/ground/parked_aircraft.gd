@@ -19,14 +19,16 @@ static var _cache: Dictionary = {}
 static func mesh_for(model_id: String) -> ArrayMesh:
 	if _cache.has(model_id):
 		return _cache[model_id]
-	var root: Node3D
-	if model_id == "spitfire":
-		root = SpitfireModel.build("RAF")
-	else:
+	# the same finished model as the flying aircraft: painted livery, markings and codes
+	var nation: String = "RAF"
+	if model_id != "spitfire":
 		var spec: Dictionary = ModelSpecs.get_spec(model_id)
 		if spec.is_empty():
 			return null
-		root = PlaneBuilder.build(spec, "")
+		nation = String(spec.get("nation", "RAF"))
+	var root: Node3D = AircraftModels.build(model_id, nation)
+	if root == null:
+		return null
 	var parts: Array = []
 	_collect(root, Transform3D.IDENTITY, parts)
 	# lowest vertex, so the wheels rest on the ground
@@ -57,7 +59,7 @@ static func mesh_for(model_id: String) -> ArrayMesh:
 
 
 static func _collect(n: Node3D, parent_xf: Transform3D, out: Array) -> void:
-	if not n.visible or n.name == "PropDisc":
+	if not n.visible or String(n.name).begins_with("PropDisc"):     # engines stopped: blades, not the blur disc
 		return
 	var t: Transform3D = parent_xf * n.transform
 	if n is MeshInstance3D:
