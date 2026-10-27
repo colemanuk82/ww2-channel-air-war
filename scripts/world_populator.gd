@@ -742,7 +742,13 @@ func _build_channel_convoy(s: Dictionary) -> Node3D:
 func _build_sea_mark(s: Dictionary) -> Node3D:
 	var container := Node3D.new()
 	var kind: String = s["kind"]
-	var n: Node3D = WorldFeatures.build_lightship() if kind == "lightship" else WorldFeatures.build_sea_fort(kind)
+	var n: Node3D
+	if kind == "lightship":
+		n = WorldFeatures.build_lightship()
+	elif kind == "army_fort" or kind == "navy_fort":
+		n = WorldFeatures.build_sea_fort(kind)
+	else:
+		n = WorldFeatures.build_buoy(kind)
 	var pos: Vector3 = s["pos"]
 	n.position = Vector3(pos.x, 0.0, pos.z)
 	n.rotation.y = float(hash(str(s["name"])) % 360) * PI / 180.0
@@ -2413,7 +2419,7 @@ func _stream_tiles() -> void:
 		# loading screen: compute the next tiles' beach defences on all cores at once
 		var pre: Array = []
 		for e0 in cand:
-			if pre.size() >= TILE_BUDGET * 4:
+			if pre.size() >= TILE_BUDGET:
 				break
 			pre.append(e0[1])
 		var bt0: int = Time.get_ticks_msec()

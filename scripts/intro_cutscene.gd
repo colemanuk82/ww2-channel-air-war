@@ -610,7 +610,8 @@ func _update_bombs(t: float, delta: float) -> void:
 		v.y -= 150.0 * delta
 		b[1] = v
 		mi.global_position += v * delta
-		mi.look_at(mi.global_position + v, Vector3.UP)
+		if v.length_squared() > 0.0001:
+			mi.look_at(mi.global_position + v, Vector3.UP)
 		if mi.global_position.y <= _gh(mi.global_position) + 1.0:
 			var gp: Vector3 = mi.global_position
 			gp.y = _gh(gp)
@@ -681,7 +682,8 @@ func _update_fight(t: float, delta: float) -> void:
 		_hero_vel.y -= 28.0 * delta
 		_hero.global_position += _hero_vel * delta
 		var ahead: Vector3 = _hero.global_position + _hero_vel
-		_hero.look_at(ahead, Vector3.UP)
+		if _hero_vel.length_squared() > 0.0001:
+			_hero.look_at(ahead, Vector3.UP)
 		_hero.rotate_object_local(Vector3.FORWARD, (t - T_H) * 3.2)
 		_spin(_hero)
 		if t >= T_H + 1.7 and not _bail:
@@ -717,7 +719,8 @@ func _spawn_bullet(p: Vector3, dir: Vector3) -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	get_tree().current_scene.add_child(mi)
 	mi.global_position = p
-	mi.look_at(p + dir, Vector3.UP)
+	if dir.length_squared() > 0.0001:
+		mi.look_at(p + dir, Vector3.UP)
 	_bullets.append([mi, dir * 520.0, 0.9])
 
 

@@ -865,7 +865,7 @@ const BINDINGS := [
 	["Landing gear", "G", "gear", ""],
 	["Wheel brake", "V", "brake", ""],
 	["Flaps (up / 15 / 35)", "F", "flaps", ""],
-	["Bail out (hold)", "J", "bail_out", ""],
+	["Bail out (hold 1 s, above 70 m)", "J", "bail_out", ""],
 	["WEAPONS", "", "", ""],
 	["Fire / drop bomb", "Space", "fire", ""],
 	["Switch guns / bombs", "X or B", "weapon_toggle", ""],

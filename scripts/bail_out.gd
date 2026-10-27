@@ -28,6 +28,7 @@ var _hint: Label
 var _hud: Node
 var _aircraft: Aircraft
 var _done: bool = false
+var _was_alive: bool = false
 
 
 func setup(hud: Node) -> void:
@@ -47,6 +48,10 @@ func tick(delta: float, player: Aircraft) -> void:
 		return
 	if player != null and not is_instance_valid(player):
 		return
+	# a mortally hit aircraft is already going down: say why the silk will not open
+	if player != null and is_instance_valid(player) and player.state == Aircraft.State.DYING and _was_alive:
+		_msg("AIRCRAFT GOING DOWN - too late to bail out", 2.5)
+	_was_alive = player != null and is_instance_valid(player) and player.state == Aircraft.State.ALIVE
 	if player == null or not is_instance_valid(player) or player.state != Aircraft.State.ALIVE or player.on_ground:
 		_hold = 0.0
 		return

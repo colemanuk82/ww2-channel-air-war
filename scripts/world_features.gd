@@ -686,11 +686,40 @@ const SEA_MARKS := [
 	["lv_shipwash", "Shipwash lightvessel", 52.0400, 1.7400, "lightship"],
 	["lv_smiths_knoll", "Smith's Knoll lightvessel", 52.7200, 2.3000, "lightship"],
 	["lv_haisborough", "Haisborough lightvessel", 52.9000, 1.9500, "lightship"],
+	# North Sea fairway buoys: the lane markers the convoys steered by, seen from the air as small red/green floats
+	["buoy_sunk_east", "Sunk east buoy", 51.9200, 1.8800, "buoy_green"],
+	["buoy_north_hinder_n", "North Hinder north buoy", 51.9000, 2.5500, "buoy_red"],
+	["buoy_north_hinder_s", "North Hinder south buoy", 51.8200, 2.4500, "buoy_green"],
+	["buoy_maas", "Maas bell buoy", 51.9800, 3.3500, "bell_buoy"],
+	["buoy_ijmuiden", "IJmuiden approach buoy", 52.3500, 3.5500, "buoy_red"],
+	["buoy_smiths_knoll", "Smith's Knoll north buoy", 52.7800, 2.3500, "buoy_green"],
 	["fort_shivering_sands", "Shivering Sands Army Fort", 51.4990, 1.0750, "army_fort"],
 	["fort_red_sands", "Red Sands Army Fort", 51.4770, 0.9940, "army_fort"],
 	["fort_tongue_sands", "Tongue Sands Navy Fort", 51.4930, 1.2430, "navy_fort"],
 	["fort_knock_john", "Knock John Navy Fort", 51.5600, 1.1650, "navy_fort"],
 ]
+
+
+## A fairway buoy: a floating can / cone / bell with a light mast. Small, but its red or green head is
+## readable from the air and marks the swept channels across the North Sea.
+static func build_buoy(kind: String) -> Node3D:
+	var root := Node3D.new()
+	var red := Color(0.72, 0.14, 0.1)
+	var green := Color(0.12, 0.42, 0.2)
+	var col: Color = red if kind == "buoy_red" else green
+	var dark := Color(0.16, 0.16, 0.17)
+	GroundKit.cyl(root, 2.0, 2.4, 1.0, Vector3(0, 0.35, 0), dark, Vector3.ZERO, 10, false)
+	if kind == "bell_buoy":
+		GroundKit.cyl(root, 0.25, 1.9, 3.4, Vector3(0, 2.4, 0), col, Vector3.ZERO, 8, false)
+		for sx in [-1.0, 1.0]:
+			GroundKit.cyl(root, 0.07, 0.07, 2.8, Vector3(sx * 0.85, 2.4, 0.0), dark, Vector3(0, 0, 4), 4, false)
+		GroundKit.cyl(root, 0.55, 0.55, 0.8, Vector3(0, 3.2, 0), Color(0.7, 0.56, 0.2), Vector3.ZERO, 8, false)
+	else:
+		GroundKit.cyl(root, 1.7, 1.7, 3.2, Vector3(0, 2.3, 0), col, Vector3.ZERO, 8, false)
+		GroundKit.cyl(root, 1.72, 1.72, 0.35, Vector3(0, 3.1, 0), col.darkened(0.25), Vector3.ZERO, 8, false)
+	GroundKit.cyl(root, 0.08, 0.12, 4.4, Vector3(0, 6.1, 0), dark, Vector3.ZERO, 5, false)
+	GroundKit.cyl(root, 0.5, 0.5, 0.7, Vector3(0, 8.4, 0), Color(1.0, 0.86, 0.42), Vector3.ZERO, 8, false)
+	return root
 
 
 ## Red-hulled lightvessel at anchor: lantern on a lattice mast amidships, name painted on the side.

@@ -22,10 +22,18 @@ static func load_map() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	var img := Image.new()
-	if img.load(PNG) != OK:
+	# load the imported texture, not the raw PNG: Image.load() on an imported resource warns (and fails in
+	# an exported build, where the source PNG is not packed)
+	var tex: Texture2D = load(PNG) as Texture2D
+	if tex == null:
 		push_warning("RegionMap: %s missing (run tools/bake_regions.py) - no regional field patterns" % PNG)
 		return
+	var img: Image = tex.get_image()
+	if img == null:
+		push_warning("RegionMap: %s has no readable image - no regional field patterns" % PNG)
+		return
+	if img.is_compressed():
+		img.decompress()
 	if img.get_format() != Image.FORMAT_RGBA8:
 		img.convert(Image.FORMAT_RGBA8)
 	_img = img

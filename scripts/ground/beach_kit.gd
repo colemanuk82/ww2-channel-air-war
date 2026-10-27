@@ -12,6 +12,7 @@ const BIG: float = 2.2          # defences are drawn oversize and dark so they r
 static var _meshes: Dictionary = {}
 static var _logged: int = 0
 static var _cache: Dictionary = {}
+static var _pending: Dictionary = {}
 static var _mx := Mutex.new()
 
 
@@ -20,24 +21,28 @@ static func _key(origin: Vector2, cell: float) -> Vector2i:
 
 
 ## Compute the beach defences of several tiles in parallel (one worker task per tile) ahead of the tile builder,
-## which then picks the rows out of the cache. Used while the loading screen streams the first tiles in.
+## which then picks the rows out of the cache. This only *schedules* the work and returns: waiting here froze
+## the loading screen for seconds at a time.
 static func precompute(keys: Array, cell: float, exclude: Array) -> void:
 	var todo: Array = []
+	_mx.lock()
 	for k in keys:
-		if not _cache.has(k):
+		if not _cache.has(k) and not _pending.has(k):
+			_pending[k] = true
 			todo.append(k)
+	_mx.unlock()
 	if todo.is_empty():
 		return
 	GroundKit.terrain()          # resolve the cached terrain node on the main thread
-	var task: int = WorkerThreadPool.add_group_task(func(i: int) -> void:
+	WorkerThreadPool.add_group_task(func(i: int) -> void:
 		var k2: Vector2i = todo[i]
 		var org := Vector2(float(k2.x) * cell, float(k2.y) * cell)
 		var seed_v: int = k2.x * 73856093 ^ k2.y * 19349663
 		var rows: Array = _compute(org, cell, seed_v, exclude)
 		_mx.lock()
 		_cache[k2] = rows
+		_pending.erase(k2)
 		_mx.unlock(), todo.size())
-	WorkerThreadPool.wait_for_group_task_completion(task)
 
 
 
