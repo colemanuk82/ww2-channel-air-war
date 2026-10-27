@@ -17,6 +17,16 @@ const MENU_SCENE := "res://scenes/menu.tscn"
 const AIRCRAFT_SCENE := "res://scenes/aircraft/aircraft_base.tscn"
 const CFG_META := "ww2_cfg"
 const MENU_META := "ww2_force_menu"
+const RESUME_INTERVAL := 5.0
+const LOAD_TIPS := [
+	"FLY:  W / S pitch  ·  A / D roll  ·  Q / E yaw  (or the left stick)",
+	"BAIL OUT:  hold J for about a second, above ~70 m. Too low and the chute cannot open.",
+	"OBJECTIVES:  the card top-left; the compass points at your target.  M opens the chart.",
+	"HELP:  Esc > Options > Controls lists every key and lets you remap gamepad buttons.",
+	"ENGINE HEAT:  the outer arc on the airspeed dial. Ease off or dive to cool it.",
+	"BACKSPACE respawns in free flight  ·  C changes view  ·  right stick looks around",
+	"SEARCHLIGHTS, flares and distant flak are scenery: they are not aimed at you.",
+]
 
 ## Core fields built up front. Positions match data/locations.json, so the world populator dresses the same field
 ## instead of building a second one beside it (Hawkinge, Calais-Marck and Saint-Omer were each doubled up).
@@ -1365,7 +1375,7 @@ func _initial_config() -> Dictionary:
 		return Engine.get_meta(CFG_META) as Dictionary
 	var skip: bool = _args.has("--skip-menu")
 	for a in _args:
-		if a.begins_with("--mode=") or a.begins_with("--shot=") or a.begins_with("--tour=") or a.begins_with("--dam-day=") or a.begins_with("--pow-op=") or a.begins_with("--air-op="):
+		if a.begins_with("--mode=") or a.begins_with("--shot=") or a.begins_with("--tour=") or a.begins_with("--dam-day=") or a.begins_with("--pow-op=") or a.begins_with("--air-op=") or a == "--resume":
 			skip = true
 	if not skip:
 		return {}
@@ -1379,6 +1389,16 @@ func _initial_config() -> Dictionary:
 		if a.begins_with("--air-op="):
 			return AirborneCampaign.config_for(int(a.substr(9)))
 	var cfg: Dictionary = {"side": "Allies", "aircraft": "", "mode": "free", "difficulty": 0.5, "weather": "clear", "time": "noon", "ambient": false}
+	# --resume: start from the rolling checkpoint (same effect as the menu's RESUME LAST SORTIE button)
+	for a in _args:
+		if a == "--resume":
+			var rdata: Dictionary = SortieResume.read()
+			if SortieResume.fresh(rdata):
+				var saved_cfg: Dictionary = (rdata.get("config", {}) as Dictionary).duplicate(true)
+				for rk in saved_cfg.keys():
+					cfg[rk] = saved_cfg[rk]
+				cfg["resume"] = true
+			break
 	for a in _args:
 		if a.begins_with("--mode="):
 			cfg["mode"] = a.substr(7)
@@ -1572,12 +1592,22 @@ func _update_menu_cam(delta: float) -> void:
 # ---------------------------------------------------------------- session
 
 var _last_wait_log: int = -1
+var _load_tip: Label = null
+var _load_pct: Label = null
+var _load_tip_i: int = 0
+var _resume_pending: bool = false
+var _resume_state: Dictionary = {}
+var _resume_t: float = RESUME_INTERVAL
 
 
 func start_game(cfg: Dictionary) -> void:
 	GroundKit.lp("start_game begin")
 	_reset_sim_warp()      # every sortie starts at 1x: a warp never carries in from the menu, a replay or the results screen
 	config = cfg.duplicate()
+	_resume_pending = bool(config.get("resume", false))
+	config.erase("resume")
+	if not _resume_pending:
+		SortieResume.clear()          # a fresh sortie replaces whatever was checkpointed
 	Engine.set_meta(CFG_META, config)
 	if _menu:
 		_menu.queue_free()
@@ -1739,6 +1769,12 @@ func start_game(cfg: Dictionary) -> void:
 
 	in_game = true
 	_spawn_player()
+	if _resume_pending:
+		var rd: Dictionary = SortieResume.read()
+		if SortieResume.fresh(rd):
+			_resume_state = (rd.get("state", {}) as Dictionary).duplicate(true)
+		else:
+			_resume_pending = false
 	# Load-in: menu painting, no sound and a frozen aircraft while the scenery around the start streams in.
 	var cover := CanvasLayer.new()
 	cover.layer = 128
@@ -1760,6 +1796,7 @@ func start_game(cfg: Dictionary) -> void:
 		pop.set("boost", true)
 		pop.set("pending", 999)
 	var waited: float = 0.0
+	var shown: float = 0.0
 	var _load_t0: int = Time.get_ticks_msec()
 	var peak: float = 1.0
 	var min_wait: float = REPLAY_LOAD_SECONDS if _loaded_once else LOAD_SCREEN_SECONDS
@@ -1790,8 +1827,14 @@ func start_game(cfg: Dictionary) -> void:
 			peak = maxf(peak, pend)
 		var stream_k: float = 1.0 - clampf(pend / peak, 0.0, 1.0) if pend < 900.0 else 0.0
 		var k: float = minf(waited / min_wait, 1.0) * 0.4 + stream_k * 0.6
-		load_bar.value = maxf(load_bar.value, k * (1.0 if terrain.is_settled() else 0.9))
+		var target: float = minf(k * (1.0 if terrain.is_settled() else 0.9), 0.99)
+		shown = lerpf(shown, maxf(shown, target), 0.08)
+		load_bar.value = shown
+		if _load_pct != null and is_instance_valid(_load_pct):
+			_load_pct.text = "%d%%" % int(round(shown * 100.0))
 	load_bar.value = 1.0
+	if _load_pct != null and is_instance_valid(_load_pct):
+		_load_pct.text = "100%"
 	# whatever is still unbuilt is finished now, still behind the loading screen (never in flight)
 	for wj in warm:
 		(wj as Callable).call()
@@ -1813,8 +1856,83 @@ func start_game(cfg: Dictionary) -> void:
 	tw.tween_property(black, "modulate:a", 0.0, 0.6)
 	tw.tween_callback(cover.queue_free)
 	mode.start()
+	if _resume_pending:
+		_apply_resume_state()
+		_resume_pending = false
+	_save_resume_now()
+	_first_sortie_hints()
 	add_child(GameMusic.new())       # occasional in-flight music (fades in after a while)
 	_parse_debug_args()
+
+
+## Restore the aircraft state from the rolling checkpoint. The mission itself is rebuilt from the saved config.
+func _apply_resume_state() -> void:
+	if _resume_state.is_empty() or player == null or not is_instance_valid(player):
+		_resume_state = {}
+		return
+	var pos: Array = _resume_state.get("pos", [])
+	if pos.size() == 3:
+		var p := Vector3(float(pos[0]), float(pos[1]), float(pos[2]))
+		var hdg: float = float(_resume_state.get("heading", player.get_heading_deg()))
+		var airborne: bool = bool(_resume_state.get("airborne", true))
+		var spd: float = float(_resume_state.get("speed", player.speed))
+		player.reset_pose(p, hdg, airborne, spd)
+		player.health = clampf(float(_resume_state.get("health", player.health)), 1.0, player.stats.max_health)
+		player.ammo = int(_resume_state.get("ammo", player.ammo))
+		player.bombs = int(_resume_state.get("bombs", player.bombs))
+		player.boost_energy = clampf(float(_resume_state.get("boost", player.boost_energy)), 0.0, 1.0)
+		player.throttle_target = clampf(float(_resume_state.get("throttle", player.throttle_target)), 0.0, 1.0)
+		terrain.set_focus(player)
+		if hud != null and is_instance_valid(hud):
+			hud.show_message("SORTIE RESUMED - objectives have been reset", 4.0)
+	_resume_state = {}
+
+
+## Checkpoint the current flight every few seconds, so a crash or hard close can be resumed.
+func _save_resume_now() -> void:
+	if not in_game or GameState.paused or player == null or not is_instance_valid(player):
+		return
+	if player.state != Aircraft.State.ALIVE:
+		return
+	var p: Vector3 = player.global_position
+	if not (is_finite(p.x) and is_finite(p.y) and is_finite(p.z)):
+		return
+	var st := {
+		"pos": [p.x, p.y, p.z],
+		"heading": player.get_heading_deg(),
+		"airborne": not player.on_ground,
+		"speed": player.speed,
+		"health": player.health,
+		"ammo": player.ammo,
+		"bombs": player.bombs,
+		"boost": player.boost_energy,
+		"throttle": player.throttle_target,
+	}
+	SortieResume.save(config, st)
+
+
+## One-off controls / bail-out hints on the first sortie of a fresh install.
+func _first_sortie_hints() -> void:
+	if GameState.first_sortie_done or not GameState.show_hud:
+		return
+	for a in _args:
+		if a.begins_with("--shot=") or a.begins_with("--tour="):
+			return          # screenshots stay clean
+	GameState.first_sortie_done = true
+	GameState.save_settings()
+	var lines := [
+		"FLY:  W / S pitch  ·  A / D roll  ·  Q / E yaw   (or the left stick)",
+		"BAIL OUT:  hold J for about a second, above ~70 m",
+		"OBJECTIVES:  top-left card; the compass points to your target",
+		"HELP:  Esc > Options > Controls  ·  M chart  ·  C camera",
+	]
+	for i in lines.size():
+		get_tree().create_timer(2.6 + 3.3 * float(i)).timeout.connect(_show_hint.bind(String(lines[i])))
+
+
+func _show_hint(text: String) -> void:
+	if hud != null and is_instance_valid(hud):
+		hud.show_message(text, 3.4)
 
 
 ## Loading screen: a menu painting (slow pan), the sortie name and a streaming progress bar. Returns the bar.
@@ -1841,7 +1959,7 @@ void fragment(){ COLOR = vec4(0.02, 0.02, 0.015, smoothstep(0.62, 1.0, UV.y) * 0
 	box.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	box.offset_left = 56.0
 	box.offset_right = -56.0
-	box.offset_top = -150.0
+	box.offset_top = -190.0
 	box.offset_bottom = -44.0
 	box.add_theme_constant_override("separation", 8)
 	root.add_child(box)
@@ -1866,7 +1984,25 @@ void fragment(){ COLOR = vec4(0.02, 0.02, 0.015, smoothstep(0.62, 1.0, UV.y) * 0
 	bf.bg_color = UIKit.ACCENT
 	bar.add_theme_stylebox_override("background", bb)
 	bar.add_theme_stylebox_override("fill", bf)
-	box.add_child(bar)
+	_load_tip = UIKit.label(String(LOAD_TIPS[0]), 15, UIKit.TEXT)
+	_load_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(_load_tip)
+	var barrow := HBoxContainer.new()
+	barrow.add_theme_constant_override("separation", 12)
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	barrow.add_child(bar)
+	_load_pct = UIKit.label("0%", 14, UIKit.ACCENT)
+	barrow.add_child(_load_pct)
+	box.add_child(barrow)
+	_load_tip_i = 0
+	var tip_timer := Timer.new()
+	tip_timer.wait_time = 3.0
+	tip_timer.autostart = true
+	root.add_child(tip_timer)
+	tip_timer.timeout.connect(func() -> void:
+		_load_tip_i = (_load_tip_i + 1) % LOAD_TIPS.size()
+		if _load_tip != null and is_instance_valid(_load_tip):
+			_load_tip.text = String(LOAD_TIPS[_load_tip_i]))
 	for a in _args:
 		if a.begins_with("--load-shot="):   # debug: capture the loading screen
 			var path: String = a.substr(12)
@@ -1922,6 +2058,7 @@ func quit_to_menu() -> void:
 
 func _on_mission_complete(success: bool, stats: Dictionary) -> void:
 	_reset_sim_warp()
+	SortieResume.clear()          # the sortie is over: nothing left to resume
 	if _pause:
 		_pause.enabled = false
 	if success and String(config.get("mode", "")) == "historical":
@@ -2479,6 +2616,10 @@ func _process(delta: float) -> void:
 		return
 	if _perf_secs > 0.0:
 		_perf_step(delta)
+	_resume_t -= delta
+	if _resume_t <= 0.0:
+		_resume_t = RESUME_INTERVAL
+		_save_resume_now()
 	_update_sim_warp(delta)
 	if _respawn_timer >= 0.0:
 		_respawn_timer -= delta

@@ -143,10 +143,16 @@ func _load_coast_mask() -> void:
 	var meta: Variant = JSON.parse_string(mf.get_as_text())
 	if not (meta is Dictionary):
 		return
-	var img := Image.new()
-	if img.load(COAST_PATH) != OK:
+	var cf := FileAccess.open(COAST_PATH, FileAccess.READ)
+	if cf == null:
 		push_warning("HeightField: failed to load coast mask, using the DEM B-spline path")
 		return
+	var img := Image.new()
+	if img.load_png_from_buffer(cf.get_buffer(cf.get_length())) != OK:
+		push_warning("HeightField: failed to decode coast mask, using the DEM B-spline path")
+		return
+	if img.is_compressed():
+		img.decompress()
 	if img.get_format() != Image.FORMAT_L8:
 		img.convert(Image.FORMAT_L8)
 	_mask_w = img.get_width()

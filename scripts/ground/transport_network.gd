@@ -44,6 +44,10 @@ const EXTRA_SEA_LANES := [
 	{"id": "lane_normandy_fishing", "team": "Axis", "comp": "coastal", "pts": [[49.80, 0.20], [49.90, 0.65], [50.05, 1.0]]},
 	{"id": "lane_flanders", "team": "Axis", "comp": "coastal", "pts": [[51.35, 2.95], [51.45, 3.30], [51.40, 3.60]]},
 	{"id": "lane_cherbourg", "team": "Axis", "comp": "coastal", "pts": [[49.70, -1.40], [49.65, -0.90], [49.50, -0.60]]},
+	# North Sea traffic: the Dutch coast convoys and the Allied northern patrol / fishing grounds
+	{"id": "lane_thames_rotterdam", "team": "Axis", "comp": "mixed", "pts": [[51.55, 1.35], [51.78, 2.20], [51.95, 3.15], [51.95, 4.05]]},
+	{"id": "lane_harwich_ijmuiden", "team": "Axis", "comp": "coaster", "pts": [[51.95, 1.35], [52.20, 2.30], [52.45, 3.30], [52.50, 3.95]]},
+	{"id": "lane_northsea_patrol", "team": "Allies", "comp": "mixed", "pts": [[52.10, 1.55], [52.55, 1.90], [52.90, 2.45], [52.95, 2.80]]},
 ]
 
 

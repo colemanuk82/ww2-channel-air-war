@@ -206,6 +206,18 @@ void fragment() {
 	brief.add_child(_desc)
 
 	outer.add_child(UIKit.rule(0.5))
+	# a rolling checkpoint survives a crash / hard close: offer to continue the last sortie
+	var rsave: Dictionary = SortieResume.read()
+	if SortieResume.fresh(rsave):
+		var rcfg: Dictionary = (rsave.get("config", {}) as Dictionary).duplicate(true)
+		rcfg["resume"] = true
+		var rid: String = String(rcfg.get("mode", "free"))
+		var rlabel: String = "RESUME LAST SORTIE"
+		if ModeRegistry.MODES.has(rid):
+			rlabel += "  -  " + ModeRegistry.display_name(rid)
+		var rb := UIKit.button(rlabel, func() -> void: start_requested.emit(rcfg), 20, true)
+		rb.custom_minimum_size = Vector2(0, 46)
+		outer.add_child(rb)
 	var start := UIKit.button("TAKE OFF", _on_start, 30, true)
 	start.custom_minimum_size = Vector2(0, 56)
 	outer.add_child(start)

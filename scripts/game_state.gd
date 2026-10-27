@@ -44,6 +44,7 @@ var ingame_music_shuffle: bool = true
 var menu_music_current: String = ""         # the track a manager should start on ("" = pick freely)
 var ingame_music_current: String = ""
 var show_hints: bool = true    # control hints panel on the right of the HUD (Options > Control hints)
+var first_sortie_done: bool = false   # the one-off controls / bail-out hints have been shown
 var engine_heat_on: bool = true   # Options > Realism: engine overheating (player and AI)
 var g_effects_on: bool = true     # Options > Realism: G grey-out, blackout and G-LOC (player and AI)
 var g_level: int = 2              # 0 off, 1 low, 2 medium (default), 3 high
@@ -218,6 +219,7 @@ func _load_settings() -> void:
 	vsync_on = bool(cf.get_value("gfx", "vsync", vsync_on))
 	fps_cap = clampi(int(cf.get_value("gfx", "fps_cap", fps_cap)), 0, 1000)
 	show_hints = bool(cf.get_value("ui", "show_hints", show_hints))
+	first_sortie_done = bool(cf.get_value("gameplay", "first_sortie_done", first_sortie_done))
 	player_heal = bool(cf.get_value("gameplay", "player_heal", player_heal))
 	heat_level = clampi(int(cf.get_value("realism", "heat_level", (2 if bool(cf.get_value("realism", "engine_heat", true)) else 0))), 0, 3)
 	g_level = clampi(int(cf.get_value("realism", "g_level", (2 if bool(cf.get_value("realism", "g_effects", true)) else 0))), 0, 3)
@@ -287,6 +289,7 @@ func save_settings() -> void:
 	cf.set_value("gfx", "vsync", vsync_on)
 	cf.set_value("gfx", "fps_cap", fps_cap)
 	cf.set_value("ui", "show_hints", show_hints)
+	cf.set_value("gameplay", "first_sortie_done", first_sortie_done)
 	cf.set_value("gameplay", "player_heal", player_heal)
 	cf.set_value("realism", "engine_heat", engine_heat_on)
 	cf.set_value("realism", "g_effects", g_effects_on)
