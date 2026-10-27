@@ -453,7 +453,11 @@ func _draw_tally() -> void:
 		var pop: float = 1.0 + 0.9 * (1.0 - smoothstep(0.0, 0.35, age))
 		var kind: String = String(_tally[i]["kind"])
 		var col: Color = TALLY_COLS.get(kind, TEXT_COL)
-		col = col.lerp(Color.WHITE, 1.0 - smoothstep(0.2, 1.2, age))       # flashes white as it is scored
+		# muted, like weathered paint: pulled towards a warm grey and a little see-through, so the marks sit quietly
+		# at the edge of the view; a fresh one flashes bright and settles back
+		var fresh: float = 1.0 - smoothstep(0.2, 1.6, age)
+		var muted: Color = col.lerp(Color(0.60, 0.59, 0.55), 0.5) * Color(0.88, 0.88, 0.88, 1.0)
+		col = muted.lerp(Color(1, 1, 1, 1), fresh)
 		_tally_icon(c, kind, ctr, pop, col)
 
 
@@ -513,7 +517,7 @@ func _tally_icon(c: Control, kind: String, p: Vector2, k: float, col: Color) -> 
 			polys.append([Vector2(-9, -1), Vector2(9, -1), Vector2(9, 7), Vector2(-9, 7)])
 			polys.append([Vector2(-11, -1), Vector2(0, -8), Vector2(11, -1)])
 	# no backing plate: a dark outline all round (and a drop shadow) keeps the marks readable on sky or ground
-	var shadow := Color(0, 0, 0, 0.8)
+	var shadow := Color(0, 0, 0, 0.55)
 	var offs: Array = [Vector2(1.6, 1.6), Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1), Vector2.ZERO]
 	for pass_i in offs.size():
 		var off: Vector2 = offs[pass_i]
