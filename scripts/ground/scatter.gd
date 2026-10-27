@@ -794,9 +794,13 @@ static func town_stats(center: Vector3, size: int, seed_v: int) -> Dictionary:
 
 ## Build one town: terraces from town_layout(), plus the civic core (2.2) and the church.
 static func make_town(center: Vector3, size: int, seed_v: int, church: bool = true) -> Node3D:
+	return make_town_from(center, town_layout(center, size, seed_v, church))
+
+
+## The town's nodes from a town_layout() (which can be worked out on a worker thread).
+static func make_town_from(center: Vector3, d: Dictionary) -> Node3D:
 	var root := Node3D.new()
-	var d: Dictionary = town_layout(center, size, seed_v, church)
-	var lists: Array = d["houses"]
+	var lists: Array = (d["houses"] as Array).duplicate(true)
 	var town_ruins: Array = [[], []]
 	var t_areas: Array = WarDamage.areas_near(Vector2(center.x, center.z) - Vector2(3000.0, 3000.0), 6000.0)
 	WarDamage.apply_to_houses(lists, town_ruins, t_areas)

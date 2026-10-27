@@ -2019,15 +2019,16 @@ func _build_site(s: Dictionary) -> Node3D:
 	var b: Callable = s["build"]
 	var t0: int = Time.get_ticks_msec()
 	var n: Node3D = b.call(s)
-	if Time.get_ticks_msec() - t0 > 40:
-		print("[slow] site %s built in %d ms" % [str(s["key"]), Time.get_ticks_msec() - t0])
 	if n == null and bool(s.get("defer", false)):
 		s["defer"] = false
 		return null          # waiting on a background search: built on a later tick
 	if n == null:
 		n = Node3D.new()
 	n.name = str(s["key"])
+	var t1: int = Time.get_ticks_msec()
 	add_child(n)
+	if Time.get_ticks_msec() - t0 > 40:
+		print("[slow] site %s: build %d ms + into the scene %d ms" % [str(s["key"]), t1 - t0, Time.get_ticks_msec() - t1])
 	s["node"] = n
 	if bool(s["ambient"]):
 		_ambient_active += 1
@@ -2235,7 +2236,8 @@ func _start_tile_job(k: Vector2i) -> void:
 		RoadMesh.clear_block()
 		# the road and river ribbons are pure geometry: built here too, only the mesh upload is left for the main thread
 		res["roads"] = RoadMesh.tile_arrays(org, TILE) if RoadMesh.has_roads() else []
-		res["rivers"] = RiverMesh.tile_arrays(org, TILE) if RiverMesh.has_rivers() else [])
+		res["rivers"] = RiverMesh.tile_arrays(org, TILE) if RiverMesh.has_rivers() else []
+		res["rail_plan"] = RailKit.tile_plan(org, TILE) if RailKit.rail_count() > 0 else [])
 	_tile_jobs.append({"k": k, "task": task, "res": res, "gen": _tile_gen})
 
 
@@ -2267,11 +2269,12 @@ func _advance_finishing() -> void:
 		var st0: int = Time.get_ticks_usec()
 		var before: int = int(f["stage"])
 		_finish_stage(f)
+		f["last_stage"] = before
 		if int(f["stage"]) == before:
 			break                         # waiting on a worker: carry on next frame
 		var ms: float = float(Time.get_ticks_usec() - st0) / 1000.0
 		if ms > 12.0:
-			print("[slow] tile %s stage %d took %.1f ms" % [str(f["k"]), int(f["stage"]) - 1, ms])
+			print("[slow] tile %s stage %d took %.1f ms" % [str(f["k"]), before, ms])
 		if int(f["stage"]) >= FINISH_STAGES:
 			_finishing.pop_front()
 
@@ -2308,8 +2311,21 @@ func _finish_stage(f: Dictionary) -> void:
 			if CanalKit.canal_count() > 0:
 				_flatten_async(f, CanalKit.build_tile(org, TILE))
 		4:
-			if RailKit.rail_count() > 0:
-				_flatten_async(f, RailKit.build_tile(org, TILE))
+			if RailKit.rail_count() > 0 and not (res.get("rail_plan", []) as Array).is_empty():
+				# where the furniture goes was worked out on the tile's worker; the pieces (plain boxes and
+				# cylinders, GroundKit.mat is locked) are assembled and merged on a worker too
+				var plan: Array = res["rail_plan"]
+				if boost:
+					_flatten_async(f, RailKit.build_from_plan(plan))
+				else:
+					var holder: Array = [null]
+					var vis: float = 6000.0 * Scatter.vis_scale
+					var tid: int = WorkerThreadPool.add_task(func() -> void:
+						var rc: Node3D = RailKit.build_from_plan(plan)
+						holder[0] = GroundKit.flatten(rc, vis) if rc != null else null)
+					if not f.has("flat"):
+						f["flat"] = []
+					(f["flat"] as Array).append([tid, holder])
 		5:
 			var jobs: Array = f.get("flat", [])
 			for jb in jobs:
@@ -3057,6 +3073,24 @@ func _build_city(s: Dictionary) -> Node3D:
 	var d: Dictionary = s["data"]
 	var size: int = int(s["size"])
 	var pos: Vector3 = s["pos"]
+	# Laying out the town's streets of terraces is ~60-70 ms of pure maths: it runs on a worker and the town is
+	# built on a later tick (kept, so a town flown away from and back to is laid out only once).
+	if not s.has("town_d"):
+		var tseed: int = hash(String(d["id"])) + 77
+		if boost or _sync_build or bool(s.get("pin", false)):
+			s["town_d"] = Scatter.town_layout(pos, size, tseed, true)
+		else:
+			if not s.has("town_task"):
+				var holder: Array = [null]
+				s["town_hold"] = holder
+				s["town_task"] = WorkerThreadPool.add_task(func() -> void: holder[0] = Scatter.town_layout(pos, size, tseed, true))
+			if not WorkerThreadPool.is_task_completed(int(s["town_task"])):
+				s["defer"] = true
+				return null
+			WorkerThreadPool.wait_for_task_completion(int(s["town_task"]))
+			s["town_d"] = (s["town_hold"] as Array)[0]
+			s.erase("town_task")
+			s.erase("town_hold")
 	# Buildings come from the land-cover tiles now (real built-up footprint), so only the site's
 	# defences are built here.
 	var container := Node3D.new()
@@ -3070,7 +3104,7 @@ func _build_city(s: Dictionary) -> Node3D:
 	_balloon_barrage(container, pos, id, size, radius * 1.25, team)
 	# Dense historic core (terraced street grid, taller blocks in the middle). The land-cover tiles
 	# leave this disc empty (see _exclude in _register_cities) and fill the suburbs around it.
-	container.add_child(Scatter.make_town(pos, size, hash(id) + 77, true))
+	container.add_child(Scatter.make_town_from(pos, s["town_d"]))
 	_city_skyline(container, pos, size, id, radius)
 	_city_landmarks(container, d, s.get("lm", {}), s.get("lm_json", {}))
 	return container

@@ -489,11 +489,13 @@ static func kinds() -> Array:
 
 
 ## Build one tile of railway furniture: terrain-derived viaducts/tunnels plus the line furniture.
-static func build_tile(origin: Vector2, size: float) -> Node3D:
+## Where every piece of railway furniture in a tile goes (viaducts, tunnel portals, signals, stations...): pure
+## maths on the read-only line data and the terrain, so the tile streamer works it out on a worker thread.
+## Each entry: ["viaduct", pos, yaw, top, seed] / ["tunnel", pos, yaw, seed] / ["place", kind, pos, yaw, li, j].
+static func tile_plan(origin: Vector2, size: float) -> Array:
+	var plan: Array = []
 	if rails.is_empty():
-		return null
-	var container := Node3D.new()
-	container.name = "rails"
+		return plan
 	var rect := Rect2(origin, Vector2(size, size))
 	var ranges: Dictionary = _ranges_for(origin)
 	var roads: Array = _tile_roads(origin, size)
@@ -515,18 +517,42 @@ static func build_tile(origin: Vector2, size: float) -> Node3D:
 				if _valley(pts, cum, s) > DIP:
 					var a: float = _ground(_sample(pts, cum, s - SPAN))
 					var b: float = _ground(_sample(pts, cum, s + SPAN))
-					_viaduct(container, Vector3(p.x, 0.0, p.y), yaw, 240.0, maxf(a, b), li * 131 + j)
+					plan.append(["viaduct", Vector3(p.x, 0.0, p.y), yaw, maxf(a, b), li * 131 + j])
 				elif _hill(pts, cum, s) > RISE:
-					_tunnel_portal(container, Vector3(p.x, g, p.y), yaw, li * 137 + j)
+					plan.append(["tunnel", Vector3(p.x, g, p.y), yaw, li * 137 + j])
 				else:
 					var kind: String = _classify(li, j, p, _near_any_route(roads, p, 26.0), _near_other_rail(p, 95.0, li))
 					if kind != "":
-						_place(container, kind, Vector3(p.x, g, p.y), yaw, li, j)
+						plan.append(["place", kind, Vector3(p.x, g, p.y), yaw, li, j])
 			s += STEP
 			j += 1
+	return plan
+
+
+## Main thread: the furniture nodes for a tile_plan() (null when there is none).
+static func build_from_plan(plan: Array) -> Node3D:
+	if plan.is_empty():
+		return null
+	var container := Node3D.new()
+	container.name = "rails"
+	for e in plan:
+		match String(e[0]):
+			"viaduct":
+				_viaduct(container, e[1], float(e[2]), 240.0, float(e[3]), int(e[4]))
+			"tunnel":
+				_tunnel_portal(container, e[1], float(e[2]), int(e[3]))
+			_:
+				_place(container, String(e[1]), e[2], float(e[3]), int(e[4]), int(e[5]))
 	if container.get_child_count() == 0:
+		container.free()
 		return null
 	return container
+
+
+static func build_tile(origin: Vector2, size: float) -> Node3D:
+	return build_from_plan(tile_plan(origin, size))
+
+
 
 
 ## Build one curated catalogue record (data/rail_drama_1940.json): a named viaduct or tunnel at its real position.
