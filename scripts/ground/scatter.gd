@@ -642,7 +642,7 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 				var aa: Vector2 = pts[i]
 				var bb: Vector2 = pts[i + 1]
 				var seg_len: float = aa.distance_to(bb)
-				if seg_len < 0.5 or (aa.distance_to(cen) > radius + 40.0 and bb.distance_to(cen) > radius + 40.0):
+				if seg_len < 0.5 or (aa.distance_to(cen) > radius * 1.25 + 40.0 and bb.distance_to(cen) > radius * 1.25 + 40.0):
 					ct["longest"] = maxi(int(ct["longest"]), maxi(run_p, run_m))
 					run_p = 0
 					run_m = 0
@@ -651,7 +651,7 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 				var nseg: int = maxi(int(round(seg_len / step)), 1)
 				for k in range(nseg):
 					var p: Vector2 = aa.lerp(bb, float(k) / float(nseg))
-					if p.distance_to(cen) <= radius and not _near_junction(p, si2, jhash):
+					if p.distance_to(cen) <= radius * _edge_k(p.x, p.y) and not _near_junction(p, si2, jhash):
 						run_p = _lay_side(ctx, p, dv, 1.0, run_p)
 						run_m = _lay_side(ctx, p, dv, -1.0, run_m)
 					else:
@@ -666,8 +666,8 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 		var sa: float = sin(grid_yaw)
 		var row_gap: float = pitch * rng.randf_range(1.05, 1.25)
 		var block: int = rng.randi_range(3, 5)
-		var rows: int = int(ceil(radius / row_gap))
-		var cols: int = int(ceil(radius / pitch))
+		var rows: int = int(ceil(radius * 1.25 / row_gap))
+		var cols: int = int(ceil(radius * 1.25 / pitch))
 		for iz in range(-rows, rows + 1):
 			if posmod(iz, block + 1) == 0:
 				continue
@@ -678,9 +678,12 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 					run = 0
 					continue
 				var x: float = float(ix) * pitch
-				var lx: float = x + rng.randf_range(-0.6, 0.6)
-				var lz: float = z + rng.randf_range(-0.6, 0.6)
-				if lx * lx + lz * lz > radius * radius:
+				var lx: float = x + rng.randf_range(-0.9, 0.9)
+				var lz: float = z + rng.randf_range(-0.9, 0.9)
+				var wx0: float = center.x + lx * ca - lz * sa
+				var wz0: float = center.z + lx * sa + lz * ca
+				var r_eff: float = radius * _edge_k(wx0, wz0)
+				if lx * lx + lz * lz > r_eff * r_eff:
 					run = 0
 					continue
 				var wp: Vector3 = center + Vector3(lx * ca - lz * sa, 0.0, lx * sa + lz * ca)
@@ -856,7 +859,7 @@ static func _lay_side(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: float, run
 	# set back behind this street's drawn width (carriageway and verge / pavement), not onto it
 	var off: float = depth * 0.5 + float(ctx.get("half", 4.5)) + rng.randf_range(0.6, 1.8)
 	var nrm := Vector2(-dir.y, dir.x) * sgn
-	var hp: Vector2 = p + nrm * off
+	var hp: Vector2 = p + nrm * off + dir * rng.randf_range(-0.45, 0.45)
 	if not _land(hp.x, hp.y, 1.2) or in_park(hp.x, hp.y) or _on_block_lc(hp.x, hp.y, rblk) or RoadMesh.near_road(hp, depth * 0.5):
 		ct["longest"] = maxi(int(ct["longest"]), run)
 		return 0
@@ -887,7 +890,7 @@ static func _lay_side(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: float, run
 	elif band == 3:
 		h += 0.6
 	h += core * float(size) * rng.randf_range(0.3, 1.2)
-	var yaw: float = atan2(-dir.y, dir.x) + (0.0 if sgn > 0.0 else PI)
+	var yaw: float = atan2(-dir.y, dir.x) + (0.0 if sgn > 0.0 else PI) + rng.randf_range(-0.03, 0.03)
 	if waterside:
 		yaw = atan2(-wdir.x, -wdir.y)            # the nearest rows face the water
 	var y: float = GroundKit.ground_y(hp.x, hp.y) + h * 0.5 - 0.4
@@ -1292,6 +1295,9 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 						wrecks.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * TAU, Vector3.ONE))
 					if obstacles.size() < 6 and rng.randf() < 0.004 and RuralProps.wants_obstacles(p) and _ok(p, exclude, 1.5):
 						obstacles.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * PI, Vector3.ONE))
+					# an outlying cottage / ribbon plot just beyond the built-up mask frays the town edge into the fields
+					if rng.randf() < 0.04 and _built_near(p, 55.0) and _ok(p, exclude, 1.4):
+						_add_house(houses, p, rng, house_yaw + rng.randf_range(-0.9, 0.9))
 				30:                                   # grassland
 					_field_edge_props(p, exclude, hedges, trees_c, trees_r, rng, 0.6)
 					if farms_n < 3 and rng.randf() < 0.0004 and _add_farmstead(p, exclude, houses, trees_c, trees_r, rng):
@@ -1304,13 +1310,20 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 						obstacles.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * PI, Vector3.ONE))
 					if rng.randf() < 0.012 and _ok(p, exclude, 1.5):
 						cows.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * TAU, Vector3.ONE * 1.8))
+					# an outlying cottage / ribbon plot just beyond the built-up mask frays the town edge into the fields
+					if rng.randf() < 0.04 and _built_near(p, 55.0) and _ok(p, exclude, 1.4):
+						_add_house(houses, p, rng, house_yaw + rng.randf_range(-0.9, 0.9))
 				50:                                   # built-up: terraced rows along the local street grid
 					if in_park(p.x, p.y):
 						# parkland: scattered trees
 						if rng.randf() < 0.012 and _ok_tree(p, exclude):
 							_add_tree(trees_c, trees_r, p, rng, 1.0, 1.5)
-					elif rng.randf() < 0.88 and _ok(p, exclude, 1.2):
-						_add_terrace(houses, p, rng, house_yaw)
+					else:
+						var edge_f: float = _built_frac(p)
+						if rng.randf() < 0.88 * (0.45 + 0.55 * edge_f) and _ok(p, exclude, 1.2):
+							# the town's rows bend and merge with the next block instead of running dead straight
+							var yaw_j: float = house_yaw + (_vn(p.x * 0.0035 + 71.0, p.y * 0.0035 + 71.0) - 0.5) * 1.1 + rng.randf_range(-0.05, 0.05)
+							_add_terrace(houses, p, rng, yaw_j)
 	# bomb damage on the war date: gutted shells and cleared plots (same transforms, two shared shell meshes)
 	var dmg_areas: Array = WarDamage.areas_near(origin, cell)
 	var ruins: Array = [[], []]
@@ -1696,6 +1709,35 @@ static func _vn(px: float, py: float) -> float:        # t_vnoise2
 	var c: float = _fh(ix, iy + 1.0)
 	var d: float = _fh(ix + 1.0, iy + 1.0)
 	return lerpf(lerpf(a, b, fx), lerpf(c, d, fx), fy)
+
+
+## Low-frequency wobble for town edges (0.78..1.22). World-space, so neighbouring town tiles agree
+## on where the built-up area frays out instead of ending on a hard circle or tile boundary.
+static func _edge_k(x: float, z: float) -> float:
+	var n: float = _vn(x * 0.0065 + 17.0, z * 0.0065 + 17.0) * 0.65 \
+		+ _vn(x * 0.019 + 5.0, z * 0.019 + 5.0) * 0.35
+	return 0.78 + 0.44 * n
+
+
+## Cheap probe: is there built-up land cover within `r` of p? Used to fray the town edge into
+## the fields with the odd outlying cottage instead of stopping dead at the mask boundary.
+static func _built_near(p: Vector2, r: float) -> bool:
+	for k in 4:
+		var a: float = TAU * float(k) / 4.0 + 0.4
+		if LandCover.class_at(p.x + cos(a) * r, p.y + sin(a) * r) == 50:
+			return true
+	return false
+
+
+## How much of the ring around p is built-up (0..1). Frays the town fringe instead of ending it
+## on the land-cover cell boundary.
+static func _built_frac(p: Vector2, r: float = 34.0) -> float:
+	var n: int = 0
+	for k in 8:
+		var a: float = TAU * float(k) / 8.0
+		if LandCover.class_at(p.x + cos(a) * r, p.y + sin(a) * r) == 50:
+			n += 1
+	return float(n) / 8.0
 
 
 ## Nearest field boundary to world point p (the same domain-warped Voronoi cells the terrain shader paints, including its
