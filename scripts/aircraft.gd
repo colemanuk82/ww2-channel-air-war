@@ -205,6 +205,7 @@ func _build_model() -> void:
 	var spec: Dictionary = ModelSpecs.get_spec(stats.model_id)
 	if not spec.is_empty():
 		half = float(spec["wing"]["half"]) * float(spec.get("scale", 1.1))
+	_half_span = half
 	wing = WingModel.new()
 	wing.setup(half, int(get_instance_id()))
 	var mount: Node3D = get_node_or_null("CockpitMount") as Node3D
@@ -473,10 +474,58 @@ func reset_pose(pos: Vector3, heading_deg: float, airborne: bool, start_speed: f
 		throttle = 0.0
 		throttle_target = 0.0
 		set_gear(true)
+	_gear_amount = 1.0 if gear_down else 0.0
 	_apply_gear_visual()
 
 
 var _collide_cd: float = 0.0   # seconds until this aircraft can be part of another collision
+var _half_span: float = 5.9     # wing half-span in metres (set from the model spec)
+var _bump_cd: float = 0.0       # seconds before another taxiing bump can hurt
+
+
+var _near_af: bool = false
+var _near_af_t: float = 0.0
+
+
+## AI pilots fly their circuits and approaches by the book: within 2 km of an airfield their low flying is
+## a landing or take-off, so scenery is not tested for them there (the player always is).
+func _near_airfield() -> bool:
+	var now: float = Time.get_ticks_msec() * 0.001
+	if now >= _near_af_t:
+		_near_af_t = now + 1.0
+		_near_af = false
+		for n in get_tree().get_nodes_in_group("airfield"):
+			if (n as Node3D).global_position.distance_squared_to(global_position) < 4.0e6:
+				_near_af = true
+				break
+	return _near_af
+
+
+## Gear down and locked: the wheels can carry the aircraft.
+func gear_locked() -> bool:
+	return gear_down and _gear_amount > 0.6
+
+
+## Trees, woods, buildings, hangars, pylons, parked aircraft (Obstacles): flying into one is a crash; a slow bump
+## while taxiing stops the aircraft against it and dents it.
+func _obstacle_check(delta: float) -> void:
+	_bump_cd = maxf(_bump_cd - delta, 0.0)
+	var reach: float = 1.2 if on_ground else maxf(1.5, _half_span * 0.55)
+	var bottom: float = position.y - stats.gear_height * 0.55
+	var hit: Dictionary = Obstacles.hit(position, reach, bottom, position.y + 1.0, player_controlled)
+	if hit.is_empty():
+		return
+	if on_ground and speed < 9.0:
+		position -= get_forward() * maxf(speed * delta, 0.05) * 2.0
+		speed = 0.0
+		if _bump_cd <= 0.0:
+			_bump_cd = 2.0
+			_impact_shake = 0.5
+			take_damage(15.0)
+		return
+	if player_controlled:
+		print("[obstacle] flew into %s at %.0f m (top %.1f m)" % [String((hit["node"] as Node).name), position.y, float(hit["top"])])
+	_crash("crash")
 
 
 ## Aircraft hit each other: airborne aircraft whose spheres overlap take damage scaled by closing speed.
@@ -1297,6 +1346,10 @@ func _move_and_ground(delta: float) -> void:
 	var floor_y: float = gh + stats.gear_height
 	altitude_agl = position.y - gh
 	var clearance: float = position.y - floor_y
+	if state != State.DEAD and not invulnerable and altitude_agl < Obstacles.MAX_TOP and (player_controlled or (not on_ground and not _near_airfield())):
+		_obstacle_check(delta)
+		if state == State.DEAD:
+			return
 
 	if on_ground:
 		# Ground steering
@@ -1328,6 +1381,9 @@ func _move_and_ground(delta: float) -> void:
 			if over_water and state == State.ALIVE:
 				_crash("ditched")
 			elif state == State.DYING:
+				_crash("crash")
+			elif not gear_down and _gear_amount < 0.4 and state == State.ALIVE and not invulnerable:
+				# gear raised while on the ground: the aircraft drops on its belly and the propeller digs in
 				_crash("crash")
 	elif clearance <= 0.0:
 		_ground_contact(floor_y)
@@ -1393,8 +1449,10 @@ func _ground_contact(floor_y: float) -> void:
 		_impact_shake = clampf(-vy / 40.0, 0.1, 0.6)
 		if vy < -14.0:
 			take_damage((-vy - 14.0) * 1.2)
-		if not gear_down:
-			take_damage(12.0)
+		if not gear_locked():
+			# no wheels under it: a wheels-up arrival digs in the propeller and belly and breaks the aircraft up
+			_crash("crash")
+			return
 		landed.emit(self)
 	elif vy > -stats.crash_vspeed * 1.8 and health > 35.0 and pit > deg_to_rad(-45.0):
 		# hard hit: bounce and take damage rather than instantly dying
