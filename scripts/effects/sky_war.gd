@@ -128,7 +128,9 @@ func _process(delta: float) -> void:
 # ------------------------------------------------------------------ distant flak
 
 ## A point on land some way off: biased ahead of the player, preferring enemy territory and towns.
-func _zone(min_d: float, max_d: float) -> Vector3:
+## `no_towns` keeps ambient flak off a built-up area - a burning town only gets more explosions while
+## a raid is actually bombing it.
+func _zone(min_d: float, max_d: float, no_towns: bool = false) -> Vector3:
 	var p: Vector3 = _player.global_position
 	var fwd: Vector3 = -_player.global_transform.basis.z
 	fwd.y = 0.0
@@ -142,10 +144,13 @@ func _zone(min_d: float, max_d: float) -> Vector3:
 		q.y = GroundKit.ground_y(q.x, q.z)
 		if q.y < 1.0 and FX.is_water(q):
 			continue
+		var in_town: bool = not CityFires.city_at(q).is_empty()
+		if in_town and no_towns:
+			continue
 		var sc: float = _rng.randf()
 		if GroundKit.side_at(q) != _side:
 			sc += 1.0
-		if not CityFires.city_at(q).is_empty():
+		if in_town:
 			sc += 0.8
 		if sc > best_s:
 			best_s = sc
@@ -160,12 +165,13 @@ func _tick_barrages(delta: float, night: float) -> void:
 	# by day an occasional far-off salvo; at night the sky is full of it
 	var per_min: float = (2.5 + 13.0 * night) * intensity
 	_barrage_t = 60.0 / maxf(per_min, 0.1) * _rng.randf_range(0.5, 1.5)
-	var c: Vector3 = _raid_centre() if not _raid.is_empty() and _rng.randf() < 0.6 else _zone(3500.0, 16000.0)
+	var beam_zone: Vector3 = _zone(3500.0, 16000.0)     # searchlights still stand over defended towns
+	var c: Vector3 = _raid_centre() if not _raid.is_empty() and _rng.randf() < 0.6 else _zone(3500.0, 16000.0, _raid.is_empty())
 	if c == Vector3.INF:
 		return
 	_salvo(c, _rng.randi_range(4, 10 + int(6.0 * night)))
 	if night > 0.3:
-		_beam_zone = c
+		_beam_zone = beam_zone if beam_zone != Vector3.INF else c
 
 
 ## A salvo: several bursts spread through a box of sky over the guns, a second or two apart.
@@ -203,7 +209,7 @@ func _tick_streams(delta: float, night: float) -> void:
 		_stream_t -= delta
 		if _stream_t <= 0.0:
 			_stream_t = 60.0 / maxf((3.0 + 16.0 * night) * intensity, 0.1) * _rng.randf_range(0.5, 1.5)
-			var g: Vector3 = _raid_centre() if not _raid.is_empty() and _rng.randf() < 0.5 else _zone(2500.0, 13000.0)
+			var g: Vector3 = _raid_centre() if not _raid.is_empty() and _rng.randf() < 0.5 else _zone(2500.0, 13000.0, _raid.is_empty())
 			if g != Vector3.INF:
 				var cam: Camera3D = get_viewport().get_camera_3d()
 				var eye: Vector3 = cam.global_position if cam else _player.global_position
