@@ -8,10 +8,71 @@ extends RefCounted
 
 
 static func build(model_id: String, nation: String = "RAF") -> Node3D:
+	# Building a procedural airframe costs 70-250 ms of main-thread time, which was the hitch every time an
+	# aircraft appeared (worst in dogfights, where a wave spawns at once). Each type is built once into a
+	# prototype and every aircraft after that is a copy of it (a few ms: meshes and materials are shared).
+	var proto: Node3D = prototype(model_id, nation)
+	if proto == null:
+		return null
+	var m: Node3D = proto.duplicate() as Node3D
+	apply_historical_markings(m, GameState.historical_markings)
+	return m
+
+
+static var _protos: Dictionary = {}
+
+
+## The finished model for a type (built on first use, then kept). Never add it to the tree: build() copies it.
+static func prototype(model_id: String, nation: String) -> Node3D:
+	var key: String = model_id + "|" + nation
+	if _protos.has(key) and is_instance_valid(_protos[key]):
+		return _protos[key]
 	var model: Node3D = _build_raw(model_id, nation)
-	if model != null:
-		_make_realistic(model, model_id, nation)
+	if model == null:
+		return null
+	_make_realistic(model, model_id, nation)
+	_protos[key] = model
 	return model
+
+
+## Frees the kept prototypes (at quit, so nothing is reported as leaked).
+static func free_prototypes() -> void:
+	for k in _protos:
+		if is_instance_valid(_protos[k]):
+			(_protos[k] as Node).free()
+	_protos.clear()
+
+
+static func has_prototype(model_id: String, nation: String) -> bool:
+	return _protos.has(model_id + "|" + nation)
+
+
+## Every flyable type's (model, nation), the player's own and their enemies' first: what the loading screen
+## builds ahead of time so no aircraft has to be built in flight.
+static func warm_list(player_id: String, player_side: String) -> Array:
+	var out: Array = []
+	var seen: Dictionary = {}
+	var later: Array = []
+	for f in DirAccess.get_files_at("res://data/aircraft/"):
+		var fn: String = f.trim_suffix(".remap")
+		if not fn.ends_with(".tres"):
+			continue
+		var st: AircraftStats = load("res://data/aircraft/" + fn) as AircraftStats
+		if st == null:
+			continue
+		var k: String = st.model_id + "|" + st.nation
+		if seen.has(k):
+			continue
+		seen[k] = true
+		var item: Array = [st.model_id, st.nation]
+		if fn.get_basename() == player_id:
+			out.push_front(item)
+		elif not AircraftCatalog.ids_for_side(player_side).has(fn.get_basename()):
+			out.append(item)
+		else:
+			later.append(item)
+	out.append_array(later)
+	return out
 
 
 ## Replaces the cel-shaded (toon + inverted-hull outline) materials with painted-metal ones, without

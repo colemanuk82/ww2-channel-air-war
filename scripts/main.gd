@@ -1745,9 +1745,15 @@ func start_game(cfg: Dictionary) -> void:
 	var _load_t0: int = Time.get_ticks_msec()
 	var peak: float = 1.0
 	var min_wait: float = REPLAY_LOAD_SECONDS if _loaded_once else LOAD_SCREEN_SECONDS
+	# Build every aircraft type ahead, one per frame behind the loading screen, so none has to be built (a 70-250 ms
+	# hitch) when it first appears in flight; the player's own type and the enemy's come first.
+	var warm: Array = AircraftModels.warm_list(String(player.stats.id) if player != null and player.stats != null else "", GameState.player_side)
 	while waited < min_wait or (((pop != null and int(pop.get("pending")) > 0) or not terrain.is_settled()) and waited < 120.0):
 		await get_tree().process_frame
 		waited += get_process_delta_time()
+		if not warm.is_empty() and waited > 0.5:
+			var wi: Array = warm.pop_front()
+			AircraftModels.prototype(String(wi[0]), String(wi[1]))
 		if int(waited) != _last_wait_log:
 			_last_wait_log = int(waited)
 			if _last_wait_log % 3 == 0:
@@ -1759,6 +1765,9 @@ func start_game(cfg: Dictionary) -> void:
 		var k: float = minf(waited / min_wait, 1.0) * 0.4 + stream_k * 0.6
 		load_bar.value = maxf(load_bar.value, k * (1.0 if terrain.is_settled() else 0.9))
 	load_bar.value = 1.0
+	# whatever is still unbuilt is finished now, still behind the loading screen (never in flight)
+	for wi2 in warm:
+		AircraftModels.prototype(String(wi2[0]), String(wi2[1]))
 	print("[load] scenery ready after %.1f s (pending %d), wall %.1f s" % [waited, int(pop.get("pending")) if pop != null else 0, float(Time.get_ticks_msec() - _load_t0) / 1000.0])
 	if pop != null:
 		pop.set("boost", false)

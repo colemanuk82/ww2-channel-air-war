@@ -799,3 +799,7 @@ func _debug_upscaler_args() -> void:
 	if capture_run and not OS.get_cmdline_user_args().has("--capture-upscaler"):
 		upscaler = Upscaler.OFF
 		frame_gen = false
+
+
+func _exit_tree() -> void:
+	AircraftModels.free_prototypes()

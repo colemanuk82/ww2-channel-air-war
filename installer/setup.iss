@@ -1,7 +1,7 @@
-; Inno Setup script for WW2 Channel Air War. Build: ISCC.exe installer\setup.iss  (output: build\WW2ChannelAirWar_Setup_v2.55.exe)
+; Inno Setup script for WW2 Channel Air War. Build: ISCC.exe installer\setup.iss  (output: build\WW2ChannelAirWar_Setup_v2.56.exe)
 ; Installs per-user (no administrator rights).
 #define AppName "WW2 Channel Air War"
-#define AppVer "2.55"
+#define AppVer "2.56"
 
 [Setup]
 AppId={{6E1C7B2A-5D0B-4B8E-9C53-2F4A7A1D9E10}
