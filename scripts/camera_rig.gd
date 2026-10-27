@@ -236,7 +236,9 @@ func _snap() -> void:
 		chase_cam.global_transform = Transform3D(Basis.looking_at(Vector3.DOWN, Vector3.FORWARD), p + Vector3.UP * overhead_alt)
 		return
 	chase_cam.global_position = p - _fwd * distance + _up * height
-	chase_cam.look_at(p + _fwd * 30.0, Vector3.UP)
+	var look: Vector3 = p + _fwd * 30.0
+	if look.distance_squared_to(chase_cam.global_position) > 0.0001:
+		chase_cam.look_at(look, Vector3.UP)
 
 
 func _process(delta: float) -> void:
