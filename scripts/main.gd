@@ -49,6 +49,22 @@ func _airfield_team(id: String) -> String:
 			return side
 	return "Neutral"
 
+
+## Airfield ids the player's side actually holds on the current date. Liberation changes hands, so the
+## static SIDE_AIRFIELDS list alone can point at a field the enemy now owns.
+func _friendly_fields(side: String) -> Array:
+	var out: Array = []
+	for id in SIDE_AIRFIELDS.get(side, []):
+		var af: Airfield = airfields.get(id)
+		if af != null and is_instance_valid(af) and af.team == side:
+			out.append(id)
+	if out.is_empty():
+		for id in airfields.keys():
+			var af2: Airfield = airfields[id]
+			if af2 != null and is_instance_valid(af2) and af2.team == side:
+				out.append(id)
+	return out
+
 var terrain: TerrainChunkManager
 var water: WaterPlane
 var _send_off: Node = null      # PlayerGroundCrew on a ground start
@@ -1597,7 +1613,9 @@ func start_game(cfg: Dictionary) -> void:
 		EraClock.set_date(GameState.era_date)
 	# Quick missions start from a random friendly airfield each sortie (historical / training missions pick
 	# their own field, and the planner overrides this later). Previously it was always the first one (Manston).
-	var side_fields: Array = SIDE_AIRFIELDS.get(side, [])
+	var side_fields: Array = _friendly_fields(side)
+	if side_fields.is_empty():
+		side_fields = SIDE_AIRFIELDS.get(side, [])
 	var mode_id: String = String(config.get("mode", ""))
 	if not side_fields.is_empty():
 		if mode_id == "historical" or mode_id == "training":
@@ -2032,9 +2050,31 @@ func _spawn_player_inner() -> void:
 	var crew: Node = player.get_node_or_null("CrewIntercom") if player != null else null
 	if crew != null:
 		crew.call("reset_sortie")
-	var af: Airfield = airfields[GameState.start_airfield]
-	var heading: float = af.heading_deg
+	var af: Airfield = airfields.get(GameState.start_airfield)
+	if af == null:
+		af = WorldPopulator.ensure(self).get_airfield(GameState.start_airfield)
+		if af != null:
+			airfields[GameState.start_airfield] = af
 	var airborne: bool = _mode_airborne()
+	if af == null or af.team != GameState.player_side:
+		# never put the player on the runway of a field the other side holds: liberation can change hands
+		var friendly: Array = _friendly_fields(GameState.player_side)
+		if not friendly.is_empty():
+			GameState.start_airfield = String(friendly[0])
+			af = airfields[GameState.start_airfield]
+		elif af != null:
+			airborne = true     # no friendly field in this theatre on this date: start over it, not on it
+	if af == null:
+		for k in airfields.keys():
+			var cand: Airfield = airfields[k]
+			if cand != null and is_instance_valid(cand):
+				GameState.start_airfield = String(k)
+				af = cand
+				break
+	if af == null:
+		push_warning("spawn: no airfield available")
+		return
+	var heading: float = af.heading_deg
 	if not GameState.spawn_point.is_empty():
 		var sp: Dictionary = GameState.spawn_point
 		var wp: Vector3 = WorldCoords.latlon_to_world(float(sp["lat"]), float(sp["lon"]))
@@ -2459,7 +2499,9 @@ func _process(delta: float) -> void:
 		hud.show_message("Start airborne: %s (respawn with Backspace)" % ("ON" if GameState.start_airborne else "OFF"), 2.5)
 	if Input.is_action_just_pressed("airfield_cycle"):
 		GameState.spawn_point = {}
-		var list: Array = SIDE_AIRFIELDS[GameState.player_side]
+		var list: Array = _friendly_fields(GameState.player_side)
+		if list.is_empty():
+			list = SIDE_AIRFIELDS[GameState.player_side]
 		GameState.start_airfield = list[(list.find(GameState.start_airfield) + 1) % list.size()]
 		_spawn_player()
 	if Input.is_action_just_pressed("outline_toggle"):

@@ -106,6 +106,7 @@ func _ready() -> void:
 		RenderingServer.global_shader_parameter_set("real_rivers", 1.0)
 	GroundKit.lp("  data loaders (parallel)")
 	_register_airfields()
+	_refresh_airfield_teams()
 	_register_cities()
 	_register_features()
 	_register_targets()
@@ -214,6 +215,18 @@ func _existing_for(id: String, pos: Vector3) -> Airfield:
 			if Vector2(e3.x - pos.x, e3.z - pos.z).length() < 500.0:
 				return ex
 	return null
+
+
+## The core airfields exist before the populator knows the war date. Re-date their ownership whenever the
+## date changes, so a liberated field really belongs to the Allies (the dressing and defences already do).
+func _refresh_airfield_teams() -> void:
+	for a in loc.get("airfields", []):
+		var d: Dictionary = a
+		if not bool(d.get("in_bounds", true)):
+			continue
+		var ex: Airfield = _existing_for(str(d["id"]), _ll(d))
+		if ex != null:
+			ex.team = airfield_team(d)
 
 
 func _register_airfields() -> void:
@@ -2294,6 +2307,7 @@ func on_era_date(d: String) -> void:
 	_tile_jobs.clear()
 	EraClock.set_date(d)
 	WarDamage.refresh()
+	_refresh_airfield_teams()
 	_push_era_zones()
 	if terrain != null and terrain.has_method("refresh_zones"):
 		terrain.call("refresh_zones")
@@ -2942,8 +2956,7 @@ func _build_airfield(s: Dictionary) -> Node3D:
 		container.add_child(af)
 		af.build_layout()      # the layout must exist now: the field is dressed below, before it enters the tree
 	# give every populated field its side and register it, so landing there rearms (main.gd) and the tower calls
-	if af.team == "":
-		af.team = team
+	af.team = team
 	if not af.is_in_group("airfield"):
 		af.add_to_group("airfield")
 	var rng := RandomNumberGenerator.new()
@@ -3037,7 +3050,7 @@ func _build_airfield(s: Dictionary) -> Node3D:
 	_airfield_defences(container, af, axf, team, id, 4 if (team == "Allies" and is_london) else 0, maxf(260.0 * k, zone_r * 1.8))
 	# Blackout: at night an airfield shows its flare path / runway lamps only when it is an active (own-side)
 	# field; occupied/enemy fields stay dark (see Airfield.set_lights_active).
-	af.set_lights_active(team == "Allies")
+	af.set_lights_active(team == GameState.player_side)
 	# registered last: until now the field was being built off-screen over several frames
 	if af.get_parent() == container:
 		airfields[id] = af
