@@ -2,13 +2,13 @@ class_name Parachute
 extends Node3D
 ## Pooled parachuting pilot. FX.parachute(pos) launches one; it drifts down and hides itself after landing.
 
-const FALL_SPEED := 9.0
+const FALL_SPEED := 6.0        # metres a second under a fully open canopy (a wartime 24-ft chute)
 
 var active: bool = false
 var _t: float = 0.0
 var _landed_t: float = -1.0
 var _land_pose: float = 0.0
-var _fast: bool = false        # the player's own chute: twice the descent rate above 50 m, normal below
+var _fast: bool = false        # the player's own chute: three times the descent rate above 50 m, normal below
 var _canopy: MeshInstance3D
 var _sway: float = 0.0
 var _drift: Vector3 = Vector3.ZERO
@@ -19,22 +19,64 @@ const POINTS := 100
 
 func _ready() -> void:
 	visible = false
-	_canopy = ToonUtil.make_mesh(_canopy_mesh(), Color(0.9, 0.88, 0.75), {"outline_thickness": 0.05})
+	_canopy = ToonUtil.make_mesh(_canopy_mesh(), Color(0.9, 0.88, 0.75), {"outline_thickness": 0.04, "underside": Color(0.68, 0.66, 0.56)})
 	_canopy.position = Vector3(0, 7.0, 0)
-	_canopy.scale = Vector3(1.0, 0.55, 1.0)
 	add_child(_canopy)
 	_rig = Node3D.new()
 	_rig.name = "Rig"
 	add_child(_rig)
 
 
-static func _canopy_mesh() -> Mesh:
-	var sm := SphereMesh.new()
-	sm.radius = 3.4
-	sm.height = 6.8
-	sm.radial_segments = 16
-	sm.rings = 8
-	return sm
+## A wartime parachute canopy: 16 gores on a domed profile, an apex vent, and a hem scalloped where it
+## hangs between the suspension lines. Built inside-out as well so the silk is visible from below.
+static func _canopy_mesh() -> ArrayMesh:
+	const SEGS := 32       # around the canopy (two rim points per gore)
+	const RINGS := 7
+	const R := 3.9         # canopy radius in metres
+	const H := 3.0         # dome height
+	const VENT := 0.28     # apex vent radius
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	var idx := PackedInt32Array()
+	for j in RINGS + 1:
+		var q: float = float(j) / float(RINGS)
+		var rr: float = lerpf(VENT, R, q)
+		var yy: float = H * (1.0 - q * q)
+		for i in SEGS:
+			var ang: float = TAU * float(i) / float(SEGS)
+			var hem: float = 0.34 * (0.5 - 0.5 * cos(ang * 16.0)) if j == RINGS else 0.0
+			var cx: float = cos(ang)
+			var sz: float = sin(ang)
+			verts.append(Vector3(cx * rr, yy + hem, sz * rr))
+			norms.append(Vector3(cx * (2.0 * H / R), 1.0, sz * (2.0 * H / R)).normalized())
+	for j in RINGS:
+		for i in SEGS:
+			var a: int = j * SEGS + i
+			var b: int = j * SEGS + (i + 1) % SEGS
+			var c: int = (j + 1) * SEGS + i
+			var d: int = (j + 1) * SEGS + (i + 1) % SEGS
+			idx.append_array([a, c, b, b, c, d])       # outside skin (Godot front faces wind clockwise)
+	# inside skin: same shape, normals reversed, so the underside is not culled
+	var base: int = verts.size()
+	var outer_verts := verts.duplicate()
+	for v in outer_verts:
+		verts.append(v)
+	var outer_norms := norms.duplicate()
+	for nn in outer_norms:
+		norms.append(-nn)
+	var n0: int = idx.size()
+	for k in range(0, n0, 3):
+		idx.append(idx[k] + base)
+		idx.append(idx[k + 2] + base)
+		idx.append(idx[k + 1] + base)
+	var arr: Array = []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_NORMAL] = norms
+	arr[Mesh.ARRAY_INDEX] = idx
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	return m
 
 
 # ---------------------------------------------------------------- the pilot figure
@@ -109,9 +151,9 @@ func _build_pilot(side: String) -> void:
 	# suspension lines: canopy rim -> two riser tops above the shoulders, risers -> harness
 	var lines := ImmediateMesh.new()
 	lines.surface_begin(Mesh.PRIMITIVE_LINES)
-	for i in 10:
-		var a: float = TAU * float(i) / 10.0
-		var rim := Vector3(cos(a) * 3.25, 6.95, sin(a) * 3.25)
+	for i in 16:
+		var a: float = TAU * float(i) / 16.0
+		var rim := Vector3(cos(a) * 3.88, 7.0, sin(a) * 3.88)
 		var top := Vector3(0.26 if cos(a) > 0.0 else -0.26, 1.15, 0.0)
 		lines.surface_add_vertex(rim)
 		lines.surface_add_vertex(top)
@@ -171,12 +213,15 @@ func launch(pos: Vector3, p_team: String = "", p_look: String = "") -> void:
 	_t = 0.0
 	_landed_t = -1.0
 	_sway = randf() * TAU
-	_drift = Vector3(randf_range(-2.0, 2.0), 0.0, randf_range(-2.0, 2.0))
+	# a canopy drifts with the wind, not on its own: the air mass at the jump point carries it downwind
+	_drift = _wind_at(pos) + Vector3(randf_range(-1.2, 1.2), 0.0, randf_range(-1.2, 1.2))
+	_drift = _drift.limit_length(8.0)
 	active = true
 	visible = true
 	rotation = Vector3.ZERO
 	if _canopy:
-		_canopy.scale = Vector3(0.2, 0.1, 0.2)
+		_canopy.scale = Vector3(0.18, 0.06, 0.18)
+		_canopy.rotation = Vector3.ZERO
 	_land_pose = 0.0
 	for l in _limbs:
 		l["ang"] = l["base"] + Vector2(randf_range(-0.8, 0.8), randf_range(-0.4, 0.4))
@@ -201,15 +246,20 @@ func _process(delta: float) -> void:
 			visible = false
 			remove_from_group("damageable")
 		elif _canopy:
-			_canopy.scale = _canopy.scale.lerp(Vector3(1.0, 0.1, 1.0), minf(delta * 2.0, 1.0))
+			_canopy.scale = _canopy.scale.lerp(Vector3(0.88, 0.07, 0.88), minf(delta * 2.0, 1.0))
 		return
-	var open: float = clampf((_t - 0.6) / 1.0, 0.0, 1.0)
-	var fall: float = lerpf(35.0, FALL_SPEED, open)
+	# a real opening: a second of free fall, then the canopy streams and inflates over about two seconds
+	var open: float = clampf((_t - 0.5) / 1.8, 0.0, 1.0)
+	var fall: float = lerpf(35.0, FALL_SPEED, open * open)
 	if _fast and open >= 1.0 and global_position.y - FX.ground_height(global_position) > 50.0:
-		fall = FALL_SPEED * 2.0
+		fall = FALL_SPEED * 3.0
 	if _canopy:
-		_canopy.scale = Vector3(lerpf(0.2, 1.0, open), lerpf(0.1, 0.55, open), lerpf(0.2, 1.0, open))
-	var p: Vector3 = global_position + (Vector3.DOWN * fall + _drift * open) * delta
+		_canopy.scale = Vector3(lerpf(0.18, 1.0, open), lerpf(0.06, 1.0, open), lerpf(0.18, 1.0, open))
+		# lean the canopy into the drift, the way a parachute flies with the wind
+		_canopy.rotation = Vector3(_drift.z * 0.02, 0.0, -_drift.x * 0.02) * open
+	# hang and swing like a pendulum under the canopy, carried by the air mass
+	var swing := Vector3(sin(_t * 0.9 + _sway), 0.0, cos(_t * 0.7 + _sway * 1.3)) * 0.55 * open
+	var p: Vector3 = global_position + (Vector3.DOWN * fall + _drift * open + swing) * delta
 	global_position = p
 	rotation.z = sin(_t * 1.6 + _sway) * 0.14 * open
 	_animate(delta, open, false)
@@ -255,6 +305,15 @@ func _check_ram() -> bool:
 	return false
 
 
+## Local wind at the jump point, so the canopy drifts downwind like the air mass it is falling through.
+func _wind_at(p: Vector3) -> Vector3:
+	var wm: Node = get_node_or_null("/root/WeatherManager")
+	if wm != null and wm.has_method("get_wind"):
+		var w: Vector3 = wm.call("get_wind", p)
+		return Vector3(w.x, 0.0, w.z).limit_length(6.0)
+	return Vector3.ZERO
+
+
 func _canopy_col(look: String) -> void:
 	if _canopy == null:
 		return
@@ -262,6 +321,7 @@ func _canopy_col(look: String) -> void:
 	var c: Color = Color(0.93, 0.9, 0.78) if look != "Axis" else Color(0.84, 0.86, 0.8)
 	if m is ShaderMaterial:
 		(m as ShaderMaterial).set_shader_parameter("albedo", c)
+		(m as ShaderMaterial).set_shader_parameter("underside_color", c.darkened(0.24))
 	elif m is BaseMaterial3D:
 		(m as BaseMaterial3D).albedo_color = c
 
