@@ -1961,7 +1961,7 @@ func _respawn_player_with_support() -> void:
 		_bail.pending_respawn = true
 		return
 	if mode != null and is_instance_valid(mode) and mode.has_method("reinforce_wingmen"):
-		mode.call("reinforce_wingmen", 2)
+		mode.call("reinforce_wingmen")
 	_spawn_player()
 
 

@@ -46,8 +46,8 @@ func radio_call_any(key: String, n: int, delay: float = 0.0) -> void:
 
 
 ## Wingmen: friendly fighters that join the player once airborne and follow / fight with them.
-## Set wingmen_wanted (0-3) in configure(); main.gd also applies cfg["wingmen"]. Losing a life raises the
-## size (see reinforce_wingmen) and the tick tops the flight back up.
+## Set wingmen_wanted (0-3) in configure(); main.gd also applies cfg["wingmen"]. Losing a life only
+## replaces losses up to that number (see reinforce_wingmen); the flight never grows.
 const WINGMEN_MAX: int = 9
 var wingmen_wanted: int = 0
 var wingmen_list: Array = []
@@ -378,15 +378,16 @@ func _rw_release(a: Variant, next: int) -> void:
 	p.begin_takeoff(_rw_fwd, next)
 
 
-## Losing a life brings in replacements: raise the flight size, then let the tick bring them in once.
-func reinforce_wingmen(extra: int = 2) -> void:
+## Losing a life brings in replacements up to the configured flight size: the flight never grows beyond
+## what the mode asked for, however many times the player goes down.
+func reinforce_wingmen() -> void:
+	if wingmen_wanted <= 0:
+		return
 	wingmen_list = wingmen_list.filter(func(w) -> bool:
 		return is_instance_valid(w) and (w as Aircraft).state == Aircraft.State.ALIVE)
-	# wingmen still alive stay as they are: only a flight with losses (or none at all) gets replacements
-	if not wingmen_list.is_empty() and wingmen_list.size() >= wingmen_wanted:
+	# wingmen still alive stay as they are: only a flight with losses gets replacements
+	if wingmen_list.size() >= wingmen_wanted:
 		return
-	if wingmen_list.is_empty():
-		wingmen_wanted = clampi(wingmen_wanted + extra, 0, WINGMEN_MAX)
 	_wingmen_done = false
 
 
