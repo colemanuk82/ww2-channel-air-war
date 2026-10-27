@@ -714,8 +714,8 @@ func _regen_health(delta: float) -> void:
 
 
 ## Vapour contrails above 1000 m: a drifting white trail emitted just behind the tail so it streams
-## out behind the aircraft (not from the nose / propellers). Only aircraft near the camera trail, so the
-## shared puff pool is never starved.
+## out behind the aircraft (not from the nose / propellers). Every aircraft trails, wherever it is, so a
+## raid is marked from the moment it is high enough to see.
 const CONTRAIL_ALT_M := 1000.0
 var _contrail_acc: float = 0.0
 var _contrail_local: Vector3 = Vector3.ZERO
@@ -760,9 +760,6 @@ func _contrails(delta: float) -> void:
 		return
 	var alt: float = get_altitude_m()
 	if alt < CONTRAIL_ALT_M:
-		return
-	var cam: Camera3D = get_viewport().get_camera_3d()
-	if cam != null and cam.global_position.distance_squared_to(global_position) > 10000.0 * 10000.0:
 		return
 	if _contrail_node == null:
 		_contrail_node = ContrailRibbon.new()
