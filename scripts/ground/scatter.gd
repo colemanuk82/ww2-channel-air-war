@@ -579,7 +579,7 @@ static func _xf(pos: Vector3, yaw: float, scale_v: Vector3) -> Transform3D:
 
 
 static func _land(x: float, z: float, min_h: float = 1.5) -> bool:
-	return GroundKit.raw_y(x, z) >= min_h and not RoadMesh.near_rail(Vector2(x, z)) and not RoadMesh.near_road(Vector2(x, z)) and not RiverMesh.near_river(Vector2(x, z))
+	return GroundKit.raw_y(x, z) >= min_h and not RoadMesh.near_rail(Vector2(x, z)) and not RoadMesh.near_road(Vector2(x, z), 6.0) and not RiverMesh.near_river(Vector2(x, z))
 
 
 # ------------------------------------------------------------------ towns
@@ -590,6 +590,18 @@ static func _land(x: float, z: float, min_h: float = 1.5) -> bool:
 ## Terraces follow the real street network (RoadMesh.routes_in_rect) when road data covers the town; in
 ## synthetic-fallback areas it falls back to the legacy jittered grid. Districts by distance from centre (2.2).
 static func town_layout(center: Vector3, size: int, seed_v: int, church: bool = true) -> Dictionary:
+	# the town's own road index for the exact keep-off-the-roads test (unless a tile job already made one)
+	var own_block: bool = not RoadMesh.has_block()
+	if own_block:
+		var rr: float = 90.0 + float(size) * 85.0 + 120.0
+		RoadMesh.prepare_block(Vector2(center.x - rr, center.z - rr), rr * 2.0)
+	var out: Dictionary = _town_layout(center, size, seed_v, church)
+	if own_block:
+		RoadMesh.clear_block()
+	return out
+
+
+static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool = true) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
 	var radius: float = 90.0 + float(size) * 85.0
@@ -623,6 +635,7 @@ static func town_layout(center: Vector3, size: int, seed_v: int, church: bool = 
 		var step: float = pitch
 		for si2 in range(streets.size()):
 			var pts: PackedVector2Array = streets[si2]["pts"]
+			ctx["half"] = float(RoadMesh.WIDTHS.get(String(streets[si2]["k"]), 8.0)) * 0.75
 			var run_p: int = 0
 			var run_m: int = 0
 			for i in range(pts.size() - 1):
@@ -840,10 +853,11 @@ static func _lay_side(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: float, run
 	var rblk: Dictionary = ctx["rblk"]
 	var ct: Dictionary = ctx["ct"]
 	var depth: float = rng.randf_range(6.6, 9.0)
-	var off: float = depth * 0.5 + rng.randf_range(3.0, 4.5)
+	# set back behind this street's drawn width (carriageway and verge / pavement), not onto it
+	var off: float = depth * 0.5 + float(ctx.get("half", 4.5)) + rng.randf_range(0.6, 1.8)
 	var nrm := Vector2(-dir.y, dir.x) * sgn
 	var hp: Vector2 = p + nrm * off
-	if not _land(hp.x, hp.y, 1.2) or in_park(hp.x, hp.y) or _on_block_lc(hp.x, hp.y, rblk):
+	if not _land(hp.x, hp.y, 1.2) or in_park(hp.x, hp.y) or _on_block_lc(hp.x, hp.y, rblk) or RoadMesh.near_road(hp, depth * 0.5):
 		ct["longest"] = maxi(int(ct["longest"]), run)
 		return 0
 	var dcen: float = hp.distance_to(cen)
@@ -1244,8 +1258,8 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 			match cls:
 				10:                                   # tree cover
 					if _wood_interior(p):
-						if i % 3 == 0 and j % 3 == 0 and _ok_tree(p, exclude):
-							var br: float = rng.randf_range(34.0, 52.0)
+						var br: float = rng.randf_range(34.0, 52.0)
+						if i % 3 == 0 and j % 3 == 0 and _ok_tree(p, exclude) and not RoadMesh.near_road(p, br * 0.5):
 							(blobs[rng.randi() % 2] as Array).append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y) - 1.0, p.y), rng.randf() * TAU,
 								Vector3(br, rng.randf_range(15.0, 21.0), br * rng.randf_range(0.85, 1.1))))
 						if wtrees_c.size() + wtrees_r.size() < 6000 and rng.randf() < 0.52 and _ok_tree(p, exclude):
@@ -1609,6 +1623,8 @@ static func _add_house(lists: Array, p: Vector2, rng: RandomNumberGenerator, yaw
 	var h: float = rng.randf_range(5.0, 9.0)
 	var w: float = rng.randf_range(8.0, 13.0)
 	var l: float = rng.randf_range(7.0, 11.0)
+	if RoadMesh.near_road(p, maxf(w, l) * 0.6):       # the whole house clear of the road, not just its centre
+		return
 	var y: float = GroundKit.ground_y(p.x, p.y) + h * 0.5 - 0.4
 	(lists[rng.randi() % 4] as Array).append(_xf(Vector3(p.x, y, p.y), yaw + rng.randf_range(-0.12, 0.12), Vector3(w, h, l)))
 
@@ -1626,7 +1642,7 @@ static func _add_terrace(lists: Array, p: Vector2, rng: RandomNumberGenerator, y
 	var lst: Array = lists[rng.randi() % 4]
 	for i in n:
 		var q: Vector2 = start + along * unit_w * float(i)
-		if not _land(q.x, q.y, 1.2):
+		if not _land(q.x, q.y, 1.2) or RoadMesh.near_road(q, maxf(unit_w, depth) * 0.6):
 			continue
 		var h: float = base_h + rng.randf_range(-0.4, 0.4)
 		var y: float = GroundKit.ground_y(q.x, q.y) + h * 0.5 - 0.4

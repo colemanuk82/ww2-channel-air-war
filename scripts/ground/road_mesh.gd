@@ -53,19 +53,40 @@ static func ensure_loaded() -> void:
 	GroundKit.lp("    roads: rails")
 
 
-const ROAD_CELL: float = 10.0
-static var _blocks: Dictionary = {}              # thread id -> blocked-cell set of the tile that thread is scattering
+const ROAD_CELL: float = 20.0
+const ROAD_CLEAR_MAX: float = 28.0                # the widest clearance near_road() is ever asked for
+static var _blocks: Dictionary = {}              # thread id -> {cell Vector2i: [[a, b, half width]...]} of the tile being scattered
 static var _blocks_mutex := Mutex.new()
 
 
-## True near a road while a tile is being scattered (see prepare_block): trees, houses and hedges keep off roads.
-static func near_road(p: Vector2) -> bool:
+## True when a thing of radius `clear` at p would stand on a road (the drawn ribbon, verges included), while a
+## tile or town is being laid out (see prepare_block): trees, houses and hedges keep off the roads.
+static func near_road(p: Vector2, clear: float = 4.0) -> bool:
 	_blocks_mutex.lock()
 	var blk: Variant = _blocks.get(OS.get_thread_caller_id())
 	_blocks_mutex.unlock()
 	if blk == null:
 		return false
-	return (blk as Dictionary).has(Vector2i(floori(p.x / ROAD_CELL), floori(p.y / ROAD_CELL)))
+	var segs: Variant = (blk as Dictionary).get(Vector2i(floori(p.x / ROAD_CELL), floori(p.y / ROAD_CELL)))
+	if segs == null:
+		return false
+	for sg in (segs as Array):
+		var a: Vector2 = sg[0]
+		var b: Vector2 = sg[1]
+		var ab: Vector2 = b - a
+		var t: float = clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
+		var lim: float = float(sg[2]) + clear
+		if (a + ab * t).distance_squared_to(p) < lim * lim:
+			return true
+	return false
+
+
+## True when this thread already has a road block prepared (a tile job laying out a town inside it).
+static func has_block() -> bool:
+	_blocks_mutex.lock()
+	var ok: bool = _blocks.has(OS.get_thread_caller_id())
+	_blocks_mutex.unlock()
+	return ok
 
 
 static func clear_block() -> void:
@@ -74,15 +95,16 @@ static func clear_block() -> void:
 	_blocks_mutex.unlock()
 
 
-## Rasterise the roads crossing this tile (plus a margin) into the blocked-cell set used by near_road().
+## Index the road segments crossing this area (plus a margin) by small cells, for the exact near_road() test.
 static func prepare_block(origin: Vector2, size: float) -> void:
 	var blk: Dictionary = {}
-	var rect := Rect2(origin - Vector2(30, 30), Vector2(size + 60.0, size + 60.0))
-	var cx0: int = floori(origin.x / CELL)
-	var cz0: int = floori(origin.y / CELL)
+	var rect := Rect2(origin - Vector2(40, 40), Vector2(size + 80.0, size + 80.0))
+	var cx0: int = floori((origin.x + size * 0.5) / CELL)
+	var cz0: int = floori((origin.y + size * 0.5) / CELL)
+	var reach: int = int(ceil(size * 0.5 / CELL)) + 1
 	var ranges: Dictionary = {}
-	for dz in range(-1, 2):
-		for dx in range(-1, 2):
+	for dz in range(-reach, reach + 1):
+		for dx in range(-reach, reach + 1):
 			var key := Vector2i(cx0 + dx, cz0 + dz)
 			if not _cells.has(key):
 				continue
@@ -97,20 +119,26 @@ static func prepare_block(origin: Vector2, size: float) -> void:
 					ranges[ev.x] = Vector2i(ev.y, ev.z)
 	for li in ranges.keys():
 		var pts: PackedVector2Array = lines[li]["pts"]
+		# the whole drawn ribbon: carriageway plus the grass verge (see _add_line)
+		var half: float = float(WIDTHS.get(lines[li]["k"], 8.0)) * 0.75
 		var rg: Vector2i = ranges[li]
 		for i in range(maxi(rg.x, 0), mini(rg.y, pts.size() - 2) + 1):
 			var a: Vector2 = pts[i]
 			var b: Vector2 = pts[i + 1]
-			if not rect.has_point(a) and not rect.has_point(b) and not rect.has_point((a + b) * 0.5):
+			var pad: float = half + ROAD_CLEAR_MAX
+			var lo := Vector2(minf(a.x, b.x) - pad, minf(a.y, b.y) - pad)
+			var hi := Vector2(maxf(a.x, b.x) + pad, maxf(a.y, b.y) + pad)
+			if not rect.intersects(Rect2(lo, hi - lo)):
 				continue
-			var steps: int = maxi(int(a.distance_to(b) / (ROAD_CELL * 0.6)), 1)
-			for st in steps + 1:
-				var q: Vector2 = a.lerp(b, float(st) / float(steps))
-				var cx: int = floori(q.x / ROAD_CELL)
-				var cz: int = floori(q.y / ROAD_CELL)
-				for dz2 in range(-1, 2):
-					for dx2 in range(-1, 2):
-						blk[Vector2i(cx + dx2, cz + dz2)] = true
+			var item: Array = [a, b, half]
+			for cz in range(floori(lo.y / ROAD_CELL), floori(hi.y / ROAD_CELL) + 1):
+				for cx in range(floori(lo.x / ROAD_CELL), floori(hi.x / ROAD_CELL) + 1):
+					var ck := Vector2i(cx, cz)
+					var arr: Variant = blk.get(ck)
+					if arr == null:
+						blk[ck] = [item]
+					else:
+						(arr as Array).append(item)
 	_blocks_mutex.lock()
 	_blocks[OS.get_thread_caller_id()] = blk
 	_blocks_mutex.unlock()
