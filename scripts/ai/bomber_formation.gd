@@ -11,8 +11,8 @@ signal bomber_destroyed(bomber: Aircraft, killer: Node)
 signal all_destroyed
 
 const GUN_RANGE: float = 520.0
-const STREAM_ALT_M: float = 800.0     # above this the formation's contrail stream forms
-const STREAM_LIFE: float = 60.0       # seconds the stream stays in the sky (long, so it reads from far off)
+const STREAM_ALT_M: float = 1000.0    # above this the formation's contrail stream forms
+const STREAM_LIFE: float = 120.0      # seconds the stream stays in the sky (long, so it reads from far off)
 var _stream: ContrailRibbon = null
 
 # Defensive turret arcs, in the bomber's own frame: azimuth 0 = dead ahead, +/-180 = astern; elevation

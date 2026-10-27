@@ -1930,7 +1930,12 @@ static func find_shore(center: Vector3, radius: float, count: int, rng: RandomNu
 
 ## Beach defences along the shore: hedgehogs (in the surf), wire, sandbag/trench strips, optional bunkers.
 static func make_beach_defences(center: Vector3, radius: float, count: int, seed_v: int, with_bunkers: bool = true) -> Node3D:
-	var root := Node3D.new()
+	return beach_defences_from(beach_defence_data(center, radius, count, seed_v), with_bunkers)
+
+
+## The placement half of make_beach_defences: the shore search and every transform. Pure maths on the height field,
+## so the site streamer runs it on a worker thread; beach_defences_from() then builds the nodes.
+static func beach_defence_data(center: Vector3, radius: float, count: int, seed_v: int) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
 	var pts: Array = find_shore(center, radius, count, rng)
@@ -2015,6 +2020,32 @@ static func make_beach_defences(center: Vector3, radius: float, count: int, seed
 				poles.append(_xf(Vector3(pp.x, GroundKit.ground_y(pp.x, pp.z) - 0.3, pp.z), 0.0, Vector3.ONE * rng.randf_range(0.9, 1.2)))
 		var bp: Vector3 = p - sea * rng.randf_range(30.0, 50.0)
 		bags.append(_xf(Vector3(bp.x, GroundKit.ground_y(bp.x, bp.z) + 0.6, bp.z), atan2(-perp.x, -perp.z), Vector3(18, 1.2, 2.2)))
+	# burning ruins inland (at most two, only where the war date shows a recent raid): [position, scale]
+	var ruins: Array = []
+	for rp in ruin_pts:
+		if ruins.size() >= 2 or GroundKit.raw_y((rp as Vector3).x, (rp as Vector3).z) < 2.0:
+			continue
+		if WarDamage.level_at((rp as Vector3).x, (rp as Vector3).z) < 0.3:
+			continue
+		ruins.append([Vector3((rp as Vector3).x, GroundKit.ground_y((rp as Vector3).x, (rp as Vector3).z), (rp as Vector3).z), rng.randf_range(0.9, 1.4)])
+	return {"pts": pts, "hh": hh, "wire": wire, "bags": bags, "teeth": teeth, "poles": poles, "seawall": seawall,
+		"steel": steel, "trench": trench, "parapet": parapet, "mines": mines, "ruins": ruins}
+
+
+## Build the beach defences laid out by beach_defence_data() (main thread).
+static func beach_defences_from(d: Dictionary, with_bunkers: bool = true) -> Node3D:
+	var root := Node3D.new()
+	var pts: Array = d["pts"]
+	var hh: Array = d["hh"]
+	var wire: Array = d["wire"]
+	var bags: Array = d["bags"]
+	var teeth: Array = d["teeth"]
+	var poles: Array = d["poles"]
+	var seawall: Array = d["seawall"]
+	var steel: Array = d["steel"]
+	var trench: Array = d["trench"]
+	var parapet: Array = d["parapet"]
+	var mines: Array = d["mines"]
 	if not hh.is_empty():
 		root.add_child(multi(hedgehog_mesh(), hh, 6000.0))
 	if not wire.is_empty():
@@ -2035,16 +2066,11 @@ static func make_beach_defences(center: Vector3, radius: float, count: int, seed
 		root.add_child(multi(box_unit(GroundKit.COL_SAND.darkened(0.15), false), parapet, 3500.0))
 	if not mines.is_empty():
 		root.add_child(multi(box_unit(Color(0.7, 0.12, 0.1), false), mines, 2500.0))
-	var nr: int = 0
-	for rp in ruin_pts:
-		if nr >= 2 or GroundKit.raw_y((rp as Vector3).x, (rp as Vector3).z) < 2.0:
-			continue
-		if WarDamage.level_at((rp as Vector3).x, (rp as Vector3).z) < 0.3:
-			continue          # burning ruins only where the war date shows a recent raid
-		var ru: BurningRuin = BurningRuin.create(int(absf((rp as Vector3).x * 7.0 + (rp as Vector3).z)), rng.randf_range(0.9, 1.4))
-		ru.position = Vector3((rp as Vector3).x, GroundKit.ground_y((rp as Vector3).x, (rp as Vector3).z), (rp as Vector3).z)
+	for r in d["ruins"]:
+		var rp: Vector3 = r[0]
+		var ru: BurningRuin = BurningRuin.create(int(absf(rp.x * 7.0 + rp.z)), float(r[1]))
+		ru.position = rp
 		root.add_child(ru)
-		nr += 1
 	if with_bunkers:
 		var nb: int = mini(pts.size() / 6, 4)
 		for i in nb:

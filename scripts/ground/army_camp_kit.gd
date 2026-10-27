@@ -55,7 +55,9 @@ static func zone_for(center: Vector3, heading_deg: float) -> Dictionary:
 	return {"pos": center, "heading": heading_deg, "half": Vector2(HZ, HX), "feather": 130.0, "kind": 2}
 
 
-static func build(container: Node3D, center: Vector3, heading_deg: float, team: String, seed_v: int) -> void:
+## `slicer` (optional, a coroutine) is awaited between the stages, so the site streamer can spread the camp over a few
+## frames (each stage samples the terrain a few hundred times: ~25 ms in all).
+static func build(container: Node3D, center: Vector3, heading_deg: float, team: String, seed_v: int, slicer: Callable = Callable()) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
 	var yaw: float = -deg_to_rad(heading_deg)
@@ -82,6 +84,8 @@ static func build(container: Node3D, center: Vector3, heading_deg: float, team: 
 		strips.append_array(CampAssets.track_xforms(axf, Vector3(-208.0, 0, -40.0 + float(r) * 14.0), Vector3(-122.0, 0, -40.0 + float(r) * 14.0), 9.0))
 	container.add_child(Scatter.multi(Scatter.box_unit(earth), strips, 4500.0))
 
+	if slicer.is_valid():
+		await slicer.call()
 	# tank park: three rows facing out, as the photos of the 1944 marshalling areas show; the front two rows
 	# under camouflage nets on poles
 	var tanks: Array = []
@@ -114,6 +118,8 @@ static func build(container: Node3D, center: Vector3, heading_deg: float, team: 
 	for i in 6:
 		guns.append(_w(axf, yaw, Vector3(-200.0 + float(i) * 20.0, 0.0, 40.0), 0.0))
 	AirfieldFurniture._prop_cluster(container, "gun", AirfieldAssets.field_gun(team), guns, team, 3)
+	if slicer.is_valid():
+		await slicer.call()
 	# tent lines in disruptive paint (two patch layouts so the rows do not repeat) and marquees
 	var tents: Array = [[], []]
 	for r in 8:
@@ -150,6 +156,8 @@ static func build(container: Node3D, center: Vector3, heading_deg: float, team: 
 		for sx in [-1.0, 1.0]:
 			wire.append(_w(axf, yaw, Vector3(sx * 236.0, 0.0, 50.0 + float(i) * 5.0), PI * 0.5))
 	container.add_child(Scatter.multi(CampAssets.concertina(), wire, 2200.0))
+	if slicer.is_valid():
+		await slicer.call()
 	# perimeter: wire fence with a gate, sentry towers at the corners
 	container.add_child(Scatter.multi(CampAssets.fence_bay(false), CampAssets.fence_ring(axf, yaw, HX, HZ, 9.0), 2600.0))
 	var gate: Array = [_w(axf, yaw, Vector3(0.0, 0.0, HZ), 0.0)]
@@ -171,6 +179,8 @@ static func build(container: Node3D, center: Vector3, heading_deg: float, team: 
 		var g: AAGun = AAGun.create("bofors" if allied else "mg", team)
 		g.position = Vector3(gp.x, GroundKit.ground_y(gp.x, gp.z), gp.z)
 		container.add_child(g)
+	if slicer.is_valid():
+		await slicer.call()
 	# trees: the camps were pitched in parkland and along wooded lanes - keep the old hedgerow trees standing
 	# between the lines, and a looser belt round the outside of the wire
 	var avoid: Array = [

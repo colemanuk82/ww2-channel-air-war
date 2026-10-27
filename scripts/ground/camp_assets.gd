@@ -17,6 +17,23 @@ const SANDBAG := Color(0.45, 0.40, 0.29)
 const DARK := Color(0.07, 0.07, 0.06)
 
 
+## The camp meshes, built behind the loading screen (main.gd) so the first camp flown over does not build them.
+static func warm_jobs() -> Array:
+	var out: Array = [Callable(CampAssets, "fence_bay").bind(false), Callable(CampAssets, "fence_bay").bind(true),
+		Callable(CampAssets, "concertina"), Callable(CampAssets, "cookhouse"), Callable(CampAssets, "water_tower"),
+		Callable(CampAssets, "slit_trench"), Callable(CampAssets, "goalposts")]
+	for st in ["pow", "army"]:
+		out.append(Callable(CampAssets, "guard_tower").bind(st))
+	for st2 in ["stalag", "ot"]:
+		out.append(Callable(CampAssets, "barrack_hut").bind(st2))
+	for team in ["Allies", "Axis"]:
+		for f in ["gate", "ammo_bay", "drum_dump"]:
+			out.append(Callable(CampAssets, f).bind(team))
+		for v in 2:
+			out.append(Callable(CampAssets, "camo_tent").bind(team, v))
+	return out
+
+
 static func _cget(key: String) -> ArrayMesh:
 	return Scatter._meshes[key] if Scatter._meshes.has(key) else null
 

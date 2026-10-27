@@ -1753,6 +1753,9 @@ func start_game(cfg: Dictionary) -> void:
 	# ... then the parked-aircraft meshes and the airfield / camp props, so flying up to an airfield builds nothing new
 	warm.append_array(ParkedAircraft.warm_jobs())
 	warm.append_array(AirfieldAssets.warm_jobs())
+	warm.append_array(CampAssets.warm_jobs())
+	for wm in [Callable(Scatter, "hedgehog_mesh"), Callable(Scatter, "tooth_mesh"), Callable(Scatter, "pole_mesh"), Callable(WestwallKit, "teeth_mesh")]:
+		warm.append(wm)          # beach-defence and Westwall meshes: the first beach flown over no longer builds them
 	while waited < min_wait or (((pop != null and int(pop.get("pending")) > 0) or not terrain.is_settled()) and waited < 120.0):
 		await get_tree().process_frame
 		waited += get_process_delta_time()
@@ -1777,6 +1780,11 @@ func start_game(cfg: Dictionary) -> void:
 	print("[load] scenery ready after %.1f s (pending %d), wall %.1f s" % [waited, int(pop.get("pending")) if pop != null else 0, float(Time.get_ticks_msec() - _load_t0) / 1000.0])
 	if pop != null:
 		pop.set("boost", false)
+	for a2 in OS.get_cmdline_user_args():
+		if a2.begins_with("--site-sweep=") and pop != null:    # debug: time every site of these kinds, then quit
+			pop.call("site_sweep", a2.substr(13).split(","))
+			get_tree().quit()
+			return
 	for _i in 3:
 		await get_tree().process_frame
 	await get_tree().create_timer(0.3 if _loaded_once else 1.0).timeout

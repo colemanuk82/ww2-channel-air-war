@@ -3,15 +3,18 @@ extends MeshInstance3D
 ## A solid white contrail: a ribbon laid down in world space behind a high-flying aircraft. Points fade with age,
 ## and the ribbon is rebuilt about 15 times a second so it stays cheap for several aircraft at once.
 
-var life: float = 22.0      # seconds a point stays in the trail (a bomber stream sets it longer)
+var life: float = 44.0      # seconds a point stays in the trail (a bomber stream sets it longer)
 const STEP := 7.0           # metres of flight between samples
 const WIDTH := 2.6          # ribbon width in metres
+const MIN_PX_W := 0.0011    # half-width per metre of camera distance: keeps a far trail at least ~2 px wide
 const REBUILD_S := 0.066
+const IDLE_REBUILD_S := 0.25   # no fresh points (out of range): fade the existing trail at a quarter of the cost
 
 var _pts: PackedVector3Array = PackedVector3Array()
 var _age: PackedFloat32Array = PackedFloat32Array()
 var _str: PackedFloat32Array = PackedFloat32Array()
 var _rb: float = 0.0
+var _dirty: bool = false
 var _mesh: ArrayMesh = ArrayMesh.new()
 var _mat: StandardMaterial3D
 
@@ -36,6 +39,7 @@ func add_point(p: Vector3, strength: float) -> void:
 		_pts.append(p)
 		_age.append(0.0)
 		_str.append(strength)
+		_dirty = true
 
 
 func _process(delta: float) -> void:
@@ -53,7 +57,8 @@ func _process(delta: float) -> void:
 		_str = _str.slice(drop)
 	_rb -= delta
 	if _rb <= 0.0:
-		_rb = REBUILD_S
+		_rb = REBUILD_S if _dirty else IDLE_REBUILD_S
+		_dirty = false
 		_rebuild()
 
 
@@ -76,7 +81,9 @@ func _rebuild() -> void:
 		var side: Vector3 = dir.cross(eye - p)
 		if side.length_squared() < 0.000001:
 			side = Vector3.UP
-		side = side.normalized() * (WIDTH * 0.5)
+		# widen with distance so the trail does not shrink below a pixel and vanish when read from far off
+		var half_w: float = maxf(WIDTH * 0.5, eye.distance_to(p) * MIN_PX_W)
+		side = side.normalized() * half_w
 		var c := Color(0.97, 0.98, 1.0, 0.85 * a)
 		verts[i * 2] = p - side
 		verts[i * 2 + 1] = p + side
