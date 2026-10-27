@@ -61,19 +61,29 @@ vec3 detail_building(vec3 col, inout float emit, float cam_dist) {
 	float near_k = 1.0 - smoothstep(150.0, 900.0, cam_dist);
 	vec3 n = normalize(w_nrm);
 	col *= 0.9 + 0.2 * t_vnoise2(floor(w_pos.xz / 9.0) * 1.7);
+	// Distant towns are thousands of roofs only a pixel or two across: as the aircraft moves each pixel flips
+	// between a dark slate roof and a red wall, which is the crawling shimmer over a town. Further out the roof
+	// and wall tones are drawn together (to the street's average), so a flip between them barely shows.
+	float far_k = smoothstep(500.0, 2600.0, cam_dist);
+	vec3 town_avg = vec3(0.36, 0.29, 0.26);
+	col = mix(col, mix(col, town_avg * (0.9 + 0.2 * t_vnoise2(floor(w_pos.xz / 9.0) * 1.7)), 0.6), far_k);
 	if (near_k <= 0.001) {
 		return col;
 	}
 	vec3 base = col;
 	if (n.y > 0.35) {
-		// roof: staggered tile courses + moss/stain noise
+		// roof: staggered tile courses + moss/stain noise. The course lines are faded out by how many of them
+		// fall inside one pixel (screen-space derivative), so they vanish exactly where they would start to
+		// alias - not at a fixed range, which left them crawling on oblique roofs nearer than that.
 		vec2 tg = vec2(-n.z, n.x);
 		float course = w_pos.y * 2.2;
 		float row = floor(course);
 		float u = dot(w_pos.xz, tg) * 1.1 + row * 0.5;
+		float aa = 1.0 - smoothstep(0.18, 0.45, max(fwidth(course), fwidth(u)));
 		float line_h = smoothstep(0.0, 0.14, fract(course));
 		float line_v = smoothstep(0.0, 0.10, fract(u));
-		col *= mix(0.85, 0.70 + 0.30 * line_h * line_v, near_k);         // average roof tone preserved
+		float tiles = mix(0.85, 0.70 + 0.30 * line_h * line_v, aa);
+		col *= mix(0.85, tiles, near_k);         // average roof tone preserved
 		col *= mix(1.0, 0.88 + 0.24 * t_vnoise2(w_pos.xz * 0.7), near_k);
 	} else if (abs(n.y) <= 0.35) {
 		// walls: plain brick / render, no windows (owner's call - the window grid made towns look busy)
