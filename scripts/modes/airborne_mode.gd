@@ -162,9 +162,9 @@ func _fwd_of(p: Vector3) -> Vector3:
 
 func _spawn_plane(pos: Vector3, fwd: Vector3) -> Node3D:
 	var n := Node3D.new()
-	var spec: Dictionary = ModelSpecs.get_spec("c47")
-	if not spec.is_empty():
-		n.add_child(PlaneBuilder.build(spec, "USAAF"))
+	var c47: Node3D = AircraftModels.build("c47", "USAAF")
+	if c47 != null:
+		n.add_child(c47)
 	n.global_position = pos
 	world.add_child(n)
 	n.look_at(pos + fwd, Vector3.UP)

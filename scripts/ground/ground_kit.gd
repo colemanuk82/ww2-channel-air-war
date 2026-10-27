@@ -30,13 +30,29 @@ static func tree() -> SceneTree:
 
 
 # ------------------------------------------------------------------ materials / primitives
+## Painted / built prop material: matte paint with weathering (shaders/ground_paint.gdshader), the same look as the
+## aircraft skins. `outline` and `thickness` are kept for the old callers; props no longer get a cel outline.
 static func mat(color: Color, outline: bool = true, thickness: float = 0.06) -> ShaderMaterial:
-	var key: String = "%s_%s_%.3f" % [color.to_html(false), str(outline), thickness]
+	var key: String = color.to_html(false)
 	if _mats.has(key):
 		return _mats[key]
-	var m: ShaderMaterial = ToonUtil.make_toon(color, {"outline": outline, "outline_thickness": thickness, "rim": 0.0})
+	var m := ShaderMaterial.new()
+	m.shader = paint_shader()
+	m.set_shader_parameter("albedo", color)
+	# very dark parts are openings, glass, tyres and gun metal: a little smoother; pale ones are concrete / canvas
+	var lum: float = color.get_luminance()
+	m.set_shader_parameter("roughness_v", 0.62 if lum < 0.10 else 0.84)
 	_mats[key] = m
 	return m
+
+
+static var _paint_shader: Shader
+
+
+static func paint_shader() -> Shader:
+	if _paint_shader == null:
+		_paint_shader = load("res://shaders/ground_paint.gdshader") as Shader
+	return _paint_shader
 
 
 static func glow_mat(color: Color, alpha: float = 1.0, additive: bool = false) -> StandardMaterial3D:
