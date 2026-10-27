@@ -762,7 +762,7 @@ func _contrails(delta: float) -> void:
 	if alt < CONTRAIL_ALT_M:
 		return
 	var cam: Camera3D = get_viewport().get_camera_3d()
-	if cam != null and cam.global_position.distance_squared_to(global_position) > 5000.0 * 5000.0:
+	if cam != null and cam.global_position.distance_squared_to(global_position) > 10000.0 * 10000.0:
 		return
 	if _contrail_node == null:
 		_contrail_node = ContrailRibbon.new()

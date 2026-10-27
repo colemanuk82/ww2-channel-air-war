@@ -50,6 +50,7 @@ var _debug_done: bool = false
 var _frames: int = 0
 var _ambient_active: int = 0
 var _warm_center: Vector3 = Vector3(1.0e9, 0.0, 1.0e9)
+var _last_focus: Vector3 = Vector3(1.0e9, 0.0, 1.0e9)   # focus position last frame (jump detection)
 
 
 # ================================================================== setup
@@ -75,6 +76,7 @@ static func ensure(world: Node3D) -> WorldPopulator:
 
 
 func _ready() -> void:
+	_start_build.connect(_run_build)
 	instance = self
 	add_to_group("world_populator")
 	EraClock.set_date(GameState.era_date)
@@ -157,6 +159,18 @@ func _exit_tree() -> void:
 	for j in _tile_jobs:
 		WorkerThreadPool.wait_for_task_completion(int((j as Dictionary)["task"]))
 	_tile_jobs.clear()
+	for st in _sites:            # site work still running on a worker (see _site_work)
+		for k in (st as Dictionary).keys():
+			if String(k).ends_with("_task") and st[k] is Array:
+				WorkerThreadPool.wait_for_task_completion(int((st[k] as Array)[0]))
+	for st2 in _sites:           # sliced builds that finished but never went in
+		var sn: Variant = (st2 as Dictionary).get("sliced_n")
+		if sn != null and is_instance_valid(sn):
+			(sn as Node).free()
+	for e in _staged:            # children of sites still going in are outside the tree: free them with the world
+		if is_instance_valid(e[2]) and (e[2] as Node).get_parent() == null:
+			(e[2] as Node).free()
+	_staged.clear()
 
 
 func _load_locations() -> void:
@@ -235,7 +249,10 @@ func _register_airfields() -> void:
 					terrain.call("add_flat_zone", camp, 370.0, 260.0)
 				RoadMesh.add_exclusion_disc(Vector2(camp.x, camp.z), ArmyCampKit.CAMP_RADIUS * 0.85)
 				_ground_zones.append(ArmyCampKit.zone_for(camp, float(d["heading_deg"])))
-		_add_site("af_" + id, pos, 9500.0, _build_airfield, {"id": id, "data": d, "y": y, "existing": ex, "camp": camp})
+		_add_site("af_" + id, pos, 9500.0, _build_airfield, {"id": id, "data": d, "y": y, "existing": ex})
+		if camp != Vector3.INF:
+			# the camp is its own site, so it streams in on a different tick from its airfield (~9 ms each)
+			_add_site("afcamp_" + id, camp, 9500.0, _build_af_camp, {"id": id, "data": d})
 	_apply_airfield_zones(zones)
 
 
@@ -454,7 +471,11 @@ func _build_industry(s: Dictionary) -> Node3D:
 	var size: int = int(s.get("size", 2))
 	var id: String = str(s.get("id", "industry"))
 	var rail_pt: Vector3 = s.get("rail_pt", Vector3.ZERO)
-	var yaw: float = _industry_yaw(pos, rail_pt, id)
+	# the nearest-river look-up behind the yaw scans the whole river network (~95 ms): worker thread
+	var yv: Variant = _site_work(s, "yaw", func() -> float: return _industry_yaw(pos, rail_pt, id))
+	if yv == null:
+		return null
+	var yaw: float = float(yv)
 	var works: Node3D = IndustryKit.build(kind, pos, yaw, size, team, hash(id))
 	if works != null:
 		container.add_child(works)
@@ -874,6 +895,35 @@ func _shore_for(s: Dictionary, pos: Vector3, radius: float, count: int, seed_v: 
 	var holder: Array = [{}]
 	var tid: int = WorkerThreadPool.add_task(func() -> void: holder[0] = _nearest_shore(pos, radius, count, seed_v))
 	_shore_jobs[key] = [tid, holder]
+	return null
+
+
+## A site's heavy pure-maths step (shore searches, placement, river look-ups) on a worker thread. Returns the cached
+## result, or null while the worker runs (the site sets "defer" and is retried on a later tick, so the frame never
+## waits). The loading screen, warm-up and pinned sites compute it at once. `fn` must not touch nodes.
+func _site_work(s: Dictionary, key: String, fn: Callable) -> Variant:
+	if s.has(key):
+		return s[key]
+	var now: bool = boost or _sync_build or bool(s.get("pin", false))
+	var tk: String = key + "_task"
+	if s.has(tk):
+		var j: Array = s[tk]
+		if WorkerThreadPool.is_task_completed(int(j[0])):
+			WorkerThreadPool.wait_for_task_completion(int(j[0]))
+			s.erase(tk)
+			s[key] = (j[1] as Array)[0]
+			return s[key]
+		if not now:
+			s["defer"] = true
+			return null
+		_orphan_flat.append(j)       # needed now: compute it here and let the worker finish on its own
+		s.erase(tk)
+	if now:
+		s[key] = fn.call()
+		return s[key]
+	var holder: Array = [null]
+	s[tk] = [WorkerThreadPool.add_task(func() -> void: holder[0] = fn.call()), holder]
+	s["defer"] = true
 	return null
 
 
@@ -1903,6 +1953,22 @@ var _pend_tiles: int = 0
 
 func _process(delta: float) -> void:
 	_frames += 1
+	if OS.is_debug_build():
+		# debug builds: name the scenery work done in any frame that ran long (a hitch), to find what to spread out
+		var now_us: int = Time.get_ticks_usec()
+		var ft: int = now_us - _last_frame_us
+		if _last_frame_us > 0 and not boost and _frames > 60:
+			_fstat[0] += ft
+			_fstat[1] += 1
+			_fstat[2] = maxi(_fstat[2], ft)
+			if _fstat[0] > 10000000:
+				print("[frames] avg %.1f ms  max %.1f ms  over %d frames" % [float(_fstat[0]) / float(_fstat[1]) / 1000.0, float(_fstat[2]) / 1000.0, _fstat[1]])
+				_fstat = [0, 0, 0]
+			if ft > 33000 and ft > int(float(_fstat[0]) / maxf(float(_fstat[1]), 1.0) * 1.6):
+				print("[hitch] %d ms  %s" % [ft / 1000, " ".join(_frame_notes)])
+		_last_frame_us = now_us
+		_frame_notes.clear()
+	slice_tick.emit()
 	if focus == null or not is_instance_valid(focus):
 		focus = GroundKit.player_node()
 	if not _debug_done and _frames > 3:
@@ -1910,7 +1976,11 @@ func _process(delta: float) -> void:
 		_parse_debug_args()
 	if focus == null:
 		return
-	if focus.global_position.distance_to(_warm_center) > 4000.0:
+	# warm up (build the nearest sites and tiles at once) only when the focus jumps - start, respawn, teleport.
+	# In ordinary flight the streamer keeps up, and a forced build here would undo its worker-thread deferrals.
+	var jumped: bool = focus.global_position.distance_to(_last_focus) > 1500.0
+	_last_focus = focus.global_position
+	if jumped and focus.global_position.distance_to(_warm_center) > 4000.0:
 		_warm_center = focus.global_position
 		var wu0: int = Time.get_ticks_msec()
 		_warm_up(_warm_center)
@@ -1924,6 +1994,12 @@ func _process(delta: float) -> void:
 		_stream_sites()
 		if Time.get_ticks_msec() - st0 > 100:
 			print("[slow] stream_sites %d ms" % (Time.get_ticks_msec() - st0))
+	if not _staged.is_empty():
+		if boost:
+			while not _staged.is_empty():
+				_advance_staged()
+		else:
+			_advance_staged()
 	if enable_countryside:
 		_tile_timer -= delta
 		if boost:
@@ -2018,7 +2094,28 @@ func _build_site(s: Dictionary) -> Node3D:
 		return s["node"]
 	var b: Callable = s["build"]
 	var t0: int = Time.get_ticks_msec()
-	var n: Node3D = b.call(s)
+	var now: bool = boost or _sync_build or bool(s.get("pin", false))
+	var n: Node3D = null
+	if s.has("sliced_n") and is_instance_valid(s["sliced_n"]):
+		n = s["sliced_n"]               # a sliced build (see _slice) finished on an earlier frame
+		s.erase("sliced_n")
+	elif s.has("slicing") and not now:
+		return null
+	elif now:
+		n = b.call(s)
+	else:
+		# run the builder as a coroutine: one that pauses in _slice() carries on over the next frames and its result
+		# is picked up here on a later tick; one that runs straight through has finished when the emit returns
+		var tok: int = randi()
+		s["slicing"] = tok
+		_start_build.emit(s, tok)
+		if s.has("sliced_n"):
+			n = s["sliced_n"]
+			s.erase("sliced_n")
+		elif s.get("slicing", -1) == tok:
+			if OS.is_debug_build():
+				_frame_notes.append("%s:start %dms" % [str(s["key"]), Time.get_ticks_msec() - t0])
+			return null
 	if n == null and bool(s.get("defer", false)):
 		s["defer"] = false
 		return null          # waiting on a background search: built on a later tick
@@ -2026,13 +2123,151 @@ func _build_site(s: Dictionary) -> Node3D:
 		n = Node3D.new()
 	n.name = str(s["key"])
 	var t1: int = Time.get_ticks_msec()
+	# A big site (an airfield is ~1,800 nodes, ~15 ms to enter the scene) goes in over a few frames: the container
+	# first, then its children in order under a small per-frame budget (see _advance_staged).
+	var staged: bool = not (boost or _sync_build or bool(s.get("pin", false))) and _stage_children(s, n)
 	add_child(n)
+	if staged:
+		_advance_staged()
+	if OS.is_debug_build():
+		_frame_notes.append("%s:%dms" % [str(s["key"]), Time.get_ticks_msec() - t0])
 	if Time.get_ticks_msec() - t0 > 40:
 		print("[slow] site %s: build %d ms + into the scene %d ms" % [str(s["key"]), t1 - t0, Time.get_ticks_msec() - t1])
 	s["node"] = n
 	if bool(s["ambient"]):
 		_ambient_active += 1
 	return n
+
+
+var _last_frame_us: int = 0          # debug hitch log (see _process)
+var _frame_notes: PackedStringArray = []
+var _fstat: Array = [0, 0, 0]          # debug frame stats: total us, frames, worst us
+var _sweeping: bool = false            # site_sweep(): builders run straight through
+signal slice_tick                     # once a frame: resumes builders paused in _slice()
+
+
+## Called by a site builder between its stages: in flight it pauses the build until the next frame, so a big site
+## (an airfield is ~15 ms of building) is spread over a few frames. Loading-screen / warm-up / pinned builds run
+## straight through. A builder that uses it is a coroutine; _build_site picks up its result when it finishes.
+func _slice(s: Dictionary) -> void:
+	if boost or _sync_build or _sweeping or bool(s.get("pin", false)):
+		return
+	_slice_note(s)
+	await slice_tick
+	s["slice_us"] = Time.get_ticks_usec()
+
+
+signal _start_build(s: Dictionary, tok: int)
+
+
+func _run_build(s: Dictionary, tok: int) -> void:
+	var v: Variant = await (s["build"] as Callable).call(s)
+	_sliced_done(s, tok, v)
+
+
+func _slice_note(s: Dictionary) -> void:
+	if OS.is_debug_build() and s.has("slice_us"):
+		_frame_notes.append("%s+%.1fms" % [str(s["key"]), float(Time.get_ticks_usec() - int(s["slice_us"])) / 1000.0])
+	s.erase("slice_us")
+
+
+func _sliced_done(s: Dictionary, tok: int, v: Variant) -> void:
+	_slice_note(s)
+	if s.get("slicing", -1) != tok:
+		if v is Node and is_instance_valid(v):
+			(v as Node).free()          # superseded (the site was rebuilt at once meanwhile)
+		return
+	s.erase("slicing")
+	if v == null:
+		return                          # nothing built (a deferral: the builder set "defer")
+	if s["node"] != null and is_instance_valid(s["node"]):
+		if v is Node and is_instance_valid(v):
+			(v as Node).free()
+		return
+	s["sliced_n"] = v if v is Node3D else Node3D.new()
+
+
+## Debug (--site-sweep=camp_,af_): build every not-yet-built site whose key starts with one of `prefixes`, timing the
+## build and the add to the scene, then free it again.
+func site_sweep(prefixes: PackedStringArray) -> void:
+	_sweeping = true
+	for s in _sites:
+		var key: String = str(s["key"])
+		var hit: bool = false
+		for pf in prefixes:
+			hit = hit or key.begins_with(pf)
+		if not hit or s["node"] != null:
+			continue
+		var t0: int = Time.get_ticks_usec()
+		var n: Node3D = null
+		var waited: int = 0
+		for _try in 400:
+			n = (s["build"] as Callable).call(s)
+			if n != null or not bool(s.get("defer", false)):
+				break
+			s["defer"] = false
+			var tw: int = Time.get_ticks_usec()
+			OS.delay_msec(5)
+			waited += Time.get_ticks_usec() - tw
+		if n == null:
+			continue
+		var t1: int = Time.get_ticks_usec()
+		add_child(n)
+		var t2: int = Time.get_ticks_usec()
+		print("[sweep] %-28s build %6.1f ms  into the scene %5.1f ms  nodes %d" % [key, (t1 - t0 - waited) / 1000.0, (t2 - t1) / 1000.0, n.find_children("*", "", true, false).size()])
+		n.free()
+
+
+const STAGE_MIN_NODES: int = 150      # sites with fewer nodes than this enter the scene in one go
+const STAGE_BUDGET_US: int = 2500     # per frame, for staged site children
+var _staged: Array = []               # [site, parent, child] waiting to enter the scene, in order
+
+
+
+## Detach the children of a freshly built site container (and of its plain Node3D groups, a level down) so they
+## can be added back over several frames. Scripted children go back whole: their _ready sees their full subtree.
+## Returns false (nothing detached) for small sites and scripted containers.
+func _stage_children(s: Dictionary, n: Node3D) -> bool:
+	if n.get_script() != null or _count_nodes(n, STAGE_MIN_NODES) < STAGE_MIN_NODES:
+		return false
+	var queue: Array = []
+	for c in n.get_children():
+		n.remove_child(c)
+		queue.append([s, n, c])
+		if c.get_script() == null and c.get_class() == "Node3D" and c.get_child_count() > 24:
+			for g in c.get_children():
+				c.remove_child(g)
+				queue.append([s, c, g])
+	_staged.append_array(queue)
+	return true
+
+
+func _count_nodes(n: Node, cap: int) -> int:
+	var total: int = 1
+	for c in n.get_children():
+		total += _count_nodes(c, cap - total)
+		if total >= cap:
+			break
+	return total
+
+
+## Put staged site children back into the scene, a few per frame (at least one).
+func _advance_staged() -> void:
+	var t0: int = Time.get_ticks_usec()
+	var done: int = 0
+	while not _staged.is_empty() and (done == 0 or Time.get_ticks_usec() - t0 < STAGE_BUDGET_US):
+		var e: Array = _staged.pop_front()
+		var parent: Variant = e[1]
+		var child: Variant = e[2]
+		if not is_instance_valid(child):
+			continue
+		if parent == null or not is_instance_valid(parent) or (parent as Node).is_queued_for_deletion():
+			(child as Node).free()          # the site was freed before it finished going in
+			continue
+		(parent as Node).add_child(child)
+		done += 1
+	if done > 0 and OS.is_debug_build():
+		_frame_notes.append("staged:%d/%dus" % [done, Time.get_ticks_usec() - t0])
 
 
 func _free_site(s: Dictionary) -> void:
@@ -2147,7 +2382,10 @@ func _stream_tiles() -> void:
 			# the scattered trees / houses go in now; roads, rivers, pylons, canals and railways follow over the
 			# next frames (see _advance_finishing), so no single frame carries a whole tile
 			var f := {"k": jk, "org": Vector2(float(jk.x) * TILE, float(jk.y) * TILE), "res": res, "stage": 0, "node": null}
+			var ft0: int = Time.get_ticks_usec()
 			_finish_stage(f)
+			if OS.is_debug_build():
+				_frame_notes.append("tile0:%.1fms" % (float(Time.get_ticks_usec() - ft0) / 1000.0))
 			_tiles[jk] = f["node"]
 			if boost:
 				while int(f["stage"]) < FINISH_STAGES:
@@ -2273,6 +2511,8 @@ func _advance_finishing() -> void:
 		if int(f["stage"]) == before:
 			break                         # waiting on a worker: carry on next frame
 		var ms: float = float(Time.get_ticks_usec() - st0) / 1000.0
+		if OS.is_debug_build():
+			_frame_notes.append("tile%d:%.1fms" % [before, ms])
 		if ms > 12.0:
 			print("[slow] tile %s stage %d took %.1f ms" % [str(f["k"]), before, ms])
 		if int(f["stage"]) >= FINISH_STAGES:
@@ -2701,8 +2941,6 @@ func _build_airfield(s: Dictionary) -> Node3D:
 		af.style = Airfield.style_for(id)
 		container.add_child(af)
 		af.build_layout()      # the layout must exist now: the field is dressed below, before it enters the tree
-		airfields[id] = af
-	s["main"] = af
 	# give every populated field its side and register it, so landing there rearms (main.gd) and the tower calls
 	if af.team == "":
 		af.team = team
@@ -2718,6 +2956,8 @@ func _build_airfield(s: Dictionary) -> Node3D:
 	var axf := Transform3D(Basis(Vector3.UP, af.rotation.y), af.position)
 	var k: float = af.layout_scale()
 	var grass_station: bool = af.style in ["raf_grass", "lw_field"]
+	# in flight the field is built a stage per frame (each a few ms): see _slice
+	await _slice(s)
 	if grass_station:
 		_dress_grass_station(container, af, axf, y, team, rng)
 	elif af.style == "grass":
@@ -2780,11 +3020,14 @@ func _build_airfield(s: Dictionary) -> Node3D:
 				var bp: Vector3 = axf * Vector3(-520.0 - float(row) * 34.0, 0, 380.0 + float(i) * 36.0)
 				banks.append(Transform3D(Basis(Vector3.UP, af.rotation.y + PI * 0.5), Vector3(bp.x, y, bp.z)))
 		_props(container, "ammo", _bunker_bank_mesh(), banks, team, 6)
+	await _slice(s)
 	AirfieldActivity.populate(container, af, axf, y, team, rng)     # ground crews, bowsers, tugs, bomb cart, fire tender
 	# P8 airfield furniture (all layouts): blast pens/revetments, Nissen camp, T2/T1 hangars, watch office,
 	# fuel + bomb dumps, flare path with Chance lights, dummy aircraft - inside the footprint, clear of the runway.
+	await _slice(s)
 	if not grass_station:          # grass stations carry their own period dressing (pens / nets, hangar arc)
 		AirfieldFurniture.dress(container, af, axf, y, team, rng)
+	await _slice(s)
 	# defences
 	var is_london: bool = id in ["northolt", "kenley", "biggin_hill", "hornchurch"]
 	var n88: int = 1 if team == "Allies" else 2
@@ -2792,12 +3035,21 @@ func _build_airfield(s: Dictionary) -> Node3D:
 	var zone_r: float = af.runway_length * 0.55 + 100.0
 	_runway_zones.append([af.position, zone_r])
 	_airfield_defences(container, af, axf, team, id, 4 if (team == "Allies" and is_london) else 0, maxf(260.0 * k, zone_r * 1.8))
-	var camp_pos: Variant = s.get("camp", Vector3.INF)
-	if camp_pos is Vector3 and camp_pos != Vector3.INF:
-		ArmyCampKit.build(container, camp_pos, float(d["heading_deg"]), team, hash(id) + 77)
 	# Blackout: at night an airfield shows its flare path / runway lamps only when it is an active (own-side)
 	# field; occupied/enemy fields stay dark (see Airfield.set_lights_active).
 	af.set_lights_active(team == "Allies")
+	# registered last: until now the field was being built off-screen over several frames
+	if af.get_parent() == container:
+		airfields[id] = af
+	s["main"] = af
+	return container
+
+
+## The army camp beside an airfield (ArmyCampKit), streamed as a site of its own.
+func _build_af_camp(s: Dictionary) -> Node3D:
+	var d: Dictionary = s["data"]
+	var container := Node3D.new()
+	await ArmyCampKit.build(container, s["pos"], float(d["heading_deg"]), airfield_team(d), hash(str(s["id"])) + 77, _slice.bind(s))
 	return container
 
 
@@ -3338,7 +3590,11 @@ func _build_beach(s: Dictionary) -> Node3D:
 	var r: float = float(s["radius"])
 	var count: int = int(clampf(r / 3.5, 40.0, 220.0))
 	var team_allies: bool = GroundKit.side_at(pos) == "Allies"
-	var container: Node3D = Scatter.make_beach_defences(pos, r, count, hash(str(s["id"])), not team_allies)
+	var seed_v: int = hash(str(s["id"]))
+	var bd: Variant = _site_work(s, "beach_d", func() -> Dictionary: return Scatter.beach_defence_data(pos, r, count, seed_v))
+	if bd == null:
+		return null
+	var container: Node3D = Scatter.beach_defences_from(bd, not team_allies)
 	if not team_allies:
 		_defences(container, pos, "Axis", 1, 2, 0, 0, r * 0.7, hash(str(s["id"])) + 3)
 	return container
@@ -3347,10 +3603,12 @@ func _build_beach(s: Dictionary) -> Node3D:
 func _build_coast_cluster(s: Dictionary) -> Node3D:
 	var pos: Vector3 = s["pos"]
 	var team: String = str(s["team"])
+	var cv: Variant = _site_work(s, "coast_d", func() -> Dictionary: return _coast_plan(pos, team, hash(str(s["key"]))))
+	if cv == null:
+		return null
+	var plan: Dictionary = cv
 	var container := Node3D.new()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(str(s["key"]))
-	var shore: Array = Scatter.find_shore(pos, 450.0, 8, rng)
+	var shore: Array = plan["shore"]
 	if shore.is_empty():
 		return container
 	var main_pt: Dictionary = shore[0]
@@ -3363,12 +3621,29 @@ func _build_coast_cluster(s: Dictionary) -> Node3D:
 		var st: GroundStructure = GroundStructure.create(kind, bunker_team, (d["pos"] as Vector3) - (d["sea"] as Vector3) * 15.0, WorldCoords.dir_to_heading(d["sea"]))
 		container.add_child(st)
 	if team == "Axis":
-		container.add_child(Scatter.make_beach_defences(base, 520.0, 34, rng.randi(), false))
-		if rng.randf() < 0.5:
+		container.add_child(Scatter.beach_defences_from(plan["beach"], false))
+		if bool(plan["wur"]):
 			var wur: GroundStructure = GroundStructure.create("radar_wurz", "Axis", base - (main_pt["sea"] as Vector3) * 90.0, sea_h)
 			container.add_child(wur)
-	_defences(container, base, team, 1 if rng.randf() < 0.6 else 0, 2, 0, 0, 170.0, rng.randi())
+	_defences(container, base, team, int(plan["n88"]), 2, 0, 0, 170.0, int(plan["dseed"]))
 	return container
+
+
+## The placement maths of a coast cluster (worker thread): the shore points, an Axis stretch's beach defences, and the
+## dice for its Würzburg and its flak - drawn in the same order as before, so every cluster comes out as it always has.
+static func _coast_plan(pos: Vector3, team: String, seed_v: int) -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_v
+	var out: Dictionary = {"shore": Scatter.find_shore(pos, 450.0, 8, rng)}
+	if (out["shore"] as Array).is_empty():
+		return out
+	if team == "Axis":
+		var shore0: Dictionary = (out["shore"] as Array)[0]
+		out["beach"] = Scatter.beach_defence_data(shore0["pos"], 520.0, 34, rng.randi())
+		out["wur"] = rng.randf() < 0.5
+	out["n88"] = 1 if rng.randf() < 0.6 else 0
+	out["dseed"] = rng.randi()
+	return out
 
 
 func _target_team_defences(type: String) -> Array:
