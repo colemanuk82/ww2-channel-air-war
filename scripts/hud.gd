@@ -25,6 +25,8 @@ const CABLE_COL := Color(1.0, 0.5, 0.12)   # barrage balloon cable hazard marks
 ## Gauges, compass and readouts sit back a little so they frame the view instead of competing with it.
 ## The minimap, the message banner and the warnings stay at full strength.
 const HUD_FADE: float = 0.62
+## Background of the top-left cards: exactly what the faded time / weather panel shows (PANEL_BG at HUD_FADE).
+const CARD_BG := Color(0.05, 0.055, 0.05, 0.72 * 0.62)
 
 var aircraft: Aircraft
 var camera: Camera3D
@@ -316,7 +318,7 @@ func _draw_card(card: Control) -> void:
 	var l: Label = card.get_meta("src")
 	var body_col: Color = l.get_theme_color("font_color") if is_instance_valid(l) and l.has_theme_color_override("font_color") else TEXT_COL
 	var r := Rect2(Vector2.ZERO, card.size)
-	card.draw_rect(r, Color(0.035, 0.04, 0.035, 0.80))
+	card.draw_rect(r, CARD_BG)     # the same see-through plate as the time / weather panel
 	card.draw_rect(Rect2(0, 0, 4.0, r.size.y), Color(ACCENT, 0.95))            # brass edge, like the menu cards
 	card.draw_rect(r, Color(BRASS, 0.30), false, 1.0)
 	var y: float = CARD_PAD.y
