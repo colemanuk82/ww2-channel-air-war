@@ -57,7 +57,14 @@ func _process(delta: float) -> void:
 		_str = _str.slice(drop)
 	_rb -= delta
 	if _rb <= 0.0:
-		_rb = REBUILD_S if _dirty else IDLE_REBUILD_S
+		var far: bool = false
+		var m: int = _pts.size()
+		if m > 0 and is_inside_tree():
+			var cam: Camera3D = get_viewport().get_camera_3d()
+			if cam != null:
+				var eye: Vector3 = cam.global_position
+				far = minf(eye.distance_squared_to(_pts[0]), eye.distance_squared_to(_pts[m - 1])) > 14000.0 * 14000.0
+		_rb = REBUILD_S if _dirty and not far else IDLE_REBUILD_S
 		_dirty = false
 		_rebuild()
 
