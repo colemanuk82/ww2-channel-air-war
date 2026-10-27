@@ -608,7 +608,7 @@ func _build() -> void:
 	_inst.anchor_top = 1.0
 	_inst.anchor_bottom = 1.0
 	_inst.offset_left = 16.0
-	_inst.offset_right = 400.0
+	_inst.offset_right = 430.0
 	_inst.offset_top = -226.0
 	_inst.offset_bottom = -8.0
 	_inst.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -932,8 +932,8 @@ func _draw_inst() -> void:
 	if a == null or not is_instance_valid(a):
 		return
 	var r: float = 72.0
-	var actr := Vector2(92.0, 98.0)
-	var lctr := Vector2(274.0, 98.0)
+	var actr := Vector2(80.0, 98.0)
+	var lctr := Vector2(300.0, 98.0)
 	var hull: float = clampf(a.health / a.stats.max_health, 0.0, 1.0)
 	# ---- meters wrapped round the dials (no box): throttle + boost on the airspeed dial, hull + g on the altimeter.
 	# Each is an arc just outside the bezel; the left arcs fill bottom -> top, the right arcs fill bottom -> top too.
