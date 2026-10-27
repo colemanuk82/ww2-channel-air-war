@@ -98,7 +98,7 @@ func _draw_ammo() -> void:
 	for it0 in items:
 		total += 38.0 + font.get_string_size(str(it0[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, FS).x
 	c.custom_minimum_size = Vector2(total, 34.0)
-	c.draw_rect(Rect2(0, 0, total, 34.0), Color(0.035, 0.04, 0.035, 0.80))
+	c.draw_rect(Rect2(0, 0, total, 34.0), HUD.CARD_BG)
 	c.draw_rect(Rect2(0, 0, 4.0, 34.0), Color(0.93, 0.74, 0.32, 0.95))
 	c.draw_rect(Rect2(0, 0, total, 34.0), Color(0.72, 0.58, 0.32, 0.30), false, 1.0)
 	var x: float = 14.0
