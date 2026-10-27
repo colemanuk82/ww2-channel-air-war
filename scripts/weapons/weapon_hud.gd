@@ -49,7 +49,7 @@ func _find_hud() -> void:
 		if n is HUD:
 			_hud = n
 			_ammo_lbl = Control.new()
-			_ammo_lbl.custom_minimum_size = Vector2(260, 26)
+			_ammo_lbl.custom_minimum_size = Vector2(160, 34)
 			_ammo_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			_ammo_lbl.draw.connect(_draw_ammo)
 			_hud.add_widget(_ammo_lbl)
@@ -86,31 +86,41 @@ func _draw_ammo() -> void:
 	if aircraft == null or not is_instance_valid(aircraft):
 		return
 	var c: Control = _ammo_lbl
-	var font: Font = ThemeDB.fallback_font
-	var x: float = 0.0
+	var font: Font = UIKit.font(true)
+	const FS: int = 20
 	var items: Array = [[0, aircraft.ammo, aircraft.stats.ammo]]
 	if aircraft.stats.rockets > 0:
 		items.append([1, ws.rockets_left, aircraft.stats.rockets])
 	if aircraft.stats.bombs > 0:
 		items.append([2, aircraft.bombs, aircraft.stats.bombs])
+	# a dark glass plate behind the strip, the same as the mission card above it
+	var total: float = 12.0
+	for it0 in items:
+		total += 38.0 + font.get_string_size(str(it0[1]), HORIZONTAL_ALIGNMENT_LEFT, -1, FS).x
+	c.custom_minimum_size = Vector2(total, 34.0)
+	c.draw_rect(Rect2(0, 0, total, 34.0), Color(0.035, 0.04, 0.035, 0.80))
+	c.draw_rect(Rect2(0, 0, 4.0, 34.0), Color(0.93, 0.74, 0.32, 0.95))
+	c.draw_rect(Rect2(0, 0, total, 34.0), Color(0.72, 0.58, 0.32, 0.30), false, 1.0)
+	var x: float = 14.0
 	for it in items:
 		var mode: int = it[0]
 		var left: int = it[1]
 		var full: int = maxi(int(it[2]), 1)
 		var sel: bool = aircraft.weapon_mode == mode
-		var col: Color = Color(0.93, 0.74, 0.32, 0.95) if sel else Color(0.92, 0.9, 0.82, 0.5)
+		var col: Color = Color(0.93, 0.74, 0.32, 1.0) if sel else Color(0.92, 0.9, 0.82, 0.72)
 		if left <= 0:
 			col = Color(1.0, 0.35, 0.25, 0.8)
 		elif float(left) / float(full) < 0.2:
 			col = Color(1.0, 0.65, 0.3, 0.9)
-		var ic := Vector2(x + 9.0, 13.0)
+		var ic := Vector2(x + 9.0, 17.0)
 		_weapon_icon(c, mode, ic, col)
 		var t: String = str(left)
-		c.draw_string(font, Vector2(x + 21.0, 19.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0, 0, 0, 0.55 * col.a))
-		c.draw_string(font, Vector2(x + 20.0, 18.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, col)
+		var tw: float = font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, FS).x
+		c.draw_string(font, Vector2(x + 23.0, 25.5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, FS, Color(0, 0, 0, 0.8 * col.a))
+		c.draw_string(font, Vector2(x + 22.0, 24.5), t, HORIZONTAL_ALIGNMENT_LEFT, -1, FS, col)
 		if sel:
-			c.draw_line(Vector2(x, 24.0), Vector2(x + 24.0 + font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x, 24.0), col, 1.5)
-		x += 34.0 + font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+			c.draw_line(Vector2(x, 30.0), Vector2(x + 24.0 + tw, 30.0), col, 2.0)
+		x += 38.0 + tw
 
 
 ## Tiny silhouettes: 0 cartridges, 1 rocket, 2 bomb.
