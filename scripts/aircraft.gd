@@ -426,6 +426,9 @@ func set_gear(down: bool) -> void:
 func reset_pose(pos: Vector3, heading_deg: float, airborne: bool, start_speed: float = -1.0) -> void:
 	if damage_model != null:
 		damage_model.repair()
+	if _contrail_node != null and is_instance_valid(_contrail_node):
+		_contrail_node.queue_free()       # a respawn must not draw a line from the old position to the new one
+		_contrail_node = null
 	state = State.ALIVE
 	add_to_group("damageable")
 	# a fresh aircraft: no lingering engine wear or heat, break-up, pull to one side or credited attacker
@@ -770,9 +773,15 @@ func _contrails(delta: float) -> void:
 func add_contrail_point(strength: float) -> void:
 	if stats == null or state != Aircraft.State.ALIVE or on_ground or _model == null:
 		return
-	if _contrail_node == null:
+	if _contrail_node == null or not is_instance_valid(_contrail_node):
 		_contrail_node = ContrailRibbon.new()
-		add_child(_contrail_node)
+		# host it in the world, not under the aircraft: the vertices are world-space, and a top-level child
+		# of a moving aircraft is not reliably drawn by the renderer
+		var host: Node = get_tree().current_scene
+		if host == null:
+			host = get_parent()
+		host.add_child(_contrail_node)
+		_contrail_node.global_position = Vector3.ZERO
 	_contrail_node.add_point(global_transform * _contrail_anchor(), clampf(strength, 0.0, 1.0))
 
 

@@ -5,8 +5,8 @@ extends MeshInstance3D
 
 var life: float = 44.0      # seconds a point stays in the trail (a bomber stream sets it longer)
 const STEP := 7.0           # metres of flight between samples
-const WIDTH := 4.0          # ribbon width in metres
-const MIN_PX_W := 0.0016    # half-width per metre of camera distance: keeps a far trail ~3 px wide
+const WIDTH := 4.5          # ribbon width in metres
+const MIN_PX_W := 0.0019    # half-width per metre of camera distance: keeps a far trail ~4 px wide
 const REBUILD_S := 0.066
 const IDLE_REBUILD_S := 0.25   # no fresh points (out of range): fade the existing trail at a quarter of the cost
 const MAX_POINTS := 2200       # hard bound per ribbon (a warp or a very fast aircraft can never grow it forever)
@@ -65,6 +65,9 @@ func _process(delta: float) -> void:
 		_pts = _pts.slice(drop)
 		_age = _age.slice(drop)
 		_str = _str.slice(drop)
+	if _pts.is_empty():
+		queue_free()          # world-hosted trail has faded away
+		return
 	_rb -= delta
 	if _rb <= 0.0:
 		var far: bool = false
