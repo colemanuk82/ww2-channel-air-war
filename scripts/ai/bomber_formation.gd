@@ -11,9 +11,7 @@ signal bomber_destroyed(bomber: Aircraft, killer: Node)
 signal all_destroyed
 
 const GUN_RANGE: float = 520.0
-const STREAM_ALT_M: float = 1000.0    # above this the formation's contrail stream forms
-const STREAM_LIFE: float = 120.0      # seconds the stream stays in the sky (long, so it reads from far off)
-var _stream: ContrailRibbon = null
+const TRAIL_ALT_M: float = 1000.0     # above this every bomber in the formation leaves its own contrail
 
 # Defensive turret arcs, in the bomber's own frame: azimuth 0 = dead ahead, +/-180 = astern; elevation
 # 0 = level, +90 = straight up. A gun can only fire inside its arc, so the gaps between them are real blind
@@ -229,7 +227,7 @@ var _def_enemies: Array[Aircraft] = []
 
 
 func _process(delta: float) -> void:
-	_tick_stream()
+	_tick_trails()
 	_tick_defence(delta, _def_enemies)
 	_gun_t -= delta
 	if _gun_t > 0.0:
@@ -272,9 +270,9 @@ func _process(delta: float) -> void:
 			AIGun.fire(self, m, origin, AIGun.spread_dir(fire_dir, spread), m.velocity, team, gunner_damage)
 
 
-## The formation's stream: one long contrail laid down along the centre of the living formation while it is high.
-## The centre tracks the raid's course, so the white line runs along the raid heading and reads from far off.
-func _tick_stream() -> void:
+## Every bomber leaves its own trail while the formation is high, instead of one line drawn down the
+## centre from the leader. The formation altitude is used so a bomber a little low still trails with the box.
+func _tick_trails() -> void:
 	var sum := Vector3.ZERO
 	var n: int = 0
 	for m in members:
@@ -285,13 +283,12 @@ func _tick_stream() -> void:
 		return
 	var c: Vector3 = sum / float(n)
 	var alt_m: float = c.y / WorldCoords.VERTICAL_SCALE
-	if alt_m < STREAM_ALT_M:
+	if alt_m < TRAIL_ALT_M:
 		return
-	if _stream == null:
-		_stream = ContrailRibbon.new()
-		_stream.life = STREAM_LIFE
-		add_child(_stream)
-	_stream.add_point(c, clampf((alt_m - STREAM_ALT_M) / 250.0, 0.0, 1.0))
+	var f: float = clampf((alt_m - TRAIL_ALT_M) / 250.0, 0.0, 1.0)
+	for m in members:
+		if is_instance_valid(m) and m.state == Aircraft.State.ALIVE:
+			m.add_contrail_point(f)
 
 
 ## True when at least one turret can bear on `e` (i.e. it is inside a turret arc, not in a blind spot).

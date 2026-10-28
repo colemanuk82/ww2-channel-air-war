@@ -1932,6 +1932,21 @@ static func short_title(m: Dictionary) -> String:
 			return "Convoy attack"
 		"Intercept":
 			return "Intercept raid"
+		"Strike":
+			var nm: String = String(m.get("what", "")).strip_edges()
+			if nm != "" and nm.length() <= 26:
+				return "Strike " + nm
+			var typ: String = String(m.get("type", ""))
+			var noun: String = {
+				"factory": "factory", "rail_yard": "rail yard", "port": "port",
+				"radar": "radar station", "bridge": "bridge", "battery": "AA battery",
+				"v1_site": "V-1 site", "oil_depot": "oil depot", "oil": "oil depot",
+			}.get(typ, "")
+			if noun == "":
+				noun = "target"
+			return "Strike " + noun
+		"Shipping strike":
+			return "Strike convoy"
 	return head
 
 

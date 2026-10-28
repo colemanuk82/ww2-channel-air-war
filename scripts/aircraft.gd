@@ -761,11 +761,19 @@ func _contrails(delta: float) -> void:
 	var alt: float = get_altitude_m()
 	if alt < CONTRAIL_ALT_M:
 		return
+	var f: float = clampf((alt - CONTRAIL_ALT_M) / 250.0, 0.0, 1.0)
+	add_contrail_point(f)
+
+
+## Lay one trail sample at the tail. Public so a BomberFormation can give every member a trail from the
+## formation's altitude, even when one bomber sits a little lower than the rest.
+func add_contrail_point(strength: float) -> void:
+	if stats == null or state != Aircraft.State.ALIVE or on_ground or _model == null:
+		return
 	if _contrail_node == null:
 		_contrail_node = ContrailRibbon.new()
 		add_child(_contrail_node)
-	var f: float = clampf((alt - CONTRAIL_ALT_M) / 250.0, 0.0, 1.0)
-	_contrail_node.add_point(global_transform * _contrail_anchor(), f)
+	_contrail_node.add_point(global_transform * _contrail_anchor(), clampf(strength, 0.0, 1.0))
 
 
 ## Positional engine sound for every aircraft except the player's (the player has the cockpit drone).
