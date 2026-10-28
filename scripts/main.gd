@@ -2430,6 +2430,38 @@ func _reset_sim_warp() -> void:
 
 ## Warp keys plus the safety net: no warp while paused, on the ground, or with a hostile aircraft inside
 ## WARP_CONTACT_RANGE. Never compress time during combat.
+## Debug (--contrail-debug): print why each nearby aircraft is or is not laying a trail.
+var _cdbg_t: float = 0.0
+
+
+func _contrail_debug_tick(delta: float) -> void:
+	if not _args.has("--contrail-debug"):
+		return
+	_cdbg_t -= delta
+	if _cdbg_t > 0.0:
+		return
+	_cdbg_t = 2.0
+	var shown: int = 0
+	for n in get_tree().get_nodes_in_group("aircraft"):
+		var ac: Aircraft = n as Aircraft
+		if ac == null or ac.stats == null:
+			continue
+		var cn: Variant = ac.get("_contrail_node")
+		var pts: int = 0
+		var vis: String = "-"
+		var surf: int = 0
+		if cn != null and is_instance_valid(cn):
+			pts = (cn.get("_pts") as PackedVector3Array).size()
+			vis = str((cn as Node3D).is_visible_in_tree())
+			if (cn as ContrailRibbon).mesh != null:
+				surf = (cn as ContrailRibbon).mesh.get_surface_count()
+		print("[contrail] %s alt=%.0f state=%d node=%s pts=%d surf=%d vis=%s model=%s" % [
+			ac.stats.id, ac.get_altitude_m(), ac.state, str(cn != null), pts, surf, vis, str(ac.get("_model") != null)])
+		shown += 1
+		if shown >= 6:
+			break
+
+
 func _update_sim_warp(delta: float) -> void:
 	var pl: Aircraft = player as Aircraft
 	var bailing: bool = _bail != null and _bail.active       # floating down on the parachute: warp allowed
@@ -2620,6 +2652,7 @@ func _process(delta: float) -> void:
 	if _resume_t <= 0.0:
 		_resume_t = RESUME_INTERVAL
 		_save_resume_now()
+	_contrail_debug_tick(delta)
 	_update_sim_warp(delta)
 	if _respawn_timer >= 0.0:
 		_respawn_timer -= delta

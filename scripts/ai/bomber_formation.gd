@@ -285,7 +285,7 @@ func _tick_trails() -> void:
 	var alt_m: float = c.y / WorldCoords.VERTICAL_SCALE
 	if alt_m < TRAIL_ALT_M:
 		return
-	var f: float = clampf((alt_m - TRAIL_ALT_M) / 250.0, 0.0, 1.0)
+	var f: float = clampf((alt_m - TRAIL_ALT_M) / 150.0, 0.0, 1.0)
 	for m in members:
 		if is_instance_valid(m) and m.state == Aircraft.State.ALIVE:
 			m.add_contrail_point(f)

@@ -254,6 +254,21 @@ func _build_triangle(earth: Material) -> void:
 		_clover(hubw, PI * 1.5, pan_mat, earth)
 
 
+## Runway edge / threshold lamps for a grass or dirt strip, in the airfield's local frame. Paved runways
+## get the same points from _runway_pivot.
+func _strip_lamps(half_w: float, length: float) -> void:
+	var n: int = int(length / 55.0)
+	for li in n + 1:
+		var z: float = -length * 0.5 + 8.0 + float(li) * (length - 16.0) / float(maxi(n, 1))
+		for lx in [-half_w + 0.8, half_w - 0.8]:
+			_night_pts.append(Vector3(lx, 1.1, z))
+			_night_cols.append(Color(1.0, 0.85, 0.55, 0.9))
+	for end in [-1.0, 1.0]:
+		for lx2 in [-half_w * 0.55, half_w * 0.55]:
+			_night_pts.append(Vector3(lx2, 1.1, end * (length * 0.5 + 3.0)))
+			_night_cols.append(Color(1.0, 0.2, 0.12, 1.0))
+
+
 ## Dirt-strip field: one wide pale gravel/dirt runway, a big dirt apron with a row of arched hangars behind it,
 ## a taxi strip joining apron and runway, parked aircraft, huts and silos (set dressing is added by the populator).
 func _build_grass(earth: Material) -> void:
@@ -261,10 +276,12 @@ func _build_grass(earth: Material) -> void:
 	var dirt: Material = ToonUtil.make_toon(Color(0.40, 0.37, 0.27), {"outline": false, "tex": "gravel"})
 	var dirt2: Material = ToonUtil.make_toon(Color(0.57, 0.53, 0.40), {"outline": false, "rim": 0.0, "detail": 4})
 	var rut: Material = ToonUtil.make_toon(Color(0.50, 0.46, 0.34), {"outline": false, "rim": 0.0, "detail": 3})
-	# the strip itself: wide, no paint, faint wheel ruts
+	# the strip itself: wide, no paint, faint wheel ruts; a lighter worn centre keeps it readable at dawn
 	_box(Vector3(runway_width * 1.7, 0.5, L), Vector3.ZERO, dirt)
+	_box(Vector3(runway_width * 1.12, 0.51, L * 0.97), Vector3(0, -0.005, 0), dirt2)
 	_box(Vector3(2.0, 0.55, L * 0.9), Vector3(-runway_width * 0.45, 0.0, 0), rut)
 	_box(Vector3(2.0, 0.55, L * 0.9), Vector3(runway_width * 0.45, 0.0, 0), rut)
+	_strip_lamps(runway_width * 0.82, L)
 	# big apron west of the runway, joined by a wide taxi link and a taxi strip along the strip's edge
 	_box(Vector3(210.0, 0.5, 250.0), Vector3(-205.0, 0.0, -90.0), dirt2)
 	_link(Vector3(-105.0, 0, -90.0), Vector3(-runway_width * 0.8, 0, -90.0), 40.0, dirt2)
@@ -343,9 +360,15 @@ func _build_raf_grass(earth: Material) -> void:
 	var L: float = runway_length
 	var mown: Material = ToonUtil.make_toon(Color(0.27, 0.32, 0.18), {"outline": false, "tex": "grass"})
 	var mown2: Material = ToonUtil.make_toon(Color(0.25, 0.30, 0.17), {"outline": false, "tex": "grass"})
-	# mown landing area: the main direction and a cross direction, in slightly different stripes of grass
+	var mown_edge: Material = ToonUtil.make_toon(Color(0.33, 0.39, 0.22), {"outline": false, "tex": "grass"})
+	# mown landing area: the main direction and a cross direction, in slightly different stripes of grass.
+	# A lighter clipped centre, pale mown edges and edge lamps define the strip when the sun is low.
 	_box(Vector3(runway_width * 2.4, 0.3, L), Vector3(0, -0.12, 0), mown)
+	_box(Vector3(runway_width * 1.45, 0.31, L * 0.96), Vector3(0, -0.10, 0), mown2)
+	for sx in [-1.0, 1.0]:
+		_box(Vector3(3.4, 0.31, L * 0.97), Vector3(sx * runway_width * 1.12, -0.10, 0), mown_edge)
 	_box(Vector3(runway_width * 2.0, 0.3, L * 0.75), Vector3(0, -0.14, 0), mown2, deg_to_rad(65.0))
+	_strip_lamps(runway_width * 1.12, L)
 	# perimeter track: an ellipse of tarmac round the landing ground
 	# sized so the track and pens stay inside the terrain's flattened zone (~1 km radius)
 	var rx: float = L * 0.38
@@ -390,6 +413,10 @@ func _build_lw_field(earth: Material) -> void:
 	var worn: Material = ToonUtil.make_toon(Color(0.42, 0.38, 0.27), {"outline": false, "tex": "gravel"})
 	var rut: Material = ToonUtil.make_toon(Color(0.40, 0.37, 0.26), {"outline": false, "rim": 0.0, "detail": 3})
 	_box(Vector3(runway_width * 2.0, 0.3, L), Vector3(0, -0.12, 0), rolled)
+	_box(Vector3(runway_width * 1.25, 0.31, L * 0.96), Vector3(0, -0.10, 0), ToonUtil.make_toon(Color(0.31, 0.35, 0.20), {"outline": false, "tex": "grass"}))
+	for sx in [-1.0, 1.0]:
+		_box(Vector3(3.0, 0.31, L * 0.97), Vector3(sx * runway_width * 0.95, -0.10, 0), ToonUtil.make_toon(Color(0.35, 0.40, 0.23), {"outline": false, "tex": "grass"}))
+	_strip_lamps(runway_width * 0.95, L)
 	for rx2 in [-runway_width * 0.35, runway_width * 0.3]:
 		_box(Vector3(3.0, 0.32, L * 0.85), Vector3(rx2, -0.1, 0), rut)
 	# dispersal pads along both long edges and across the far end, each a worn earth patch under a net

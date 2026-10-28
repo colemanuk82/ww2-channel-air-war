@@ -1,9 +1,9 @@
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_disabled;
 
-// Dim airfield lamp: a soft round glow billboard that only shows at night (global night_amount, set by TimeOfDay).
+// Dim airfield lamp: a soft round glow billboard that shows at night and in low light (dawn / dusk).
 // It grows with distance so a lamp is still a faint dot from a few kilometres out.
-global uniform float night_amount;
+global uniform float lamp_amount;
 varying vec4 vcol;
 
 void vertex() {
@@ -19,5 +19,5 @@ void fragment() {
 	float r = length(UV - vec2(0.5)) * 2.0;
 	float g = pow(clamp(1.0 - r, 0.0, 1.0), 2.4);
 	ALBEDO = vcol.rgb * 1.6;
-	ALPHA = g * night_amount * vcol.a;
+	ALPHA = g * lamp_amount * vcol.a;
 }

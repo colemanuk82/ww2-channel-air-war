@@ -5,8 +5,8 @@ extends MeshInstance3D
 
 var life: float = 44.0      # seconds a point stays in the trail (a bomber stream sets it longer)
 const STEP := 7.0           # metres of flight between samples
-const WIDTH := 2.6          # ribbon width in metres
-const MIN_PX_W := 0.0011    # half-width per metre of camera distance: keeps a far trail at least ~2 px wide
+const WIDTH := 4.0          # ribbon width in metres
+const MIN_PX_W := 0.0016    # half-width per metre of camera distance: keeps a far trail ~3 px wide
 const REBUILD_S := 0.066
 const IDLE_REBUILD_S := 0.25   # no fresh points (out of range): fade the existing trail at a quarter of the cost
 const MAX_POINTS := 2200       # hard bound per ribbon (a warp or a very fast aircraft can never grow it forever)
@@ -107,11 +107,12 @@ func _rebuild() -> void:
 		# widen with distance so the trail does not shrink below a pixel and vanish when read from far off
 		var half_w: float = minf(maxf(WIDTH * 0.5, eye.distance_to(p) * MIN_PX_W), MAX_HALF_W)
 		side = side.normalized() * half_w
-		var c := Color(0.97, 0.98, 1.0, 0.85 * a)
+		var c_hi := Color(1.0, 1.0, 1.0, 0.90 * a)
+		var c_lo := Color(0.72, 0.77, 0.84, 0.90 * a)     # shaded edge: keeps the trail readable on a white sky
 		verts[i * 2] = p - side
 		verts[i * 2 + 1] = p + side
-		cols[i * 2] = c
-		cols[i * 2 + 1] = c
+		cols[i * 2] = c_lo
+		cols[i * 2 + 1] = c_hi
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts

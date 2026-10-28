@@ -761,7 +761,7 @@ func _contrails(delta: float) -> void:
 	var alt: float = get_altitude_m()
 	if alt < CONTRAIL_ALT_M:
 		return
-	var f: float = clampf((alt - CONTRAIL_ALT_M) / 250.0, 0.0, 1.0)
+	var f: float = clampf((alt - CONTRAIL_ALT_M) / 150.0, 0.0, 1.0)
 	add_contrail_point(f)
 
 
