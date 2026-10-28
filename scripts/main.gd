@@ -2450,16 +2450,89 @@ func _contrail_debug_tick(delta: float) -> void:
 		var pts: int = 0
 		var vis: String = "-"
 		var surf: int = 0
+		var vlen: int = 0
+		var aabb: AABB = AABB()
+		var matok: bool = false
+		var gpos: Vector3 = Vector3.ZERO
+		var tl: bool = false
+		var layers: int = 0
+		var cam_cull: int = -1
+		var same_world: bool = false
+		var iaabb: AABB = AABB()
 		if cn != null and is_instance_valid(cn):
 			pts = (cn.get("_pts") as PackedVector3Array).size()
 			vis = str((cn as Node3D).is_visible_in_tree())
+			gpos = (cn as Node3D).global_position
+			tl = (cn as Node3D).top_level
+			layers = (cn as MeshInstance3D).layers
+			iaabb = (cn as MeshInstance3D).get_aabb()
+			var c3: Camera3D = get_viewport().get_camera_3d()
+			if c3 != null:
+				cam_cull = c3.cull_mask
+				same_world = c3.get_world_3d() == (cn as Node3D).get_world_3d()
 			if (cn as ContrailRibbon).mesh != null:
 				surf = (cn as ContrailRibbon).mesh.get_surface_count()
-		print("[contrail] %s alt=%.0f state=%d node=%s pts=%d surf=%d vis=%s model=%s" % [
-			ac.stats.id, ac.get_altitude_m(), ac.state, str(cn != null), pts, surf, vis, str(ac.get("_model") != null)])
+				if surf > 0:
+					vlen = (cn as ContrailRibbon).mesh.surface_get_array_len(0)
+				aabb = (cn as ContrailRibbon).mesh.get_aabb()
+			matok = (cn as ContrailRibbon).material_override != null
+		print("[contrail] %s alt=%.0f state=%d node=%s pts=%d surf=%d vlen=%d vis=%s model=%s mat=%s tl=%s gpos=%s layers=%d cull=%d sameworld=%s aabb=%s iaabb=%s" % [
+			ac.stats.id, ac.get_altitude_m(), ac.state, str(cn != null), pts, surf, vlen, vis, str(ac.get("_model") != null),
+			str(matok), str(tl), str(gpos), layers, cam_cull, str(same_world), str(aabb), str(iaabb)])
 		shown += 1
 		if shown >= 6:
 			break
+
+
+## Debug (--bomber-demo): stage a high bomber box and a tracking camera, for a clean contrail capture.
+var _demo_form: BomberFormation = null
+var _demo_cam: Camera3D = null
+var _demo_fwd: Vector3 = Vector3.FORWARD
+var _demo_side: Vector3 = Vector3.RIGHT
+
+
+func _start_bomber_demo() -> void:
+	if player == null or not is_instance_valid(player):
+		return
+	var f: Vector3 = player.get_forward()
+	f.y = 0.0
+	f = f.normalized() if f.length() > 0.1 else Vector3.FORWARD
+	var side := Vector3(-f.z, 0.0, f.x)
+	var c: Vector3 = player.global_position + f * 1200.0 + Vector3.UP * 120.0
+	var route: Array[Vector3] = [c + f * 22000.0]
+	var old_mult: float = BomberFormation.size_mult
+	var old_chance: float = BomberFormation.big_raid_chance
+	BomberFormation.size_mult = 1.0
+	BomberFormation.big_raid_chance = 0.0
+	_demo_form = BomberFormation.spawn(self, "lancaster", "Allies", 6, c, player.get_heading_deg(), route, 0.5, 80.0)
+	BomberFormation.size_mult = old_mult
+	BomberFormation.big_raid_chance = old_chance
+	_demo_fwd = f
+	_demo_side = side
+	_demo_cam = Camera3D.new()
+	_demo_cam.fov = 75.0
+	_demo_cam.far = 48000.0
+	add_child(_demo_cam)
+	_demo_cam.make_current()
+	if hud != null and is_instance_valid(hud):
+		hud.visible = false
+	_bomber_demo_tick()
+
+
+func _bomber_demo_tick() -> void:
+	if _demo_form == null or not is_instance_valid(_demo_form) or _demo_cam == null or not is_instance_valid(_demo_cam):
+		return
+	var sum := Vector3.ZERO
+	var n: int = 0
+	for m in _demo_form.members:
+		if is_instance_valid(m) and m.state == Aircraft.State.ALIVE:
+			sum += m.global_position
+			n += 1
+	if n == 0:
+		return
+	var c: Vector3 = sum / float(n)
+	_demo_cam.global_position = c + _demo_side * 450.0 - Vector3.UP * 200.0
+	_demo_cam.look_at(c, Vector3.UP)
 
 
 func _update_sim_warp(delta: float) -> void:
@@ -2653,6 +2726,7 @@ func _process(delta: float) -> void:
 		_resume_t = RESUME_INTERVAL
 		_save_resume_now()
 	_contrail_debug_tick(delta)
+	_bomber_demo_tick()
 	_update_sim_warp(delta)
 	if _respawn_timer >= 0.0:
 		_respawn_timer -= delta
@@ -2708,6 +2782,8 @@ func _parse_debug_args() -> void:
 			_want_cockpit = true
 			camera_rig.force_cockpit = true
 			camera_rig.set_cockpit(true)
+		elif a == "--bomber-demo":
+			_start_bomber_demo()
 		elif a.begins_with("--gunner="):   # debug: step into defensive gun position N (bombers only)
 			var gi: int = int(a.substr(9))
 			if turrets != null and is_instance_valid(turrets):
