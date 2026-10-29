@@ -1,8 +1,8 @@
 class_name ContrailRibbon
 extends MeshInstance3D
 ## A soft, widening vapour plume: a world-space ribbon that starts thin and dense at the engine, then
-## spreads, wanders and breaks into wisps as it ages. The shader supplies the soft edges and turbulence;
-## the geometry stays a cheap strip and is rebuilt about 15 times a second.
+## spreads, wanders and breaks into wisps as it ages. Vertex generation runs on the WorkerThreadPool;
+## only the finished mesh upload happens on the main thread.
 
 var life: float = 120.0     # seconds a point stays in the trail: long, high-altitude streaks
 const STEP := 7.0           # metres of flight between samples
@@ -67,6 +67,72 @@ void fragment() {
 }
 """
 
+
+## Worker-thread job. It owns copies of the point data, so the main thread can keep appending and
+## ageing points while the geometry is generated.
+class BuildJob extends RefCounted:
+	var pts: PackedVector3Array
+	var ages: PackedFloat32Array
+	var strs: PackedFloat32Array
+	var eye: Vector3
+	var life: float
+	var near_w: float
+	var far_w: float
+	var min_px: float
+	var max_half: float
+	var result: Dictionary = {}
+
+	func run() -> void:
+		var n: int = pts.size()
+		if n < 2:
+			result = {"valid": false}
+			return
+		var verts := PackedVector3Array()
+		var uvs := PackedVector2Array()
+		var uv2s := PackedVector2Array()
+		verts.resize(n * 2)
+		uvs.resize(n * 2)
+		uv2s.resize(n * 2)
+		for i in n:
+			var p: Vector3 = pts[i]
+			if not (is_finite(p.x) and is_finite(p.y) and is_finite(p.z)):
+				result = {"valid": false}
+				return
+			var age_norm: float = clampf(ages[i] / life, 0.0, 1.0)
+			var dir: Vector3 = pts[mini(i + 1, n - 1)] - pts[maxi(i - 1, 0)]
+			if dir.length_squared() < 0.000001:
+				dir = Vector3.FORWARD
+			var dn: Vector3 = dir.normalized()
+			var right: Vector3 = dn.cross(Vector3.UP)
+			if right.length_squared() < 0.000001:
+				right = Vector3.RIGHT
+			right = right.normalized()
+			# A slow, smooth wander as it ages; no per-point zig-zag or puffing.
+			var spread: float = smoothstep(0.0, 0.55, age_norm)
+			p += right * (sin(float(i) * 0.09 + ages[i] * 0.30) * (0.2 + 1.8 * age_norm))
+			p += Vector3.UP * (cos(float(i) * 0.07 + ages[i] * 0.22) * (0.1 + 0.8 * age_norm))
+			var side: Vector3 = dir.cross(eye - p)
+			if side.length_squared() < 0.000001:
+				side = Vector3.UP
+			side = side.normalized()
+			var half_w: float = lerpf(near_w, far_w, spread)
+			# Very gentle edge variation; the silhouette expands smoothly rather than bulging point to point.
+			var edge_var: float = 0.94 + 0.10 * sin(float(i) * 0.06 + age_norm * 1.2)
+			var lw: float = half_w * edge_var
+			var rw: float = half_w * (1.88 - edge_var)
+			var min_w: float = eye.distance_to(p) * min_px
+			lw = minf(maxf(lw, min_w), max_half)
+			rw = minf(maxf(rw, min_w), max_half)
+			var v: float = float(i) * 0.33
+			verts[i * 2] = p - side * lw
+			verts[i * 2 + 1] = p + side * rw
+			uvs[i * 2] = Vector2(0.0, v)
+			uvs[i * 2 + 1] = Vector2(1.0, v)
+			uv2s[i * 2] = Vector2(age_norm, strs[i])
+			uv2s[i * 2 + 1] = Vector2(age_norm, strs[i])
+		result = {"valid": true, "verts": verts, "uvs": uvs, "uv2s": uv2s}
+
+
 var _pts: PackedVector3Array = PackedVector3Array()
 var _age: PackedFloat32Array = PackedFloat32Array()
 var _str: PackedFloat32Array = PackedFloat32Array()
@@ -74,6 +140,8 @@ var _rb: float = 0.0
 var _dirty: bool = false
 var _mesh: ArrayMesh = ArrayMesh.new()
 var _mat: ShaderMaterial
+var _task_id: int = -1
+var _job: BuildJob = null
 
 
 func _ready() -> void:
@@ -120,77 +188,69 @@ func _process(delta: float) -> void:
 	if _pts.is_empty():
 		queue_free()          # world-hosted trail has faded away
 		return
+
+	# Pick up a finished worker build. Nothing here touches the rendering server from the worker.
+	if _task_id >= 0 and WorkerThreadPool.is_task_completed(_task_id):
+		WorkerThreadPool.wait_for_task_completion(_task_id)
+		_task_id = -1
+		var res: Dictionary = _job.result if _job != null else {}
+		_job = null
+		_apply_result(res)
+
+	if _pts.size() < 2:
+		if _task_id < 0:
+			_mesh.clear_surfaces()
+		return
+
 	_rb -= delta
-	if _rb <= 0.0:
+	if _rb <= 0.0 and _task_id < 0:
 		var far: bool = false
 		var m: int = _pts.size()
-		if m > 0 and is_inside_tree():
-			var cam: Camera3D = get_viewport().get_camera_3d()
-			if cam != null:
-				var eye: Vector3 = cam.global_position
-				far = minf(eye.distance_squared_to(_pts[0]), eye.distance_squared_to(_pts[m - 1])) > 14000.0 * 14000.0
+		var cam: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() else null
+		var eye: Vector3 = cam.global_position if cam != null else Vector3.ZERO
+		if cam != null:
+			far = minf(eye.distance_squared_to(_pts[0]), eye.distance_squared_to(_pts[m - 1])) > 14000.0 * 14000.0
 		_rb = REBUILD_S if _dirty and not far else IDLE_REBUILD_S
 		_dirty = false
-		_rebuild()
+		_start_build(eye)
 
 
-func _rebuild() -> void:
-	var n: int = _pts.size()
-	if n < 2:
+func _start_build(eye: Vector3) -> void:
+	var job := BuildJob.new()
+	job.pts = _pts.duplicate()
+	job.ages = _age.duplicate()
+	job.strs = _str.duplicate()
+	job.eye = eye
+	job.life = life
+	job.near_w = NEAR_HALF_W
+	job.far_w = FAR_HALF_W
+	job.min_px = MIN_PX_W
+	job.max_half = MAX_HALF_W
+	_job = job
+	var id: int = WorkerThreadPool.add_task(job.run, false, "contrail")
+	if id < 0:
+		job.run()               # pool unavailable: build once on the main thread
+		_job = null
+		_task_id = -1
+		_apply_result(job.result)
+	else:
+		_task_id = id
+
+
+func _apply_result(res: Dictionary) -> void:
+	if _pts.size() < 2:
 		_mesh.clear_surfaces()
 		return
-	var cam: Camera3D = get_viewport().get_camera_3d()
-	var eye: Vector3 = cam.global_position if cam != null else Vector3.ZERO
-	var verts := PackedVector3Array()
-	var uvs := PackedVector2Array()
-	var uv2s := PackedVector2Array()
-	verts.resize(n * 2)
-	uvs.resize(n * 2)
-	uv2s.resize(n * 2)
-	for i in n:
-		var p: Vector3 = _pts[i]
-		if not (is_finite(p.x) and is_finite(p.y) and is_finite(p.z)):
-			_pts.clear()
-			_age.clear()
-			_str.clear()
-			_mesh.clear_surfaces()
-			return
-		var age_norm: float = clampf(_age[i] / life, 0.0, 1.0)
-		var dir: Vector3 = _pts[mini(i + 1, n - 1)] - _pts[maxi(i - 1, 0)]
-		if dir.length_squared() < 0.000001:
-			dir = Vector3.FORWARD
-		var dn: Vector3 = dir.normalized()
-		var right: Vector3 = dn.cross(Vector3.UP)
-		if right.length_squared() < 0.000001:
-			right = Vector3.RIGHT
-		right = right.normalized()
-		# A slow, smooth wander as it ages; no per-point zig-zag or puffing.
-		var spread: float = smoothstep(0.0, 0.55, age_norm)
-		p += right * (sin(float(i) * 0.09 + _age[i] * 0.30) * (0.2 + 1.8 * age_norm))
-		p += Vector3.UP * (cos(float(i) * 0.07 + _age[i] * 0.22) * (0.1 + 0.8 * age_norm))
-		var side: Vector3 = dir.cross(eye - p)
-		if side.length_squared() < 0.000001:
-			side = Vector3.UP
-		side = side.normalized()
-		var half_w: float = lerpf(NEAR_HALF_W, FAR_HALF_W, spread)
-		# Very gentle edge variation; the silhouette expands smoothly rather than bulging point to point.
-		var edge_var: float = 0.94 + 0.10 * sin(float(i) * 0.06 + age_norm * 1.2)
-		var lw: float = half_w * edge_var
-		var rw: float = half_w * (1.88 - edge_var)
-		var min_w: float = eye.distance_to(p) * MIN_PX_W
-		lw = minf(maxf(lw, min_w), MAX_HALF_W)
-		rw = minf(maxf(rw, min_w), MAX_HALF_W)
-		var v: float = float(i) * 0.33
-		verts[i * 2] = p - side * lw
-		verts[i * 2 + 1] = p + side * rw
-		uvs[i * 2] = Vector2(0.0, v)
-		uvs[i * 2 + 1] = Vector2(1.0, v)
-		uv2s[i * 2] = Vector2(age_norm, _str[i])
-		uv2s[i * 2 + 1] = Vector2(age_norm, _str[i])
+	if not bool(res.get("valid", false)):
+		_pts.clear()
+		_age.clear()
+		_str.clear()
+		_mesh.clear_surfaces()
+		return
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = verts
-	arrays[Mesh.ARRAY_TEX_UV] = uvs
-	arrays[Mesh.ARRAY_TEX_UV2] = uv2s
+	arrays[Mesh.ARRAY_VERTEX] = res.get("verts", PackedVector3Array())
+	arrays[Mesh.ARRAY_TEX_UV] = res.get("uvs", PackedVector2Array())
+	arrays[Mesh.ARRAY_TEX_UV2] = res.get("uv2s", PackedVector2Array())
 	_mesh.clear_surfaces()
 	_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLE_STRIP, arrays)

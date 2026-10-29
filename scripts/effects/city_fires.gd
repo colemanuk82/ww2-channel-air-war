@@ -8,11 +8,14 @@ extends Node3D
 const MAX_FIRES: int = 30
 const MAX_PALLS: int = 6
 const MERGE_DIST: float = 220.0
+const SMOKE_CHANCE: float = 0.2    # only a fifth of bombed-town fires raise a black smoke plume
+const PALL_CHANCE: float = 0.2     # and only a fifth of towns get the big pall
 
 static var _inst: CityFires = null
 
 var _fires: Array = []        # {node, light, glow, emit:Array, life, max_life, power, city, seed}
 var _palls: Dictionary = {}   # city name -> {node, emit}
+var _pall_roll: Dictionary = {}   # city name -> whether this town ever gets a pall
 var _cities: Array = []       # {name, pos, r}
 var _cities_ready: bool = false
 var _t: float = 0.0
@@ -133,7 +136,7 @@ func _ignite(pos: Vector3, strength: float, anywhere: bool) -> bool:
 		if is_instance_valid(f["node"]) and (f["node"] as Node3D).global_position.distance_to(gp) < MERGE_DIST:
 			f["power"] = minf(float(f["power"]) + strength * 0.6, 4.0)
 			f["life"] = maxf(float(f["life"]), float(f["max_life"]) * 0.8)
-			if float(f["power"]) >= 2.5 and not bool(f["pillar"]):
+			if float(f["power"]) >= 2.5 and not bool(f["pillar"]) and bool(f.get("smoky", false)):
 				f["pillar"] = true
 				(f["emit"] as Array).append(FX.pillar(f["node"], 8.0 + float(f["power"]) * 1.5))
 			return true
@@ -145,11 +148,14 @@ func _ignite(pos: Vector3, strength: float, anywhere: bool) -> bool:
 	n.global_position = gp
 	# a whole block alight, big enough to be seen burning from ten miles off
 	var sz: float = clampf(3.2 + strength * 1.4, 3.2, 8.0)
-	var emit: Array = FX.blaze(n, sz, 0.9 + strength * 0.25)
+	var smoky: bool = randf() < SMOKE_CHANCE
+	var emit: Array = FX.blaze(n, sz, 0.9 + strength * 0.25, smoky)
 	# a second, taller fire bound to the same holder (bound emitters are never culled by the FX emitter cap)
-	emit.append(FX._add_emitter(FXEmitter.Kind.FIRE, gp, n, Vector3(randf_range(-25, 25), 0.0, randf_range(-25, 25)), sz * 2.2, -1.0))
+	var fire_e: FXEmitter = FX._add_emitter(FXEmitter.Kind.FIRE, gp, n, Vector3(randf_range(-25, 25), 0.0, randf_range(-25, 25)), sz * 2.2, -1.0)
+	fire_e.smoke_on = smoky
+	emit.append(fire_e)
 	var pillar: bool = strength >= 2.5
-	if pillar:
+	if pillar and smoky:
 		emit.append(FX.pillar(n, 9.0 + strength * 1.5))
 	# a modest light for the walls and smoke right by the fire. The old one reached 300-400 m and its clustered
 	# lighting lit a hard-edged red square of ground and trees; the wide firelight on the ground is the soft
@@ -160,7 +166,7 @@ func _ignite(pos: Vector3, strength: float, anywhere: bool) -> bool:
 	var glow: GroundGlow = null
 	var life: float = randf_range(300.0, 540.0) * (0.8 + 0.2 * strength)
 	_fires.append({"node": n, "light": l, "glow": glow, "emit": emit, "life": life, "max_life": life, "power": strength,
-		"pillar": pillar, "city": str(city.get("name", "")), "seed": randf() * 10.0, "cpos": city.get("pos", gp)})
+		"pillar": pillar, "smoky": smoky, "city": str(city.get("name", "")), "seed": randf() * 10.0, "cpos": city.get("pos", gp)})
 	_update_pall(str(city.get("name", "")))
 	return true
 
@@ -176,6 +182,10 @@ func _update_pall(cname: String) -> void:
 			n_fires += 1
 			centre += (f["node"] as Node3D).global_position
 	if n_fires < 3 or _palls.size() >= MAX_PALLS:
+		return
+	if not _pall_roll.has(cname):
+		_pall_roll[cname] = randf() < PALL_CHANCE
+	if not bool(_pall_roll[cname]):
 		return
 	centre /= float(n_fires)
 	var h := Node3D.new()
