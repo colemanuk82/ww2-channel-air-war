@@ -2446,7 +2446,13 @@ func _contrail_debug_tick(delta: float) -> void:
 		var ac: Aircraft = n as Aircraft
 		if ac == null or ac.stats == null:
 			continue
-		var cn: Variant = ac.get("_contrail_node")
+		var cn: Variant = null
+		var ncount: int = 0
+		var nodes_arr: Variant = ac.get("_contrail_nodes")
+		if nodes_arr is Array:
+			ncount = (nodes_arr as Array).size()
+			if ncount > 0:
+				cn = (nodes_arr as Array)[0]
 		var pts: int = 0
 		var vis: String = "-"
 		var surf: int = 0
@@ -2476,8 +2482,8 @@ func _contrail_debug_tick(delta: float) -> void:
 					vlen = (cn as ContrailRibbon).mesh.surface_get_array_len(0)
 				aabb = (cn as ContrailRibbon).mesh.get_aabb()
 			matok = (cn as ContrailRibbon).material_override != null
-		print("[contrail] %s alt=%.0f state=%d node=%s pts=%d surf=%d vlen=%d vis=%s model=%s mat=%s tl=%s gpos=%s layers=%d cull=%d sameworld=%s aabb=%s iaabb=%s" % [
-			ac.stats.id, ac.get_altitude_m(), ac.state, str(cn != null), pts, surf, vlen, vis, str(ac.get("_model") != null),
+		print("[contrail] %s alt=%.0f state=%d nodes=%d node=%s pts=%d surf=%d vlen=%d vis=%s model=%s mat=%s tl=%s gpos=%s layers=%d cull=%d sameworld=%s aabb=%s iaabb=%s" % [
+			ac.stats.id, ac.get_altitude_m(), ac.state, ncount, str(cn != null), pts, surf, vlen, vis, str(ac.get("_model") != null),
 			str(matok), str(tl), str(gpos), layers, cam_cull, str(same_world), str(aabb), str(iaabb)])
 		shown += 1
 		if shown >= 6:
