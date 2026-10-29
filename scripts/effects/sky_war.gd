@@ -12,6 +12,7 @@ extends Node3D
 
 const BEAMS: int = 3
 const TRACER_COLS := [Color(1.0, 0.25, 0.12), Color(1.0, 0.62, 0.15), Color(1.0, 0.9, 0.35), Color(0.45, 1.0, 0.4)]
+const ENEMY_NEAR_M := 7000.0        # a town only lights up for aircraft this close
 
 # searchlight alert: seconds left in which the lights are up. Set by a raid (15 min after it starts) and by a raid
 # that is about to come (2 min before). Peaceful towns stay dark.
@@ -38,6 +39,9 @@ var _v2_t: float = 240.0
 var _beams: Array = []         # {mi, base, yaw, pitch, sp, ph}
 var _beam_mat: StandardMaterial3D
 var _beam_zone: Vector3 = Vector3.INF
+var _near_t: float = 0.0
+var _near_zone: Vector3 = Vector3.INF
+var _near_val: bool = false
 var _rng := RandomNumberGenerator.new()
 var _force_city: String = ""
 var _civil: RaidBlackout = null
@@ -169,9 +173,24 @@ func _tick_barrages(delta: float, night: float) -> void:
 	var c: Vector3 = _raid_centre() if not _raid.is_empty() and _rng.randf() < 0.6 else _zone(3500.0, 16000.0, _raid.is_empty())
 	if c == Vector3.INF:
 		return
-	_salvo(c, _rng.randi_range(4, 10 + int(6.0 * night)))
+	var enemy_here: bool = not _raid.is_empty() or _enemy_near(c, ENEMY_NEAR_M)
+	var n: int = _rng.randi_range(4, 10 + int(6.0 * night))
+	if not enemy_here:
+		n = maxi(1, n / 3)          # a quiet sector only gets a token barrage
+		_barrage_t *= 2.0
+	_salvo(c, n)
 	if night > 0.3:
 		_beam_zone = beam_zone if beam_zone != Vector3.INF else c
+
+
+## Is there an aircraft hostile to the ground at `pos` close enough for the guns and lights there to act?
+func _enemy_near(pos: Vector3, radius: float) -> bool:
+	if pos == Vector3.INF:
+		return false
+	var side: String = GroundKit.side_at(pos)
+	if side == "Neutral":
+		return false
+	return not GroundKit.enemy_aircraft(side, pos, radius).is_empty()
 
 
 ## A salvo: several bursts spread through a box of sky over the guns, a second or two apart.
@@ -211,11 +230,14 @@ func _tick_streams(delta: float, night: float) -> void:
 			_stream_t = 60.0 / maxf((3.0 + 16.0 * night) * intensity, 0.1) * _rng.randf_range(0.5, 1.5)
 			var g: Vector3 = _raid_centre() if not _raid.is_empty() and _rng.randf() < 0.5 else _zone(2500.0, 13000.0, _raid.is_empty())
 			if g != Vector3.INF:
+				var enemy_here: bool = not _raid.is_empty() or _enemy_near(g, ENEMY_NEAR_M)
+				if not enemy_here:
+					_stream_t *= 2.0
 				var cam: Camera3D = get_viewport().get_camera_3d()
 				var eye: Vector3 = cam.global_position if cam else _player.global_position
 				var k: float = clampf(eye.distance_to(g) / 1800.0, 1.0, 5.0)
 				var col: Color = TRACER_COLS[_rng.randi() % TRACER_COLS.size()]
-				for j in _rng.randi_range(2, 5):
+				for j in _rng.randi_range(1 if not enemy_here else 2, 2 if not enemy_here else 5):
 					var a: float = _rng.randf() * TAU
 					var el: float = _rng.randf_range(0.75, 1.35)
 					var dir := Vector3(cos(a) * cos(el), sin(el), sin(a) * cos(el))
@@ -261,6 +283,14 @@ func _tick_siren() -> void:
 func _tick_beams(delta: float, night: float) -> void:
 	var on: bool = lights_up() and night > 0.45 and _beam_zone != Vector3.INF and _beam_zone.distance_to(_player.global_position) < 26000.0
 	var zone: Vector3 = _raid_centre() if not _raid.is_empty() else _beam_zone
+	# A quiet town keeps one beam up; a raid or an enemy aircraft close by brings the full display back.
+	_near_t -= delta
+	if zone.distance_squared_to(_near_zone) > 1.0 or _near_t <= 0.0:
+		_near_t = 0.5
+		_near_zone = zone
+		_near_val = _enemy_near(zone, ENEMY_NEAR_M)
+	var active: bool = not _raid.is_empty() or _near_val
+	var beam_limit: int = BEAMS if active else 1
 	for i in BEAMS:
 		var b: Dictionary = _beams[i]
 		var mi: MeshInstance3D = b["mi"]
@@ -277,7 +307,7 @@ func _tick_beams(delta: float, night: float) -> void:
 			else:
 				b["lit"] = false
 				b["timer"] = _rng.randf_range(8.0, 25.0)
-		mi.visible = bool(b["lit"])
+		mi.visible = bool(b["lit"]) and i < beam_limit
 		if not bool(b["lit"]):
 			continue
 		if not bool(b["placed"]) or (b["base"] as Vector3).distance_to(zone) > 3500.0:
