@@ -723,7 +723,7 @@ func _regen_health(delta: float) -> void:
 
 
 ## Vapour contrails above 1000 m: one trail from behind each engine (propeller node), so a four-engine
-## bomber leaves four separate trails. Single-engine types get one from behind their engine.
+## bomber leaves four separate trails. Single-engine types get one from the back of the aircraft.
 const CONTRAIL_ALT_M := 1000.0
 var _contrail_pts: Array[Vector3] = []
 var _contrail_nodes: Array[ContrailRibbon] = []
@@ -735,21 +735,21 @@ func _build_contrail_anchors() -> void:
 	if _model == null:
 		return
 	var seen: Dictionary = {}
-	var aft: float = 4.0 if stats != null and stats.engine_count > 1 else 2.8
-	for n in _model.find_children("*", "Node3D", true, false):
-		var nm: String = String(n.name)
-		if not nm.begins_with("Propeller") or nm.begins_with("PropDisc"):
-			continue
-		if seen.has(nm):
-			continue
-		seen[nm] = true
-		var lp: Vector3 = to_local((n as Node3D).global_position)
-		_contrail_pts.append(lp + Vector3(0.0, -0.25, aft))    # aft (+Z) of the engine, behind the nacelle
-		if _contrail_pts.size() >= 8:
-			break
+	if stats != null and stats.engine_count > 1:
+		for n in _model.find_children("*", "Node3D", true, false):
+			var nm: String = String(n.name)
+			if not nm.begins_with("Propeller") or nm.begins_with("PropDisc"):
+				continue
+			if seen.has(nm):
+				continue
+			seen[nm] = true
+			var lp: Vector3 = to_local((n as Node3D).global_position)
+			_contrail_pts.append(lp + Vector3(0.0, -0.25, 4.0))    # aft (+Z) of the engine, behind the nacelle
+			if _contrail_pts.size() >= 8:
+				break
 	if not _contrail_pts.is_empty():
 		return
-	# fallback (model with no propeller nodes): behind the tail centre
+	# single-engine (or model with no propeller nodes): behind the tail centre
 	var box := AABB()
 	var have: bool = false
 	for n in _model.find_children("*", "MeshInstance3D", true, false):

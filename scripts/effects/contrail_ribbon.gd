@@ -6,7 +6,7 @@ extends MeshInstance3D
 
 var life: float = 120.0     # seconds a point stays in the trail: long, high-altitude streaks
 const STEP := 7.0           # metres of flight between samples
-const NEAR_HALF_W := 1.0    # half-width at the engine
+const NEAR_HALF_W := 0.8    # half-width at the aircraft: starts as a thin wisp
 const FAR_HALF_W := 11.0    # half-width once the vapour has spread
 const MIN_PX_W := 0.0019    # half-width per metre of camera distance: keeps a far trail ~4 px wide
 const REBUILD_S := 0.066
@@ -48,22 +48,22 @@ void fragment() {
 	// Soft, rounded cross-section instead of a hard-edged rectangle.
 	float profile = exp(-pow((u - 0.5) * 3.6, 2.0));
 
-	// Turbulence: broad billows plus finer wisps, drifting slowly through the plume.
-	vec2 q = vec2(u * 2.8, UV.y * 0.9);
-	float n1 = noise(q + vec2(0.0, TIME * 0.020));
-	float n2 = noise(q * 2.3 - vec2(TIME * 0.013, 1.7));
-	float n3 = noise(q * 4.9 + vec2(TIME * 0.008, 4.1));
-	float wisp = n1 * 0.55 + n2 * 0.30 + n3 * 0.15;
+	// Gentle, static density variation: a smooth plume, not a string of puffs.
+	vec2 q = vec2(u * 2.4, UV.y * 0.7);
+	float n1 = noise(q);
+	float n2 = noise(q * 2.2 + 1.7);
+	float wisp = n1 * 0.70 + n2 * 0.30;
+	float density = mix(0.94, 1.03, wisp);
 
-	// Dense at the engine, patchy and translucent where the trail is old.
-	float fade = mix(0.80, 0.10, smoothstep(0.08, 1.0, age));
-	float breakup = mix(1.0, smoothstep(0.28, 0.62, wisp), smoothstep(0.08, 0.65, age));
-	float core = exp(-pow((u - 0.5) * 7.0, 2.0)) * (1.0 - age);
+	// Weak right at the aircraft, thickening behind it, then dissipating far back.
+	float fresh = smoothstep(0.0, 0.020, age);
+	float old = 1.0 - smoothstep(0.62, 1.0, age);
+	float fade = fresh * old;
+	float core = exp(-pow((u - 0.5) * 7.0, 2.0));
 
-	float alpha = profile * fade * breakup * mix(0.75, 1.10, wisp) * str;
-	alpha += core * 0.10 * str;
+	float alpha = (profile * 0.55 + core * 0.08) * fade * density * str;
 	ALBEDO = mix(vec3(0.66, 0.72, 0.82), vec3(1.0), profile * 0.8 + 0.2);
-	ALPHA = clamp(alpha, 0.0, 0.70);
+	ALPHA = clamp(alpha, 0.0, 0.68);
 }
 """
 
@@ -164,18 +164,19 @@ func _rebuild() -> void:
 		if right.length_squared() < 0.000001:
 			right = Vector3.RIGHT
 		right = right.normalized()
-		# The plume wanders and rises a little as it ages; it is not a ruler-straight band.
+		# A slow, smooth wander as it ages; no per-point zig-zag or puffing.
 		var spread: float = smoothstep(0.0, 0.55, age_norm)
-		p += right * (sin(float(i) * 0.37 + _age[i] * 0.55) * (0.2 + 4.0 * age_norm))
-		p += Vector3.UP * (cos(float(i) * 0.29 + _age[i] * 0.40) * (0.1 + 2.0 * age_norm))
+		p += right * (sin(float(i) * 0.09 + _age[i] * 0.30) * (0.2 + 1.8 * age_norm))
+		p += Vector3.UP * (cos(float(i) * 0.07 + _age[i] * 0.22) * (0.1 + 0.8 * age_norm))
 		var side: Vector3 = dir.cross(eye - p)
 		if side.length_squared() < 0.000001:
 			side = Vector3.UP
 		side = side.normalized()
 		var half_w: float = lerpf(NEAR_HALF_W, FAR_HALF_W, spread)
-		# Asymmetric, irregular edges: the silhouette should never look like a rectangle.
-		var lw: float = half_w * (0.80 + 0.40 * absf(sin(float(i) * 1.13 + 0.7)))
-		var rw: float = half_w * (0.80 + 0.40 * absf(cos(float(i) * 0.97 + 1.3)))
+		# Very gentle edge variation; the silhouette expands smoothly rather than bulging point to point.
+		var edge_var: float = 0.94 + 0.10 * sin(float(i) * 0.06 + age_norm * 1.2)
+		var lw: float = half_w * edge_var
+		var rw: float = half_w * (1.88 - edge_var)
 		var min_w: float = eye.distance_to(p) * MIN_PX_W
 		lw = minf(maxf(lw, min_w), MAX_HALF_W)
 		rw = minf(maxf(rw, min_w), MAX_HALF_W)
