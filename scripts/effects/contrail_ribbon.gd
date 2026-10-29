@@ -61,9 +61,9 @@ void fragment() {
 	float fade = fresh * old;
 	float core = exp(-pow((u - 0.5) * 7.0, 2.0));
 
-	float alpha = (profile * 0.55 + core * 0.08) * fade * density * str;
+	float alpha = (profile * 0.55 + core * 0.08) * fade * density * str * 0.5;
 	ALBEDO = mix(vec3(0.66, 0.72, 0.82), vec3(1.0), profile * 0.8 + 0.2);
-	ALPHA = clamp(alpha, 0.0, 0.68);
+	ALPHA = clamp(alpha, 0.0, 0.34);
 }
 """
 
