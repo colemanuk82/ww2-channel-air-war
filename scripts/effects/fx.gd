@@ -316,7 +316,7 @@ func stack_smoke(pos: Vector3, size: float, holder: Node3D) -> FXEmitter:
 
 ## Burning building: flames plus a tall black smoke plume, both bound to `holder` (stopped when it leaves the tree).
 ## Returns the emitters so the caller can stop() them.
-func blaze(holder: Node3D, size: float = 1.0, plume: float = 1.0) -> Array:
+func blaze(holder: Node3D, size: float = 1.0, plume: float = 1.0, smoke_on: bool = true) -> Array:
 	var w: Vector3 = Vector3.ZERO
 	var wm: Node = get_node_or_null("/root/WeatherManager")
 	if wm != null and wm.has_method("get_wind"):
@@ -324,9 +324,13 @@ func blaze(holder: Node3D, size: float = 1.0, plume: float = 1.0) -> Array:
 	var lean: Vector3 = Vector3(w.x, 0.0, w.z).limit_length(9.0) * 0.8 + Vector3(2.0, 0.0, 0.8)
 	var fire_e: FXEmitter = _add_emitter(FXEmitter.Kind.BLAZE, holder.global_position, holder, Vector3(0, 1.0, 0), 2.2 * size, -1.0)
 	fire_e.drift = lean
-	var plume_e: FXEmitter = _add_emitter(FXEmitter.Kind.PLUME, holder.global_position, holder, Vector3(0, 4.0 * size, 0), 3.2 * size * plume, -1.0)
-	plume_e.drift = lean
-	return [fire_e, plume_e]
+	fire_e.smoke_on = smoke_on
+	var out: Array = [fire_e]
+	if smoke_on:
+		var plume_e: FXEmitter = _add_emitter(FXEmitter.Kind.PLUME, holder.global_position, holder, Vector3(0, 4.0 * size, 0), 3.2 * size * plume, -1.0)
+		plume_e.drift = lean
+		out.append(plume_e)
+	return out
 
 
 ## Permanent tall black smoke pillar with fire at its foot, bound to `holder` (stops when it leaves the tree).

@@ -11,6 +11,7 @@ var follow: Node3D
 var offset: Vector3
 var size: float = 4.0
 var dark: float = 0.5          # 0 light grey .. 1 black (trails)
+var smoke_on: bool = true      # city fires switch this off on 80% of their fires
 var drift: Vector3 = Vector3(2.0, 0.0, 0.8)   # STACK: how far the wind leans the plume
 var aux: FXParticles           # PILLAR: pool for the flames at its foot
 var remain: float = 20.0       # < 0 = until stop()
@@ -78,12 +79,13 @@ func _emit(p: Vector3, puffs: FXParticles, fade: float) -> void:
 	var s: float = size * fade
 	match kind:
 		Kind.COLUMN:
-			puffs.spawn(p + _jit(s * 0.15), Vector3(4.0, s * 1.4, 1.5) + _jit(s * 0.2), 9.0, s * 0.5, s * 2.4,
-				Color(0.13, 0.12, 0.12, 0.88 * fade), Color(0.32, 0.31, 0.3, 0.0), 1.0, 0.0, 0.2)
+			if smoke_on:
+				puffs.spawn(p + _jit(s * 0.15), Vector3(4.0, s * 1.4, 1.5) + _jit(s * 0.2), 9.0, s * 0.5, s * 2.4,
+					Color(0.13, 0.12, 0.12, 0.88 * fade), Color(0.32, 0.31, 0.3, 0.0), 1.0, 0.0, 0.2)
 		Kind.FIRE:
 			puffs.spawn(p + _jit(s * 0.25), Vector3(0.0, s * 1.6, 0.0) + _jit(s * 0.3), 0.75, s * 0.8, s * 0.25,
 				Color(1.0, 0.82, 0.25, 1.0), Color(0.95, 0.25, 0.05, 0.0), 0.2, 0.0, 0.5)
-			if _tick % 3 == 0:
+			if smoke_on and _tick % 3 == 0:
 				puffs.spawn(p + Vector3(0, s * 0.8, 0), Vector3(2.0, s * 1.2, 0.8) + _jit(s * 0.2), 3.0, s * 0.5, s * 1.5,
 					Color(0.1, 0.1, 0.1, 0.85 * fade), Color(0.3, 0.3, 0.3, 0.0), 1.0, 0.0, 0.4)
 		Kind.TRAIL_SMOKE:
@@ -103,22 +105,25 @@ func _emit(p: Vector3, puffs: FXParticles, fade: float) -> void:
 			# flames licking out of a burning building
 			puffs.spawn(p + _jit(s * 1.2) * Vector3(1, 0.4, 1), Vector3(drift.x * 0.2, s * 2.4, drift.z * 0.2) + _jit(s * 0.35), 0.9, s * 1.5, s * 0.35,
 				Color(1.0, 0.78, 0.22, 1.0), Color(0.95, 0.22, 0.04, 0.0), 0.2, 0.0, 0.5)
-			if _tick % 2 == 0:
+			if smoke_on and _tick % 2 == 0:
 				puffs.spawn(p + Vector3(0, s * 1.5, 0) + _jit(s * 0.8), Vector3(drift.x * 0.4, s * 2.0, drift.z * 0.4) + _jit(s * 0.3), 5.5, s * 1.1, s * 2.9,
-					Color(0.05, 0.05, 0.05, 0.9), Color(0.2, 0.2, 0.2, 0.0), 1.0, 0.0, 0.3)
+					Color(0.05, 0.05, 0.05, 0.9 * fade), Color(0.2, 0.2, 0.2, 0.0), 1.0, 0.0, 0.3)
 		Kind.PLUME:
 			# tall, wide black column that leans with the wind and thins into the haze
-			puffs.spawn(p + _jit(s * 0.4), drift + Vector3(0.0, 6.0 + 0.9 * s, 0.0) + _jit(0.8), 22.0, s * 1.4, s * 8.5,
-				Color(0.06, 0.055, 0.055, 0.9 * fade), Color(0.22, 0.21, 0.21, 0.0), 1.0, 0.0, 0.1)
+			if smoke_on:
+				puffs.spawn(p + _jit(s * 0.4), drift + Vector3(0.0, 6.0 + 0.9 * s, 0.0) + _jit(0.8), 22.0, s * 1.4, s * 8.5,
+					Color(0.06, 0.055, 0.055, 0.9 * fade), Color(0.22, 0.21, 0.21, 0.0), 1.0, 0.0, 0.1)
 		Kind.PILLAR:
 			# a tall, narrow, near-black column that climbs a kilometre or more, leans with the wind and thins out at the top
-			puffs.spawn(p + _jit(s * 0.12) * Vector3(1, 0.2, 1), drift * 0.35 + Vector3(0.0, 22.0 + s * 0.6, 0.0) + _jit(0.5), 44.0, s * 0.55, s * 2.9,
-				Color(0.035, 0.033, 0.036, 0.97 * fade), Color(0.17, 0.17, 0.18, 0.0), 1.0, 0.0, 0.04)
+			if smoke_on:
+				puffs.spawn(p + _jit(s * 0.12) * Vector3(1, 0.2, 1), drift * 0.35 + Vector3(0.0, 22.0 + s * 0.6, 0.0) + _jit(0.5), 44.0, s * 0.55, s * 2.9,
+					Color(0.035, 0.033, 0.036, 0.97 * fade), Color(0.17, 0.17, 0.18, 0.0), 1.0, 0.0, 0.04)
 			if aux != null and _tick % 2 == 0:
 				aux.spawn(p + _jit(s * 0.2) * Vector3(1, 0.3, 1), Vector3(0.0, s * 1.6, 0.0) + _jit(s * 0.25), 0.8, s * 0.55, s * 0.18,
 					Color(1.0, 0.78, 0.22, 1.0), Color(0.95, 0.22, 0.04, 0.0), 0.2, 0.0, 0.5)
 		Kind.TRAIL_FIRE:
 			puffs.spawn(p + _jit(s * 0.1), _jit(1.5), 0.35, s * 0.7, s * 0.15,
 				Color(1.0, 0.8, 0.2, 1.0), Color(0.95, 0.25, 0.05, 0.0), 0.2, 0.0, 0.0)
-			puffs.spawn(p + _jit(s * 0.1), _jit(1.5) + Vector3(0, 2.0, 0), 4.6, s * 0.55, s * 2.4,
-				Color(0.08, 0.08, 0.08, 0.9), Color(0.3, 0.3, 0.3, 0.0), 1.0, 0.0, 0.22)
+			if smoke_on:
+				puffs.spawn(p + _jit(s * 0.1), _jit(1.5) + Vector3(0, 2.0, 0), 4.6, s * 0.55, s * 2.4,
+					Color(0.08, 0.08, 0.08, 0.9), Color(0.3, 0.3, 0.3, 0.0), 1.0, 0.0, 0.22)
