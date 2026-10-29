@@ -19,6 +19,8 @@ const SHADER := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled;
 
+uniform vec3 contrail_tint = vec3(1.0);
+
 varying vec2 v_uv2;
 
 float hash(vec2 p) {
@@ -62,7 +64,7 @@ void fragment() {
 	float core = exp(-pow((u - 0.5) * 7.0, 2.0));
 
 	float alpha = (profile * 0.55 + core * 0.08) * fade * density * str * 0.5;
-	ALBEDO = mix(vec3(0.66, 0.72, 0.82), vec3(1.0), profile * 0.8 + 0.2);
+	ALBEDO = mix(vec3(0.66, 0.72, 0.82), vec3(1.0), profile * 0.8 + 0.2) * contrail_tint;
 	ALPHA = clamp(alpha, 0.0, 0.34);
 }
 """
@@ -142,6 +144,7 @@ var _mesh: ArrayMesh = ArrayMesh.new()
 var _mat: ShaderMaterial
 var _task_id: int = -1
 var _job: BuildJob = null
+var _tint_t: float = 0.0
 
 
 func _ready() -> void:
@@ -153,6 +156,19 @@ func _ready() -> void:
 	_mat.shader = sh
 	material_override = _mat
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_mat.set_shader_parameter("contrail_tint", _cloud_tint())
+
+
+## The same lit colour the cloud layer uses, so high contrails sit in the sky instead of glowing white.
+static func _cloud_tint() -> Color:
+	var cc := Color(0.85, 0.87, 0.9)
+	var cf: CloudField = WeatherManager.cloud_field
+	if cf != null and cf.mat != null:
+		var cv: Variant = cf.mat.get_shader_parameter("cloud_color")
+		if cv is Color:
+			cc = cv
+	var lk: float = clampf(0.15 + TimeOfDay.light_level * 0.9, 0.1, 1.0)
+	return Color(cc.r * lk, cc.g * lk, cc.b * lk)
 
 
 ## Lay down a point at world position `p`. `strength` 0..1 sets how opaque the trail is (0 at low altitude).
@@ -176,6 +192,11 @@ func _process(delta: float) -> void:
 	var n: int = _pts.size()
 	if n == 0:
 		return
+	_tint_t -= delta
+	if _tint_t <= 0.0:
+		_tint_t = 0.5
+		if _mat != null:
+			_mat.set_shader_parameter("contrail_tint", _cloud_tint())
 	for i in n:
 		_age[i] += delta
 	var drop: int = 0
