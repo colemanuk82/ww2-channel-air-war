@@ -186,7 +186,11 @@ func _build_model() -> void:
 	if old:
 		old.queue_free()
 	_model = AircraftModels.build(stats.model_id, stats.nation)
-	_contrail_ready = false
+	for cn in _contrail_nodes:
+		if cn != null and is_instance_valid(cn):
+			cn.queue_free()
+	_contrail_nodes.clear()
+	_contrail_pts.clear()
 	add_child(_model)
 	_apply_team_outline()
 	_prop = _model.find_child("Propeller", true, false) as Node3D
@@ -426,9 +430,11 @@ func set_gear(down: bool) -> void:
 func reset_pose(pos: Vector3, heading_deg: float, airborne: bool, start_speed: float = -1.0) -> void:
 	if damage_model != null:
 		damage_model.repair()
-	if _contrail_node != null and is_instance_valid(_contrail_node):
-		_contrail_node.queue_free()       # a respawn must not draw a line from the old position to the new one
-		_contrail_node = null
+	if _contrail_nodes.size() > 0:
+		for cn in _contrail_nodes:
+			if cn != null and is_instance_valid(cn):
+				cn.queue_free()       # a respawn must not draw a line from the old position to the new one
+		_contrail_nodes.clear()
 	state = State.ALIVE
 	add_to_group("damageable")
 	# a fresh aircraft: no lingering engine wear or heat, break-up, pull to one side or credited attacker
@@ -716,20 +722,34 @@ func _regen_health(delta: float) -> void:
 			damage_model.repair()      # fully patched up: holes and part damage go too
 
 
-## Vapour contrails above 1000 m: a drifting white trail emitted just behind the tail so it streams
-## out behind the aircraft (not from the nose / propellers). Every aircraft trails, wherever it is, so a
-## raid is marked from the moment it is high enough to see.
+## Vapour contrails above 1000 m: one trail from behind each engine (propeller node), so a four-engine
+## bomber leaves four separate trails. Single-engine types get one from behind their engine.
 const CONTRAIL_ALT_M := 1000.0
-var _contrail_acc: float = 0.0
-var _contrail_local: Vector3 = Vector3.ZERO
-var _contrail_ready: bool = false
-var _contrail_node: ContrailRibbon = null
+var _contrail_pts: Array[Vector3] = []
+var _contrail_nodes: Array[ContrailRibbon] = []
 
 
-## Emission point in the aircraft's local space: just aft of the tail, cached from the model's bounds.
-func _contrail_anchor() -> Vector3:
-	if _contrail_ready or _model == null:
-		return _contrail_local
+## Emission points in aircraft-local space, aft of every propeller/engine, cached from the model.
+func _build_contrail_anchors() -> void:
+	_contrail_pts.clear()
+	if _model == null:
+		return
+	var seen: Dictionary = {}
+	var aft: float = 4.0 if stats != null and stats.engine_count > 1 else 2.8
+	for n in _model.find_children("*", "Node3D", true, false):
+		var nm: String = String(n.name)
+		if not nm.begins_with("Propeller") or nm.begins_with("PropDisc"):
+			continue
+		if seen.has(nm):
+			continue
+		seen[nm] = true
+		var lp: Vector3 = to_local((n as Node3D).global_position)
+		_contrail_pts.append(lp + Vector3(0.0, -0.25, aft))    # aft (+Z) of the engine, behind the nacelle
+		if _contrail_pts.size() >= 8:
+			break
+	if not _contrail_pts.is_empty():
+		return
+	# fallback (model with no propeller nodes): behind the tail centre
 	var box := AABB()
 	var have: bool = false
 	for n in _model.find_children("*", "MeshInstance3D", true, false):
@@ -753,9 +773,9 @@ func _contrail_anchor() -> Vector3:
 				box = AABB(w, Vector3.ZERO)
 				have = true
 	if have:
-		_contrail_local = Vector3(box.get_center().x, box.get_center().y, box.end.z + 0.6)
-		_contrail_ready = true
-	return _contrail_local
+		_contrail_pts.append(Vector3(box.get_center().x, box.get_center().y, box.end.z + 0.6))
+	else:
+		_contrail_pts.append(Vector3(0.0, 0.0, 3.0))
 
 
 func _contrails(delta: float) -> void:
@@ -768,21 +788,31 @@ func _contrails(delta: float) -> void:
 	add_contrail_point(f)
 
 
-## Lay one trail sample at the tail. Public so a BomberFormation can give every member a trail from the
-## formation's altitude, even when one bomber sits a little lower than the rest.
+## Lay one sample at every engine's exhaust. Public so a BomberFormation can give every member a trail from
+## the formation's altitude, even when one bomber sits a little lower than the rest.
 func add_contrail_point(strength: float) -> void:
 	if stats == null or state != Aircraft.State.ALIVE or on_ground or _model == null:
 		return
-	if _contrail_node == null or not is_instance_valid(_contrail_node):
-		_contrail_node = ContrailRibbon.new()
-		# host it in the world, not under the aircraft: the vertices are world-space, and a top-level child
-		# of a moving aircraft is not reliably drawn by the renderer
-		var host: Node = get_tree().current_scene
-		if host == null:
-			host = get_parent()
-		host.add_child(_contrail_node)
-		_contrail_node.global_position = Vector3.ZERO
-	_contrail_node.add_point(global_transform * _contrail_anchor(), clampf(strength, 0.0, 1.0))
+	if _contrail_pts.is_empty():
+		_build_contrail_anchors()
+	if _contrail_pts.is_empty():
+		return
+	if _contrail_nodes.size() != _contrail_pts.size():
+		_contrail_nodes.resize(_contrail_pts.size())
+	var host: Node = get_tree().current_scene
+	if host == null:
+		host = get_parent()
+	var f: float = clampf(strength, 0.0, 1.0)
+	for i in _contrail_pts.size():
+		var cn: ContrailRibbon = _contrail_nodes[i]
+		if cn == null or not is_instance_valid(cn):
+			cn = ContrailRibbon.new()
+			# host it in the world, not under the aircraft: the vertices are world-space, and a top-level
+			# child of a moving aircraft is not reliably drawn by the renderer
+			host.add_child(cn)
+			cn.global_position = Vector3.ZERO
+			_contrail_nodes[i] = cn
+		cn.add_point(global_transform * _contrail_pts[i], f)
 
 
 ## Positional engine sound for every aircraft except the player's (the player has the cockpit drone).
