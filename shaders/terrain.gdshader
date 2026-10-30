@@ -83,6 +83,7 @@ uniform vec3 limestone_col : source_color = vec3(0.800, 0.790, 0.720);  // lime-
 uniform float ground_roughness : hint_range(0.0, 1.0) = 0.9;
 uniform float rock_slope : hint_range(0.10, 0.95) = 0.55;     // slope where rock takes over
 uniform float field_variation : hint_range(0.0, 1.0) = 1.0;   // 0 = one uniform sward, 1 = full patchwork
+uniform float pasture_bias : hint_range(0.0, 0.40) = 0.12;    // more open grass / pasture among the arable fields
 uniform float detail_strength : hint_range(0.0, 2.0) = 1.0;   // within-field micro texture
 uniform float ao_strength : hint_range(0.0, 1.0) = 0.35;      // hollow / valley darkening
 uniform float grass_translucency : hint_range(0.0, 1.0) = 0.35; // grazing-angle leaf translucency
@@ -199,7 +200,7 @@ void fragment() {
 	pasture = mix(pasture, grass_a * 0.80, step(0.72, cell_h) * 0.5);         // dark improved pasture
 
 	// How pastoral this enclosure is: low cells and pasture districts stay grass.
-	float pasture_w = clamp((1.0 - smoothstep(0.22, 0.60, cell_h)) * 0.75 + regional_pasture * 0.45 + 0.35 * r_boc + 0.30 * r_pold - 0.35 * r_open, 0.0, 1.0);
+	float pasture_w = clamp((1.0 - smoothstep(0.22, 0.60, cell_h)) * 0.75 + regional_pasture * 0.45 + 0.35 * r_boc + 0.30 * r_pold - 0.35 * r_open + pasture_bias, 0.0, 1.0);
 	vec3 field = mix(arable, pasture, pasture_w);
 	// occasional whole field of oilseed rape, only where farming is arable
 	float rape = step(0.92, fh3) * (1.0 - regional_pasture) * (1.0 - pasture_w);
