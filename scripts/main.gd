@@ -90,6 +90,9 @@ var in_game: bool = false
 var _adapt_t: float = 0.0
 var _adapt_frames: int = 0
 var _adapt_cloud: int = -1
+var _ov_layer: CanvasLayer
+var _ov_label: Label
+var _ov_t: float = 0.0
 
 var _respawn_timer: float = -1.0
 var _bail: BailOut     # bail-out (J held): the pilot on his parachute; see scripts/bail_out.gd
@@ -110,6 +113,7 @@ func _ready() -> void:
 	GroundKit.lp("main _ready start")
 	randomize()
 	_args = OS.get_cmdline_user_args()
+	_build_perf_overlay()
 	HeightField.force_procedural = _args.has("--procedural")
 	terrain = TerrainChunkManager.new()
 	terrain.name = "Terrain"
@@ -2125,6 +2129,12 @@ func _respawn_player_with_support() -> void:
 
 ## Bomber gunner view: L steps through the defensive gun positions (the aircraft flies itself while gunning).
 func _unhandled_input(event: InputEvent) -> void:
+	# F9 = performance overlay (frame time, draw calls, VRAM, active aircraft/contrails).
+	if event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_F9:
+		if _ov_layer != null:
+			_ov_layer.visible = not _ov_layer.visible
+			get_viewport().set_input_as_handled()
+		return
 	# F12 = photo: the HUD is hidden for a moment and a clean screenshot is saved to Pictures.
 	if in_game and event is InputEventKey and event.pressed and not event.echo and (event as InputEventKey).keycode == KEY_F12:
 		get_viewport().set_input_as_handled()
@@ -2723,6 +2733,52 @@ func _perf_dump() -> void:
 		var k: String = keys[i]
 		print("DUMP %-60s tris=%8.0fk nodes=%5d shadow=%s" % [k, float(tally[k]) / 1000.0, cnt[k], shadow.has(k)])
 
+## Built-in performance overlay (F9, or --perf-overlay): frame time, draw calls, VRAM and the
+## adaptive render/cloud state. Always a normal CanvasLayer, never part of the HUD.
+func _build_perf_overlay() -> void:
+	_ov_layer = CanvasLayer.new()
+	_ov_layer.layer = 100
+	_ov_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(_ov_layer)
+	var panel := PanelContainer.new()
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.02, 0.03, 0.035, 0.72)
+	st.border_color = Color(0.55, 0.6, 0.62, 0.65)
+	st.set_border_width_all(1)
+	st.set_content_margin_all(8)
+	panel.add_theme_stylebox_override("panel", st)
+	panel.position = Vector2(14, 86)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ov_layer.add_child(panel)
+	_ov_label = Label.new()
+	_ov_label.add_theme_font_size_override("font_size", 13)
+	_ov_label.add_theme_color_override("font_color", Color(0.9, 0.93, 0.92))
+	_ov_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(_ov_label)
+	_ov_layer.visible = _args.has("--perf-overlay")
+
+
+func _update_perf_overlay(delta: float) -> void:
+	if _ov_layer == null or not _ov_layer.visible:
+		return
+	_ov_t -= delta
+	if _ov_t > 0.0:
+		return
+	_ov_t = 0.25
+	var fps: int = Engine.get_frames_per_second()
+	var cpu_ms: float = Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
+	var phys_ms: float = Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+	var draws: int = int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+	var prims: int = int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))
+	var vram: float = Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0
+	var aircraft: int = get_tree().get_nodes_in_group("aircraft").size()
+	var scale: float = get_viewport().scaling_3d_scale
+	_ov_label.text = "PERF  %d FPS   cpu %.1f ms   phys %.1f ms\nDRAW %d   PRIM %dk   VRAM %.0f MB   NODES %d\nFSR2 %.3f   CLOUD %s   AIRCRAFT %d" % [
+		fps, cpu_ms, phys_ms, draws, prims / 1000, vram,
+		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), scale,
+		str(GameState.cloud_detail if _adapt_cloud < 0 else _adapt_cloud), aircraft]
+
+
 ## Dynamic FSR 2 scale and cloud-detail fallback. Runs in one-second windows; it never saves the
 ## adjusted values, so the player's chosen quality is restored in Options / on the next launch.
 func _adaptive_graphics(delta: float) -> void:
@@ -2766,6 +2822,7 @@ func _process(delta: float) -> void:
 			_update_menu_cam(delta)
 		return
 	_adaptive_graphics(delta)
+	_update_perf_overlay(delta)
 	if _perf_secs > 0.0:
 		_perf_step(delta)
 	_resume_t -= delta
@@ -3582,3 +3639,4 @@ func _audit_floating() -> void:
 		var e2: Array = agg[k]
 		var wp: Vector3 = e2[2]
 		print("[audit] %s  n=%d  max_above=%.0f  at=(%.0f, %.0f, %.0f)  dist=%.0f" % [k, int(e2[0]), float(e2[1]), wp.x, wp.y, wp.z, float(e2[3])])
+
