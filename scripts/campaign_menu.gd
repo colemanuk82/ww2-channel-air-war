@@ -73,7 +73,7 @@ func _refresh_new() -> void:
 	_homes = Campaign.airfields_for(side, String(Campaign.ERAS[_era.selected][1]))
 	_home.clear()
 	for a in _homes:
-		_home.add_item(str(a["name"]))
+		_home.add_item(SpawnPoints.label_for(str(a["name"]), side))
 	var pref: int = 0
 	for i in _homes.size():
 		if str(_homes[i]["id"]) in ["biggin_hill", "manston", "calais_marck", "abbeville_drucat"]:

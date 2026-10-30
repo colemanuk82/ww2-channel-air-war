@@ -28,11 +28,14 @@ const BELLY_TYPES := ["lancaster", "he111", "b26", "b25", "ju88", "do17", "fw200
 var team: String = "Allies"
 var members: Array[Aircraft] = []
 var leader: Aircraft
+var home_af: Airfield
 var difficulty: float = 0.5
 var gunner_damage: float = 3.5
 var route: Array[Vector3] = []
 var _gun_t: float = 0.0
 var _finished: bool = false
+var _landing_started: bool = false
+var _landed: int = 0
 
 
 ## Bomber streams are bigger than they were: every formation is scaled by this (1 = the old sizes).
@@ -78,6 +81,7 @@ static func spawn(parent: Node, stats_id: String, p_team: String, count: int, st
 	f.difficulty = p_difficulty
 	f.gunner_damage = lerpf(1.2, 2.4, p_difficulty)
 	parent.add_child(f)
+	f.home_af = _nearest_home(parent, p_team, start_pos)
 	var yaw: Basis = Basis.looking_at(WorldCoords.heading_to_dir(heading_deg), Vector3.UP)
 	for i in count:
 		var off: Vector3 = slot_offset(i, spacing)
@@ -88,6 +92,7 @@ static func spawn(parent: Node, stats_id: String, p_team: String, count: int, st
 		f.members.append(ac)
 		var pilot: AIPilot = AIFactory.pilot_of(ac)
 		pilot.set_leader(null if i == 0 else f.members[0], off)
+		pilot.landed_ai.connect(f._on_member_landed)
 		ac.destroyed.connect(f._on_member_destroyed)
 	f.leader = f.members[0]
 	f.set_route(waypoints)
@@ -125,10 +130,65 @@ func alive_count() -> int:
 	return n
 
 
+static func _nearest_home(parent: Node, p_team: String, pos: Vector3) -> Airfield:
+	if parent == null or parent.get_tree() == null:
+		return null
+	var best: Airfield = null
+	var bd: float = INF
+	for n in parent.get_tree().get_nodes_in_group("airfield"):
+		var af: Airfield = n as Airfield
+		if af != null and af.team == p_team:
+			var d: float = Vector2(af.global_position.x - pos.x, af.global_position.z - pos.z).length()
+			if d < bd:
+				bd = d
+				best = af
+	return best
+
+
+## Fly the whole formation back into the circuit and land each aircraft. Called when a route that ends
+## at the home field is finished, or by a mode that is ending a raid but wants the bombers to go home.
+func land_at_home() -> void:
+	if _landing_started or home_af == null or not is_instance_valid(home_af):
+		return
+	_landing_started = true
+	for i in members.size():
+		var m: Aircraft = members[i]
+		if not is_instance_valid(m) or m.state != Aircraft.State.ALIVE:
+			continue
+		var p: AIPilot = AIFactory.pilot_of(m)
+		if p == null:
+			continue
+		if i == 0:
+			p.begin_landing(home_af)
+		else:
+			var mm: Aircraft = m
+			get_tree().create_timer(2.5 * float(i)).timeout.connect(func() -> void:
+				if is_instance_valid(mm) and is_instance_valid(home_af):
+					var pp: AIPilot = AIFactory.pilot_of(mm)
+					if pp != null and mm.state == Aircraft.State.ALIVE:
+						pp.begin_landing(home_af))
+
+
+func _on_member_landed(_a: Aircraft) -> void:
+	_landed += 1
+	_maybe_free()
+
+
+func _maybe_free() -> void:
+	for m in members:
+		if is_instance_valid(m) and m.state == Aircraft.State.ALIVE:
+			return
+	queue_free()
+
+
 func _on_route_finished() -> void:
 	if not _finished:
 		_finished = true
 		route_finished.emit()
+		if home_af != null and is_instance_valid(home_af) and not route.is_empty():
+			var last: Vector3 = route[route.size() - 1]
+			if Vector2(last.x - home_af.global_position.x, last.z - home_af.global_position.z).length() < 9000.0:
+				land_at_home()
 
 
 func _on_member_destroyed(a: Aircraft, killer: Node) -> void:
@@ -137,6 +197,7 @@ func _on_member_destroyed(a: Aircraft, killer: Node) -> void:
 		_promote_leader()
 	if alive_count() == 0:
 		all_destroyed.emit()
+		_maybe_free()
 
 
 func _promote_leader() -> void:
