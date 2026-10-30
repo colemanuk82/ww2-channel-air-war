@@ -281,9 +281,23 @@ func _process(delta: float) -> void:
 
 	_rb -= delta
 	if _rb <= 0.0 and _task_id < 0:
-		var far: bool = false
 		var cam: Camera3D = get_viewport().get_camera_3d() if is_inside_tree() else null
 		var eye: Vector3 = cam.global_position if cam != null else Vector3.ZERO
+		if cam != null:
+			var visible_trail: bool = false
+			for arr in [_pts, _pts2]:
+				var lane: PackedVector3Array = arr
+				if lane.size() >= 2:
+					for k in [0, lane.size() / 2, lane.size() - 1]:
+						if cam.is_position_in_frustum(lane[int(k)]):
+							visible_trail = true
+							break
+				if visible_trail:
+					break
+			if not visible_trail:
+				_rb = 0.15
+				return
+		var far: bool = false
 		if cam != null:
 			var best: float = INF
 			if _pts.size() > 0:

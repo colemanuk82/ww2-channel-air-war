@@ -16,7 +16,7 @@ file_logging/max_log_files=8
 [application]
 
 config/name="WW2 Channel Air War"
-config/version="2.85"
+config/version="2.86"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 
@@ -90,6 +90,14 @@ anti_aliasing/quality/msaa_3d=2
 night_k={
 "type": "float",
 "value": 0.0
+}
+outline_near_start={
+"type": "float",
+"value": 1300.0
+}
+outline_fade_end={
+"type": "float",
+"value": 6500.0
 }
 lamp_amount={
 "type": "float",

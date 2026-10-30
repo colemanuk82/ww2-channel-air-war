@@ -216,6 +216,10 @@ func _build_video_page() -> VBoxContainer:
 		_refresh())
 	_outlines = _row(page, "Outlines", ["Off", "On"], 1 if GameState.outlines_enabled else 0, func(i: int) -> void:
 		GameState.set_graphic("outlines", i == 1))
+	_slider_metres(page, "Outline low range", GameState.outline_near, 0.0, 5000.0, func(v: float) -> void:
+		GameState.set_outline_visibility(v, GameState.outline_fade, false))
+	_slider_metres(page, "Outline fade out", GameState.outline_fade, 2000.0, 12000.0, func(v: float) -> void:
+		GameState.set_outline_visibility(GameState.outline_near, v, false))
 	_shadows = _row(page, "Shadows", ["Off", "On"], 1 if GameState.shadows_enabled else 0, func(i: int) -> void:
 		GameState.set_graphic("shadows", i == 1))
 	_msaa = _row(page, "Anti-aliasing", ["Off", "2x", "4x"], [0, 2, 4].find(GameState.msaa_level), func(i: int) -> void:
@@ -802,6 +806,34 @@ func _ui_index() -> int:
 			bd = d
 			best = i
 	return best
+
+
+## Distance sliders in metres (outline low range / fade-out).
+func _slider_metres(page: VBoxContainer, caption: String, value: float, minv: float, maxv: float, cb: Callable) -> HSlider:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 12)
+	page.add_child(hb)
+	var l: Label = UIKit.label(caption.to_upper(), 17, UIKit.TEXT_DIM, true)
+	l.custom_minimum_size = Vector2(150, 0)
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hb.add_child(l)
+	var sl := HSlider.new()
+	sl.min_value = minv
+	sl.max_value = maxv
+	sl.step = 100.0
+	sl.value = value
+	sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	sl.custom_minimum_size = Vector2(280, 28)
+	hb.add_child(sl)
+	var val := UIKit.label("%d m" % int(sl.value), 17)
+	val.custom_minimum_size = Vector2(70, 0)
+	hb.add_child(val)
+	sl.value_changed.connect(func(v: float) -> void:
+		val.text = "%d m" % int(v)
+		cb.call(v))
+	sl.drag_ended.connect(func(_changed: bool) -> void: GameState.save_settings())
+	return sl
 
 
 ## Volume sliders (0-100 %), applied live and saved when the handle is released.
