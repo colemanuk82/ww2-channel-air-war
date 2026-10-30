@@ -813,22 +813,20 @@ func add_contrail_point(strength: float) -> void:
 		_build_contrail_anchors()
 	if _contrail_pts.is_empty():
 		return
-	if _contrail_nodes.size() != _contrail_pts.size():
-		_contrail_nodes.resize(_contrail_pts.size())
-	var host: Node = get_tree().current_scene
-	if host == null:
-		host = get_parent()
+	if _contrail_nodes.is_empty():
+		var cn := ContrailRibbon.new()
+		# host it in the world, not under the aircraft: the vertices are world-space, and a top-level
+		# child of a moving aircraft is not reliably drawn by the renderer
+		var host: Node = get_tree().current_scene
+		if host == null:
+			host = get_parent()
+		host.add_child(cn)
+		cn.global_position = Vector3.ZERO
+		_contrail_nodes.append(cn)
+	var trail: ContrailRibbon = _contrail_nodes[0]
 	var f: float = clampf(strength, 0.0, 1.0)
 	for i in _contrail_pts.size():
-		var cn: ContrailRibbon = _contrail_nodes[i]
-		if cn == null or not is_instance_valid(cn):
-			cn = ContrailRibbon.new()
-			# host it in the world, not under the aircraft: the vertices are world-space, and a top-level
-			# child of a moving aircraft is not reliably drawn by the renderer
-			host.add_child(cn)
-			cn.global_position = Vector3.ZERO
-			_contrail_nodes[i] = cn
-		cn.add_point(global_transform * _contrail_pts[i], f)
+		trail.add_point(global_transform * _contrail_pts[i], f, i)
 
 
 ## Positional engine sound for every aircraft except the player's (the player has the cockpit drone).
