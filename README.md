@@ -41,7 +41,7 @@ Any suggestions or feedback? Let me know!
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.96.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.97.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 
 2. Run it. It installs just for you, with no admin rights needed.
 

@@ -1231,6 +1231,11 @@ func _update_rotation(delta: float) -> void:
 	if _stall_amount > 0.0 and not on_ground:
 		var pit2: float = _pitch_angle()
 		t_pitch -= _stall_amount * deg_to_rad(36.0) * smoothstep(deg_to_rad(-80.0), deg_to_rad(-60.0), pit2)
+		# A stalled aircraft with the nose held high loses the tail's lift and falls through toward the
+		# flight path. Without this extra high-nose break it could hang vertically with the nose up.
+		var nose_high: float = smoothstep(deg_to_rad(25.0), deg_to_rad(70.0), pit2)
+		var low_energy: float = clampf((stats.stall_speed * 1.10 - eas) / (stats.stall_speed * 0.55), 0.0, 1.0)
+		t_pitch -= nose_high * low_energy * deg_to_rad(24.0)
 		t_roll += _stall_amount * _wing_drop * deg_to_rad(6.0)      # tie-breaker; the real wing drop comes from the strip model
 		t_yaw += _stall_amount * _wing_drop * deg_to_rad(8.0)
 
