@@ -718,6 +718,55 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 					ct["suburban"] = int(ct["suburban"]) + 1
 				elif band == 3:
 					ct["industrial"] = int(ct["industrial"]) + 1
+	# 2.1c Ribbon plots just beyond the built-up edge: cottages along the lanes outside the town radius,
+	# so the centre frays into the countryside instead of stopping on a clean circle.
+	if not streets.is_empty():
+		var fringe_n: int = 12 + size * 6
+		for f in range(fringe_n):
+			var rd: Dictionary = streets[rng.randi_range(0, streets.size() - 1)]
+			var rpts: PackedVector2Array = rd["pts"]
+			if rpts.size() < 2:
+				continue
+			var ri: int = rng.randi_range(0, rpts.size() - 2)
+			var ra: Vector2 = rpts[ri]
+			var rb: Vector2 = rpts[ri + 1]
+			var rv: Vector2 = rb - ra
+			var rl: float = rv.length()
+			if rl < 1.0:
+				continue
+			var rdir: Vector2 = rv / rl
+			var rp: Vector2 = ra.lerp(rb, rng.randf_range(0.35, 1.0))
+			var rdst: float = rp.distance_to(cen)
+			if rdst < radius * 0.90 or rdst > radius * 1.60:
+				continue
+			var rside: float = 1.0 if rng.randf() < 0.5 else -1.0
+			var hp: Vector2 = rp + Vector2(-rdir.y, rdir.x) * rside * rng.randf_range(11.0, 20.0)
+			if not _land(hp.x, hp.y, 1.4) or in_park(hp.x, hp.y) or _on_block_lc(hp.x, hp.y, rblk) or RoadMesh.near_road(hp, 4.0):
+				continue
+			var hv: int = 2 if rng.randf() < 0.55 else (3 if rng.randf() < 0.70 else 5)
+			var hh: float = 5.2 + rng.randf_range(0.0, 1.8)
+			var hy: float = GroundKit.ground_y(hp.x, hp.y) + hh * 0.5 - 0.4
+			var hyaw: float = atan2(-rdir.y, rdir.x) + (0.0 if rside > 0.0 else PI) + rng.randf_range(-0.18, 0.18)
+			(lists[hv] as Array).append(_xf(Vector3(hp.x, hy, hp.y), hyaw, Vector3(pitch * 1.1, hh, rng.randf_range(6.0, 8.0))))
+			ct["houses"] = int(ct["houses"]) + 1
+			ct["suburban"] = int(ct["suburban"]) + 1
+	else:
+		# No road data (synthetic-fallback towns): a ragged ring of outlying cottages and smallholdings
+		# beyond the grid, so the built-up edge does not end on a clean circle.
+		var fringe_n: int = 10 + size * 4
+		for f in range(fringe_n):
+			var fa: float = rng.randf() * TAU
+			var fr: float = radius * rng.randf_range(0.98, 1.55)
+			var hp := Vector2(cen.x + cos(fa) * fr, cen.y + sin(fa) * fr)
+			if not _land(hp.x, hp.y, 1.4) or in_park(hp.x, hp.y) or _on_block_lc(hp.x, hp.y, rblk) or RoadMesh.near_road(hp, 4.0):
+				continue
+			var hv: int = 2 if rng.randf() < 0.55 else (3 if rng.randf() < 0.70 else 5)
+			var hh: float = 5.2 + rng.randf_range(0.0, 1.8)
+			var hy: float = GroundKit.ground_y(hp.x, hp.y) + hh * 0.5 - 0.4
+			var hyaw: float = fa + PI * 0.5 + rng.randf_range(-0.8, 0.8)
+			(lists[hv] as Array).append(_xf(Vector3(hp.x, hy, hp.y), hyaw, Vector3(pitch * 1.1, hh, rng.randf_range(6.0, 8.0))))
+			ct["houses"] = int(ct["houses"]) + 1
+			ct["suburban"] = int(ct["suburban"]) + 1
 	# 2.1b The nearest rail to the town: used by the station, the goods yard and the gasworks (any size).
 	var rails: Array = TransportNetwork.routes_near("rails", center, radius * 1.8)
 	var best_r: RoutePath = null
@@ -1265,9 +1314,9 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 						if i % 3 == 0 and j % 3 == 0 and _ok_tree(p, exclude) and not RoadMesh.near_road(p, br * 0.5):
 							(blobs[rng.randi() % 2] as Array).append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y) - 1.0, p.y), rng.randf() * TAU,
 								Vector3(br, rng.randf_range(15.0, 21.0), br * rng.randf_range(0.85, 1.1))))
-						if wtrees_c.size() + wtrees_r.size() < 6000 and rng.randf() < 0.52 and _ok_tree(p, exclude):
+						if wtrees_c.size() + wtrees_r.size() < 8000 and rng.randf() < 0.70 and _ok_tree(p, exclude):
 							_add_tree(wtrees_c, wtrees_r, p, rng, 1.25, 1.8)
-					elif trees_c.size() + trees_r.size() < 6000 and rng.randf() < 0.52 and _ok_tree(p, exclude):
+					elif trees_c.size() + trees_r.size() < 8000 and rng.randf() < 0.70 and _ok_tree(p, exclude):
 						_add_tree(trees_c, trees_r, p, rng, 1.25, 1.8)     # fewer, bigger trees: the same canopy
 				20:                                   # shrub
 					if trees_c.size() + trees_r.size() < 6000 and rng.randf() < 0.2 and _ok_tree(p, exclude):
@@ -1296,13 +1345,13 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 					if obstacles.size() < 6 and rng.randf() < 0.004 and RuralProps.wants_obstacles(p) and _ok(p, exclude, 1.5):
 						obstacles.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * PI, Vector3.ONE))
 					# an outlying cottage / ribbon plot just beyond the built-up mask frays the town edge into the fields
-					if rng.randf() < 0.04 and _built_near(p, 55.0) and _ok(p, exclude, 1.4):
+					if rng.randf() < 0.075 and _built_near(p, 80.0) and _ok(p, exclude, 1.4):
 						_add_house(houses, p, rng, house_yaw + rng.randf_range(-0.9, 0.9))
 				30:                                   # grassland
-					_field_edge_props(p, exclude, hedges, trees_c, trees_r, rng, 0.6)
+					_field_edge_props(p, exclude, hedges, trees_c, trees_r, rng, 0.45)
 					if farms_n < 3 and rng.randf() < 0.0004 and _add_farmstead(p, exclude, houses, trees_c, trees_r, rng):
 						farms_n += 1
-					if trees_c.size() + trees_r.size() < 9000 and rng.randf() < 0.035 and _ok_tree(p, exclude):
+					if trees_c.size() + trees_r.size() < 9000 and rng.randf() < 0.022 and _ok_tree(p, exclude):
 						_add_tree(trees_c, trees_r, p, rng, 0.85, 1.25)
 					if wrecks.size() < 1 and rng.randf() < 0.00004 and _ok(p, exclude, 1.5):
 						wrecks.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * TAU, Vector3.ONE))
@@ -1311,7 +1360,7 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 					if rng.randf() < 0.012 and _ok(p, exclude, 1.5):
 						cows.append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y), p.y), rng.randf() * TAU, Vector3.ONE * 1.8))
 					# an outlying cottage / ribbon plot just beyond the built-up mask frays the town edge into the fields
-					if rng.randf() < 0.04 and _built_near(p, 55.0) and _ok(p, exclude, 1.4):
+					if rng.randf() < 0.075 and _built_near(p, 80.0) and _ok(p, exclude, 1.4):
 						_add_house(houses, p, rng, house_yaw + rng.randf_range(-0.9, 0.9))
 				50:                                   # built-up: terraced rows along the local street grid
 					if in_park(p.x, p.y):
