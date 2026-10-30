@@ -32,6 +32,8 @@ var _initial_done: bool = false
 var _task_ids: Array = []
 var _generation: int = 0        # bumps on rebuild so stale results are dropped
 var _base_lod: Array = []
+var _pin_pos: Vector3 = Vector3(INF, 0.0, INF)
+var _pin_radius: float = 0.0    # keep the start/respawn airfield's terrain resident while the player flies away
 
 # Kept for the whole session: a replay / next mission reuses the imagery and urban-mask textures instead of decoding
 # and uploading them again (about 75 MB of video memory stays resident).
@@ -305,6 +307,14 @@ func set_focus(n: Node3D) -> void:
 	focus = n
 
 
+## Keep terrain around a world point resident (the start airfield). It is streamed at the detail its
+## distance to that pin needs, even when the player flies far away, so respawning cannot pop empty ground.
+func set_pin(pos: Vector3, radius: float) -> void:
+	_pin_pos = pos
+	_pin_radius = maxf(radius, 0.0)
+	_timer = 0.0
+
+
 ## Scale the terrain streaming/LOD distances (graphics "view distance" setting).
 func set_view_scale(s: float) -> void:
 	if _base_lod.is_empty():
@@ -386,7 +396,6 @@ func _update_streaming() -> void:
 	var cx0: int = floori(fp.x / chunk_size)
 	var cz0: int = floori(fp.z / chunk_size)
 	var wanted: Dictionary = {}
-	var requests: Array = []
 	for dz in range(-cr, cr + 1):
 		for dx in range(-cr, cr + 1):
 			var key := Vector2i(cx0 + dx, cz0 + dz)
@@ -400,8 +409,33 @@ func _update_streaming() -> void:
 			if lod < 0:
 				continue
 			wanted[key] = lod
-			if lod != current and _pending.get(key, -2) != lod:
-				requests.append([d, key, lod])
+	# The pinned start area stays wanted at its own detail, even when the focus is far away.
+	if _pin_radius > 0.0 and is_finite(_pin_pos.x):
+		var pcr: int = int(ceil(_pin_radius / chunk_size)) + 1
+		var px0: int = floori(_pin_pos.x / chunk_size)
+		var pz0: int = floori(_pin_pos.z / chunk_size)
+		for dz in range(-pcr, pcr + 1):
+			for dx in range(-pcr, pcr + 1):
+				var key := Vector2i(px0 + dx, pz0 + dz)
+				var center := Vector2((key.x + 0.5) * chunk_size, (key.y + 0.5) * chunk_size)
+				if not _bounds.has_point(center):
+					continue
+				var pd: float = (center - Vector2(_pin_pos.x, _pin_pos.z)).length() - chunk_size * 0.5
+				pd = maxf(pd, 0.0)
+				if pd > _pin_radius:
+					continue
+				var current: int = _chunks[key]["lod"] if _chunks.has(key) else -1
+				var lod: int = _desired_lod(pd, current)
+				if lod < 0:
+					continue
+				if not wanted.has(key) or lod < int(wanted[key]):
+					wanted[key] = lod
+	var requests: Array = []
+	for key in wanted.keys():
+		var lod2: int = int(wanted[key])
+		var current2: int = _chunks[key]["lod"] if _chunks.has(key) else -1
+		if lod2 != current2 and _pending.get(key, -2) != lod2:
+			requests.append([0.0, key, lod2])
 	# unload far chunks
 	for key in _chunks.keys():
 		if not wanted.has(key):
