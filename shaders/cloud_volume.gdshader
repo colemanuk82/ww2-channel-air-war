@@ -221,12 +221,15 @@ void fragment() {
 	if (center_dist - max_r > fade_far) { discard; }
 	float angular = max_r / max(center_dist, 1.0);
 	if (angular < 0.0005) { discard; }
-	float lod_k = clamp(1.0 + (0.03 - angular) * 22.0, 1.0, 2.0);
+	float lod_k = clamp(1.0 + (0.02 - angular) * 14.0, 1.0, 1.2);
 	// fewer steps for far clouds (they cover few pixels)
 	float span_m = (t1 - t0) * wl;
 	float step_m = dist_cam < 4000.0 ? 55.0 : (dist_cam < 12000.0 ? 90.0 : 150.0);
 	step_m *= lod_k;
-	int steps = int(clamp(span_m / (step_m * step_k), 8.0, float(max_steps)));
+	// Large on-screen clouds get a higher floor: the old 8-step floor left visible dithering along
+	// their silhouettes at night, while tiny distant clouds can still use the coarse path.
+	int min_steps = angular > 0.02 ? 24 : (angular > 0.008 ? 16 : 8);
+	int steps = int(clamp(span_m / (step_m * step_k), float(min_steps), float(max_steps)));
 	float dt = (t1 - t0) / float(steps);
 	float jitter = t_hash12(FRAGCOORD.xy);
 	float t = t0 + dt * jitter;
