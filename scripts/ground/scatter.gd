@@ -538,7 +538,7 @@ static func _bushy(parts: Array, center: Vector3, radius: float, count: int, col
 		parts.append([sm, Transform3D(Basis.IDENTITY, off), _dmat(col * rng.randf_range(0.84, 1.14), 3, 0.1)])
 
 
-static func multi(mesh: Mesh, xforms: Array, vis_end: float = 0.0) -> MultiMeshInstance3D:
+static func multi(mesh: Mesh, xforms: Array, vis_end: float = 0.0, register_obstacle: bool = true) -> MultiMeshInstance3D:
 	# The node is re-centred on its instances with a tight AABB, so the engine can frustum-cull it per
 	# tile/site and distance-fade it (visibility_range uses the AABB centre, hence the re-centring).
 	var mm := MultiMesh.new()
@@ -563,7 +563,8 @@ static func multi(mesh: Mesh, xforms: Array, vis_end: float = 0.0) -> MultiMeshI
 	var pad := Vector3(60.0, 60.0, 60.0)
 	mi.custom_aabb = AABB(lo - c - pad, (hi - lo) + pad * 2.0)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	Obstacles.register(mi)
+	if register_obstacle:
+		Obstacles.register(mi)
 	if vis_end > 0.0:
 		vis_end *= vis_scale
 		mi.visibility_range_end = vis_end
@@ -849,7 +850,7 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 	var stats: Dictionary = {"streets": streets.size(), "houses": int(ct["houses"]), "longest_run": int(ct["longest"]),
 		"core": int(ct["core"]), "suburban": int(ct["suburban"]), "industrial": int(ct["industrial"]),
 		"civic": civic.size(), "waterfront": wdir != Vector2.ZERO}
-	return {"houses": lists, "civic": civic, "church": church_d, "smokes": smokes, "stats": stats}
+	return {"houses": lists, "civic": civic, "church": church_d, "smokes": smokes, "stats": stats, "radius": radius}
 
 
 ## Stats for --city-test without building any nodes.
@@ -882,7 +883,15 @@ static func make_town_from(center: Vector3, d: Dictionary) -> Node3D:
 	for i in range(lists.size()):
 		if (lists[i] as Array).is_empty():
 			continue
-		root.add_child(multi(house_mesh(i), lists[i], 11000.0))
+		root.add_child(multi(house_mesh(i), lists[i], 8000.0))
+	# Far town HLOD: one merged roofscape mesh, then the detailed terraces stop drawing. The occluders are
+	# coarse boxes generated from the same house clusters, so the static occlusion pass can cull whole blocks
+	# without any editor bake step.
+	var hlod: MultiMeshInstance3D = _town_hlod(center, lists)
+	if hlod != null:
+		root.add_child(hlod)
+	for oc in _town_occluders(center, lists):
+		root.add_child(oc)
 	for c in d["civic"]:
 		_build_civic(root, c as Dictionary)
 	var ch_d: Variant = d["church"]
@@ -893,6 +902,73 @@ static func make_town_from(center: Vector3, d: Dictionary) -> Node3D:
 		ch.rotation.y = float(cd["yaw"])
 		root.add_child(ch)
 	return root
+
+
+## Coarse house clusters used by both the far town HLOD and its static occluder boxes.
+static func _town_clusters(lists: Array) -> Array:
+	var buckets: Dictionary = {}
+	var cell: float = 110.0
+	for li in lists.size():
+		for t in (lists[li] as Array):
+			var o: Vector3 = (t as Transform3D).origin
+			var key := Vector2i(floori(o.x / cell), floori(o.z / cell))
+			var b: Dictionary = buckets.get(key, {"n": 0, "lo": Vector3(1e9, 1e9, 1e9), "hi": Vector3(-1e9, -1e9, -1e9)})
+			b["n"] = int(b["n"]) + 1
+			var lo: Vector3 = b["lo"]
+			var hi: Vector3 = b["hi"]
+			lo = Vector3(minf(lo.x, o.x), minf(lo.y, o.y), minf(lo.z, o.z))
+			hi = Vector3(maxf(hi.x, o.x), maxf(hi.y, o.y), maxf(hi.z, o.z))
+			b["lo"] = lo
+			b["hi"] = hi
+			buckets[key] = b
+	var out: Array = []
+	for key in buckets.keys():
+		var b2: Dictionary = buckets[key]
+		if int(b2["n"]) < 3:
+			continue
+		var lo2: Vector3 = b2["lo"]
+		var hi2: Vector3 = b2["hi"]
+		out.append({"x": (lo2.x + hi2.x) * 0.5, "y": (lo2.y + hi2.y) * 0.5, "z": (lo2.z + hi2.z) * 0.5,
+			"w": clampf(hi2.x - lo2.x + 18.0, 20.0, 220.0),
+			"h": clampf(hi2.y - lo2.y + 4.0, 8.0, 24.0),
+			"d": clampf(hi2.z - lo2.z + 18.0, 20.0, 220.0), "n": int(b2["n"])})
+	return out
+
+
+## One merged roofscape mesh per town: the far LOD after the detailed terraces drop out.
+static func _town_hlod(center: Vector3, lists: Array) -> MultiMeshInstance3D:
+	var clusters: Array = _town_clusters(lists)
+	if clusters.size() < 3:
+		return null
+	var xf: Array = []
+	for c in clusters:
+		var cd: Dictionary = c
+		xf.append(_xf(Vector3(cd["x"], cd["y"], cd["z"]), 0.0, Vector3(cd["w"], cd["h"], cd["d"])))
+	var hlod: MultiMeshInstance3D = multi(box_unit(Color(0.30, 0.26, 0.21), false), xf, 24000.0, false)
+	hlod.visibility_range_begin = 7400.0 * vis_scale
+	hlod.visibility_range_begin_margin = 500.0
+	return hlod
+
+
+## Static box occluders from the larger town blocks. These are generated with the town and never baked at
+## runtime, so the occlusion pass can reject whole blocks behind a terrace row.
+static func _town_occluders(center: Vector3, lists: Array) -> Array:
+	var out: Array = []
+	var clusters: Array = _town_clusters(lists)
+	clusters.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["n"]) > int(b["n"]))
+	for c in clusters:
+		var cd: Dictionary = c
+		if int(cd["n"]) < 8:
+			continue
+		var oc := OccluderInstance3D.new()
+		var box := BoxOccluder3D.new()
+		box.size = Vector3(float(cd["w"]) * 0.82, float(cd["h"]) * 0.78, float(cd["d"]) * 0.82)
+		oc.occluder = box
+		oc.position = Vector3(cd["x"], cd["y"], cd["z"])
+		out.append(oc)
+		if out.size() >= 16:
+			break
+	return out
 
 
 ## Lay one terrace unit on the side (sgn) of a street point p with unit direction dir. Returns the new run length.
