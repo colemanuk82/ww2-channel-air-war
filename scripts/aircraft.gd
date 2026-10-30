@@ -185,6 +185,10 @@ func _build_model() -> void:
 	var old: Node = get_node_or_null("Model")
 	if old:
 		old.queue_free()
+	if _lod_model != null and is_instance_valid(_lod_model):
+		_lod_model.queue_free()
+	_lod_model = null
+	_lod_shown = false
 	_model = AircraftModels.build(stats.model_id, stats.nation)
 	for cn in _contrail_nodes:
 		if cn != null and is_instance_valid(cn):
@@ -204,6 +208,7 @@ func _build_model() -> void:
 	_eye = _model.find_child("CockpitEye", true, false) as Node3D
 	_flap_l = _model.find_child("FlapL", true, false) as Node3D
 	_flap_r = _model.find_child("FlapR", true, false) as Node3D
+	_build_lod_model()
 	# wing half-span (metres * model scale) for the strip-theory wing
 	var half: float = 5.4 * 1.1
 	var spec: Dictionary = ModelSpecs.get_spec(stats.model_id)
@@ -231,6 +236,61 @@ var _gg_py: float = 0.0       # propeller centre height / station / radius
 var _gg_pz: float = 0.0
 var _gg_pr: float = 0.0
 var _gg_rest: float = 0.0     # nose-up attitude at rest (radians); 0 for nose-wheel types
+
+
+# ---------------------------------------------------------------- far LOD
+var _lod_model: Node3D
+var _lod_shown: bool = false
+var _lod_t: float = 0.0
+
+
+func _build_lod_model() -> void:
+	if not is_inside_tree() or _model == null:
+		return
+	var bb: AABB = _aabb_local(_model)
+	if bb.size.length() < 1.0:
+		return
+	_lod_model = Node3D.new()
+	_lod_model.name = "FarLOD"
+	add_child(_lod_model)
+	var c: Vector3 = bb.get_center()
+	var col := Color(0.33, 0.35, 0.31) if team == "Axis" else Color(0.27, 0.32, 0.24)
+	var fus := Vector3(maxf(bb.size.x * 0.13, 0.55), maxf(bb.size.y * 0.42, 0.55), bb.size.z * 0.88)
+	_lod_box(fus, Vector3(c.x, c.y, c.z), col)
+	var wing := Vector3(bb.size.x, maxf(bb.size.y * 0.08, 0.14), bb.size.z * 0.28)
+	_lod_box(wing, Vector3(c.x, c.y + bb.size.y * 0.06, c.z), col.darkened(0.06))
+	var tail := Vector3(bb.size.x * 0.34, maxf(bb.size.y * 0.15, 0.28), bb.size.z * 0.16)
+	_lod_box(tail, Vector3(c.x, c.y + bb.size.y * 0.10, bb.end.z - tail.z * 0.55), col)
+	var fin := Vector3(maxf(bb.size.x * 0.035, 0.10), bb.size.y * 0.30, bb.size.z * 0.12)
+	_lod_box(fin, Vector3(c.x, c.y + bb.size.y * 0.26, bb.end.z - fin.z * 0.55), col)
+	_lod_model.visible = false
+
+
+func _lod_box(size: Vector3, pos: Vector3, col: Color) -> void:
+	var bm := BoxMesh.new()
+	bm.size = size
+	var mi := ToonUtil.make_mesh(bm, col, {"outline": false})
+	mi.position = pos
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_lod_model.add_child(mi)
+
+
+func _update_lod(delta: float) -> void:
+	if _model == null or _lod_model == null:
+		return
+	_lod_t -= delta
+	if _lod_t > 0.0:
+		return
+	_lod_t = 0.4
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var far: bool = cam.global_position.distance_squared_to(global_position) > 1800.0 * 1800.0
+	if far == _lod_shown:
+		return
+	_lod_shown = far
+	_model.visible = not far
+	_lod_model.visible = far
 
 
 func _aabb_local(n: Node3D) -> AABB:
@@ -662,6 +722,7 @@ func _process(delta: float) -> void:
 	delta = minf(delta, 0.05)
 	if state == State.DEAD:
 		return
+	_update_lod(delta)
 	_update_wind(delta)
 	_update_air_data()
 	_update_flaps(delta)
