@@ -87,6 +87,9 @@ var mode: ModeBase
 var config: Dictionary = {}
 var airfields: Dictionary = {}   # id -> Airfield
 var in_game: bool = false
+var _adapt_t: float = 0.0
+var _adapt_frames: int = 0
+var _adapt_cloud: int = -1
 
 var _respawn_timer: float = -1.0
 var _bail: BailOut     # bail-out (J held): the pilot on his parachute; see scripts/bail_out.gd
@@ -2720,11 +2723,49 @@ func _perf_dump() -> void:
 		var k: String = keys[i]
 		print("DUMP %-60s tris=%8.0fk nodes=%5d shadow=%s" % [k, float(tally[k]) / 1000.0, cnt[k], shadow.has(k)])
 
+## Dynamic FSR 2 scale and cloud-detail fallback. Runs in one-second windows; it never saves the
+## adjusted values, so the player's chosen quality is restored in Options / on the next launch.
+func _adaptive_graphics(delta: float) -> void:
+	if get_tree().paused or not GameState.dynamic_resolution \
+			or GameState.effective_upscaler() != GameState.Upscaler.FSR2:
+		return
+	var rdt: float = delta / maxf(Engine.time_scale, 0.01)
+	_adapt_t += rdt
+	_adapt_frames += 1
+	if _adapt_t < 1.0:
+		return
+	var avg: float = _adapt_t / float(maxi(_adapt_frames, 1))
+	_adapt_t = 0.0
+	_adapt_frames = 0
+	var vp: Viewport = get_viewport()
+	var cur: float = vp.scaling_3d_scale
+	var nxt: float = cur
+	if avg > 0.0190:
+		nxt = maxf(0.333, cur - 0.03)
+	elif avg < 0.0145:
+		nxt = minf(0.667, cur + 0.02)
+	if absf(nxt - cur) > 0.002:
+		vp.scaling_3d_scale = nxt
+	var base_cloud: int = clampi(GameState.cloud_detail, 0, 2)
+	if _adapt_cloud < 0 or _adapt_cloud > base_cloud:
+		_adapt_cloud = base_cloud
+	var want_cloud: int = _adapt_cloud
+	if avg > 0.0200 and want_cloud > 0:
+		want_cloud -= 1
+	elif avg < 0.0150 and want_cloud < base_cloud:
+		want_cloud += 1
+	if want_cloud != _adapt_cloud:
+		_adapt_cloud = want_cloud
+		if WeatherManager.cloud_field != null:
+			WeatherManager.cloud_field.set_detail(want_cloud)
+
+
 func _process(delta: float) -> void:
 	if not in_game:
 		if _menu_anchor:
 			_update_menu_cam(delta)
 		return
+	_adaptive_graphics(delta)
 	if _perf_secs > 0.0:
 		_perf_step(delta)
 	_resume_t -= delta

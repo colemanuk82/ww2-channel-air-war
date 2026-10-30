@@ -353,6 +353,40 @@ func _build_parallel(earth: Material) -> void:
 	_frying_pans(loop, pan, 190.0, Vector2(ax - 20.0, -L * 0.1), 260.0)
 
 
+## Close-range 3D grass tufts along a grass strip. One MultiMesh, distance-culled, shadowless.
+static var _tuft_mesh: Mesh
+static var _tuft_mat: Material
+
+
+func _grass_tufts(L: float, count: int) -> void:
+	if _tuft_mesh == null:
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.09, 0.42, 0.09)
+		_tuft_mesh = bm
+		_tuft_mat = ToonUtil.make_toon(Color(0.20, 0.29, 0.12), {"outline": false, "detail": 4})
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(airfield_name) + 991
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.instance_count = count
+	mm.mesh = _tuft_mesh
+	for i in count:
+		var side: float = -1.0 if i % 2 == 0 else 1.0
+		var x: float = side * rng.randf_range(runway_width * 1.10, runway_width * 1.65)
+		var z: float = rng.randf_range(-L * 0.49, L * 0.49)
+		var s: float = rng.randf_range(0.65, 1.35)
+		var b := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * rng.randf_range(0.8, 1.5), s))
+		mm.set_instance_transform(i, Transform3D(b, Vector3(x, 0.06, z)))
+	var mi := MultiMeshInstance3D.new()
+	mi.multimesh = mm
+	mi.material_override = _tuft_mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.visibility_range_end = 700.0
+	mi.visibility_range_end_margin = 70.0
+	mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+	add_child(mi)
+
+
 ## Pre-war RAF grass station (Biggin Hill, Hornchurch, Kenley... in 1940): no paved runway - a mown landing area
 ## inside boundary markers - with a concrete apron and an arc of big hangars on the west side, a tarmac perimeter
 ## track, and E-type blast pens round it, each pen holding two fighters.
@@ -382,6 +416,7 @@ func _build_raf_grass(earth: Material) -> void:
 		var pz: float = rng.randf_range(-L * 0.44, L * 0.44)
 		_box(Vector3(rng.randf_range(2.5, 8.0), 0.02, rng.randf_range(3.0, 12.0)), Vector3(px, 0.058, pz), bare)
 	_strip_lamps(runway_width * 1.12, L)
+	_grass_tufts(L, 280)
 	# perimeter track: an ellipse of tarmac round the landing ground
 	# sized so the track and pens stay inside the terrain's flattened zone (~1 km radius)
 	var rx: float = L * 0.38
@@ -441,6 +476,7 @@ func _build_lw_field(earth: Material) -> void:
 		var pz: float = rng.randf_range(-L * 0.44, L * 0.44)
 		_box(Vector3(rng.randf_range(2.5, 6.5), 0.02, rng.randf_range(4.0, 12.0)), Vector3(px, 0.058, pz), worn)
 	_strip_lamps(runway_width * 0.95, L)
+	_grass_tufts(L, 220)
 	for rx2 in [-runway_width * 0.35, runway_width * 0.3]:
 		_box(Vector3(3.0, 0.32, L * 0.85), Vector3(rx2, -0.1, 0), rut)
 	# dispersal pads along both long edges and across the far end, each a worn earth patch under a net
