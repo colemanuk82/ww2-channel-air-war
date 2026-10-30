@@ -16,7 +16,7 @@ file_logging/max_log_files=8
 [application]
 
 config/name="WW2 Channel Air War"
-config/version="2.87"
+config/version="2.88"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 
@@ -74,6 +74,8 @@ view_dist_reset={
 3d_physics/layer_4="ground_targets"
 
 [rendering]
+
+occlusion_culling/use_occlusion_culling=true
 
 limits/global_shader_variables/buffer_size=262144
 

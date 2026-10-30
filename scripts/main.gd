@@ -113,6 +113,7 @@ func _ready() -> void:
 	GroundKit.lp("main _ready start")
 	randomize()
 	_args = OS.get_cmdline_user_args()
+	get_viewport().use_occlusion_culling = true
 	_build_perf_overlay()
 	HeightField.force_procedural = _args.has("--procedural")
 	terrain = TerrainChunkManager.new()
