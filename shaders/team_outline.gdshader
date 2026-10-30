@@ -9,6 +9,7 @@ uniform float dist_scale = 0.0009;
 uniform float strength = 0.5;
 global uniform float outline_near_start;
 global uniform float outline_fade_end;
+global uniform float outline_enabled;
 global uniform float night_k;          // 0 day .. 1 night (FX): outlines show up closer in the dark
 
 varying float v_dist;
@@ -27,9 +28,9 @@ void fragment() {
 		discard;
 	}
 	float near_start = outline_near_start;
-	float near_end = outline_near_start + 1000.0;
+	float near_end = outline_near_start + 250.0;   // show the colour quickly past the chosen low range
 	float fade_end = max(outline_fade_end, near_end + 500.0);
 	float fade_start = max(near_end, fade_end - 2500.0);
 	ALBEDO = outline_color.rgb;
-	ALPHA = strength * (1.0 - smoothstep(fade_start, fade_end, v_dist)) * mix(smoothstep(near_start, near_end, v_dist), 1.0, night_k);
+	ALPHA = strength * outline_enabled * (1.0 - smoothstep(fade_start, fade_end, v_dist)) * mix(smoothstep(near_start, near_end, v_dist), 1.0, night_k);
 }

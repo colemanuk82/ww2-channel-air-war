@@ -174,11 +174,14 @@ func _apply_team_outline() -> void:
 	var m := ShaderMaterial.new()
 	m.shader = load("res://shaders/team_outline.gdshader") as Shader
 	m.set_shader_parameter("outline_color", Color(1.0, 0.85, 0.1) if friendly else Color(1.0, 0.16, 0.1))
-	for n in _model.find_children("*", "MeshInstance3D", true, false):
-		var mi: MeshInstance3D = n as MeshInstance3D
-		if mi == null or String(mi.name).findn("disc") >= 0:
+	for root in [_model, _lod_model]:
+		if root == null or not is_instance_valid(root):
 			continue
-		mi.material_overlay = m
+		for n in (root as Node3D).find_children("*", "MeshInstance3D", true, false):
+			var mi: MeshInstance3D = n as MeshInstance3D
+			if mi == null or String(mi.name).findn("disc") >= 0:
+				continue
+			mi.material_overlay = m
 
 
 func _build_model() -> void:
@@ -264,6 +267,7 @@ func _build_lod_model() -> void:
 	var fin := Vector3(maxf(bb.size.x * 0.035, 0.10), bb.size.y * 0.30, bb.size.z * 0.12)
 	_lod_box(fin, Vector3(c.x, c.y + bb.size.y * 0.26, bb.end.z - fin.z * 0.55), col)
 	_lod_model.visible = false
+	_apply_team_outline()      # the far boxes need the team colour too; the detailed model drops out beyond 1.8 km
 
 
 func _lod_box(size: Vector3, pos: Vector3, col: Color) -> void:
