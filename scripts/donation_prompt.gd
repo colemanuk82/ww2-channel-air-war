@@ -44,7 +44,7 @@ func _ready() -> void:
 	box.add_child(UIKit.label("SUPPORT CHANNEL AIR WAR", 29, UIKit.TEXT, true))
 	box.add_child(UIKit.rule(0.8))
 	var body := UIKit.label(
-		"Thank you for playing. If you are enjoying the game, please consider donating to me — it helps cover the AI development costs and lets me keep updating it.\n\nI would also love to hear any suggestions you have for what to add next.",
+		"This game will always be free — but if you can, please consider donating to me. It helps cover the AI development costs and lets me keep updating it.\n\nI would also love to hear any suggestions you have for what to add next.",
 		18, UIKit.TEXT)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.custom_minimum_size = Vector2(700, 0)
