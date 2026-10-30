@@ -2,13 +2,12 @@ class_name Parachute
 extends Node3D
 ## Pooled parachuting pilot. FX.parachute(pos) launches one; it drifts down and hides itself after landing.
 
-const FALL_SPEED := 6.0        # metres a second under a fully open canopy (a wartime 24-ft chute)
+const FALL_SPEED := 5.6        # metres a second under a fully open canopy (a wartime 24-ft chute)
 
 var active: bool = false
 var _t: float = 0.0
 var _landed_t: float = -1.0
 var _land_pose: float = 0.0
-var _fast: bool = false        # the player's own chute: three times the descent rate above 50 m, normal below
 var _canopy: MeshInstance3D
 var _sway: float = 0.0
 var _drift: Vector3 = Vector3.ZERO
@@ -21,34 +20,73 @@ func _ready() -> void:
 	visible = false
 	_canopy = ToonUtil.make_mesh(_canopy_mesh(), Color(0.9, 0.88, 0.75), {"outline_thickness": 0.04, "underside": Color(0.68, 0.66, 0.56)})
 	_canopy.position = Vector3(0, 7.0, 0)
+	var cmat := _canopy.material_override as ShaderMaterial
+	if cmat == null:
+		cmat = _canopy.get_active_material(0) as ShaderMaterial
+	if cmat != null:
+		cmat.set_shader_parameter("use_vcol", true)
 	add_child(_canopy)
+	# stitched apex vent ring
+	var vent := TorusMesh.new()
+	vent.inner_radius = 0.23
+	vent.outer_radius = 0.31
+	vent.rings = 12
+	vent.ring_segments = 6
+	var vent_mi := ToonUtil.make_mesh(vent, Color(0.72, 0.70, 0.60), {"outline_thickness": 0.02})
+	vent_mi.position = Vector3(0, 3.16, 0)
+	_canopy.add_child(vent_mi)
+	# stitched radial seams from the apex vent to the hem
+	var seams := ImmediateMesh.new()
+	seams.surface_begin(Mesh.PRIMITIVE_LINES)
+	for i in 24:
+		var a: float = TAU * float(i) / 24.0
+		seams.surface_add_vertex(Vector3(0, 3.19, 0))
+		seams.surface_add_vertex(Vector3(cos(a) * 3.92, 0.02, sin(a) * 3.92))
+	seams.surface_end()
+	var seam_mat := StandardMaterial3D.new()
+	seam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	seam_mat.albedo_color = Color(0.32, 0.29, 0.22, 0.85)
+	var seam_mi := MeshInstance3D.new()
+	seam_mi.mesh = seams
+	seam_mi.material_override = seam_mat
+	seam_mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_canopy.add_child(seam_mi)
 	_rig = Node3D.new()
 	_rig.name = "Rig"
 	add_child(_rig)
 
 
-## A wartime parachute canopy: 16 gores on a domed profile, an apex vent, and a hem scalloped where it
-## hangs between the suspension lines. Built inside-out as well so the silk is visible from below.
+## A wartime parachute canopy: 24 gores on a domed profile, stitched silk panels, an apex vent and a
+## hem scalloped where it hangs between the suspension lines. Built inside-out too so the silk is
+## visible from below.
 static func _canopy_mesh() -> ArrayMesh:
-	const SEGS := 32       # around the canopy (two rim points per gore)
-	const RINGS := 7
-	const R := 3.9         # canopy radius in metres
-	const H := 3.0         # dome height
-	const VENT := 0.28     # apex vent radius
+	const GORES := 24
+	const SEGS := GORES * 2
+	const RINGS := 10
+	const R := 3.95        # canopy radius in metres
+	const H := 3.2         # dome height
+	const VENT := 0.30     # apex vent radius
 	var verts := PackedVector3Array()
 	var norms := PackedVector3Array()
+	var cols := PackedColorArray()
 	var idx := PackedInt32Array()
+	var panel := [Color(1.0, 0.98, 0.90), Color(0.62, 0.64, 0.48)]   # bleached linen / olive silk
 	for j in RINGS + 1:
 		var q: float = float(j) / float(RINGS)
 		var rr: float = lerpf(VENT, R, q)
 		var yy: float = H * (1.0 - q * q)
 		for i in SEGS:
 			var ang: float = TAU * float(i) / float(SEGS)
-			var hem: float = 0.34 * (0.5 - 0.5 * cos(ang * 16.0)) if j == RINGS else 0.0
+			var hem: float = 0.30 * (0.5 - 0.5 * cos(ang * float(GORES))) if j == RINGS else 0.0
 			var cx: float = cos(ang)
 			var sz: float = sin(ang)
-			verts.append(Vector3(cx * rr, yy + hem, sz * rr))
+			var billow: float = 1.0 + 0.012 * sin(ang * float(GORES) + q * 2.4)
+			verts.append(Vector3(cx * rr * billow, yy + hem, sz * rr * billow))
 			norms.append(Vector3(cx * (2.0 * H / R), 1.0, sz * (2.0 * H / R)).normalized())
+			var c: Color = panel[int(i / 2) % 2]
+			if i % 2 == 0:
+				c = c.darkened(0.18)       # stitched seam between gores
+			cols.append(c)
 	for j in RINGS:
 		for i in SEGS:
 			var a: int = j * SEGS + i
@@ -64,6 +102,9 @@ static func _canopy_mesh() -> ArrayMesh:
 	var outer_norms := norms.duplicate()
 	for nn in outer_norms:
 		norms.append(-nn)
+	var outer_cols := cols.duplicate()
+	for cc in outer_cols:
+		cols.append(cc.darkened(0.10))
 	var n0: int = idx.size()
 	for k in range(0, n0, 3):
 		idx.append(idx[k] + base)
@@ -73,6 +114,7 @@ static func _canopy_mesh() -> ArrayMesh:
 	arr.resize(Mesh.ARRAY_MAX)
 	arr[Mesh.ARRAY_VERTEX] = verts
 	arr[Mesh.ARRAY_NORMAL] = norms
+	arr[Mesh.ARRAY_COLOR] = cols
 	arr[Mesh.ARRAY_INDEX] = idx
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
@@ -151,9 +193,9 @@ func _build_pilot(side: String) -> void:
 	# suspension lines: canopy rim -> two riser tops above the shoulders, risers -> harness
 	var lines := ImmediateMesh.new()
 	lines.surface_begin(Mesh.PRIMITIVE_LINES)
-	for i in 16:
-		var a: float = TAU * float(i) / 16.0
-		var rim := Vector3(cos(a) * 3.88, 7.0, sin(a) * 3.88)
+	for i in 24:
+		var a: float = TAU * float(i) / 24.0
+		var rim := Vector3(cos(a) * 3.92, 7.0, sin(a) * 3.92)
 		var top := Vector3(0.26 if cos(a) > 0.0 else -0.26, 1.15, 0.0)
 		lines.surface_add_vertex(rim)
 		lines.surface_add_vertex(top)
@@ -202,7 +244,6 @@ func _build_pilot(side: String) -> void:
 
 func launch(pos: Vector3, p_team: String = "", p_look: String = "") -> void:
 	team = p_team
-	_fast = p_team == ""
 	var look: String = p_look if p_look != "" else (p_team if p_team != "" else "Allies")
 	if look != _look and _rig != null:
 		_build_pilot(look)
@@ -241,27 +282,29 @@ func _process(delta: float) -> void:
 	if _landed_t >= 0.0:
 		_landed_t += delta
 		_animate(delta, 1.0, true)
+		if _landed_t < 1.5:
+			global_position += _drift * 0.22 * delta       # the silk is dragged a little before it spills
 		if _landed_t > 6.0:
 			active = false
 			visible = false
 			remove_from_group("damageable")
 		elif _canopy:
 			_canopy.scale = _canopy.scale.lerp(Vector3(0.88, 0.07, 0.88), minf(delta * 2.0, 1.0))
+			_canopy.rotation.z = lerpf(_canopy.rotation.z, 0.22, minf(delta * 1.5, 1.0))
 		return
 	# a real opening: a second of free fall, then the canopy streams and inflates over about two seconds
 	var open: float = clampf((_t - 0.5) / 1.8, 0.0, 1.0)
 	var fall: float = lerpf(35.0, FALL_SPEED, open * open)
-	if _fast and open >= 1.0 and global_position.y - FX.ground_height(global_position) > 50.0:
-		fall = FALL_SPEED * 3.0
 	if _canopy:
-		_canopy.scale = Vector3(lerpf(0.18, 1.0, open), lerpf(0.06, 1.0, open), lerpf(0.18, 1.0, open))
+		var breathe: float = 1.0 + 0.015 * sin(_t * 1.8 + _sway) * open
+		_canopy.scale = Vector3(lerpf(0.18, 1.0, open) * breathe, lerpf(0.06, 1.0, open), lerpf(0.18, 1.0, open) * breathe)
 		# lean the canopy into the drift, the way a parachute flies with the wind
 		_canopy.rotation = Vector3(_drift.z * 0.02, 0.0, -_drift.x * 0.02) * open
 	# hang and swing like a pendulum under the canopy, carried by the air mass
-	var swing := Vector3(sin(_t * 0.9 + _sway), 0.0, cos(_t * 0.7 + _sway * 1.3)) * 0.55 * open
+	var swing := Vector3(sin(_t * 1.1 + _sway), 0.0, cos(_t * 0.85 + _sway * 1.3)) * 1.45 * open
 	var p: Vector3 = global_position + (Vector3.DOWN * fall + _drift * open + swing) * delta
 	global_position = p
-	rotation.z = sin(_t * 1.6 + _sway) * 0.14 * open
+	rotation.z = sin(_t * 1.6 + _sway) * 0.18 * open
 	_animate(delta, open, false)
 	var gh: float = FX.ground_height(p)
 	if p.y <= gh + 0.9:

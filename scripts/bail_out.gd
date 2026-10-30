@@ -9,13 +9,16 @@ extends Node
 
 signal resolved(fate: String, pos: Vector3)
 
-const HOLD_TIME := 0.9         # seconds J must be held (no accidental bail-outs)
-const MIN_AGL := 70.0          # metres: lower than this the parachute cannot open
+const HOLD_TIME := 0.6         # seconds J must be held (still deliberate, but quick under fire)
+const MIN_AGL := 55.0          # metres: lower than this the parachute cannot open
+const DYING_GRACE := 2.5       # after a fatal hit the pilot can still get out for a moment
 const SKIP_AFTER := 1.5        # seconds into the descent before Enter / J skips to the landing
 
 var active: bool = false       # the pilot is on the parachute (or just landed, before resolution)
 var pending_respawn: bool = false
 var _hold: float = 0.0
+var _dying_t: float = 0.0
+var _late_shown: bool = false
 var _chute: Parachute
 var _cam: Camera3D
 var _t: float = 0.0
@@ -46,14 +49,31 @@ func tick(delta: float, player: Aircraft) -> void:
 	if active:
 		_follow(delta)
 		return
-	if player != null and not is_instance_valid(player):
-		return
-	# a mortally hit aircraft is already going down: say why the silk will not open
-	if player != null and is_instance_valid(player) and player.state == Aircraft.State.DYING and _was_alive:
-		_msg("AIRCRAFT GOING DOWN - too late to bail out", 2.5)
-	_was_alive = player != null and is_instance_valid(player) and player.state == Aircraft.State.ALIVE
-	if player == null or not is_instance_valid(player) or player.state != Aircraft.State.ALIVE or player.on_ground:
+	if player == null or not is_instance_valid(player):
 		_hold = 0.0
+		_dying_t = 0.0
+		_was_alive = false
+		return
+	# A hit that sets the aircraft DYING does not close the door immediately: give the pilot a
+	# moment to get out, and make the hold shorter than the old one-second rule.
+	if player.state == Aircraft.State.DYING:
+		if _was_alive:
+			_dying_t = 0.0
+			_late_shown = false
+			_msg("AIRCRAFT GOING DOWN - bail out now!", 2.0)
+		_dying_t += delta
+	else:
+		_dying_t = 0.0
+		_late_shown = false
+	var alive: bool = player.state == Aircraft.State.ALIVE
+	var can_bail: bool = alive or (player.state == Aircraft.State.DYING and _dying_t <= DYING_GRACE)
+	_was_alive = alive
+	if not can_bail or player.on_ground:
+		_hold = 0.0
+		if player.state == Aircraft.State.DYING and player.state != Aircraft.State.DEAD and not player.on_ground \
+				and _dying_t > DYING_GRACE and not _late_shown:
+			_late_shown = true
+			_msg("TOO LATE TO BAIL OUT", 2.5)
 		return
 	if not InputMap.has_action("bail_out"):
 		return
@@ -168,6 +188,10 @@ func cancel() -> void:
 	_cam = null
 	active = false
 	_done = true
+	_hold = 0.0
+	_dying_t = 0.0
+	_late_shown = false
+	_was_alive = false
 
 
 static func fate_text(fate: String, side: String) -> String:

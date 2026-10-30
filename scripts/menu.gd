@@ -334,6 +334,7 @@ void fragment() {
 		_refresh_mode())
 	_refresh_aircraft()
 	_refresh_mode()
+	_restore_last_sortie()
 	_show_page(_initial_page())
 	start.grab_focus()
 	# decorations not yet presented (earned in a sortie that ended in a hurry) are shown once the card has gone
@@ -780,7 +781,62 @@ func _on_start() -> void:
 		cfg["spawn"] = String(SpawnPoints.LIST[_spawn.selected]["id"])
 		if not _plan.is_empty():
 			cfg.merge(_plan, true)      # map planner overrides spawn, scenario (mode), targets, enemy strength
+	_remember_sortie(cfg)
 	start_requested.emit(cfg)
+
+
+## Remember the last SORTIE choices. Keep only what the menu can restore: the mode, aircraft,
+## start point (spawn list or planner coordinates) and the mission where applicable.
+func _remember_sortie(cfg: Dictionary) -> void:
+	var rec: Dictionary = {}
+	for k in ["side", "mode", "aircraft", "mission", "spawn", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading"]:
+		if cfg.has(k):
+			rec[k] = cfg[k]
+	GameState.last_sortie = rec
+	GameState.save_settings()
+
+
+## Apply the remembered SORTIE choices when the menu opens. Weather, time and difficulty stay at their
+## normal defaults/random so every sortie still gets a different sky.
+func _restore_last_sortie() -> void:
+	var c: Dictionary = GameState.last_sortie
+	if c.is_empty():
+		return
+	var side: String = str(c.get("side", "Allies"))
+	_side.select(0 if side == "Allies" else 1)
+	_refresh_aircraft()
+	var mode_id: String = str(c.get("mode", "free"))
+	var mi: int = _mode_ids.find(mode_id)
+	if mi >= 0:
+		_mode.select(mi)
+		_refresh_mode()
+	var mission_id: String = str(c.get("mission", ""))
+	if mission_id != "":
+		var mj: int = _mission_ids.find(mission_id)
+		if mj >= 0:
+			_mission.select(mj)
+			_apply_mission_defaults()
+	# mission defaults may have changed the side/aircraft; the player's saved choices win
+	_side.select(0 if side == "Allies" else 1)
+	_refresh_aircraft()
+	var aid: String = str(c.get("aircraft", ""))
+	var ai: int = _ids.find(aid)
+	if ai >= 0:
+		_aircraft.select(ai)
+		_refresh_info()
+	var sp: String = str(c.get("spawn", ""))
+	for i in SpawnPoints.LIST.size():
+		if str(SpawnPoints.LIST[i]["id"]) == sp:
+			_spawn.select(i)
+			break
+	if c.has("spawn_lat") or c.has("spawn_lon") or c.has("spawn_airfield"):
+		_plan = {}
+		for k in ["spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading"]:
+			if c.has(k):
+				_plan[k] = c[k]
+		if not _plan.is_empty():
+			_plan_label.text = "Planned: %s" % ("runway" if not bool(_plan.get("spawn_airborne", false)) else "airborne")
+	_refresh_mode()
 
 
 ## Dogfight and free flight start on a random day of the war unless the planner or a mission has set one.

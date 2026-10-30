@@ -510,6 +510,15 @@ func _near_airfield() -> bool:
 	return _near_af
 
 
+## The airfield whose flattened area contains this aircraft (used to choose grass/dirt/paved dust).
+func _current_airfield() -> Airfield:
+	for n in get_tree().get_nodes_in_group("airfield"):
+		var af: Airfield = n as Airfield
+		if af != null and af.global_position.distance_squared_to(global_position) < 6.25e6:
+			return af
+	return null
+
+
 ## Gear down and locked: the wheels can carry the aircraft.
 func gear_locked() -> bool:
 	return gear_down and _gear_amount > 0.6
@@ -722,20 +731,21 @@ func _regen_health(delta: float) -> void:
 			damage_model.repair()      # fully patched up: holes and part damage go too
 
 
-## Vapour contrails above 1000 m: one trail from behind each engine (propeller node), so a four-engine
-## bomber leaves four separate trails. Single-engine types get one from the back of the aircraft.
+## Vapour contrails above 1000 m: up to two trails for a multi-engine aircraft (the outer engines),
+## so a four-engine bomber leaves two. Single-engine types get one from the back of the aircraft.
 const CONTRAIL_ALT_M := 1000.0
 var _contrail_pts: Array[Vector3] = []
 var _contrail_nodes: Array[ContrailRibbon] = []
 
 
-## Emission points in aircraft-local space, aft of every propeller/engine, cached from the model.
+## Emission points in aircraft-local space, aft of the engine, cached from the model.
 func _build_contrail_anchors() -> void:
 	_contrail_pts.clear()
 	if _model == null:
 		return
 	var seen: Dictionary = {}
 	if stats != null and stats.engine_count > 1:
+		var anchors: Array[Vector3] = []
 		for n in _model.find_children("*", "Node3D", true, false):
 			var nm: String = String(n.name)
 			if not nm.begins_with("Propeller") or nm.begins_with("PropDisc"):
@@ -744,9 +754,15 @@ func _build_contrail_anchors() -> void:
 				continue
 			seen[nm] = true
 			var lp: Vector3 = to_local((n as Node3D).global_position)
-			_contrail_pts.append(lp + Vector3(0.0, -0.25, 4.0))    # aft (+Z) of the engine, behind the nacelle
-			if _contrail_pts.size() >= 8:
+			anchors.append(lp + Vector3(0.0, -0.25, 4.0))    # aft (+Z) of the engine, behind the nacelle
+			if anchors.size() >= 8:
 				break
+		if anchors.size() > 2:
+			anchors.sort_custom(func(a: Vector3, b: Vector3) -> bool: return a.x < b.x)
+			_contrail_pts.append(anchors[0])
+			_contrail_pts.append(anchors[anchors.size() - 1])
+		else:
+			_contrail_pts = anchors
 	if not _contrail_pts.is_empty():
 		return
 	# single-engine (or model with no propeller nodes): behind the tail centre
@@ -1673,30 +1689,56 @@ func _ground_dust(delta: float) -> void:
 	_dust_t -= delta
 	if _dust_t > 0.0:
 		return
-	_dust_t = 0.09
+	_dust_t = 0.10 if speed > 20.0 else 0.16
 	var cam: Camera3D = get_viewport().get_camera_3d()
 	if cam != null and not player_controlled and cam.global_position.distance_to(global_position) > 700.0:
 		return
+	var af: Airfield = _current_airfield()
+	var grass: bool = af != null and (af.style == "grass" or af.style == "raf_grass" or af.style == "lw_field") \
+		and not af.near_paved(global_position, 3.0)
+	var col := Color(0.30, 0.29, 0.16) if grass else Color(0.43, 0.41, 0.37)
+	var size: float = (1.35 if grass else 0.9) * (0.70 + 0.30 * clampf(speed / stats.max_speed, 0.0, 1.0))
+	var fwd: Vector3 = get_forward()
+	# both main wheels throw their own ribbon of dust/grit
+	for sx in [-1.8, 1.8]:
+		var w: Vector3 = global_position + global_transform.basis.x * sx + global_transform.basis.z * 0.5
+		w.y = FX.ground_height(w) + 0.25
+		if not FX.is_water(w):
+			FX.runway_dust(w, size, col, 2, fwd)
+	# propeller wash and exhaust kick the loose surface up behind the tail
 	var tail: Vector3 = global_position + global_transform.basis.z * 4.0
 	tail.y = FX.ground_height(tail) + 0.4
-	if FX.is_water(tail):
-		return
-	FX.dust(tail, clampf(speed / stats.max_speed, 0.2, 1.0) * 1.9)
+	if not FX.is_water(tail):
+		FX.runway_dust(tail, size * 1.15, col, 1, fwd)
 
 
 var _was_ground: bool = true
 var _wash_t: float = 0.0
 
 
-## Tyre smoke on touchdown, and spray off the water under a low-flying aircraft.
+## Tyre smoke on touchdown, dust on a grass strip, and a last kick of dust at lift-off.
 func _touchdown_and_wash(delta: float) -> void:
 	if state != State.ALIVE:
 		return
+	var af: Airfield = _current_airfield()
+	var grass: bool = af != null and (af.style == "grass" or af.style == "raf_grass" or af.style == "lw_field") \
+		and not af.near_paved(global_position, 3.0)
+	var col := Color(0.30, 0.29, 0.16) if grass else Color(0.43, 0.41, 0.37)
 	if on_ground and not _was_ground and speed > 22.0:
 		for sx in [-1.8, 1.8]:
 			var w: Vector3 = global_position + global_transform.basis.x * sx + global_transform.basis.z * 0.4
 			w.y = FX.ground_height(w) + 0.2
-			FX.tyre_smoke(w, 1.6)
+			if grass:
+				FX.runway_dust(w, 1.6, col, 4, get_forward())
+			else:
+				FX.tyre_smoke(w, 1.6)
+	# lift-off: a final burst of grit/grass from the wheels
+	if not on_ground and _was_ground and speed > 18.0 and global_position.y - FX.ground_height(global_position) < 6.0:
+		for sx in [-1.8, 1.8]:
+			var w: Vector3 = global_position + global_transform.basis.x * sx + global_transform.basis.z * 0.4
+			w.y = FX.ground_height(w) + 0.25
+			if not FX.is_water(w):
+				FX.runway_dust(w, 1.3 if grass else 0.8, col, 4, get_forward())
 	_was_ground = on_ground
 	if on_ground or speed < 20.0:
 		return

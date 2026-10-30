@@ -13,6 +13,7 @@ var outlines_enabled: bool = true:
 var start_airborne: bool = false
 var start_airfield: String = "manston"  # "manston" or "hawkinge"
 var spawn_point: Dictionary = {}          # free-flight airborne spawn (SpawnPoints entry); empty = use start_airfield
+var last_sortie: Dictionary = {}          # last SORTIE choices: side, mode, aircraft, mission, spawn/plan
 var auto_level: bool = false
 var invert_pitch: bool = false
 var show_hud: bool = true
@@ -228,6 +229,9 @@ func _load_settings() -> void:
 	show_pitch_ladder = bool(cf.get_value("gameplay", "pitch_ladder", show_pitch_ladder))
 	show_lead_marker = bool(cf.get_value("gameplay", "lead_marker", show_lead_marker))
 	completed_missions = cf.get_value("progress", "completed_missions", completed_missions)
+	last_sortie = cf.get_value("sortie", "last", last_sortie)
+	if not (last_sortie is Dictionary):
+		last_sortie = {}
 	time_speed = clampi(int(cf.get_value("ui", "time_speed", time_speed)), 0, TIME_SPEEDS.size() - 1)
 	radio_static = bool(cf.get_value("ui", "radio_static", radio_static))
 	historical_markings = bool(cf.get_value("ui", "historical_markings", historical_markings))
@@ -298,6 +302,7 @@ func save_settings() -> void:
 	cf.set_value("gameplay", "pitch_ladder", show_pitch_ladder)
 	cf.set_value("gameplay", "lead_marker", show_lead_marker)
 	cf.set_value("progress", "completed_missions", completed_missions)
+	cf.set_value("sortie", "last", last_sortie)
 	cf.set_value("ui", "time_speed", time_speed)
 	cf.set_value("ui", "radio_static", radio_static)
 	cf.set_value("ui", "historical_markings", historical_markings)

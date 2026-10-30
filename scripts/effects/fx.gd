@@ -436,6 +436,20 @@ func dust(pos: Vector3, size: float = 1.5) -> void:
 			randf_range(0.7, 1.2), size * 0.4, size * 1.2, Color(0.48, 0.4, 0.3, 0.8), Color(0.55, 0.48, 0.4, 0.0), 1.0, 0.0, 1.0)
 
 
+## Earth, dry grass and grit flung back by a wheel or propeller during a take-off roll. `forward` is
+## the aircraft's direction of travel; the puffs are thrown aft, outward and up.
+func runway_dust(pos: Vector3, size: float = 1.5, col: Color = Color(0.48, 0.4, 0.3), count: int = 3, forward: Vector3 = Vector3.FORWARD) -> void:
+	var back: Vector3 = -forward
+	back.y = 0.0
+	back = back.normalized() if back.length_squared() > 0.0001 else Vector3.BACK
+	for i in count:
+		var side: Vector3 = Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0)).normalized()
+		var v: Vector3 = (back * randf_range(2.0, 6.0) + side * randf_range(0.3, 1.8) + Vector3.UP * randf_range(0.6, 2.8)) * size
+		puffs.spawn(pos + Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0)) * size * 0.5,
+			v, randf_range(0.6, 1.1), size * randf_range(0.45, 0.8), size * randf_range(1.0, 1.8),
+			Color(col.r, col.g, col.b, 0.50), Color(col.r * 1.08, col.g * 1.05, col.b, 0.0), 1.0, 0.0, 0.7)
+
+
 ## Rubber smoke from a wheel touching down.
 func tyre_smoke(pos: Vector3, size: float = 1.6) -> void:
 	for i in 3:
