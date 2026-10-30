@@ -358,9 +358,10 @@ func _build_parallel(earth: Material) -> void:
 ## track, and E-type blast pens round it, each pen holding two fighters.
 func _build_raf_grass(earth: Material) -> void:
 	var L: float = runway_length
-	var mown: Material = ToonUtil.make_toon(Color(0.27, 0.32, 0.18), {"outline": false, "tex": "grass"})
-	var mown2: Material = ToonUtil.make_toon(Color(0.25, 0.30, 0.17), {"outline": false, "tex": "grass"})
-	var mown_edge: Material = ToonUtil.make_toon(Color(0.33, 0.39, 0.22), {"outline": false, "tex": "grass"})
+	var mown: Material = ToonUtil.make_toon(Color(0.26, 0.33, 0.17), {"outline": false, "detail": 4, "patch": Color(0.34, 0.29, 0.18), "patch_amount": 0.22, "patch_scale": 1.1})
+	var mown2: Material = ToonUtil.make_toon(Color(0.20, 0.26, 0.12), {"outline": false, "detail": 4, "patch": Color(0.31, 0.27, 0.16), "patch_amount": 0.18, "patch_scale": 1.3})
+	var mown_edge: Material = ToonUtil.make_toon(Color(0.37, 0.44, 0.24), {"outline": false, "detail": 4})
+	var bare: Material = ToonUtil.make_toon(Color(0.32, 0.26, 0.15), {"outline": false, "detail": 4, "patch": Color(0.21, 0.25, 0.12), "patch_amount": 0.40, "patch_scale": 1.8})
 	# mown landing area: the main direction and a cross direction, in slightly different stripes of grass.
 	# A lighter clipped centre, pale mown edges and edge lamps define the strip when the sun is low.
 	_box(Vector3(runway_width * 2.4, 0.3, L), Vector3(0, -0.12, 0), mown)
@@ -368,6 +369,18 @@ func _build_raf_grass(earth: Material) -> void:
 	for sx in [-1.0, 1.0]:
 		_box(Vector3(3.4, 0.31, L * 0.97), Vector3(sx * runway_width * 1.12, -0.10, 0), mown_edge)
 	_box(Vector3(runway_width * 2.0, 0.3, L * 0.75), Vector3(0, -0.14, 0), mown2, deg_to_rad(65.0))
+	# mown bands, wheel ruts and scuffed earth patches break up the flat green
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(airfield_name)
+	for i in 7:
+		var x: float = -runway_width * 1.12 + (float(i) + 0.5) * (runway_width * 2.24 / 7.0)
+		_box(Vector3(runway_width * 2.24 / 7.0, 0.02, L * 0.95), Vector3(x, 0.060, 0), mown if i % 2 == 0 else mown2)
+	for sx in [-0.28, 0.30]:
+		_box(Vector3(2.4, 0.02, L * 0.82), Vector3(sx * runway_width, 0.062, 0), bare)
+	for i in 22:
+		var px: float = rng.randf_range(-runway_width * 1.08, runway_width * 1.08)
+		var pz: float = rng.randf_range(-L * 0.44, L * 0.44)
+		_box(Vector3(rng.randf_range(2.5, 8.0), 0.02, rng.randf_range(3.0, 12.0)), Vector3(px, 0.058, pz), bare)
 	_strip_lamps(runway_width * 1.12, L)
 	# perimeter track: an ellipse of tarmac round the landing ground
 	# sized so the track and pens stay inside the terrain's flattened zone (~1 km radius)
@@ -409,13 +422,24 @@ func _build_raf_grass(earth: Material) -> void:
 ## aircraft dispersed round the field edge under camouflage nets on worn earth pads, joined by dirt tracks.
 func _build_lw_field(earth: Material) -> void:
 	var L: float = runway_length
-	var rolled: Material = ToonUtil.make_toon(Color(0.28, 0.32, 0.18), {"outline": false, "tex": "grass"})
-	var worn: Material = ToonUtil.make_toon(Color(0.42, 0.38, 0.27), {"outline": false, "tex": "gravel"})
+	var rolled: Material = ToonUtil.make_toon(Color(0.26, 0.32, 0.16), {"outline": false, "detail": 4, "patch": Color(0.33, 0.28, 0.17), "patch_amount": 0.24, "patch_scale": 1.2})
+	var worn: Material = ToonUtil.make_toon(Color(0.38, 0.33, 0.22), {"outline": false, "detail": 4, "patch": Color(0.24, 0.27, 0.14), "patch_amount": 0.30, "patch_scale": 1.6})
 	var rut: Material = ToonUtil.make_toon(Color(0.40, 0.37, 0.26), {"outline": false, "rim": 0.0, "detail": 3})
+	var mown2: Material = ToonUtil.make_toon(Color(0.21, 0.27, 0.13), {"outline": false, "detail": 4, "patch": Color(0.33, 0.28, 0.17), "patch_amount": 0.20, "patch_scale": 1.4})
 	_box(Vector3(runway_width * 2.0, 0.3, L), Vector3(0, -0.12, 0), rolled)
-	_box(Vector3(runway_width * 1.25, 0.31, L * 0.96), Vector3(0, -0.10, 0), ToonUtil.make_toon(Color(0.31, 0.35, 0.20), {"outline": false, "tex": "grass"}))
+	_box(Vector3(runway_width * 1.25, 0.31, L * 0.96), Vector3(0, -0.10, 0), mown2)
 	for sx in [-1.0, 1.0]:
-		_box(Vector3(3.0, 0.31, L * 0.97), Vector3(sx * runway_width * 0.95, -0.10, 0), ToonUtil.make_toon(Color(0.35, 0.40, 0.23), {"outline": false, "tex": "grass"}))
+		_box(Vector3(3.0, 0.31, L * 0.97), Vector3(sx * runway_width * 0.95, -0.10, 0), ToonUtil.make_toon(Color(0.35, 0.40, 0.23), {"outline": false, "detail": 4}))
+	# rolled bands and scuffed patches, in addition to the worn wheel tracks
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(airfield_name)
+	for i in 6:
+		var x: float = -runway_width * 0.95 + (float(i) + 0.5) * (runway_width * 1.9 / 6.0)
+		_box(Vector3(runway_width * 1.9 / 6.0, 0.02, L * 0.94), Vector3(x, 0.060, 0), rolled if i % 2 == 0 else mown2)
+	for i in 16:
+		var px: float = rng.randf_range(-runway_width * 0.95, runway_width * 0.95)
+		var pz: float = rng.randf_range(-L * 0.44, L * 0.44)
+		_box(Vector3(rng.randf_range(2.5, 6.5), 0.02, rng.randf_range(4.0, 12.0)), Vector3(px, 0.058, pz), worn)
 	_strip_lamps(runway_width * 0.95, L)
 	for rx2 in [-runway_width * 0.35, runway_width * 0.3]:
 		_box(Vector3(3.0, 0.32, L * 0.85), Vector3(rx2, -0.1, 0), rut)

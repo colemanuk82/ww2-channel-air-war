@@ -20,7 +20,7 @@ const MENU_META := "ww2_force_menu"
 const RESUME_INTERVAL := 5.0
 const LOAD_TIPS := [
 	"FLY:  W / S pitch  ·  A / D roll  ·  Q / E yaw  (or the left stick)",
-	"BAIL OUT:  hold J for about a second, above ~70 m. Too low and the chute cannot open.",
+	"BAIL OUT:  hold J briefly (about 0.6 s), above ~55 m; you can still get out just after a fatal hit.",
 	"OBJECTIVES:  the card top-left; the compass points at your target.  M opens the chart.",
 	"HELP:  Esc > Options > Controls lists every key and lets you remap gamepad buttons.",
 	"ENGINE HEAT:  the outer arc on the airspeed dial. Ease off or dive to cool it.",
@@ -1922,7 +1922,7 @@ func _first_sortie_hints() -> void:
 	GameState.save_settings()
 	var lines := [
 		"FLY:  W / S pitch  ·  A / D roll  ·  Q / E yaw   (or the left stick)",
-		"BAIL OUT:  hold J for about a second, above ~70 m",
+		"BAIL OUT:  hold J briefly (about 0.6 s), above ~55 m",
 		"OBJECTIVES:  top-left card; the compass points to your target",
 		"HELP:  Esc > Options > Controls  ·  M chart  ·  C camera",
 	]
@@ -2814,10 +2814,10 @@ func _parse_debug_args() -> void:
 				var ch: Parachute = FX.parachute(player.global_position + Vector3(0, 40, 0), "", cside)
 				if ch != null:
 					var cc := Camera3D.new()
-					cc.fov = 50.0
+					cc.fov = 58.0
 					ch.add_child(cc)
-					cc.position = Vector3(2.6, 1.2, 4.6)
-					cc.look_at(ch.global_position + Vector3(0, 0.8, 0), Vector3.UP)
+					cc.position = Vector3(5.0, 4.5, 12.0)
+					cc.look_at(ch.global_position + Vector3(0, 3.6, 0), Vector3.UP)
 					cc.make_current())
 		elif a == "--noout":
 			GameState.outlines_enabled = false
