@@ -39,6 +39,7 @@ global uniform float raid_black_k;     // 0..1 full blackout over the raided tow
 global uniform vec3 raid_black_pos;    // centre of the raided town
 global uniform float raid_black_r;     // radius of the raided town's built-up area
 global uniform float blackout;         // 0 = windows lit as usual, 1 = wartime blackout (towns almost dark)
+global uniform float wetness;          // 0..1 ground wetness (WeatherManager): wet grass/runways darken and sheen
 
 varying vec3 obj_n;
 varying vec3 obj_p;
@@ -303,8 +304,13 @@ void fragment() {
 		float dcam = length(w_pos - CAMERA_POSITION_WORLD);
 		col = mix(col, vec3(0.60, 0.68, 0.78), smoothstep(4000.0, 30000.0, dcam) * 0.35);
 	}
+	float wet_ground = 0.0;
+	if (detail_mode == 2 || detail_mode == 4 || detail_mode == 6 || detail_mode == 7) {
+		wet_ground = clamp(wetness, 0.0, 1.0);
+		col *= mix(1.0, 0.84, wet_ground);
+	}
 	ALBEDO = col * mix(1.0, BUILDING_DARKEN, flat_shade);
-	ROUGHNESS = 1.0;
+	ROUGHNESS = mix(1.0, 0.42, wet_ground);
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), rim_power);
 	// Curved environment reflection: a soft studio-like sheen that follows the surface, so painted metal
 	// reads as polished and rounded instead of flat. Bright toward grazing angles (Fresnel).
@@ -314,6 +320,7 @@ void fragment() {
 	env = mix(env, vec3(0.96, 0.97, 1.0), smoothstep(0.62, 1.0, rup) * 0.55);
 	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
 	vec3 refl = env * gloss * (0.10 + 0.9 * fres);
+	refl += env * wet_ground * 0.22 * (0.15 + 0.85 * fres);
 	// raid civil defence: windows go dark over the raided town and dim everywhere else while a raid is on
 	float raid_loc = raid_black_k * (1.0 - smoothstep(raid_black_r * 0.5, raid_black_r * 1.05, length(w_pos.xz - raid_black_pos.xz)));
 	float raid_out = 1.0 - clamp(max(raid_dim, raid_loc), 0.0, 1.0);

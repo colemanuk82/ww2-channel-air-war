@@ -37,7 +37,7 @@ var _raid: Dictionary = {}     # {city, t_left, bomb_t}
 var _v1_t: float = 150.0
 var _v2_t: float = 240.0
 var _beams: Array = []         # {mi, base, yaw, pitch, sp, ph}
-var _beam_mat: StandardMaterial3D
+var _beam_mat: ShaderMaterial
 var _beam_zone: Vector3 = Vector3.INF
 var _near_t: float = 0.0
 var _near_zone: Vector3 = Vector3.INF
@@ -75,13 +75,9 @@ func _ready() -> void:
 	_rng.randomize()
 	_civil = RaidBlackout.new()
 	add_child(_civil)
-	_beam_mat = StandardMaterial3D.new()
-	_beam_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_beam_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_beam_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	_beam_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_beam_mat.albedo_color = Color(0.55, 0.6, 0.7, 0.10)
-	_beam_mat.disable_receive_shadows = true
+	_beam_mat = ShaderMaterial.new()
+	_beam_mat.shader = load("res://shaders/searchlight_beam.gdshader") as Shader
+	_beam_mat.set_shader_parameter("beam_color", Color(0.55, 0.60, 0.70, 0.10))
 	var cm := CylinderMesh.new()
 	cm.top_radius = 55.0
 	cm.bottom_radius = 3.0
@@ -326,7 +322,9 @@ func _tick_beams(delta: float, night: float) -> void:
 		var bs: Basis = Basis(Quaternion(Vector3.UP, dir))
 		mi.global_transform = Transform3D(bs, (b["base"] as Vector3) + dir * 4500.0)
 	# the beams fade in with the dark
-	_beam_mat.albedo_color.a = 0.10 * clampf((night - 0.45) / 0.3, 0.0, 1.0)
+	var bc: Color = _beam_mat.get_shader_parameter("beam_color")
+	bc.a = 0.10 * clampf((night - 0.45) / 0.3, 0.0, 1.0)
+	_beam_mat.set_shader_parameter("beam_color", bc)
 
 
 # ------------------------------------------------------------------ raids on towns

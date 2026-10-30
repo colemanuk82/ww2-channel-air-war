@@ -106,6 +106,7 @@ const UPSCALE_SCALES := [0.667, 0.58, 0.5, 0.333]     # Quality, Balanced, Perfo
 const UPSCALE_NAMES := ["Quality", "Balanced", "Performance", "Ultra Performance"]
 var upscaler: int = -1             # -1 = not chosen yet: DLSS when the GPU/engine supports it, otherwise FSR 2
 var upscale_quality: int = 0
+var dynamic_resolution: bool = true  # adapt the FSR 2 scale (and cloud detail) to the frame time
 var frame_gen: bool = false
 var vsync_on: bool = true
 var fps_cap: int = 0                                  # 0 = unlimited; otherwise frames per second
@@ -216,6 +217,7 @@ func _load_settings() -> void:
 	ui_scale = float(cf.get_value("gfx", "ui_scale", ui_scale))
 	upscaler = int(cf.get_value("gfx", "upscaler", upscaler))
 	upscale_quality = int(cf.get_value("gfx", "upscale_quality", upscale_quality))
+	dynamic_resolution = bool(cf.get_value("gfx", "dynamic_resolution", dynamic_resolution))
 	frame_gen = bool(cf.get_value("gfx", "frame_gen", frame_gen))
 	vsync_on = bool(cf.get_value("gfx", "vsync", vsync_on))
 	fps_cap = clampi(int(cf.get_value("gfx", "fps_cap", fps_cap)), 0, 1000)
@@ -289,6 +291,7 @@ func save_settings() -> void:
 	cf.set_value("gfx", "ui_scale", ui_scale)
 	cf.set_value("gfx", "upscaler", upscaler)
 	cf.set_value("gfx", "upscale_quality", upscale_quality)
+	cf.set_value("gfx", "dynamic_resolution", dynamic_resolution)
 	cf.set_value("gfx", "frame_gen", frame_gen)
 	cf.set_value("gfx", "vsync", vsync_on)
 	cf.set_value("gfx", "fps_cap", fps_cap)

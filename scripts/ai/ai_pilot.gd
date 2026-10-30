@@ -63,6 +63,7 @@ var max_cmd: float = 1.0
 
 var _terrain: Node
 var _think_t: float = 0.0
+var _lod_acc: float = 0.0
 var _mistake_t: float = 0.0      # > 0 = the pilot is mid-mistake (no ground avoidance)
 var _mistake_cd: float = 0.0
 # Energy fighting: some pilots prefer to fight in the vertical — they break off, climb for a height
@@ -277,6 +278,17 @@ func _process(delta: float) -> void:
 	if ac.state != Aircraft.State.ALIVE:
 		ac.cmd_fire = false
 		return
+	# Far aircraft do not need control updates every frame: run their decisions at ~20 Hz while
+	# their ordinary aircraft physics keeps them flying smoothly. Near aircraft stay at full rate.
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	if cam != null and cam.global_position.distance_squared_to(ac.global_position) > 2500.0 * 2500.0:
+		_lod_acc += delta
+		if _lod_acc < 0.05:
+			return
+		delta = minf(_lod_acc, 0.05)
+		_lod_acc = 0.0
+	else:
+		_lod_acc = 0.0
 	# Pilots make mistakes: now and then a low, fast, nose-down aircraft misjudges the pull-out. While the
 	# mistake lasts the ground-avoidance is skipped, so the occasional AI flies into the deck.
 	if _mistake_cd > 0.0:
