@@ -1531,6 +1531,11 @@ func _show_menu() -> void:
 	add_child(_menu)
 	_menu.start_requested.connect(start_game)
 	_menu.quit_requested.connect(func() -> void: get_tree().quit())
+	if _donation_prompt_needed():
+		var prompt := DonationPrompt.new()
+		add_child(prompt)
+		await prompt.done
+		prompt.queue_free()
 	for fa in _args:
 		if fa.begins_with("--film="):    # debug: --film=<chapter>[,<seconds>] opens the training film on that frame
 			var fp: PackedStringArray = fa.substr(7).split(",")
@@ -1545,6 +1550,20 @@ func _legal_gate_needed() -> bool:
 	if DisplayServer.get_name() == "headless" or _args.has("--menu-test") or _args.has("--skip-legal"):
 		return false
 	return not LegalGate.session_done
+
+
+## Optional donation / suggestion panel, once per launch, over the start menu. Automated menu tests and
+## captures skip it (as does --skip-legal / --no-donate).
+func _donation_prompt_needed() -> bool:
+	if DonationPrompt.shown or DisplayServer.get_name() == "headless":
+		return false
+	if _args.has("--menu-test") or _args.has("--skip-legal") or _args.has("--no-donate"):
+		return false
+	for a in _args:
+		if a.begins_with("--film="):
+			return false
+	DonationPrompt.shown = true
+	return true
 
 
 ## Opening cinematic once per launch (before the menu). --intro=<seconds> forces it from that point (debug);
