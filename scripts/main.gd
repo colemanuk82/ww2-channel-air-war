@@ -2257,6 +2257,7 @@ func _spawn_player_inner() -> void:
 		player.reset_pose(wp, float(sp["heading"]), true)
 		camera_rig.bind(player)
 		terrain.set_focus(player)
+		terrain.set_pin(player.global_position, 9000.0)
 		if hud and not _manages_respawn():
 			hud.show_message(String(sp["name"]), 3.0)
 		return
@@ -2279,6 +2280,7 @@ func _spawn_player_inner() -> void:
 		_send_off = null     # (the player's send-off ground crew was removed in v7.27)
 	camera_rig.bind(player)
 	terrain.set_focus(player)
+	terrain.set_pin(player.global_position, 9000.0)
 	if hud and not _manages_respawn():
 		hud.show_message("%s - %s" % [af.airfield_name, "airborne" if airborne else "hold Shift for throttle, S to rotate"], 4.0)
 
