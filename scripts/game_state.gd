@@ -53,6 +53,8 @@ var heat_level: int = 2           # 0 off, 1 low, 2 medium (default), 3 high
 var player_heal: bool = true   # the player's aircraft very slowly repairs itself in flight
 var show_pitch_ladder: bool = false   # pitch ladder drawn in the HUD
 var show_lead_marker: bool = false    # Options > Gameplay: the lead (aim-ahead) marker on a targeted aircraft; off by default
+var outline_near: float = 1300.0      # AI team outlines: fade in beyond this distance
+var outline_fade: float = 6500.0      # ... and gone beyond this distance
 var player_side: String = "Allies"
 var era_date: String = ""          # ISO date of the current mission / campaign day ("" = no date): decides which airfields are liberated
 var quality: int = 1  # 0 low, 1 medium, 2 high
@@ -230,6 +232,8 @@ func _load_settings() -> void:
 	g_effects_on = g_level > 0
 	show_pitch_ladder = bool(cf.get_value("gameplay", "pitch_ladder", show_pitch_ladder))
 	show_lead_marker = bool(cf.get_value("gameplay", "lead_marker", show_lead_marker))
+	outline_near = clampf(float(cf.get_value("ui", "outline_near", outline_near)), 0.0, 5000.0)
+	outline_fade = clampf(float(cf.get_value("ui", "outline_fade", outline_fade)), outline_near + 1000.0, 15000.0)
 	completed_missions = cf.get_value("progress", "completed_missions", completed_missions)
 	last_sortie = cf.get_value("sortie", "last", last_sortie)
 	if not (last_sortie is Dictionary):
@@ -257,6 +261,16 @@ func _load_settings() -> void:
 		for k in cf.get_section_keys("input"):
 			pad_bindings[k] = cf.get_value("input", k)
 		_apply_pad_bindings()
+
+
+## Change the AI team-outline visibility window live (Video settings sliders).
+func set_outline_visibility(near_d: float, fade_d: float, save_now: bool = true) -> void:
+	outline_near = clampf(near_d, 0.0, 5000.0)
+	outline_fade = clampf(fade_d, outline_near + 1000.0, 15000.0)
+	RenderingServer.global_shader_parameter_set("outline_near_start", outline_near)
+	RenderingServer.global_shader_parameter_set("outline_fade_end", outline_fade)
+	if save_now:
+		save_settings()
 
 
 func mark_mission_done(id: String) -> void:
@@ -304,6 +318,8 @@ func save_settings() -> void:
 	cf.set_value("realism", "g_level", g_level)
 	cf.set_value("gameplay", "pitch_ladder", show_pitch_ladder)
 	cf.set_value("gameplay", "lead_marker", show_lead_marker)
+	cf.set_value("ui", "outline_near", outline_near)
+	cf.set_value("ui", "outline_fade", outline_fade)
 	cf.set_value("progress", "completed_missions", completed_missions)
 	cf.set_value("sortie", "last", last_sortie)
 	cf.set_value("ui", "time_speed", time_speed)
@@ -511,6 +527,8 @@ func apply_quality(q: int) -> void:
 ## Push the current settings to the running game (call after the world/light/camera exist).
 func apply_graphics() -> void:
 	RenderingServer.global_shader_parameter_set("outline_enabled", 1.0 if outlines_enabled else 0.0)
+	RenderingServer.global_shader_parameter_set("outline_near_start", outline_near)
+	RenderingServer.global_shader_parameter_set("outline_fade_end", outline_fade)
 	Scatter.vis_scale = float(VIEW_SCALES[clampi(view_distance, 0, 2)])
 	var tod0: Node = get_tree().root.get_node_or_null("TimeOfDay")
 	if tod0 != null:
@@ -539,6 +557,7 @@ func apply_graphics() -> void:
 		var sun: DirectionalLight3D = tod.get("sun")
 		if sun:
 			sun.shadow_enabled = shadows_enabled
+			sun.directional_shadow_max_distance = 1400.0 * float(VIEW_SCALES[clampi(view_distance, 0, 2)])
 		if tod.has_method("apply_post"):
 			tod.call("apply_post", post_fx)
 	var wm: Node = get_tree().root.get_node_or_null("WeatherManager")

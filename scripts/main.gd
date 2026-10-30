@@ -2756,6 +2756,7 @@ func _build_perf_overlay() -> void:
 	_ov_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(_ov_label)
 	_ov_layer.visible = _args.has("--perf-overlay")
+	RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 
 
 func _update_perf_overlay(delta: float) -> void:
@@ -2768,13 +2769,14 @@ func _update_perf_overlay(delta: float) -> void:
 	var fps: int = Engine.get_frames_per_second()
 	var cpu_ms: float = Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0
 	var phys_ms: float = Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0
+	var gpu_ms: float = RenderingServer.viewport_get_measured_render_time_gpu(get_viewport().get_viewport_rid())
 	var draws: int = int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
 	var prims: int = int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME))
 	var vram: float = Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0
 	var aircraft: int = get_tree().get_nodes_in_group("aircraft").size()
 	var scale: float = get_viewport().scaling_3d_scale
-	_ov_label.text = "PERF  %d FPS   cpu %.1f ms   phys %.1f ms\nDRAW %d   PRIM %dk   VRAM %.0f MB   NODES %d\nFSR2 %.3f   CLOUD %s   AIRCRAFT %d" % [
-		fps, cpu_ms, phys_ms, draws, prims / 1000, vram,
+	_ov_label.text = "PERF  %d FPS   cpu %.1f ms   phys %.1f ms   gpu %.1f ms\nDRAW %d   PRIM %dk   VRAM %.0f MB   NODES %d\nFSR2 %.3f   CLOUD %s   AIRCRAFT %d" % [
+		fps, cpu_ms, phys_ms, gpu_ms, draws, prims / 1000, vram,
 		int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), scale,
 		str(GameState.cloud_detail if _adapt_cloud < 0 else _adapt_cloud), aircraft]
 

@@ -6,11 +6,9 @@ render_mode cull_front, unshaded, shadows_disabled, blend_mix, depth_draw_never;
 uniform vec4 outline_color : source_color = vec4(1.0, 0.15, 0.1, 1.0);
 uniform float thickness = 0.05;
 uniform float dist_scale = 0.0009;
-uniform float fade_start = 4000.0;
-uniform float fade_end = 6500.0;
-uniform float near_start = 1300.0;   // fully gone inside this range
-uniform float near_end = 2300.0;    // fully back by this range
 uniform float strength = 0.5;
+global uniform float outline_near_start;
+global uniform float outline_fade_end;
 global uniform float night_k;          // 0 day .. 1 night (FX): outlines show up closer in the dark
 
 varying float v_dist;
@@ -21,13 +19,17 @@ void vertex() {
 	float d = length((MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz);
 	v_dist = d;
 	o_p = VERTEX;
-	VERTEX += NORMAL * (thickness + min(d, fade_end) * dist_scale);
+	VERTEX += NORMAL * (thickness + min(d, outline_fade_end) * dist_scale);
 }
 
 void fragment() {
 	if ((cut.x > 0.0 && o_p.x > cut.x) || (cut.y > 0.0 && o_p.x < -cut.y) || (cut.z > 0.0 && o_p.z > cut.z)) {
 		discard;
 	}
+	float near_start = outline_near_start;
+	float near_end = outline_near_start + 1000.0;
+	float fade_end = max(outline_fade_end, near_end + 500.0);
+	float fade_start = max(near_end, fade_end - 2500.0);
 	ALBEDO = outline_color.rgb;
 	ALPHA = strength * (1.0 - smoothstep(fade_start, fade_end, v_dist)) * mix(smoothstep(near_start, near_end, v_dist), 1.0, night_k);
 }

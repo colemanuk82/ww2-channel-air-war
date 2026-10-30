@@ -140,6 +140,7 @@ func build_layout() -> void:
 	sock.position = Vector3(-runway_width * 0.5 - 40.0, 8.8, -160.0)
 	add_child(sock)
 	_build_night_lights()
+	_build_puddles()
 
 
 ## One paved runway with centre dashes and threshold bars, built on a pivot rotated by angle_deg.
@@ -829,8 +830,52 @@ const LAMP_RADIUS := 3500.0          # aircraft within this (horizontally) ...
 const LAMP_HEIGHT := 700.0           # ... and this low over the field (world units, about 350 m) switch them on
 
 
-## The flare path is lit only for traffic: an aircraft landing, taking off or flying low near the field.
+## Puddles: a few flat reflective patches that appear when the weather wetness rises.
+var _puddles: Array = []
+var _puddle_t: float = 0.0
+static var _puddle_mat: StandardMaterial3D
+
+
+func _build_puddles() -> void:
+	if _puddle_mat == null:
+		_puddle_mat = StandardMaterial3D.new()
+		_puddle_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_puddle_mat.albedo_color = Color(0.10, 0.14, 0.17, 0.62)
+		_puddle_mat.metallic = 0.45
+		_puddle_mat.roughness = 0.06
+		_puddle_mat.disable_receive_shadows = true
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(airfield_name) + 1771
+	var cm := CylinderMesh.new()
+	cm.top_radius = 1.0
+	cm.bottom_radius = 1.0
+	cm.height = 0.02
+	cm.radial_segments = 14
+	cm.rings = 1
+	for i in 8:
+		var mi := MeshInstance3D.new()
+		mi.mesh = cm
+		mi.material_override = _puddle_mat
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.position = Vector3(rng.randf_range(-runway_width * 0.75, runway_width * 0.75), 0.085,
+			rng.randf_range(-runway_length * 0.42, runway_length * 0.42))
+		var rad: float = rng.randf_range(2.0, 7.0)
+		mi.scale = Vector3(rad, 1.0, rad * rng.randf_range(0.55, 1.3))
+		mi.visible = false
+		add_child(mi)
+		_puddles.append(mi)
+
+
+func _update_puddles() -> void:
+	var wet: bool = WeatherManager.wetness > 0.12
+	for p in _puddles:
+		if p is MeshInstance3D and is_instance_valid(p):
+			(p as MeshInstance3D).visible = wet
 func _process(delta: float) -> void:
+	_puddle_t -= delta
+	if _puddle_t <= 0.0:
+		_puddle_t = 0.5
+		_update_puddles()
 	if _night_lights == null:
 		return
 	_lamp_t -= delta
