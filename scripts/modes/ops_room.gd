@@ -804,13 +804,15 @@ func _make_raid(cover: bool) -> Dictionary:
 		tgt = town["pos"]
 		tgt_name = str(town["name"])
 	# the raid comes in from the nearest enemy airfield side, 30 km out
-	var from_dir: Vector3 = _nearest_enemy_airfield(tgt) - tgt
+	var home_pos: Vector3 = _nearest_enemy_airfield(tgt)
+	var from_dir: Vector3 = home_pos - tgt
 	from_dir.y = 0.0
 	from_dir = from_dir.normalized() if from_dir.length() > 1.0 else Vector3(0, 0, 1)
 	var start: Vector3 = tgt + from_dir * 30000.0
 	var alt_y: float = (_rng.randf_range(1800.0, 3200.0) if not cover else _rng.randf_range(1400.0, 2000.0)) * WorldCoords.VERTICAL_SCALE
 	start.y = alt_y
-	var route: Array[Vector3] = [Vector3(tgt.x, alt_y, tgt.z), start + Vector3(from_dir.z, 0, -from_dir.x) * 8000.0]
+	var route: Array[Vector3] = [Vector3(tgt.x, alt_y, tgt.z), start + Vector3(from_dir.z, 0, -from_dir.x) * 8000.0,
+		Vector3(home_pos.x, alt_y, home_pos.z)]
 	var pool: Array = AircraftCatalog.bombers_for_side(enemy)
 	if not cover:
 		pool = pool.filter(func(i: String) -> bool: return i != "ju87" and i != "ju52" and i != "c47")      # a town raid is a level-bomber job
@@ -845,7 +847,7 @@ func _make_raid(cover: bool) -> Dictionary:
 	var ang: int = int(round(alt_y / WorldCoords.VERTICAL_SCALE * 3.281 / 1000.0))
 	return {"title": ("Convoy cover" if cover else "Intercept: raid on %s" % tgt_name), "what": AircraftCatalog.display_name(bid), "pos": tgt, "place": tgt_name,
 		"track": form, "goal": "raid", "nodes": nodes, "bombers": form.members.duplicate(), "count": nb, "angels": ang, "downs": downs, "hit": [],
-		"root": root, "protect": protect, "points": 1300 if not cover else 1100, "raid_target": tgt}
+		"root": root, "protect": protect, "points": 1300 if not cover else 1100, "raid_target": tgt, "rtb": true}
 
 
 func _make_sweep() -> Dictionary:
@@ -1646,6 +1648,8 @@ func _clear_active() -> void:
 ## Remove what the tasking spawned once the player is well away from it (wreckage stays meanwhile).
 func _cleanup(info: Dictionary) -> void:
 	var nodes: Array = info.get("nodes", []).duplicate()
+	var bombers: Array = info.get("bombers", [])
+	var rtb: bool = bool(info.get("rtb", false))
 	nodes.append_array(info.get("friends", []))
 	nodes.append_array(info.get("enemies", []))
 	var roots: Array = info.get("extra_roots", []).duplicate()
@@ -1660,10 +1664,10 @@ func _cleanup(info: Dictionary) -> void:
 	var tm := get_tree().create_timer(120.0)
 	tm.timeout.connect(func() -> void:
 		for n in nodes:
-			if is_instance_valid(n) and n is Aircraft:
+			if is_instance_valid(n) and n is Aircraft and not (rtb and bombers.has(n)):
 				(n as Aircraft).queue_free()
 		for t in tracks:
-			if t != null and is_instance_valid(t) and t is BomberFormation:
+			if t != null and is_instance_valid(t) and t is BomberFormation and not rtb:
 				(t as BomberFormation).queue_free()
 		for r in roots:
 			if r != null and is_instance_valid(r):

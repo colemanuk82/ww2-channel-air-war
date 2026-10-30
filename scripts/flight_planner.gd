@@ -351,7 +351,7 @@ func _refresh() -> void:
 	var label: String = "Air spawn at %.2f N, %.2f E" % [float(_sel["lat"]), float(_sel["lon"])]
 	for a in _airfields:
 		if str(a["id"]) == af_id:
-			label = "%s (%s)" % [str(a["name"]), "RAF" if str(a["side"]) == "RAF" else "Luftwaffe"]
+			label = SpawnPoints.label_for(str(a["name"]), "Allies" if str(a["side"]) == "RAF" else "Axis")
 	_info.text = label
 	var rw: bool = _is_runway()
 	_alt.editable = not rw

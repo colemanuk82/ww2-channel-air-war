@@ -13,6 +13,21 @@ const PAGES := ["SORTIE", "START POINT", "CONDITIONS", "BRIEFING"]
 
 const DONATE_URL := "https://paypal.me/colemanuk82"
 
+## README renders reused as the aircraft-selection portrait. Anything without its own render falls back
+## to the fleet overview image rather than showing a blank panel.
+const AIRCRAFT_PORTRAITS := {
+	"spitfire": "spitfire_three.jpg",
+	"hurricane": "hurricane_three.jpg",
+	"typhoon": "typhoon_three.jpg",
+	"tempest": "typhoon_three.jpg",
+	"p51": "p51_three.jpg",
+	"bf109": "bf109_front.jpg",
+	"me262": "me262_front.jpg",
+	"lancaster": "lancaster_three.jpg",
+	"b25": "b25_three.jpg",
+}
+const PORTRAIT_FALLBACK := "all_aircraft.jpg"
+
 var _side: OptionButton
 var _aircraft: OptionButton
 var _mode: OptionButton
@@ -24,6 +39,10 @@ var _time: OptionButton
 var _spawn: OptionButton
 var _spawn_row: Control
 var _spawn_note: Label
+var _spawn_entries: Array = []
+var _preview_panel: PanelContainer
+var _preview: TextureRect
+var _preview_name: Label
 var _desc: Label
 var _info: Label
 var _plan: Dictionary = {}      # result of the map planner (free flight)
@@ -82,6 +101,37 @@ void fragment() {
 	col.add_theme_constant_override("margin_top", 28)
 	col.add_theme_constant_override("margin_bottom", 22)
 	root.add_child(col)
+	# aircraft portrait for the SORTIE page, using the README renders
+	_preview_panel = PanelContainer.new()
+	_preview_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	_preview_panel.offset_left = -470.0
+	_preview_panel.offset_right = -36.0
+	_preview_panel.offset_top = -168.0
+	_preview_panel.offset_bottom = 168.0
+	_preview_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var psb := StyleBoxFlat.new()
+	psb.bg_color = Color(0.025, 0.03, 0.035, 0.72)
+	psb.border_color = Color(0.78, 0.69, 0.43, 0.55)
+	psb.set_border_width_all(1)
+	psb.set_corner_radius_all(3)
+	_preview_panel.add_theme_stylebox_override("panel", psb)
+	root.add_child(_preview_panel)
+	var pv_margin := MarginContainer.new()
+	for k in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		pv_margin.add_theme_constant_override(k, 8)
+	_preview_panel.add_child(pv_margin)
+	var pv_box := VBoxContainer.new()
+	pv_box.add_theme_constant_override("separation", 6)
+	pv_margin.add_child(pv_box)
+	_preview = TextureRect.new()
+	_preview.custom_minimum_size = Vector2(418, 260)
+	_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pv_box.add_child(_preview)
+	_preview_name = UIKit.label("", 15, UIKit.TEXT_DIM)
+	_preview_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pv_box.add_child(_preview_name)
 	var outer := VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 6)
 	col.add_child(outer)
@@ -143,7 +193,7 @@ void fragment() {
 	startpage.add_child(UIKit.label("START POINT", 14, UIKit.TEXT_DIM, true))
 	_spawn_note = UIKit.label("The mission sets your airfield, altitude and heading.", 16, UIKit.TEXT_DIM)
 	startpage.add_child(_spawn_note)
-	_spawn = UIKit.option_row(startpage, "Spawn", SpawnPoints.names(), 20)
+	_spawn = UIKit.option_row(startpage, "Spawn", [], 20)
 	_spawn_row = _spawn.get_parent()
 	_plan_btn = UIKit.button("MAP - pick your start point / sortie", _open_planner, 20, true)
 	startpage.add_child(_plan_btn)
@@ -324,6 +374,7 @@ void fragment() {
 		_welcome_when_clear(root)
 
 	_side.item_selected.connect(func(_i: int) -> void: _refresh_aircraft())
+	_side.item_selected.connect(func(_i: int) -> void: _refresh_spawns())
 	_side.item_selected.connect(func(_i: int) -> void: _refresh_mode())
 	_aircraft.item_selected.connect(func(_i: int) -> void: _refresh_info())
 	_mode.item_selected.connect(func(_i: int) -> void:
@@ -333,6 +384,7 @@ void fragment() {
 		_apply_mission_defaults()
 		_refresh_mode())
 	_refresh_aircraft()
+	_refresh_spawns()
 	_refresh_mode()
 	_restore_last_sortie()
 	_show_page(_initial_page())
@@ -403,6 +455,8 @@ func _show_page(index: int) -> void:
 		(_pages[i] as Control).visible = i == index
 	for i in _nav_btns.size():
 		(_nav_btns[i] as Button).button_pressed = i == index
+	if _preview_panel != null:
+		_preview_panel.visible = index == 0
 
 
 func _refresh_aircraft() -> void:
@@ -416,11 +470,40 @@ func _refresh_aircraft() -> void:
 	_refresh_info()
 
 
+func _refresh_spawns() -> void:
+	if _spawn == null:
+		return
+	var prev: String = ""
+	if _spawn.selected >= 0 and _spawn.selected < _spawn_entries.size():
+		prev = str(_spawn_entries[_spawn.selected]["id"])
+	var side: String = _side.get_item_text(_side.selected)
+	_spawn_entries = SpawnPoints.list_for_side(side)
+	_spawn.clear()
+	for e in _spawn_entries:
+		_spawn.add_item(str(e["name"]))
+	var idx: int = 0
+	if prev != "":
+		for i in _spawn_entries.size():
+			if str(_spawn_entries[i]["id"]) == prev:
+				idx = i
+				break
+	if not _spawn_entries.is_empty():
+		_spawn.select(idx)
+
+
 func _refresh_info() -> void:
 	if _aircraft.selected < 0 or _aircraft.selected >= _ids.size():
 		return
 	var st: AircraftStats = AircraftCatalog.load_stats(_ids[_aircraft.selected])
 	_info.text = "Speed %d km/h   Hull %d   Bombs %d" % [int(st.max_speed * 3.6), int(st.max_health), st.bombs]
+	if _preview != null:
+		var file: String = String(AIRCRAFT_PORTRAITS.get(st.model_id, PORTRAIT_FALLBACK))
+		var path: String = "res://assets/aircraft/" + file
+		if not ResourceLoader.exists(path):
+			path = "res://assets/aircraft/" + PORTRAIT_FALLBACK
+		_preview.texture = load(path) as Texture2D
+	if _preview_name != null:
+		_preview_name.text = st.display_name
 
 
 ## The Mission list holds historical missions or training lessons depending on the mode.
@@ -778,7 +861,8 @@ func _on_start() -> void:
 	if (mode_id == "free" or mode_id == "dogfight") and not cfg.has("era_date") and _random_date_ok():
 		cfg["era_date"] = _random_war_date()      # a random day of the war, so the ground and the airfields change too
 	if mode_id == "free":
-		cfg["spawn"] = String(SpawnPoints.LIST[_spawn.selected]["id"])
+		if _spawn.selected >= 0 and _spawn.selected < _spawn_entries.size():
+			cfg["spawn"] = String(_spawn_entries[_spawn.selected]["id"])
 		if not _plan.is_empty():
 			cfg.merge(_plan, true)      # map planner overrides spawn, scenario (mode), targets, enemy strength
 	_remember_sortie(cfg)
@@ -805,6 +889,7 @@ func _restore_last_sortie() -> void:
 	var side: String = str(c.get("side", "Allies"))
 	_side.select(0 if side == "Allies" else 1)
 	_refresh_aircraft()
+	_refresh_spawns()
 	var mode_id: String = str(c.get("mode", "free"))
 	var mi: int = _mode_ids.find(mode_id)
 	if mi >= 0:
@@ -819,14 +904,15 @@ func _restore_last_sortie() -> void:
 	# mission defaults may have changed the side/aircraft; the player's saved choices win
 	_side.select(0 if side == "Allies" else 1)
 	_refresh_aircraft()
+	_refresh_spawns()
 	var aid: String = str(c.get("aircraft", ""))
 	var ai: int = _ids.find(aid)
 	if ai >= 0:
 		_aircraft.select(ai)
 		_refresh_info()
 	var sp: String = str(c.get("spawn", ""))
-	for i in SpawnPoints.LIST.size():
-		if str(SpawnPoints.LIST[i]["id"]) == sp:
+	for i in _spawn_entries.size():
+		if str(_spawn_entries[i]["id"]) == sp:
 			_spawn.select(i)
 			break
 	if c.has("spawn_lat") or c.has("spawn_lon") or c.has("spawn_airfield"):
