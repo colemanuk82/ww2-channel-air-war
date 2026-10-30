@@ -13,21 +13,6 @@ const PAGES := ["SORTIE", "START POINT", "CONDITIONS", "BRIEFING"]
 
 const DONATE_URL := "https://paypal.me/colemanuk82"
 
-## README renders reused as the aircraft-selection portrait. Anything without its own render falls back
-## to the fleet overview image rather than showing a blank panel.
-const AIRCRAFT_PORTRAITS := {
-	"spitfire": "spitfire_three.jpg",
-	"hurricane": "hurricane_three.jpg",
-	"typhoon": "typhoon_three.jpg",
-	"tempest": "typhoon_three.jpg",
-	"p51": "p51_three.jpg",
-	"bf109": "bf109_front.jpg",
-	"me262": "me262_front.jpg",
-	"lancaster": "lancaster_three.jpg",
-	"b25": "b25_three.jpg",
-}
-const PORTRAIT_FALLBACK := "all_aircraft.jpg"
-
 var _side: OptionButton
 var _aircraft: OptionButton
 var _mode: OptionButton
@@ -40,9 +25,6 @@ var _spawn: OptionButton
 var _spawn_row: Control
 var _spawn_note: Label
 var _spawn_entries: Array = []
-var _preview_panel: PanelContainer
-var _preview: TextureRect
-var _preview_name: Label
 var _desc: Label
 var _info: Label
 var _plan: Dictionary = {}      # result of the map planner (free flight)
@@ -101,37 +83,6 @@ void fragment() {
 	col.add_theme_constant_override("margin_top", 28)
 	col.add_theme_constant_override("margin_bottom", 22)
 	root.add_child(col)
-	# aircraft portrait for the SORTIE page, using the README renders
-	_preview_panel = PanelContainer.new()
-	_preview_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	_preview_panel.offset_left = -470.0
-	_preview_panel.offset_right = -36.0
-	_preview_panel.offset_top = -168.0
-	_preview_panel.offset_bottom = 168.0
-	_preview_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var psb := StyleBoxFlat.new()
-	psb.bg_color = Color(0.025, 0.03, 0.035, 0.72)
-	psb.border_color = Color(0.78, 0.69, 0.43, 0.55)
-	psb.set_border_width_all(1)
-	psb.set_corner_radius_all(3)
-	_preview_panel.add_theme_stylebox_override("panel", psb)
-	root.add_child(_preview_panel)
-	var pv_margin := MarginContainer.new()
-	for k in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		pv_margin.add_theme_constant_override(k, 8)
-	_preview_panel.add_child(pv_margin)
-	var pv_box := VBoxContainer.new()
-	pv_box.add_theme_constant_override("separation", 6)
-	pv_margin.add_child(pv_box)
-	_preview = TextureRect.new()
-	_preview.custom_minimum_size = Vector2(418, 260)
-	_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	_preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pv_box.add_child(_preview)
-	_preview_name = UIKit.label("", 15, UIKit.TEXT_DIM)
-	_preview_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pv_box.add_child(_preview_name)
 	var outer := VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 6)
 	col.add_child(outer)
@@ -455,8 +406,6 @@ func _show_page(index: int) -> void:
 		(_pages[i] as Control).visible = i == index
 	for i in _nav_btns.size():
 		(_nav_btns[i] as Button).button_pressed = i == index
-	if _preview_panel != null:
-		_preview_panel.visible = index == 0
 
 
 func _refresh_aircraft() -> void:
@@ -496,14 +445,6 @@ func _refresh_info() -> void:
 		return
 	var st: AircraftStats = AircraftCatalog.load_stats(_ids[_aircraft.selected])
 	_info.text = "Speed %d km/h   Hull %d   Bombs %d" % [int(st.max_speed * 3.6), int(st.max_health), st.bombs]
-	if _preview != null:
-		var file: String = String(AIRCRAFT_PORTRAITS.get(st.model_id, PORTRAIT_FALLBACK))
-		var path: String = "res://assets/aircraft/" + file
-		if not ResourceLoader.exists(path):
-			path = "res://assets/aircraft/" + PORTRAIT_FALLBACK
-		_preview.texture = load(path) as Texture2D
-	if _preview_name != null:
-		_preview_name.text = st.display_name
 
 
 ## The Mission list holds historical missions or training lessons depending on the mode.
