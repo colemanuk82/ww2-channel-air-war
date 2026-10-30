@@ -214,9 +214,18 @@ void fragment() {
 	if (t1 <= t0) { discard; }
 
 	float dist_cam = length(w_pos - CAMERA_POSITION_WORLD);
+	// Cheap LOD: keep the near clouds at full sampling; distant or tiny clouds get coarser steps where
+	// the difference is below the pixel scale. Clouds whose whole extent is past the fade-out are not drawn.
+	float center_dist = length(MODEL_MATRIX[3].xyz - CAMERA_POSITION_WORLD);
+	float max_r = max(max(v_sc.x, v_sc.y), v_sc.z);
+	if (center_dist - max_r > fade_far) { discard; }
+	float angular = max_r / max(center_dist, 1.0);
+	if (angular < 0.0005) { discard; }
+	float lod_k = clamp(1.0 + (0.03 - angular) * 22.0, 1.0, 2.0);
 	// fewer steps for far clouds (they cover few pixels)
 	float span_m = (t1 - t0) * wl;
 	float step_m = dist_cam < 4000.0 ? 55.0 : (dist_cam < 12000.0 ? 90.0 : 150.0);
+	step_m *= lod_k;
 	int steps = int(clamp(span_m / (step_m * step_k), 8.0, float(max_steps)));
 	float dt = (t1 - t0) / float(steps);
 	float jitter = t_hash12(FRAGCOORD.xy);
