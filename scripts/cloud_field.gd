@@ -155,6 +155,11 @@ func _ready() -> void:
 		mi.set_instance_shader_parameter("ctype", float(_kinds[i]))
 		mi.set_instance_shader_parameter("nfreq", 1.8 * clampf(sqrt(maxf(r.x, r.z) / 450.0), 1.0, 2.6))
 		mi.position = _centers[i]
+		# Past the shader's fade-out the cloud is fully transparent already: don't submit it at all.
+		# Leave room for the cloud's radius: the node origin is its centre, not its nearest edge.
+		mi.visibility_range_end = 60000.0
+		mi.visibility_range_end_margin = 2500.0
+		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 		add_child(mi)
 		_nodes.append(mi)
 		if _kinds[i] == Kind.TOWER or (_kinds[i] == Kind.STRATO and _centers[i].y < 1400.0 and _radii[i].x > 2200.0 and _ranks[i] < 0.5):
