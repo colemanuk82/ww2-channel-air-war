@@ -24,6 +24,12 @@ func configure(cfg: Dictionary) -> void:
 	taskings = bool(cfg.get("taskings", false)) or OS.get_cmdline_user_args().has("--taskings")
 	tasking_interval = float(cfg.get("tasking_interval", 600.0))
 	passing_on = bool(cfg.get("passing_flights", true)) and not OS.get_cmdline_user_args().has("--no-passing")
+	# Free flight had no wingman count of its own, so the base default stayed at zero unless the map
+	# planner supplied one. Give fighter starts the normal pair; bomber crews still fly alone.
+	var want: int = int(cfg.get("wingmen", 2))
+	if player is Aircraft and (player as Aircraft).stats != null and AircraftCatalog.is_bomber((player as Aircraft).stats.id):
+		want = 0
+	wingmen_wanted = clampi(want, 0, WINGMEN_MAX)
 
 
 ## Most AI aircraft alive at once in free flight (all dynamic traffic shares it; wingmen count too).

@@ -33,6 +33,8 @@ var _plan_btn: Button
 var _plan_hint: Label
 var _ambient: CheckBox
 var _taskings: CheckBox
+var _wingmen: OptionButton
+var _passing: CheckBox
 var _ids: Array = []
 var _mode_ids: Array = []
 var _mission_ids: Array = []
@@ -175,6 +177,17 @@ void fragment() {
 	_taskings.add_theme_color_override("font_hover_color", Color.WHITE)
 	_taskings.add_theme_color_override("font_focus_color", Color.WHITE)
 	startpage.add_child(_taskings)
+	_wingmen = UIKit.option_row(startpage, "Wingmen", ["None", "1", "2", "3"], 20)
+	_wingmen.select(2)
+	_passing = CheckBox.new()
+	_passing.text = "Friendly flights you can join"
+	_passing.button_pressed = true
+	_passing.add_theme_font_override("font", UIKit.font())
+	_passing.add_theme_font_size_override("font_size", 17)
+	_passing.add_theme_color_override("font_color", UIKit.TEXT)
+	_passing.add_theme_color_override("font_hover_color", Color.WHITE)
+	_passing.add_theme_color_override("font_focus_color", Color.WHITE)
+	startpage.add_child(_passing)
 
 	# --- CONDITIONS ---
 	var cond := _new_page()
@@ -804,6 +817,8 @@ func _on_start() -> void:
 	if mode_id == "free":
 		if _spawn.selected >= 0 and _spawn.selected < _spawn_entries.size():
 			cfg["spawn"] = String(_spawn_entries[_spawn.selected]["id"])
+		cfg["wingmen"] = _wingmen.selected
+		cfg["passing_flights"] = _passing.button_pressed
 		if not _plan.is_empty():
 			cfg.merge(_plan, true)      # map planner overrides spawn, scenario (mode), targets, enemy strength
 	_remember_sortie(cfg)
@@ -814,7 +829,7 @@ func _on_start() -> void:
 ## start point (spawn list or planner coordinates) and the mission where applicable.
 func _remember_sortie(cfg: Dictionary) -> void:
 	var rec: Dictionary = {}
-	for k in ["side", "mode", "aircraft", "mission", "spawn", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading"]:
+	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading"]:
 		if cfg.has(k):
 			rec[k] = cfg[k]
 	GameState.last_sortie = rec
@@ -856,6 +871,10 @@ func _restore_last_sortie() -> void:
 		if str(_spawn_entries[i]["id"]) == sp:
 			_spawn.select(i)
 			break
+	if c.has("wingmen"):
+		_wingmen.select(clampi(int(c["wingmen"]), 0, 3))
+	if c.has("passing_flights"):
+		_passing.button_pressed = bool(c["passing_flights"])
 	if c.has("spawn_lat") or c.has("spawn_lon") or c.has("spawn_airfield"):
 		_plan = {}
 		for k in ["spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading"]:
