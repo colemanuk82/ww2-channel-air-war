@@ -8,9 +8,9 @@ Any suggestions or feedback? Let me know!
 
 ![Free](https://img.shields.io/badge/price-100%25%20free-2ea44f) ![Windows](https://img.shields.io/badge/platform-Windows%2064--bit-0078d4) ![Engine](https://img.shields.io/badge/engine-Godot%204-478cbf) 
 
-[![WW2 Channel Air War in-game highlights](docs/promo/highlights.gif)](docs/promo/highlights.mp4)
+[![WW2 Channel Air War trailer](docs/promo/highlights.gif)](docs/promo/highlights.mp4)
 
-**▶ [Watch the in-game highlights reel](docs/promo/highlights.mp4)** (real gameplay: day, sunset and night flying, combat, G effects and bailing out)
+**▶ [Watch the trailer](docs/promo/highlights.mp4)** (2 minutes of real gameplay: dawn and daylight dogfights, night attacks on shipping, and moonlit flying over the Channel)
 
 ### [⬇️ Download the installer](../../releases/latest)
 
