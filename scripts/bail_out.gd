@@ -173,9 +173,10 @@ func _resolve() -> void:
 		fate = "sea"
 	elif GroundKit.side_at(pos) != team:
 		fate = "captured"
+	# Keep the landing view through the respawn cool-off. Freeing this camera here makes the view snap
+	# back to the abandoned aircraft, which is still falling, until _spawn_player runs.
 	if _cam != null and is_instance_valid(_cam):
-		_cam.queue_free()
-	_cam = null
+		_cam.look_at(pos + Vector3(0, 1.0, 0), Vector3.UP)
 	active = false
 	resolved.emit(fate, pos)
 
