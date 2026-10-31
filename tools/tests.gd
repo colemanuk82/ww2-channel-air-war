@@ -21,6 +21,7 @@ func _ready() -> void:
 	_test_scatter_masks()
 	_test_music()
 	_test_audio()
+	_test_logbook_voice()
 	_test_data_files()
 	_test_river_data()
 	_test_landmarks_all()
@@ -520,6 +521,31 @@ func _test_audio() -> void:
 			_check(cp > 0.3 and cp <= 0.999, "combat sound %s peak %.2f in range" % [n, cp])
 	a.free()
 
+
+
+func _test_logbook_voice() -> void:
+	print("-- logbook voice")
+	_check(LogbookMenu.VOICE_TRACKS.size() >= 1, "logbook has spoken tracks")
+	for rel in LogbookMenu.VOICE_TRACKS:
+		var found: bool = false
+		for ext in ["ogg", "wav", "mp3"]:
+			if ResourceLoader.exists("res://assets/voice/%s.%s" % [rel, ext]):
+				found = true
+				break
+		_check(found, "logbook voice file exists: %s" % rel)
+	# the picker stays in range and never repeats the same track twice running
+	LogbookMenu._last_track = -1
+	var prev: int = -1
+	var n: int = LogbookMenu.VOICE_TRACKS.size()
+	for i in 50:
+		var pick: int = randi() % n
+		if n > 1 and pick == LogbookMenu._last_track:
+			pick = (pick + 1) % n
+		_check(pick >= 0 and pick < n, "logbook pick in range")
+		if n > 1:
+			_check(pick != prev, "logbook pick never repeats")
+		LogbookMenu._last_track = pick
+		prev = pick
 
 func _peak(s: AudioStreamWAV) -> float:
 	var d: PackedByteArray = s.data

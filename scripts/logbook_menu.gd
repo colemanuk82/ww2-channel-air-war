@@ -4,6 +4,10 @@ extends Control
 
 signal closed
 
+## One of these spoken tracks (a pilot's reminiscence or the poem) plays when the logbook opens; it stops on close.
+const VOICE_TRACKS: PackedStringArray = ["logbook/intro2", "logbook/intro3", "logbook/intro4", "logbook/poem"]
+static var _last_track: int = -1
+
 var _text: Label
 var _tabs: Dictionary = {}
 
@@ -46,16 +50,33 @@ func _ready() -> void:
 	_text = UIKit.label("", 16, UIKit.TEXT)
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(_text)
-	box.add_child(UIKit.button("Back", func() -> void: closed.emit(), 18))
+	box.add_child(UIKit.button("Back", func() -> void: _close(), 18))
 	_show("Allies")
+	_play_voice()
 
 
 func _show(side: String) -> void:
 	_text.text = PilotLog.logbook_text(side)
 
 
+## Play one spoken track at random (never the same one twice in a row). Uses the clean Narration bus.
+func _play_voice() -> void:
+	if VOICE_TRACKS.is_empty():
+		return
+	var i: int = randi() % VOICE_TRACKS.size()
+	if VOICE_TRACKS.size() > 1 and i == _last_track:
+		i = (i + 1) % VOICE_TRACKS.size()
+	_last_track = i
+	Radio.narrate(VOICE_TRACKS[i])
+
+
+func _close() -> void:
+	Radio.stop_narration()
+	closed.emit()
+
+
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		closed.emit()
+		_close()
 		get_viewport().set_input_as_handled()
