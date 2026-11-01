@@ -58,6 +58,14 @@ const ENGINE_POWER: float = 0.6        # share of stats.accel available as thrus
 const INDUCED_DRAG: float = 1.5        # speed lost per second per g above 1 (scaled by speed)
 const ROLL_COUPLING: float = 0.9       # rad/s of roll rate per unit of wing rolling moment
 const GROUND_RUN_K: float = 0.30       # fraction of the normal acceleration available while rolling on the ground
+# Loaded weight: bombs, rockets and gun rounds all count, so dropping them or running the guns dry makes the
+# aircraft a little lighter. Values are shares of one bomb; the full designed load is the reference (1 = heavy).
+const LOAD_BOMB_W: float = 1.0
+const LOAD_ROCKET_W: float = 0.12
+const LOAD_ROUND_W: float = 0.002
+const LOAD_SPEED_GAIN: float = 0.05    # a clean aircraft is 5% faster than a fully loaded one
+const LOAD_ACCEL_GAIN: float = 0.10    # ... and accelerates 10% harder
+const LOAD_TURN_GAIN: float = 0.05     # ... and turns 5% tighter
 var _flap_l: Node3D
 var _flap_r: Node3D
 
@@ -94,6 +102,10 @@ var over_water: bool = false
 var shake_intensity: float = 0.0
 var ammo: int = 0
 var bombs: int = 0
+# Mission loadout: the most of each weapon this sortie carries (-1 = the type's full load). Set before _ready().
+var loadout_ammo: int = -1
+var loadout_bombs: int = -1
+var loadout_rockets: int = -1
 var hit_radius: float = 8.0   # damage contract: sphere radius for hit tests (world units)
 var weapons: WeaponSystem
 var bombsight_only: bool = false   # bomber with a bombsight: no free impact-point aid in the chase view (set the sight instead)
@@ -141,8 +153,8 @@ func _ready() -> void:
 	if stats == null:
 		stats = load("res://data/aircraft/spitfire.tres") as AircraftStats
 	health = stats.max_health
-	ammo = stats.ammo
-	bombs = stats.bombs
+	ammo = max_ammo()
+	bombs = max_bombs()
 	gear_down = start_gear_down
 	_gear_amount = 1.0 if gear_down else 0.0
 	auto_level = GameState.auto_level
@@ -154,7 +166,7 @@ func _ready() -> void:
 	weapons.name = "Weapons"
 	add_child(weapons)
 	weapons.attach(self)
-	weapon_mode = 2 if (stats != null and stats.bombs > 0 and stats.ammo <= 0) else 0   # bombers default to bombs
+	weapon_mode = 2 if (max_bombs() > 0 and max_ammo() <= 0) else 0   # bombers default to bombs
 	weapon_bombs = weapon_mode == 2
 	damage_fx = AircraftDamageFX.new()
 	damage_fx.name = "DamageFX"
@@ -390,6 +402,39 @@ func get_altitude_m() -> float:
 	return global_position.y / WorldCoords.VERTICAL_SCALE
 
 
+## Mission loadout limits. A -1 loadout means the aircraft carries the type's full load.
+func max_ammo() -> int:
+	if stats == null:
+		return 0
+	return stats.ammo if loadout_ammo < 0 else clampi(loadout_ammo, 0, stats.ammo)
+
+
+func max_bombs() -> int:
+	if stats == null:
+		return 0
+	return stats.bombs if loadout_bombs < 0 else clampi(loadout_bombs, 0, stats.bombs)
+
+
+func max_rockets() -> int:
+	if stats == null:
+		return 0
+	return stats.rockets if loadout_rockets < 0 else clampi(loadout_rockets, 0, stats.rockets)
+
+
+## 0 = fully loaded (all the type can carry), 1 = clean (no bombs, rockets or ammo left). Used so the aircraft
+## gains a little speed, acceleration and turn rate as the ordnance goes.
+func load_light() -> float:
+	if stats == null:
+		return 0.0
+	var cap: float = float(stats.bombs) * LOAD_BOMB_W + float(stats.rockets) * LOAD_ROCKET_W + float(stats.ammo) * LOAD_ROUND_W
+	if cap <= 0.0001:
+		return 0.0
+	var load: float = float(bombs) * LOAD_BOMB_W + float(ammo) * LOAD_ROUND_W
+	if weapons != null:
+		load += float(weapons.rockets_left) * LOAD_ROCKET_W
+	return clampf(1.0 - load / cap, 0.0, 1.0)
+
+
 var _gun_marks: Array[Node3D] = []
 
 
@@ -501,6 +546,8 @@ func reset_pose(pos: Vector3, heading_deg: float, airborne: bool, start_speed: f
 		_contrail_nodes.clear()
 	state = State.ALIVE
 	add_to_group("damageable")
+	if has_meta("bailed"):
+		remove_meta("bailed")       # a fresh aircraft can be abandoned again
 	# a fresh aircraft: no lingering engine wear or heat, break-up, pull to one side or credited attacker
 	engine_wear = 0.0
 	engine_heat = 0.0
@@ -511,10 +558,10 @@ func reset_pose(pos: Vector3, heading_deg: float, airborne: bool, start_speed: f
 	_dmg_side = 0.0
 	_explode_t = -1.0
 	if weapons:
-		weapons.rockets_left = stats.rockets
+		weapons.rockets_left = max_rockets()
 	health = stats.max_health
-	ammo = stats.ammo
-	bombs = stats.bombs
+	ammo = max_ammo()
+	bombs = max_bombs()
 	boost_energy = 1.0
 	boost_locked = false
 	boosting = false
@@ -1035,9 +1082,9 @@ func _read_input() -> void:
 	cmd_boost = Input.is_action_pressed("boost")
 	if Input.is_action_just_pressed("weapon_toggle"):
 		var modes: Array = [0]
-		if stats.rockets > 0:
+		if max_rockets() > 0:
 			modes.append(1)
-		if stats.bombs > 0:
+		if max_bombs() > 0:
 			modes.append(2)
 		weapon_mode = modes[(modes.find(weapon_mode) + 1) % modes.size()]
 		weapon_bombs = weapon_mode == 2
@@ -1204,9 +1251,10 @@ func _update_rotation(delta: float) -> void:
 		var al: float = _alpha_signed()
 		if cmd_pitch * al > 0.0:
 			pull_limit *= 1.0 - smoothstep(0.17, 0.25, absf(al))
-	var t_pitch: float = cmd_pitch * pull_limit * deg_to_rad(stats.pitch_rate_deg) * pitch_auth
-	var t_roll: float = cmd_roll * deg_to_rad(stats.roll_rate_deg) * roll_auth
-	var t_yaw: float = cmd_yaw * deg_to_rad(stats.yaw_rate_deg) * (0.4 + 0.6 * ctrl)
+	var light_k: float = 1.0 + LOAD_TURN_GAIN * load_light()     # lighter once the ordnance is gone
+	var t_pitch: float = cmd_pitch * pull_limit * deg_to_rad(stats.pitch_rate_deg) * pitch_auth * light_k
+	var t_roll: float = cmd_roll * deg_to_rad(stats.roll_rate_deg) * roll_auth * light_k
+	var t_yaw: float = cmd_yaw * deg_to_rad(stats.yaw_rate_deg) * (0.4 + 0.6 * ctrl) * light_k
 	# a shot-up aircraft wants to roll off to one side; the pilot has to hold it against the stick
 	if dmg > 0.35 and not on_ground and state == State.ALIVE:
 		t_roll += _dmg_side * deg_to_rad(9.0) * smoothstep(0.35, 0.9, dmg) * air_auth * (0.4 if parts_hit else 1.0)
@@ -1300,7 +1348,7 @@ func _update_rotation(delta: float) -> void:
 		# Turn rate falls with speed (w = g*tan(bank)/v): tight at slow speed, wide when fast.
 		var turn_k: float = clampf(stats.max_speed * 0.55 / maxf(speed, 20.0), 0.7, 1.45)
 		var dmg_turn: float = damage_model.turn_k() if damage_model != null else 1.0
-		rotate(Vector3.UP, global_transform.basis.x.y * stats.bank_turn_rate * turn_k * dmg_turn * air_auth * turn_w * delta)
+		rotate(Vector3.UP, global_transform.basis.x.y * stats.bank_turn_rate * turn_k * dmg_turn * air_auth * light_k * turn_w * delta)
 
 	orthonormalize()
 
@@ -1320,7 +1368,8 @@ func _roll_trim(a_trim: float) -> float:
 func _update_speed(delta: float) -> void:
 	if state == State.DYING and not on_ground:
 		return      # a falling wreck follows _update_flight_path's ballistic fall
-	var max_s: float = stats.max_speed
+	var light: float = load_light()
+	var max_s: float = stats.max_speed * (1.0 + LOAD_SPEED_GAIN * light)
 	var target: float
 	if on_ground:
 		target = lerpf(0.0, max_s * _engine_power(), throttle)
@@ -1348,7 +1397,7 @@ func _update_speed(delta: float) -> void:
 		# speed squared and exactly balances full throttle at max_speed (max_speed + boost_bonus when boosting), so
 		# top speeds are unchanged, but the engine is weaker (ENGINE_POWER) and turns cost far more energy:
 		# lost speed takes a while to win back.
-		var d0: float = stats.accel * ENGINE_POWER
+		var d0: float = stats.accel * ENGINE_POWER * (1.0 + LOAD_ACCEL_GAIN * light)
 		var vr: float = speed / max_s
 		var engine_k: float = 1.0 - 0.5 * smoothstep(0.3, 1.0, dmg_s)     # lost power: top speed and climb fall away
 		if damage_model != null:

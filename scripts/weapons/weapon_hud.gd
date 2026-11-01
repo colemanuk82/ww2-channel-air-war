@@ -88,11 +88,11 @@ func _draw_ammo() -> void:
 	var c: Control = _ammo_lbl
 	var font: Font = UIKit.font(true)
 	const FS: int = 20
-	var items: Array = [[0, aircraft.ammo, aircraft.stats.ammo]]
-	if aircraft.stats.rockets > 0:
-		items.append([1, ws.rockets_left, aircraft.stats.rockets])
-	if aircraft.stats.bombs > 0:
-		items.append([2, aircraft.bombs, aircraft.stats.bombs])
+	var items: Array = [[0, aircraft.ammo, aircraft.max_ammo()]]
+	if aircraft.max_rockets() > 0:
+		items.append([1, ws.rockets_left, aircraft.max_rockets()])
+	if aircraft.max_bombs() > 0:
+		items.append([2, aircraft.bombs, aircraft.max_bombs()])
 	# a dark glass plate behind the strip, the same as the mission card above it
 	var total: float = 12.0
 	for it0 in items:

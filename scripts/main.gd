@@ -1704,6 +1704,17 @@ func start_game(cfg: Dictionary) -> void:
 	player.stats = AircraftCatalog.load_stats(aid)
 	player.team = side
 	player.player_controlled = true
+	# Mission setup loadout (bombs / rockets / rounds). Applied before _ready so the first spawn, rearm and the
+	# HUD all see the chosen limits rather than the type's full load.
+	var loadout_v: Variant = config.get("loadout", null)
+	if loadout_v is Dictionary:
+		var loadout: Dictionary = loadout_v
+		if loadout.has("bombs"):
+			player.loadout_bombs = int(loadout["bombs"])
+		if loadout.has("rockets"):
+			player.loadout_rockets = int(loadout["rockets"])
+		if loadout.has("ammo"):
+			player.loadout_ammo = int(loadout["ammo"])
 	add_child(player)
 	if AircraftCatalog.is_bomber(aid):
 		CrewIntercom.attach(player)
@@ -2338,7 +2349,7 @@ func _check_rearm() -> void:
 		var st: AircraftStats = player.stats
 		var w: Variant = player.weapons
 		var rockets: int = int(w.get("rockets_left")) if w != null else st.rockets
-		var short: bool = player.ammo < st.ammo or player.bombs < st.bombs or rockets < st.rockets
+		var short: bool = player.ammo < player.max_ammo() or player.bombs < player.max_bombs() or rockets < player.max_rockets()
 		player.weapons.rearm()
 		if short and hud and hud.has_method("show_message"):
 			hud.call("show_message", "REARMED - guns, bombs and rockets restored", 3.0)

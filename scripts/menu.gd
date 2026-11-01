@@ -35,6 +35,13 @@ var _ambient: CheckBox
 var _taskings: CheckBox
 var _wingmen: OptionButton
 var _passing: CheckBox
+# Loadout: what the sortie carries. Values are the aircraft type's own limits, rebuilt when the aircraft changes.
+var _bombs: OptionButton
+var _rockets: OptionButton
+var _ammo: OptionButton
+var _bombs_vals: Array = [0]
+var _rockets_vals: Array = [0]
+var _ammo_vals: Array = [0]
 var _ids: Array = []
 var _mode_ids: Array = []
 var _mission_ids: Array = []
@@ -123,6 +130,13 @@ void fragment() {
 	_aircraft = UIKit.option_row(sortie, "Aircraft", [], 20)
 	_info = UIKit.label("", 15, UIKit.TEXT_DIM)
 	sortie.add_child(_info)
+	# Loadout: fewer weapons mean a lighter aircraft (a little more speed, acceleration and turn rate).
+	_bombs = UIKit.option_row(sortie, "Bombs", ["0"], 20)
+	_rockets = UIKit.option_row(sortie, "Rockets", ["0"], 20)
+	_ammo = UIKit.option_row(sortie, "Ammo", ["0"], 20)
+	_bombs.tooltip_text = "Bombs carried. Every bomb dropped makes the aircraft lighter."
+	_rockets.tooltip_text = "Rockets carried. Each pair fired makes the aircraft lighter."
+	_ammo.tooltip_text = "Gun rounds loaded. Running the guns dry makes the aircraft lighter."
 	_mode_ids = ModeRegistry.get_available_ids()
 	var mode_names: Array = []
 	for id in _mode_ids:
@@ -271,27 +285,29 @@ void fragment() {
 	# application/config/version), small and quiet in the top-right corner
 	var gv: Dictionary = Engine.get_version_info()
 	var godot_ver: String = "Godot %d.%d%s" % [int(gv["major"]), int(gv["minor"]), (".%d" % int(gv["patch"])) if int(gv["patch"]) > 0 else ""]
-	var ver := UIKit.label("%s  ·  v%s" % [godot_ver, str(ProjectSettings.get_setting("application/config/version", "dev"))], 14, Color(0.85, 0.83, 0.75, 0.55))
+	var ver := UIKit.label("%s  ·  v%s" % [godot_ver, str(ProjectSettings.get_setting("application/config/version", "dev"))], 14, Color(0.9, 0.22, 0.16, 0.95))
 	ver.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	ver.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	ver.offset_right = -22.0
 	ver.offset_top = 14.0
 	root.add_child(ver)
-	# voluntary donation link, top-right under the version label (opens the player's browser; nothing is sent by the game)
+	# voluntary donation link, bottom-right (opens the player's browser; nothing is sent by the game)
 	var sup := UIKit.button("Support me on PayPal", func() -> void: OS.shell_open(DONATE_URL), 15)
-	sup.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	sup.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	sup.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	sup.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	sup.offset_right = -22.0
-	sup.offset_top = 40.0
+	sup.offset_bottom = -14.0
 	sup.tooltip_text = "Optional. Opens " + DONATE_URL + " in your web browser."
 	root.add_child(sup)
 	# manual update check (a request is made only when this is pressed)
 	var upd_newer: Array = [false]
 	var upd := UIKit.button("Check for updates", func() -> void: pass, 15)
-	upd.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	upd.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	upd.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	upd.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	upd.offset_right = -22.0
-	upd.offset_top = 76.0
+	upd.offset_bottom = -58.0
 	upd.tooltip_text = "Optional. Asks GitHub whether a newer release exists; sends nothing else."
 	root.add_child(upd)
 	var checker := UpdateCheck.new()
@@ -308,10 +324,11 @@ void fragment() {
 		upd.disabled = true
 		checker.check())
 	var logs := UIKit.button("Open logs folder", func() -> void: OS.shell_open(ProjectSettings.globalize_path("user://logs")), 15)
-	logs.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	logs.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	logs.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	logs.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	logs.offset_right = -22.0
-	logs.offset_top = 112.0
+	logs.offset_bottom = -102.0
 	logs.tooltip_text = "Opens the folder with the game's log files (useful when reporting a crash)."
 	root.add_child(logs)
 	if FirstRun.pending():
@@ -320,7 +337,9 @@ void fragment() {
 	_side.item_selected.connect(func(_i: int) -> void: _refresh_aircraft())
 	_side.item_selected.connect(func(_i: int) -> void: _refresh_spawns())
 	_side.item_selected.connect(func(_i: int) -> void: _refresh_mode())
-	_aircraft.item_selected.connect(func(_i: int) -> void: _refresh_info())
+	_aircraft.item_selected.connect(func(_i: int) -> void:
+		_refresh_info()
+		_refresh_loadout())
 	_mode.item_selected.connect(func(_i: int) -> void:
 		_refresh_mode()
 		_apply_mission_defaults())
@@ -444,6 +463,7 @@ func _refresh_aircraft() -> void:
 		_aircraft.add_item(st.display_name + (" (bomber)" if AircraftCatalog.is_bomber(id) else ""))
 	_aircraft.select(0)
 	_refresh_info()
+	_refresh_loadout()
 
 
 func _refresh_spawns() -> void:
@@ -472,6 +492,53 @@ func _refresh_info() -> void:
 		return
 	var st: AircraftStats = AircraftCatalog.load_stats(_ids[_aircraft.selected])
 	_info.text = "Speed %d km/h   Hull %d   Bombs %d" % [int(st.max_speed * 3.6), int(st.max_health), st.bombs]
+
+
+## Rebuild the loadout lists for the selected aircraft. Every row starts at the full load.
+func _refresh_loadout() -> void:
+	if _bombs == null or _aircraft.selected < 0 or _aircraft.selected >= _ids.size():
+		return
+	var st: AircraftStats = AircraftCatalog.load_stats(_ids[_aircraft.selected])
+	_fill_count_row(_bombs, _bombs_vals, st.bombs, 1)
+	_fill_count_row(_rockets, _rockets_vals, st.rockets, 1 if st.rockets <= 10 else 2)
+	_fill_count_row(_ammo, _ammo_vals, st.ammo, maxi(1, int(ceil(float(st.ammo) / 10.0))))
+	_bombs.disabled = st.bombs <= 0
+	_rockets.disabled = st.rockets <= 0
+	_ammo.disabled = st.ammo <= 0
+
+
+## Fill one OptionButton with 0..cap (in rough steps), leaving the full load selected.
+func _fill_count_row(ob: OptionButton, vals: Array, cap: int, step: int) -> void:
+	vals.clear()
+	ob.clear()
+	if cap <= 0:
+		vals.append(0)
+		ob.add_item("0")
+		ob.select(0)
+		return
+	for v in range(0, cap + 1, maxi(step, 1)):
+		vals.append(v)
+		ob.add_item(str(v))
+	if int(vals[vals.size() - 1]) != cap:
+		vals.append(cap)
+		ob.add_item(str(cap))
+	ob.select(vals.size() - 1)
+
+
+func _selected_count(ob: OptionButton, vals: Array) -> int:
+	if ob == null or vals.is_empty() or ob.selected < 0:
+		return -1
+	return int(vals[clampi(ob.selected, 0, vals.size() - 1)])
+
+
+## Select a saved count in a loadout row (leaves the full load if it is not one of the offered values).
+func _select_count(ob: OptionButton, vals: Array, want: int) -> void:
+	if ob == null or want < 0:
+		return
+	for i in vals.size():
+		if int(vals[i]) == want:
+			ob.select(i)
+			return
 
 
 ## The Mission list holds historical missions or training lessons depending on the mode.
@@ -838,6 +905,11 @@ func _on_start() -> void:
 		"time": TIMES[_time.selected] if _time.selected < TIMES.size() else TIMES[randi() % TIMES.size()],
 		"ambient": _ambient.button_pressed,
 		"taskings": _taskings.button_pressed and mode_id == "free",
+		"loadout": {
+			"bombs": _selected_count(_bombs, _bombs_vals),
+			"rockets": _selected_count(_rockets, _rockets_vals),
+			"ammo": _selected_count(_ammo, _ammo_vals),
+		},
 	}
 	if (mode_id == "free" or mode_id == "dogfight") and not cfg.has("era_date") and _random_date_ok():
 		cfg["era_date"] = _random_war_date()      # a random day of the war, so the ground and the airfields change too
@@ -856,7 +928,7 @@ func _on_start() -> void:
 ## start point (spawn list or planner coordinates) and the mission where applicable.
 func _remember_sortie(cfg: Dictionary) -> void:
 	var rec: Dictionary = {}
-	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading"]:
+	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout"]:
 		if cfg.has(k):
 			rec[k] = cfg[k]
 	GameState.last_sortie = rec
@@ -893,6 +965,12 @@ func _restore_last_sortie() -> void:
 	if ai >= 0:
 		_aircraft.select(ai)
 		_refresh_info()
+		_refresh_loadout()
+	if c.has("loadout"):
+		var lo: Dictionary = c["loadout"]
+		_select_count(_bombs, _bombs_vals, int(lo.get("bombs", -1)))
+		_select_count(_rockets, _rockets_vals, int(lo.get("rockets", -1)))
+		_select_count(_ammo, _ammo_vals, int(lo.get("ammo", -1)))
 	var sp: String = str(c.get("spawn", ""))
 	for i in _spawn_entries.size():
 		if str(_spawn_entries[i]["id"]) == sp:

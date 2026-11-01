@@ -26,7 +26,7 @@ const AIM_ASSIST_DEG: float = 3.0
 
 func attach(a: Aircraft) -> void:
 	aircraft = a
-	rockets_left = a.stats.rockets
+	rockets_left = a.max_rockets()
 	a.fire_requested.connect(_on_fire)
 	a.bomb_requested.connect(_on_bomb)
 	_muzzles = a.get_muzzles()
@@ -52,7 +52,7 @@ func _process(delta: float) -> void:
 
 
 func _low_threshold() -> int:
-	return int(float(aircraft.stats.ammo) * 0.25)
+	return int(float(aircraft.max_ammo()) * 0.25)
 
 
 ## Player only: one spoken + on-screen warning when the guns drop to a quarter, and another when they run dry.
@@ -75,9 +75,9 @@ func _ammo_call(side: String, key: String, texts: Array, banner: String) -> void
 
 
 func rearm() -> void:
-	rockets_left = aircraft.stats.rockets
-	aircraft.ammo = aircraft.stats.ammo
-	aircraft.bombs = aircraft.stats.bombs
+	rockets_left = aircraft.max_rockets()
+	aircraft.ammo = aircraft.max_ammo()
+	aircraft.bombs = aircraft.max_bombs()
 	_warned_low = false
 	_warned_out = false
 

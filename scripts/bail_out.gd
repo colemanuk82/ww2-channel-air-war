@@ -54,6 +54,14 @@ func tick(delta: float, player: Aircraft) -> void:
 		_dying_t = 0.0
 		_was_alive = false
 		return
+	if player.has_meta("bailed"):
+		# The pilot is already out (the aircraft was abandoned and the descent skipped): never tell him he is
+		# too late to bail from the wreck he just left.
+		_hold = 0.0
+		_dying_t = 0.0
+		_was_alive = false
+		_late_shown = true
+		return
 	# A hit that sets the aircraft DYING does not close the door immediately: give the pilot a
 	# moment to get out, and make the hold shorter than the old one-second rule.
 	if player.state == Aircraft.State.DYING:
