@@ -1,3 +1,16 @@
+# SESSION 2026-11-01 (v2.104): music licences
+- **A licence must be present for every music track uploaded to the game.** The 19 *Battle of Britain* film cues
+  that had been sitting in `assets/music/ingame/` since v2.24 (and shipping inside every export, `embed_pck=true`)
+  are gone from the working tree and from every commit (history rewritten, force-pushed). The 79 releases v2.24-v2.103
+  and their tags were deleted; v2.104 is the first clean release.
+- Guard rails so it cannot come back: `tools/audio_allowlist.json` (every audio file that may ship, with title,
+  artist and source, plus the `assets/voice/` generated prefix), `tools/check_audio_licences.py`, the
+  `_test_audio_licences` check inside the `TESTS OK` gate, `.githooks/pre-commit`
+  (`git config core.hooksPath .githooks`) and `.github/workflows/audio-licences.yml`. The ship script aborts on a
+  missing licence. A track without a licence now fails the build instead of riding along.
+- Players still import their own music via **Options > Music**; the README's recommendation stands, the files are
+  just not ours to ship.
+
 # SESSION 2026-10-24 (v2.8): standard Godot 4.7.2, double precision
 - The game now runs on **standard Godot 4.7.2-stable**, built from the official source in `F:\godot-std` with
   `precision=double` (`tools/cache/build_std.ps1`: `platform=windows precision=double optimize=speed use_static_cpp=yes angle=no`).
