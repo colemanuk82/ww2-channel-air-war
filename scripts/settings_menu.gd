@@ -612,7 +612,7 @@ func _build_music_page() -> VBoxContainer:
 	var row1 := HBoxContainer.new()
 	row1.add_theme_constant_override("separation", 8)
 	page.add_child(row1)
-	for spec in [["Import...", _music_import], ["Import folder...", _music_import_folder], ["Delete", _music_delete], ["Play", _music_play]]:
+	for spec in [["Import...", _music_import], ["Import folder...", _music_import_folder], ["Delete", _music_delete], ["Play", _music_play], ["Fix list", _music_fix]]:
 		var b: Button = UIKit.button(String(spec[0]), spec[1], 17)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row1.add_child(b)
@@ -690,7 +690,7 @@ func _music_select_manager(which: String) -> void:
 	if _music_shuffle_btn != null:
 		_music_shuffle_btn.text = "Shuffle: %s" % ("On" if GameState.music_shuffle(which) else "Off")
 	if _music_note != null:
-		_music_note.text = "Imports are copied into user://music/; Import folder... takes a whole folder at once. Shipped tracks are never deleted from disk."
+		_music_note.text = "Imports are copied into user://music/; Import folder... takes a whole folder at once. Fix list drops tracks whose file has gone and picks up files found there."
 	_music_refresh()
 
 
@@ -744,6 +744,17 @@ func _music_select(index: int) -> void:
 
 func _music_flip_page(dir: int) -> void:
 	_music_page += dir
+	_music_refresh()
+
+
+## Fix list: rescan for files. Entries whose file has gone are dropped and audio files found in the manager's own
+## folder are added, so the list only ever shows tracks that actually play.
+func _music_fix() -> void:
+	var r: Dictionary = GameState.fix_music_playlist(_music_which)
+	_music_selected = -1
+	_music_page = 0
+	_music_note.text = "Scanned for tracks: removed %d missing, added %d found in %s." % [int(r["removed"]), int(r["added"]), MenuMusic.user_dir(_music_which)]
+	_music_sync_player(false)
 	_music_refresh()
 
 

@@ -250,19 +250,28 @@ func _load_settings() -> void:
 	vol_engine = clampf(float(cf.get_value("audio", "engine", vol_engine)), 0.0, 1.0)
 	vol_radio = clampf(float(cf.get_value("audio", "radio", vol_radio)), 0.0, 1.0)
 	vol_music = clampf(float(cf.get_value("audio", "music", vol_music)), 0.0, 1.0)
-	menu_music_playlist = _str_array(cf.get_value("music", "menu_playlist", menu_music_playlist))
-	ingame_music_playlist = _str_array(cf.get_value("music", "ingame_playlist", ingame_music_playlist))
-	menu_music_configured = bool(cf.get_value("music", "menu_configured", menu_music_configured))
-	ingame_music_configured = bool(cf.get_value("music", "ingame_configured", ingame_music_configured))
+	var stored_menu: Array = _str_array(cf.get_value("music", "menu_playlist", menu_music_playlist))
+	var stored_ingame: Array = _str_array(cf.get_value("music", "ingame_playlist", ingame_music_playlist))
+	menu_music_playlist = music_existing(stored_menu)
+	ingame_music_playlist = music_existing(stored_ingame)
+	var playlists_pruned: bool = menu_music_playlist.size() != stored_menu.size() or ingame_music_playlist.size() != stored_ingame.size()
+	menu_music_configured = bool(cf.get_value("music", "menu_configured", menu_music_configured)) and not menu_music_playlist.is_empty()
+	ingame_music_configured = bool(cf.get_value("music", "ingame_configured", ingame_music_configured)) and not ingame_music_playlist.is_empty()
 	menu_music_shuffle = bool(cf.get_value("music", "menu_shuffle", menu_music_shuffle))
 	ingame_music_shuffle = bool(cf.get_value("music", "ingame_shuffle", ingame_music_shuffle))
 	menu_music_current = str(cf.get_value("music", "menu_current", menu_music_current))
 	ingame_music_current = str(cf.get_value("music", "ingame_current", ingame_music_current))
+	if not MenuMusic.exists(menu_music_current):
+		menu_music_current = ""
+	if not MenuMusic.exists(ingame_music_current):
+		ingame_music_current = ""
 	music_gap = clampf(float(cf.get_value("music", "gap", music_gap)), 0.0, 300.0)
 	if cf.has_section("input"):
 		for k in cf.get_section_keys("input"):
 			pad_bindings[k] = cf.get_value("input", k)
 		_apply_pad_bindings()
+	if playlists_pruned:
+		save_settings()     # write the cleaned list back so the dead entries do not linger in settings.cfg
 
 
 ## Change the AI team-outline visibility window live (Video settings sliders).
@@ -352,10 +361,22 @@ func save_settings() -> void:
 # ---------------------------------------------------------------- music playlists (Options > Music)
 ## Effective playlist for a manager ("menu" or "ingame"): the stored list once the player has edited it,
 ## otherwise every shipped track found on disk, so a fresh install and newly shipped tracks are picked up.
+## Entries whose file has gone are dropped, so the list only ever holds tracks that can play.
 func music_playlist(which: String) -> Array:
 	if which == "ingame":
-		return ingame_music_playlist.duplicate() if ingame_music_configured else default_music_playlist("ingame")
-	return menu_music_playlist.duplicate() if menu_music_configured else default_music_playlist("menu")
+		return music_existing(ingame_music_playlist) if ingame_music_configured else default_music_playlist("ingame")
+	return music_existing(menu_music_playlist) if menu_music_configured else default_music_playlist("menu")
+
+
+## Only the entries that still exist (a saved playlist can name a track the game no longer ships, or an import
+## the player deleted from disk: those would sit in the list and play silence).
+static func music_existing(list: Array) -> Array:
+	var out: Array = []
+	for p in list:
+		var s: String = str(p)
+		if MenuMusic.exists(s) and not out.has(s):
+			out.append(s)
+	return out
 
 
 ## The tracks that ship with the game for a manager (never modified; the fallback playlist).
@@ -396,14 +417,51 @@ func set_music_current(which: String, path: String) -> void:
 
 
 ## Replace a manager's playlist and mark it as edited by the player (so it is no longer auto-discovered).
-func set_music_playlist(which: String, list: Array) -> void:
+func set_music_playlist(which: String, list: Array, save: bool = true) -> void:
 	if which == "ingame":
 		ingame_music_playlist = list.duplicate()
 		ingame_music_configured = true
 	else:
 		menu_music_playlist = list.duplicate()
 		menu_music_configured = true
-	save_settings()
+	if save:
+		save_settings()
+
+
+## Options > Music "Fix list": drop entries whose file has gone and add any audio file sitting in the manager's
+## own folder that is not listed (dropped in by hand, or a copy whose entry was lost). With nothing left to play
+## the manager goes back to the shipped tracks. Returns {"removed": n, "added": n}.
+func fix_music_playlist(which: String, save: bool = true) -> Dictionary:
+	var stored: Array = ingame_music_playlist if which == "ingame" else menu_music_playlist
+	var kept: Array = music_playlist(which)          # already without the entries whose file has gone
+	var removed: int = 0
+	for p in stored:                                 # count what the saved list still names but cannot play
+		if not MenuMusic.exists(str(p)):
+			removed += 1
+	var added: Array = []
+	for p in MenuMusic.discover_user(MenuMusic.user_dir(which)):
+		var s: String = String(p)
+		if not kept.has(s):
+			kept.append(s)
+			added.append(s)
+	var lost_current: bool = music_current(which) != "" and not kept.has(music_current(which))
+	if kept.is_empty():
+		if which == "ingame":
+			ingame_music_playlist = []
+			ingame_music_configured = false
+		else:
+			menu_music_playlist = []
+			menu_music_configured = false
+	elif removed > 0 or not added.is_empty():
+		set_music_playlist(which, kept, false)
+	if lost_current:
+		if which == "ingame":
+			ingame_music_current = ""
+		else:
+			menu_music_current = ""
+	if save and (removed > 0 or not added.is_empty() or lost_current):
+		save_settings()
+	return {"removed": removed, "added": added.size()}
 
 
 ## Add a track to a manager's playlist (no-op when it is already there).

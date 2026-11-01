@@ -119,6 +119,15 @@ static func discover_user(dir: String) -> Array:
 	return out
 
 
+## True if a playlist entry can actually play: a shipped track (a packed resource in exported builds, a file in the
+## editor) or an imported copy on disk. A saved playlist can outlive the file it names (a track dropped from the
+## game, an import deleted outside it), and those entries must not be listed.
+static func exists(path: String) -> bool:
+	if path == "":
+		return false
+	return ResourceLoader.exists(path) or FileAccess.file_exists(path)
+
+
 ## Load a track from anywhere: shipped res:// tracks go through the resource system; imported user:// files
 ## are decoded straight from their bytes (they have no imported resource).
 static func load_track(path: String) -> AudioStream:

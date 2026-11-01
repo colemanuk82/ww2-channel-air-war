@@ -508,6 +508,21 @@ func _test_music() -> void:
 	GameState.set_music_gap(gap_before, false)
 	_check(MenuMusic.audio_files_in("res://assets/fonts").is_empty(), "folder scan skips folders without audio")
 	_check(MenuMusic.import_folder("ingame", "res://no_such_folder").is_empty(), "importing a missing folder adds nothing")
+	# A playlist that names a file which has gone must not list it (Options > Music "Fix list")
+	_check(GameState.music_existing(["res://assets/music/freedom.mp3", "user://music/menu/gone.mp3"]).size() == 1, "only tracks that exist stay in a playlist")
+	_check(not MenuMusic.exists("res://assets/music/not_a_track.mp3"), "a missing track is reported missing")
+	var saved_list: Array = GameState.ingame_music_playlist.duplicate()
+	var saved_cfg: bool = GameState.ingame_music_configured
+	var saved_cur: String = GameState.ingame_music_current
+	GameState.ingame_music_playlist = ["res://assets/music/ingame/freedom.mp3", "user://music/ingame/gone.mp3"]
+	GameState.ingame_music_configured = true
+	var fix: Dictionary = GameState.fix_music_playlist("ingame", false)
+	_check(int(fix["removed"]) == 1, "fix list drops the missing track (%d)" % int(fix["removed"]))
+	_check(not GameState.music_playlist("ingame").has("user://music/ingame/gone.mp3"), "fixed list holds no dead entries")
+	_check(GameState.music_playlist("ingame").has("res://assets/music/ingame/freedom.mp3"), "fix list keeps the tracks that play")
+	GameState.ingame_music_playlist = saved_list
+	GameState.ingame_music_configured = saved_cfg
+	GameState.ingame_music_current = saved_cur
 	# The Ops Room tooltip is its own dim hint row under the tasking
 	var card_hud := HUD.new()
 	var rows: Array = card_hud._card_rows("AIRFIELD ATTACK   30 km\n(P: skip task, F1: see controls)", UIKit.display_font(), UIKit.font(true))
