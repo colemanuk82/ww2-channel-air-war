@@ -21,6 +21,7 @@ func _ready() -> void:
 	_test_scatter_masks()
 	_test_music()
 	_test_audio_licences()
+	_test_target_index()
 	_test_audio()
 	_test_logbook_voice()
 	_test_custom_missions()
@@ -588,6 +589,44 @@ func _audio_files_under(dir: String, out: Array = []) -> Array:
 	for sub in d.get_directories():
 		_audio_files_under(dir.path_join(sub) + "/", out)
 	return out
+
+
+## A stand-in for anything the target index collects (a ship, a ground target or an aircraft).
+class FakeDamageable:
+	extends Node3D
+	var team: String = "Axis"
+	var velocity: Vector3 = Vector3.ZERO
+	var hit_radius: float = 1.0
+	var is_dead: bool = false
+	var state: int = 0
+
+
+## TargetIndex: the shared snapshot the AI and the gunsight use instead of walking the scene tree every frame.
+func _test_target_index() -> void:
+	print("-- target index")
+	TargetIndex._next_ms = 0
+	var near_t := FakeDamageable.new()
+	near_t.position = Vector3(100, 0, 0)
+	near_t.add_to_group("ground_target")
+	add_child(near_t)
+	var far_t := FakeDamageable.new()
+	far_t.position = Vector3(900, 0, 0)
+	far_t.add_to_group("ground_target")
+	add_child(far_t)
+	var friendly := FakeDamageable.new()
+	friendly.team = "Allies"
+	friendly.position = Vector3(50, 0, 0)
+	friendly.add_to_group("ground_target")
+	add_child(friendly)
+	TargetIndex.ensure(get_tree())
+	_check(TargetIndex.count() >= 2, "target index holds the scene's targets (%d)" % TargetIndex.count())
+	_check(TargetIndex.nearest(Vector3.ZERO, "Allies", 10.0, 2000.0) == near_t, "nearest picks the closest enemy, not the friendly")
+	_check(TargetIndex.nearest_ahead(Vector3.ZERO, Vector3.RIGHT, "Allies", 10.0, 2000.0, 0.1) == near_t, "the strike cone picks the target on the line")
+	_check(TargetIndex.nearest_ahead(Vector3.ZERO, Vector3.LEFT, "Allies", 10.0, 2000.0, 0.1) == null, "off the line finds no strike target")
+	_check(TargetIndex.any_near(Vector3(105, 0, 0), "Allies", 20.0), "the bombsight sees a target over the aim point")
+	near_t.queue_free()
+	far_t.queue_free()
+	friendly.queue_free()
 
 
 func _test_audio() -> void:

@@ -460,21 +460,8 @@ func set_strike(t: Node3D) -> void:
 func _pick_strike_target(max_d: float) -> Node3D:
 	if ac.stats.rockets <= 0 or _salvos >= ac.stats.rockets / 2:
 		return null
-	var best: Node3D = null
-	var best_d: float = max_d
-	for n in ac.get_tree().get_nodes_in_group("damageable"):
-		var t := n as Node3D
-		if t == null or not (t.is_in_group("ship") or t.is_in_group("ground_target")):
-			continue
-		var tt: Variant = t.get("team")
-		if tt == null or tt == ac.team:
-			continue
-		var d: float = ac.global_position.distance_to(t.global_position)
-		if d < 600.0 or d > best_d:
-			continue
-		best = t
-		best_d = d
-	return best
+	TargetIndex.ensure(ac.get_tree())
+	return TargetIndex.nearest(ac.global_position, ac.team, 600.0, max_d)
 
 
 func _run_strike(delta: float) -> void:
@@ -636,14 +623,9 @@ func _on_player_hit(node: Node, _amount: float) -> void:
 func _strike_pick_near(g: Node3D) -> Node3D:
 	if randf() < 0.4:
 		return g
-	var picks: Array[Node3D] = [g]
-	for n in ac.get_tree().get_nodes_in_group("damageable"):
-		var t := n as GroundTarget
-		if t == null or t == g or t.is_dead or t.team == ac.team:
-			continue
-		if t.global_position.distance_to(g.global_position) < 700.0:
-			picks.append(t)
-	return picks[randi() % picks.size()]
+	TargetIndex.ensure(ac.get_tree())
+	var pick: Node3D = TargetIndex.random_near(g.global_position, ac.team, 700.0, g)
+	return pick if pick != null else g
 
 
 func _end_strike() -> void:
@@ -669,25 +651,17 @@ func _ground_strike(delta: float) -> void:
 		return
 	if state != State.PATROL and state != State.FORMATION and state != State.ROUTE:
 		return
-	var fwd: Vector3 = ac.get_forward()
-	var best: Node3D = null
-	var best_d: float = GROUND_STRIKE_RANGE
-	for n in ac.get_tree().get_nodes_in_group("damageable"):
-		var t := n as Node3D
-		if t == null or t == ac or not (t.is_in_group("ship") or t.is_in_group("ground_target")):
-			continue
-		var tt: Variant = t.get("team")
-		if tt == null or tt == ac.team:
-			continue
-		var rel: Vector3 = t.global_position - ac.global_position
-		var d: float = rel.length()
-		if d < 120.0 or d > best_d:
-			continue
-		var rad: float = float(t.get("hit_radius"))
-		if fwd.angle_to(rel) > 0.1 + rad / d:
-			continue
-		best = t
-		best_d = d
+	# Only aircraft that can actually hurt the ground need to look, and looking four times a second is plenty
+	# for an opportunistic strike (this used to walk every damageable node, every aircraft, every frame).
+	var bomber: bool = role == Role.BOMBER_LEADER or role == Role.BOMBER_FOLLOWER
+	if bomber:
+		if ac.bombs <= 0:
+			return
+	elif ac.stats.rockets <= 0 or _salvos >= ac.stats.rockets / 2:
+		return
+	_strike_cd = 0.25
+	TargetIndex.ensure(ac.get_tree())
+	var best: Node3D = TargetIndex.nearest_ahead(ac.global_position, ac.get_forward(), ac.team, 120.0, GROUND_STRIKE_RANGE, 0.1)
 	if best == null:
 		return
 	if role == Role.BOMBER_LEADER or role == Role.BOMBER_FOLLOWER:

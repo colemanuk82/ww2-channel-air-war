@@ -166,23 +166,8 @@ func _on_bomb(a: Aircraft) -> void:
 ## Dogfight aim assist for the player: when an enemy sits close to the gun line, the guns converge on where it will be
 ## when the bullets arrive (lead), pulled in only as far as a small cone so deliberate misses still miss.
 func _assisted_aim(a: Aircraft, fwd: Vector3, default_aim: Vector3) -> Vector3:
-	var best: Node3D = null
-	var best_ang: float = deg_to_rad(AIM_ASSIST_DEG)
-	for n in a.get_tree().get_nodes_in_group("damageable"):
-		var t := n as Node3D
-		if t == null or t == a or not is_instance_valid(t):
-			continue
-		var tt: Variant = t.get("team")
-		if tt == null or tt == a.team:
-			continue
-		var to: Vector3 = t.global_position - a.global_position
-		var dist: float = to.length()
-		if dist < 40.0 or dist > a.stats.gun_range * 0.9:
-			continue
-		var ang: float = fwd.angle_to(to)
-		if ang < best_ang:
-			best_ang = ang
-			best = t
+	TargetIndex.ensure(a.get_tree())
+	var best: Node3D = TargetIndex.best_by_angle(a.global_position, fwd, a.team, 40.0, a.stats.gun_range * 0.9, deg_to_rad(AIM_ASSIST_DEG))
 	if best == null:
 		return default_aim
 	var tv: Variant = best.get("velocity")

@@ -325,7 +325,7 @@ func _tick_aa(delta: float) -> void:
 		return
 	var best: Aircraft = null
 	var best_d: float = AA_RANGE
-	for n in get_tree().get_nodes_in_group("damageable"):
+	for n in get_tree().get_nodes_in_group("aircraft"):
 		var a := n as Aircraft
 		if a == null or a.team == team or a.state != Aircraft.State.ALIVE:
 			continue

@@ -207,33 +207,13 @@ func _ensure_impact_marker() -> void:
 	_impact_root.visible = false
 
 
-func _is_enemy(n: Node) -> bool:
-	var t: Variant = n.get("team")
-	return t != null and str(t) != aircraft.team and str(t) != "Neutral"
-
-
 func _update_aids() -> void:
 	var st: AircraftStats = aircraft.stats
 	var fwd: Vector3 = aircraft.get_forward()
 	var pos: Vector3 = aircraft.global_position
 	# --- target + lead
-	var best: Node3D = null
-	var best_score: float = 0.0
-	for n in get_tree().get_nodes_in_group("damageable"):
-		var n3 := n as Node3D
-		if n3 == null or n3 == aircraft or not _is_enemy(n3):
-			continue
-		var to: Vector3 = n3.global_position - pos
-		var d: float = to.length()
-		if d > 1800.0 or d < 5.0:
-			continue
-		var dotv: float = fwd.dot(to / d)
-		if dotv < 0.8:
-			continue
-		var score: float = dotv * 2.0 - d / 1800.0
-		if score > best_score:
-			best_score = score
-			best = n3
+	TargetIndex.ensure(get_tree())
+	var best: Node3D = TargetIndex.best_in_cone(pos, fwd, aircraft.team, 5.0, 1800.0, 0.8)
 	_target = best
 	_has_lead = false
 	if best:
@@ -265,15 +245,7 @@ func _update_aids() -> void:
 		if vel.length_squared() < 1.0:
 			vel = fwd * aircraft.speed
 		_impact = Weapons.predict_bomb_impact(pos - aircraft.global_transform.basis.y * 1.8, vel)
-		_on_target = false
-		for n in get_tree().get_nodes_in_group("damageable"):
-			var n3b := n as Node3D
-			if n3b == null or n3b == aircraft or not _is_enemy(n3b):
-				continue
-			var dd := Vector2(n3b.global_position.x - _impact.x, n3b.global_position.z - _impact.z).length()
-			if dd < st.bomb_radius:
-				_on_target = true
-				break
+		_on_target = TargetIndex.any_near(_impact, aircraft.team, st.bomb_radius)
 		_ensure_impact_marker()
 		if _impact_root != null and is_instance_valid(_impact_root) and _ring != null:
 			var gh: float = _terrain_height(_impact)
