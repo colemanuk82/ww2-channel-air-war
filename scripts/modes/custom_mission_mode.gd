@@ -186,8 +186,20 @@ func _spawn_unit(uid: String) -> void:
 				for q3 in route3:
 					pts3.append(q3)
 				var rp3: RoutePath = RoutePath.from_points(pts3)
+				# sailing in company: columns a few hundred metres apart, the odd column staggered half a station
+				var small3: bool = typ in ["fishing_boat", "landing_craft", "trawler"]
+				var station3: float = 150.0 if small3 else 260.0
+				var gap3: float = 170.0 if small3 else 300.0
+				var cols3: int = 1 if count <= 2 else (2 if count <= 6 else 3)
+				var rows3: int = int(ceil(float(count) / float(cols3)))
 				for i in count:
-					var sh: GroundShip = GroundShip.create(typ, team, rp3, float(count - 1 - i) * 160.0)
+					var col3: int = i % cols3
+					var row3: int = i / cols3
+					var along3: float = float(rows3 - 1 - row3) * station3 - (station3 * 0.5 if col3 % 2 == 1 else 0.0) + randf_range(-0.12, 0.12) * station3
+					var sh: GroundShip = GroundShip.create(typ, team, rp3, maxf(along3 + station3 * 0.5, 0.0))
+					sh.lateral = (float(col3) - float(cols3 - 1) * 0.5) * gap3 + randf_range(-0.1, 0.1) * gap3
+					sh.wander = 14.0 if small3 else 22.0
+					sh.wander_phase = randf() * TAU
 					world.add_child(sh)
 					members.append(sh)
 			else:

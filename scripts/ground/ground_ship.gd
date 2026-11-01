@@ -26,6 +26,10 @@ var dir: float = 1.0
 var speed: float = 10.0
 var wrap: bool = false
 var lateral: float = 0.0          # sideways offset from the route (convoy columns), + = starboard
+var wander: float = 0.0           # convoy station-keeping: the ship drifts this far either side of its station
+var wander_phase: float = 0.0
+var _lat_k: float = 1.0           # eased down to 0 where the column offset would put the ship aground
+var _shore_t: float = 0.0
 var balloon_alt: float = 0.0      # > 0: flies a barrage balloon from the deck (1940 Channel convoys)
 var _yaw: float = 0.0
 var _sink: float = 0.0
@@ -283,7 +287,7 @@ func _process(delta: float) -> void:
 
 
 func _step(delta: float, snap: bool) -> void:
-	s += speed * dir * delta
+	s += speed * dir * delta * (1.0 + (0.03 * sin(_bob_t * 0.031 + wander_phase * 1.7) if wander > 0.0 else 0.0))
 	if wrap:
 		s = fposmod(s, route.length)
 	elif s > route.length:
@@ -296,9 +300,18 @@ func _step(delta: float, snap: bool) -> void:
 	var t: Vector3 = route.tangent(s) * dir
 	var ty: float = atan2(-t.x, -t.z)
 	_yaw = ty if snap else lerp_angle(_yaw, ty, clampf(delta * 1.2, 0.0, 1.0))
-	if lateral != 0.0:
+	var lat: float = lateral + wander * sin(_bob_t * 0.045 + wander_phase)
+	if lat != 0.0:
 		var tf: Vector3 = route.tangent(s)
-		p += Vector3(-tf.z, 0.0, tf.x).normalized() * lateral
+		var side: Vector3 = Vector3(-tf.z, 0.0, tf.x).normalized()
+		# a column station that would run the ship onto the coast closes in towards the convoy's track instead
+		_shore_t -= delta
+		if _shore_t <= 0.0 or snap:
+			_shore_t = 0.5
+			var q: Vector3 = p + side * lat
+			var aground: bool = GroundKit.raw_y(q.x, q.z) > 0.3
+			_lat_k = clampf(_lat_k + (-0.6 if aground else 0.15) * (1.0 if not snap else 4.0), 0.0, 1.0)
+		p += side * lat * _lat_k
 	global_position = Vector3(p.x, 0.1 + sin(_bob_t * 1.4) * 0.12, p.z)
 	rotation.y = _yaw
 	rotation.z = sin(_bob_t * 0.9) * 0.012

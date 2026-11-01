@@ -150,6 +150,7 @@ static func attach(aircraft: Aircraft, p_role: int = Role.FIGHTER, p_difficulty:
 		p.cruise_throttle = 0.68
 	elif p_role == Role.WINGMAN:
 		p.state = State.FORMATION
+		Weapons.player_hit.connect(p._on_player_hit)    # the leader goes in on a ground target: follow him in
 	aircraft.damaged.connect(p._on_damaged)
 	return p
 
@@ -419,6 +420,23 @@ var strike_target: Node3D                 # planned strike (State.STRIKE): the s
 var _strike_salvos: int = 0               # rocket salvos fired on this strike
 var _strike_t: float = 0.0                # time limit on a strike, so a pilot never circles a target for ever
 var _route_bomb: Vector3 = Vector3.ZERO   # a bomber's own bomb-run point, put back when a strike ends
+var _strike_pass: int = 0                 # attack passes flown on this strike
+var _strike_extend: float = 0.0           # > 0: running out after a pass before turning in again
+var _strike_err: Vector3 = Vector3.ZERO   # this pass's aiming error: pilots misjudge range, lead and drift
+var _strike_lead_k: float = 1.0           # how much of a moving target's lead the pilot allows for
+var _strike_prev: Vector3 = Vector3.ZERO
+var _strike_vel: Vector3 = Vector3.ZERO
+var _strike_fire: bool = false            # strafing: guns on the target this frame
+var _strike_done_pass: bool = false       # weapons gone on this pass: pull out
+var _pending_strike: Node3D               # wingman: the leader hit this target; follow him in after a short delay
+var _pending_at: int = 0
+var _wing_strike_cd: int = 0              # msec: no new follow-in before this
+static var _follow_call_ms: int = -100000 # one "following you in" call per attack, not one per wingman
+const STRIKE_PASSES: int = 2
+const STRIKE_HEIGHT: float = 650.0        # world units above the target to run in at (about 300 m)
+var _strike_phase: int = 0                # 0 run in, 1 dive, 2 run out
+var _strike_bombs: bool = false           # this pass drops bombs (else rockets, else guns only)
+static var DEBUG_STRIKE: bool = OS.get_cmdline_user_args().has("--debug-strike")
 
 
 ## Give the pilot a planned strike on a ship or ground target. Fighters dive on it and fire rockets; bombers run
@@ -427,6 +445,12 @@ func set_strike(t: Node3D) -> void:
 	strike_target = t
 	_strike_salvos = 0
 	_strike_t = 90.0
+	_strike_pass = 0
+	_strike_extend = 0.0
+	_strike_phase = 0
+	_strike_prev = t.global_position if t != null else Vector3.ZERO
+	_strike_vel = Vector3.ZERO
+	_new_strike_pass()
 	if role == Role.BOMBER_LEADER or role == Role.BOMBER_FOLLOWER:
 		_route_bomb = bomb_target
 	_set_state(State.STRIKE)
@@ -471,26 +495,168 @@ func _run_strike(delta: float) -> void:
 		_bomb_logic(delta)          # releases only when the target lies on the bomb-run line
 		_dir = Vector3(to.x, 0.0, to.z).normalized()
 		return
-	# fighter: a shallow dive on the target, rockets once the nose is on it
-	if flat < 200.0 or _strike_salvos >= 2 or _salvos >= ac.stats.rockets / 2:
-		_end_strike()
+	_run_fighter_strike(delta, tg)
+
+
+## A fresh attack pass: every pilot misjudges a little, the poorer ones more, so the bombs, rockets and bullets land
+## around the target rather than on it -- a near miss is far more common than a direct hit.
+func _new_strike_pass() -> void:
+	var r: float = lerpf(75.0, 22.0, accuracy) * randf_range(0.25, 1.35)
+	var ang: float = randf() * TAU
+	_strike_err = Vector3(cos(ang) * r, 0.0, sin(ang) * r)
+	_strike_lead_k = randf_range(0.35, 1.15)
+	_strike_salvos = 0
+	_strike_done_pass = false
+	# a pilot carrying both picks one for the pass: bombs, or a pair of rocket salvos
+	var rk: int = int(ac.weapons.rockets_left) if ac != null and ac.weapons != null else 0
+	var has_rk: bool = ac != null and rk > 0 and _salvos < ac.stats.rockets / 2
+	_strike_bombs = ac != null and ac.bombs > 0 and (not has_rk or randf() < 0.5)
+	if DEBUG_STRIKE and ac != null:
+		print("[strike] %s pass %d err %.0fm lead %.2f %s" % [ac.name, _strike_pass, _strike_err.length(), _strike_lead_k, "bombs" if _strike_bombs else ("rockets" if has_rk else "guns")])
+
+
+func _has_strike_weapons() -> bool:
+	var rk: int = int(ac.weapons.rockets_left) if ac.weapons != null else 0
+	return ac.bombs > 0 or (rk > 0 and _salvos < ac.stats.rockets / 2) or ac.ammo > 0
+
+
+## Fighter / fighter-bomber attack on a ship or ground target: run in, dive on it with the nose laid off for drop
+## and lead, release bombs or rocket salvos and strafe with the guns, pull out low, run out and come round again.
+func _run_fighter_strike(delta: float, tg: Node3D) -> void:
+	_strike_fire = false
+	if delta > 0.0:
+		_strike_vel = _strike_vel.lerp((tg.global_position - _strike_prev) / delta, clampf(delta * 2.0, 0.0, 1.0))
+	_strike_prev = tg.global_position
+	var fwd: Vector3 = ac.get_forward()
+	var tpos: Vector3 = tg.global_position + _strike_err
+	var to: Vector3 = tpos - ac.global_position
+	var dist: float = to.length()
+	var flat: float = Vector2(to.x, to.z).length()
+	var flat_dir: Vector3 = Vector3(to.x, 0.0, to.z) / maxf(flat, 1.0)
+	var want_y: float = tg.global_position.y + STRIKE_HEIGHT
+	var h: float = maxf(ac.global_position.y - tg.global_position.y, 120.0)
+	var dive_start: float = clampf(h * 1.8, 600.0, 2200.0)     # roll in where the dive is about 30 degrees
+	var climb: float = clampf((want_y - ac.global_position.y) / 500.0, -0.3, 0.35)
+	if _strike_phase == 2:
+		# run out away from the target and climb back to height, then come round for the next pass
+		_strike_extend -= delta
+		_dir = Vector3(-flat_dir.x, climb, -flat_dir.z).normalized()
+		_thr = 1.0
+		if _strike_extend <= 0.0 and flat > dive_start + 900.0:
+			if _strike_pass >= STRIKE_PASSES or not _has_strike_weapons():
+				_end_strike()
+				return
+			_new_strike_pass()
+			_strike_phase = 0
 		return
-	_dir = to.normalized()
-	if flat < 900.0 and _strike_cd <= 0.0 and ac.get_forward().angle_to(to) < 0.12:
-		var mode: int = ac.weapon_mode
-		ac.weapon_mode = 1
-		ac.bomb_requested.emit(ac)
-		ac.weapon_mode = mode
-		_salvos += 1
-		_strike_salvos += 1
-		_strike_cd = 1.5
+	var tof: float = dist / maxf(ac.speed, 60.0)
+	var aim: Vector3 = tpos + _strike_vel * tof * _strike_lead_k
+	var use_bombs: bool = _strike_bombs and ac.bombs > 0
+	if use_bombs:
+		aim.y += 0.5 * WeaponWorld.BOMB_GRAVITY * tof * tof      # nose laid above the target: the bomb falls away
+	var to_aim: Vector3 = aim - ac.global_position
+	var ang: float = fwd.angle_to(to_aim)
+	if _strike_phase == 0:
+		# run in at attacking height towards the target
+		if flat > dive_start:
+			_dir = Vector3(flat_dir.x, climb, flat_dir.z).normalized()
+			_thr = 0.95
+			return
+		if ang < 0.75:
+			_strike_phase = 1        # target under the nose: roll in
+		else:
+			_strike_phase = 2        # badly placed (turned in too late): run out and set up again, not a pass
+			_strike_extend = 3.0
+			return
+	# the dive: nose on the aim point
+	if ang > 1.1:
+		_strike_phase = 2            # overshot
+		_strike_extend = 3.0
+		_strike_pass += 1
+		return
+	_dir = to_aim.normalized()
+	_dir.y = maxf(_dir.y, -0.8)
+	_dir = _dir.normalized()
+	_thr = 0.7 if _dir.y < -0.3 else 0.9         # ease the power in the dive
+	var rad: float = float(tg.get("hit_radius")) if tg.get("hit_radius") != null else 8.0
+	if not _strike_done_pass:
+		if use_bombs:
+			if dist < 800.0 and ang < 0.2:
+				ac.bomb_requested.emit(ac)
+				if ac.bombs > 0 and randf() < 0.5:
+					ac.bomb_requested.emit(ac)       # a pair, one from each rack
+				_strike_done_pass = true
+				if DEBUG_STRIKE:
+					print("[strike] %s bombs away at %.0f m" % [ac.name, dist])
+		else:
+			var rk: int = int(ac.weapons.rockets_left) if ac.weapons != null else 0
+			if rk > 0 and _salvos < ac.stats.rockets / 2 and dist < 1000.0 and ang < 0.1 and _strike_cd <= 0.0:
+				var mode: int = ac.weapon_mode
+				ac.weapon_mode = 1
+				ac.bomb_requested.emit(ac)
+				ac.weapon_mode = mode
+				_salvos += 1
+				_strike_salvos += 1
+				_strike_cd = 0.6
+				if DEBUG_STRIKE:
+					print("[strike] %s rockets at %.0f m" % [ac.name, dist])
+				if _strike_salvos >= 2:
+					_strike_done_pass = true
+	if ac.ammo > 0 and dist < 750.0 and fwd.angle_to(to) < 0.06 + rad / maxf(dist, 1.0):
+		_strike_fire = true
+	if flat < 200.0 or ac.altitude_agl < 110.0 or (_strike_done_pass and dist < 350.0):
+		_strike_pass += 1
+		_strike_phase = 2
+		_strike_extend = randf_range(3.0, 5.0)
+
+
+## Weapons.player_hit: the player has hit something. A wingman of his whose leader just went in on an enemy ship or
+## ground target follows him in a few seconds later, on that target or one close beside it.
+func _on_player_hit(node: Node, _amount: float) -> void:
+	if role != Role.WINGMAN or ac == null or ac.team != GameState.player_side or ac.state != Aircraft.State.ALIVE:
+		return
+	if not (node is GroundTarget) or (node as GroundTarget).is_dead or str(node.get("team")) == ac.team:
+		return
+	if order == Order.RTB or order == Order.ATTACK:
+		return
+	if state != State.FORMATION and state != State.PATROL:
+		return
+	if Time.get_ticks_msec() < _wing_strike_cd or is_instance_valid(_pending_strike):
+		return
+	var g := node as Node3D
+	if ac.global_position.distance_to(g.global_position) > 8000.0 or not _has_strike_weapons():
+		return
+	if DEBUG_STRIKE:
+		print("[strike] %s follows the leader in on %s" % [ac.name, g.name])
+	_pending_strike = _strike_pick_near(g)
+	_pending_at = Time.get_ticks_msec() + int(randf_range(1.2, 4.5) * 1000.0)
+
+
+## The leader's target, or another enemy ship / ground target close beside it, so the flight spreads its attack.
+func _strike_pick_near(g: Node3D) -> Node3D:
+	if randf() < 0.4:
+		return g
+	var picks: Array[Node3D] = [g]
+	for n in ac.get_tree().get_nodes_in_group("damageable"):
+		var t := n as GroundTarget
+		if t == null or t == g or t.is_dead or t.team == ac.team:
+			continue
+		if t.global_position.distance_to(g.global_position) < 700.0:
+			picks.append(t)
+	return picks[randi() % picks.size()]
 
 
 func _end_strike() -> void:
 	strike_target = null
 	_strike_salvos = 0
+	_strike_fire = false
+	_strike_extend = 0.0
 	if role == Role.BOMBER_LEADER or role == Role.BOMBER_FOLLOWER:
 		bomb_target = _route_bomb
+	if role == Role.WINGMAN:
+		_wing_strike_cd = Time.get_ticks_msec() + 6000
+		_set_state(State.FORMATION if is_instance_valid(leader) else State.PATROL)
+		return
 	_set_state(State.ROUTE if role == Role.BOMBER_LEADER else (State.FORMATION if role == Role.BOMBER_FOLLOWER else State.PATROL))
 
 
@@ -560,6 +726,17 @@ func _think() -> void:
 		var pick: Node3D = _pick_strike_target(3200.0)
 		if pick != null:
 			set_strike(pick)
+			return
+	if role == Role.WINGMAN and is_instance_valid(_pending_strike) and Time.get_ticks_msec() >= _pending_at:
+		var ps: Node3D = _pending_strike
+		_pending_strike = null
+		if not (ps as GroundTarget).is_dead and order != Order.RTB and order != Order.ATTACK and (state == State.FORMATION or state == State.PATROL):
+			set_strike(ps)
+			var now: int = Time.get_ticks_msec()
+			if ac.team == GameState.player_side and now - _follow_call_ms > 15000:
+				_follow_call_ms = now
+				var lines: Array = ["Following you in, leader.", "I'm with you, going in.", "Right behind you. Attacking.", "Tally on the target, going down."]
+				Radio.say("Wingman", lines[randi() % lines.size()], Radio.Kind.FRIENDLY, 0.0)
 			return
 	if role == Role.WINGMAN:
 		if order == Order.RTB:
@@ -1484,6 +1661,8 @@ func _fire_control(delta: float) -> void:
 		if d < FIRE_RANGE and d > 20.0:
 			var ang: float = ac.get_forward().angle_to(rel)
 			want = ang < 0.07 + target.stats.radius / d
+	if state == State.STRIKE and _strike_fire:
+		want = true
 	if want:
 		if _burst_t <= 0.0 and _pause_t <= 0.0:
 			_burst_t = randf_range(0.7, 1.4)

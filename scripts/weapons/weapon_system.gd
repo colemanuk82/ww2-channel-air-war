@@ -128,6 +128,10 @@ func _on_fire(a: Aircraft) -> void:
 	FX.sfx(shot_sfx, a.global_position, -6.0 if not a.player_controlled else -3.0, 0.06)
 
 
+const AI_BOMB_SCATTER: float = 5.0       # m/s of random release velocity on an AI bomb (tens of metres on the ground)
+const AI_ROCKET_SCATTER: float = 0.022   # rad-ish random error on an AI rocket's line of flight
+
+
 func _on_bomb(a: Aircraft) -> void:
 	if a.state != Aircraft.State.ALIVE:
 		return
@@ -141,6 +145,9 @@ func _on_bomb(a: Aircraft) -> void:
 		var vel: Vector3 = a.velocity
 		if vel.length_squared() < 1.0:
 			vel = a.get_forward() * a.speed
+		if not a.player_controlled:
+			# AI release is never perfect: a slip or skid, a twitch on the stick, the wrong moment -- the bomb drifts
+			vel += Vector3(randf_range(-1.0, 1.0), randf_range(-0.6, 0.6), randf_range(-1.0, 1.0)) * AI_BOMB_SCATTER
 		Weapons.drop_bomb(pos, vel, a.team, a, st.bomb_damage, st.bomb_radius)
 	elif rockets_left > 0:
 		var n: int = mini(2, rockets_left)
@@ -149,7 +156,11 @@ func _on_bomb(a: Aircraft) -> void:
 		for i in n:
 			var side: float = -1.0 if i == 0 else 1.0
 			var pos2: Vector3 = a.global_position + basis.x * side * 3.0 - basis.y * 0.6 + fwd * 2.0
-			Weapons.fire_rocket(pos2, a.velocity + fwd * st.rocket_speed, a.team, a, st.rocket_damage, st.rocket_radius)
+			var rdir: Vector3 = fwd
+			if not a.player_controlled:
+				# unguided rockets wander off the line of the nose (fin wobble, slip, a ragged salvo)
+				rdir = (fwd + Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * AI_ROCKET_SCATTER).normalized()
+			Weapons.fire_rocket(pos2, a.velocity + rdir * st.rocket_speed, a.team, a, st.rocket_damage, st.rocket_radius)
 
 
 ## Dogfight aim assist for the player: when an enemy sits close to the gun line, the guns converge on where it will be

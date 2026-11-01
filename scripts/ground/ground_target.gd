@@ -78,6 +78,8 @@ func take_damage(amount: float, source: Node = null) -> void:
 		return
 	if WeaponWorld.is_player_source(source):
 		Weapons.player_hit.emit(self, amount)
+	elif AIPilot.DEBUG_STRIKE and source is Aircraft:
+		print("[strike-hit] %s hit %s for %.0f" % [source.name, name, amount])
 	var a: float = amount * (small_mult if amount < 30.0 else 1.0)
 	health -= a * damage_mult
 	if health <= 0.0:

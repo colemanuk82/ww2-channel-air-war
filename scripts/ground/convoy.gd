@@ -106,37 +106,35 @@ func _ready() -> void:
 	_build()
 
 
+const ESCORTS := ["destroyer", "cruiser", "battleship", "trawler"]
+const SMALL_CRAFT := ["fishing_boat", "landing_craft", "trawler"]
+
+
 func _build() -> void:
 	if _built or route == null or route.length < 2.0:
 		return
 	_built = true
 	var list: Array = sea_composition(composition) if naval else land_composition(composition, team)
-	var off: float = start_s
-	var ni: int = 0     # index among non-escort ships (for column / row placement)
+	var stations: Array = _naval_stations(list) if naval else []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(target_id + composition + str(int(start_s)))
 	for i in list.size():
 		var t: String = list[i]
 		var u: GroundTarget
 		var sp: float = speed
-		var s0: float = off - float(i) * spacing
+		var s0: float = start_s - float(i) * spacing
 		var lat: float = 0.0
-		if naval and columns > 1:
-			if t in ["destroyer", "trawler"]:
-				# escorts screen the flanks of the columns, staggered fore and aft
-				var flank: float = maxf(1.6, float(columns) * 0.5 + 0.7)
-				lat = column_gap * (flank if i % 2 == 0 else -flank)
-				s0 = off - float(ni / columns) * spacing - (spacing * 0.5 if columns > 2 else float(i) * spacing * 0.5)
-			else:
-				lat = column_gap * (float(ni % columns) - float(columns - 1) * 0.5)
-				if columns > 2:
-					lat += sin(float(ni) * 2.7) * column_gap * 0.12     # loose, slightly ragged line
-				s0 = off - float(ni / columns) * spacing
-				ni += 1
+		if naval:
+			s0 = start_s + float(stations[i].y)
+			lat = float(stations[i].x)
 		if route.length > 0.0:
 			s0 = fposmod(s0, route.length)
 		if naval:
 			var sh: GroundShip = GroundShip.create(t, team, route, s0, sp)
 			sh.wrap = wrap
 			sh.lateral = lat
+			sh.wander = 14.0 if t in SMALL_CRAFT else 22.0      # ships never hold station exactly
+			sh.wander_phase = rng.randf() * TAU
 			if team == "Allies" and composition == "channel" and t == "collier" and i % 3 == 0:
 				sh.balloon_alt = 180.0
 			u = sh
@@ -148,6 +146,66 @@ func _build() -> void:
 		u.destroyed.connect(_on_unit_destroyed)
 		add_child(u)
 		units.append(u)
+
+
+## Where each ship of a naval convoy sails: Vector2(lateral, along) in metres from the head of the convoy (+ lateral =
+## starboard, + along = ahead). Modelled on the real practice, compressed so the convoy reads from the air: the merchants
+## in two or three columns (more for an invasion fleet) with alternate columns staggered half a station, the leading
+## escort ahead, the others screening the flanks along the length of the convoy, and the armed trawlers astern. Small
+## craft keep closer together than merchantmen. A little irregularity so no two convoys look drawn with a ruler.
+func _naval_stations(list: Array) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(composition + target_id) + list.size()
+	var merchants: Array = []
+	var escorts: Array = []
+	for i in list.size():
+		if str(list[i]) in ESCORTS and not (composition == "fishing"):
+			escorts.append(i)
+		else:
+			merchants.append(i)
+	var small: int = 0
+	for i2 in merchants:
+		if str(list[i2]) in SMALL_CRAFT:
+			small += 1
+	var small_fleet: bool = small * 2 >= maxi(merchants.size(), 1)
+	var station: float = 150.0 if small_fleet else 260.0          # fore and aft between ships in a column
+	var gap: float = 170.0 if small_fleet else 300.0              # between columns
+	var cols: int = columns if columns > 1 else (1 if merchants.size() <= 2 else (2 if merchants.size() <= 6 else 3))
+	if composition == "neptune":
+		station = 170.0
+		gap = 150.0
+	var out: Array = []
+	out.resize(list.size())
+	var rows: int = int(ceil(float(merchants.size()) / float(cols)))
+	for k in merchants.size():
+		var col: int = k % cols
+		var row: int = k / cols
+		var lat: float = (float(col) - float(cols - 1) * 0.5) * gap + rng.randf_range(-0.1, 0.1) * gap
+		var along: float = -(float(row) * station + (station * 0.5 if col % 2 == 1 else 0.0)) + rng.randf_range(-0.12, 0.12) * station
+		out[merchants[k]] = Vector2(lat, along)
+	var length: float = float(maxi(rows - 1, 0)) * station + station * 0.5
+	var half_w: float = float(cols - 1) * 0.5 * gap
+	var flank: float = half_w + gap * 0.9 + 60.0
+	var side: float = 1.0
+	var placed_lead: bool = false
+	var e_n: int = escorts.size()
+	for e in e_n:
+		var idx: int = escorts[e]
+		var typ: String = str(list[idx])
+		if not placed_lead and typ != "trawler":
+			# the senior escort leads, a little to one side of the centre line
+			out[idx] = Vector2(rng.randf_range(-0.25, 0.25) * gap, station * 1.3)
+			placed_lead = true
+			continue
+		if typ == "trawler" and e == e_n - 1 and e_n > 2:
+			out[idx] = Vector2(rng.randf_range(-0.3, 0.3) * gap, -length - station * 1.1)    # tail-end Charlie
+			continue
+		var frac: float = float(e) / float(maxi(e_n - 1, 1))
+		out[idx] = Vector2(side * (flank + rng.randf_range(-30.0, 30.0)), lerpf(station * 0.4, -length, frac) + rng.randf_range(-40.0, 40.0))
+		side = -side
+	if merchants.is_empty() and not escorts.is_empty():
+		out[escorts[0]] = Vector2.ZERO
+	return out
 
 
 func _on_unit_destroyed(unit: Node, killer: Node) -> void:

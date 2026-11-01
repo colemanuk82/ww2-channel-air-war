@@ -2851,6 +2851,45 @@ func _adaptive_graphics(delta: float) -> void:
 			WeatherManager.cloud_field.set_detail(want_cloud)
 
 
+## debug (--debug-hit=<s>): <s> seconds into the flight, report a player hit on the nearest enemy ship / ground target,
+## as if the player had just attacked it -- the wingmen follow him in (AIPilot._on_player_hit)
+var _dbg_hit_t: float = -2.0
+func wingmen_debug_list() -> Array:
+	var out: Array = []
+	for n in get_tree().get_nodes_in_group("aircraft"):
+		for c in n.get_children():
+			if c is AIPilot and (c as AIPilot).role == AIPilot.Role.WINGMAN:
+				out.append(c)
+	return out
+func _debug_hit_tick(delta: float) -> void:
+	if _dbg_hit_t < -1.5:
+		_dbg_hit_t = -1.0
+		for a in _args:
+			if a.begins_with("--debug-hit="):
+				_dbg_hit_t = float(a.substr(12))
+	if _dbg_hit_t < 0.0 or player == null or not is_instance_valid(player):
+		return
+	_dbg_hit_t -= delta
+	if _dbg_hit_t > 0.0:
+		return
+	_dbg_hit_t = -1.0
+	var best: GroundTarget = null
+	var bd: float = INF
+	for n in get_tree().get_nodes_in_group("damageable"):
+		var t := n as GroundTarget
+		if t == null or t.is_dead or t.team == player.team:
+			continue
+		var d: float = t.global_position.distance_to(player.global_position)
+		if d < bd:
+			bd = d
+			best = t
+	if best != null:
+		print("[strike] debug hit on %s %s at %.0f m" % [best.get_class(), best.name, bd])
+		for w in wingmen_debug_list():
+			print("[strike]   wingman ", w.name, " state ", w.get("state"), " order ", w.get("order"))
+		Weapons.player_hit.emit(best, 1.0)
+
+
 func _process(delta: float) -> void:
 	if not in_game:
 		if _menu_anchor:
@@ -2866,6 +2905,7 @@ func _process(delta: float) -> void:
 		_save_resume_now()
 	_contrail_debug_tick(delta)
 	_bomber_demo_tick()
+	_debug_hit_tick(delta)
 	_update_sim_warp(delta)
 	if _respawn_timer >= 0.0:
 		_respawn_timer -= delta

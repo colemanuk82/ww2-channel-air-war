@@ -429,7 +429,7 @@ func _layout_tally() -> void:
 	if _hints != null:
 		var hy: float = 70.0 + (h + 6.0 if n > 0 else 0.0)
 		_hints.offset_top = hy
-		_hints.offset_bottom = hy + HINT_ROW * float(HINTS.size()) + 16.0
+		_hints.offset_bottom = hy + HINT_ROW * float(_hint_rows().size()) + 16.0
 	_tally_c.queue_redraw()
 
 
@@ -667,10 +667,10 @@ func _build() -> void:
 	_hints.anchor_right = 1.0
 	_hints.anchor_top = 0.0
 	_hints.anchor_bottom = 0.0
-	_hints.offset_left = -176.0
+	_hints.offset_left = -16.0 - HINT_W
 	_hints.offset_right = -16.0
 	_hints.offset_top = 70.0
-	_hints.offset_bottom = 70.0 + HINT_ROW * float(HINTS.size()) + 16.0
+	_hints.offset_bottom = 70.0 + HINT_ROW * 18.0 + 16.0
 	_hints.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_hints.draw.connect(_draw_hints)
 	_root.add_child(_hints)
@@ -1136,36 +1136,87 @@ func _value_box(c: Control, pos: Vector2, text: String, size: int, col: Color) -
 
 
 ## Control hints (right side): Xbox controller glyph + action (controller only). Shown when GameState.show_hints (Options >
-## Control hints, F1 toggles it).
-const HINTS := [
-	["LS", "Fly"],
-	["RS", "Look around"],
-	["RT", "Throttle up"],
-	["LT", "Throttle down"],
-	["A", "Fire / drop"],
-	["B", "Switch weapon"],
-	["RB", "Boost"],
-	["LB", "Level assist"],
-	["Y", "Gear"],
-	["L3", "Flaps"],
-	["R3", "Wheel brake"],
-	["X", "Camera"],
-	["MENU", "Pause"],
+## Control hints, F1 toggles it). Built from the live input map, so the card always shows the real bindings, remapped
+## buttons included: every action below is listed against each pad input it is bound to, and an input that does
+## several things lists them together ("Throttle down / Wheel brake").
+const HINT_ACTIONS := [
+	["throttle_up", "Throttle up"], ["throttle_down", "Throttle down"],
+	["fire", "Fire / drop"], ["weapon_toggle", "Switch weapon"], ["camera", "Camera"], ["tac_map", "Map"],
+	["boost", "Boost"], ["padlock", "Target view (hold)"],
+	["assist_toggle", "Auto-level"], ["gear", "Gear"], ["flaps", "Flaps"], ["bail_out", "Bail out (hold)"],
+	["brake", "Wheel brake"], ["center_view", "Centre view"],
+	["gunner_view", "Gunner view", "bomber"], ["sight_cycle", "Bombsight / chart", "bomber"],
+	["ui_cancel", "Pause"],
 ]
 const HINT_ROW: float = 25.0
+const HINT_W: float = 236.0
+
+
+## [[glyph, text], ...] for the current bindings: the sticks first, then each pad input in the order of HINT_ACTIONS.
+func _hint_rows() -> Array:
+	var rows: Array = [["LS", "Fly"], ["RS", "Look around"]]
+	var by_glyph: Dictionary = {}
+	var order: Array = []
+	var bomber: bool = aircraft != null and is_instance_valid(aircraft) and aircraft.stats != null and AircraftCatalog.is_bomber(aircraft.stats.id)
+	for a in HINT_ACTIONS:
+		if a.size() > 2 and str(a[2]) == "bomber" and not bomber:
+			continue
+		if not InputMap.has_action(str(a[0])):
+			continue
+		for ev in InputMap.action_get_events(str(a[0])):
+			var g: String = _hint_glyph(ev)
+			if g == "" or g == "LS" or g == "RS":
+				continue
+			if not by_glyph.has(g):
+				by_glyph[g] = []
+				order.append(g)
+			if not (by_glyph[g] as Array).has(str(a[1])):
+				(by_glyph[g] as Array).append(str(a[1]))
+	for g2 in order:
+		rows.append([g2, " / ".join(by_glyph[g2])])
+	return rows
+
+
+func _hint_glyph(ev: InputEvent) -> String:
+	if ev is InputEventJoypadButton:
+		match (ev as InputEventJoypadButton).button_index:
+			JOY_BUTTON_A: return "A"
+			JOY_BUTTON_B: return "B"
+			JOY_BUTTON_X: return "X"
+			JOY_BUTTON_Y: return "Y"
+			JOY_BUTTON_LEFT_SHOULDER: return "LB"
+			JOY_BUTTON_RIGHT_SHOULDER: return "RB"
+			JOY_BUTTON_LEFT_STICK: return "L3"
+			JOY_BUTTON_RIGHT_STICK: return "R3"
+			JOY_BUTTON_START: return "MENU"
+			JOY_BUTTON_BACK: return "VIEW"
+			JOY_BUTTON_DPAD_UP: return "DU"
+			JOY_BUTTON_DPAD_DOWN: return "DD"
+			JOY_BUTTON_DPAD_LEFT: return "DL"
+			JOY_BUTTON_DPAD_RIGHT: return "DR"
+	elif ev is InputEventJoypadMotion:
+		match (ev as InputEventJoypadMotion).axis:
+			JOY_AXIS_TRIGGER_LEFT: return "LT"
+			JOY_AXIS_TRIGGER_RIGHT: return "RT"
+			JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y: return "LS"
+			JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y: return "RS"
+	return ""
 
 
 func _draw_hints() -> void:
 	var c: Control = _hints
+	var rows: Array = _hint_rows()
 	var w: float = c.size.x
-	var h: float = HINT_ROW * float(HINTS.size()) + 16.0
+	var h: float = HINT_ROW * float(rows.size()) + 16.0
+	if absf(c.size.y - h) > 0.5:
+		c.offset_bottom = c.offset_top + h
 	c.draw_rect(Rect2(0, 0, w, h), Color(0.04, 0.045, 0.04, 0.42))
 	c.draw_rect(Rect2(0, 0, 2.0, h), Color(BRASS, 0.7))
-	for i in HINTS.size():
-		var row: Array = HINTS[i]
+	for i in rows.size():
+		var row: Array = rows[i]
 		var y: float = 8.0 + float(i) * HINT_ROW + HINT_ROW * 0.5
-		_pad_glyph(c, Vector2(22.0, y), String(row[0]))
-		_txt(c, String(row[1]), Vector2(44.0, y + 5.0), 13, Color(TEXT_COL, 0.88))
+		_pad_glyph(c, Vector2(24.0, y), String(row[0]))
+		_txt(c, String(row[1]), Vector2(46.0, y + 5.0), 13, Color(TEXT_COL, 0.88))
 
 
 ## Xbox controller glyphs: coloured face buttons, bumper / trigger pills, stick rings, menu button.
@@ -1193,6 +1244,22 @@ func _pad_glyph(c: Control, p: Vector2, g: String) -> void:
 			c.draw_arc(p, 6.0, 0.0, TAU, 20, Color(lite, 0.5), 1.2)
 			if g == "L3" or g == "R3":
 				c.draw_circle(p, 2.0, lite)
+		"DU", "DD", "DL", "DR":
+			# D-pad cross with the pressed arm lit
+			var arms := {"DU": Vector2(0, -1), "DD": Vector2(0, 1), "DL": Vector2(-1, 0), "DR": Vector2(1, 0)}
+			c.draw_rect(Rect2(p.x - 4.0, p.y - 10.0, 8.0, 20.0).grow(1.0), Color(0, 0, 0, 0.6))
+			c.draw_rect(Rect2(p.x - 10.0, p.y - 4.0, 20.0, 8.0).grow(1.0), Color(0, 0, 0, 0.6))
+			c.draw_rect(Rect2(p.x - 4.0, p.y - 10.0, 8.0, 20.0), dark)
+			c.draw_rect(Rect2(p.x - 10.0, p.y - 4.0, 20.0, 8.0), dark)
+			var arm: Vector2 = arms[g]
+			c.draw_rect(Rect2(p + arm * 6.5 - Vector2(3.0, 3.0), Vector2(6.0, 6.0)), lite)
+			return
+		"VIEW":
+			c.draw_circle(p, 9.5, Color(0, 0, 0, 0.6))
+			c.draw_circle(p, 8.5, dark)
+			c.draw_rect(Rect2(p.x - 4.5, p.y - 3.5, 6.0, 5.0), lite, false, 1.2)
+			c.draw_rect(Rect2(p.x - 1.5, p.y - 1.0, 6.0, 5.0), lite, false, 1.2)
+			return
 		"MENU":
 			c.draw_circle(p, 9.5, Color(0, 0, 0, 0.6))
 			c.draw_circle(p, 8.5, dark)
