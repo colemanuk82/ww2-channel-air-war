@@ -43,6 +43,9 @@ func _ready() -> void:
 	vb.add_child(_warp_btn)
 	vb.add_child(UIKit.button("Score", _show_score))
 	vb.add_child(UIKit.button("Options", func() -> void: add_child(SettingsMenu.new())))
+	vb.add_child(UIKit.button("Music", func() -> void:
+		SettingsMenu.start_page = "music"
+		add_child(SettingsMenu.new())))
 	_end_btn = UIKit.button("End sortie (land first)", func() -> void:
 		set_open(false)
 		end_sortie_requested.emit())

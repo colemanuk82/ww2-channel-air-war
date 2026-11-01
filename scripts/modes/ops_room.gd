@@ -1918,6 +1918,7 @@ func _refresh_label() -> void:
 			t += "\nPhotos taken - land at base"
 		elif str(active.get("stage", "")) == "rv":
 			t += "\nJoin " + str(active.get("section", "the bombers"))
+	t += "\n(P: skip task, F1: see controls)"
 	_label.text = t
 
 

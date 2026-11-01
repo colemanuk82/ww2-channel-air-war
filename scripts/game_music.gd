@@ -9,8 +9,8 @@ extends AudioStreamPlayer
 const DIR := "res://assets/music/ingame/"
 const FADE_IN := 9.0
 const FADE_OUT := 6.0
-const FIRST_WAIT := Vector2(20.0, 55.0)     # silence before the first track (seconds, min..max)
-const GAP := Vector2(35.0, 90.0)            # silence between tracks
+const FIRST_WAIT := Vector2(20.0, 55.0)     # cap on the silence before the first track (seconds, min..max)
+const GAP_SCATTER := Vector2(0.75, 1.25)    # the Options > Music gap, varied by this much so it never feels metronomic
 
 var _tracks: Array = []
 var _last: int = -1
@@ -27,8 +27,8 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	add_to_group("game_music")
 	refresh_playlist()
-	_wait = randf_range(FIRST_WAIT.x, FIRST_WAIT.y)
-	finished.connect(func() -> void: _wait = randf_range(GAP.x, GAP.y))
+	_wait = _first_wait()
+	finished.connect(func() -> void: _wait = _gap_wait())
 
 
 ## Re-read the playlist + shuffle flag from GameState (called at start and whenever Options changes them).
@@ -116,13 +116,25 @@ func _process(delta: float) -> void:
 		_last = (_last + 1) % _tracks.size()
 	var st: AudioStream = MenuMusic.load_track(String(_tracks[_last]))
 	if st == null:
-		_wait = randf_range(GAP.x, GAP.y)
+		_wait = _gap_wait()
 		return
 	stream = st
 	_fade = 0.0
 	volume_db = linear_to_db(0.0001)
 	play()
 	_wait = 1.0e9      # set again when the track finishes
+
+## Silence before the next track comes in: Options > Music "Pause between tracks" (GameState.music_gap), with the
+## first track of a sortie arriving sooner than the rest. 0 plays them back to back.
+func _first_wait() -> float:
+	var g: float = GameState.music_gap
+	return randf_range(minf(FIRST_WAIT.x, g), minf(FIRST_WAIT.y, g))
+
+
+func _gap_wait() -> float:
+	var g: float = GameState.music_gap
+	return randf_range(g * GAP_SCATTER.x, g * GAP_SCATTER.y)
+
 
 ## Shuffle bag: every track plays once, in a fresh random order, before any repeats (and the first track of a new
 ## bag is never the one that just played).

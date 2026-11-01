@@ -499,6 +499,38 @@ func _test_music() -> void:
 		_check(ResourceLoader.exists(String(p)), "menu track loads: %s" % p)
 	for p in ingame:
 		_check(ResourceLoader.exists(String(p)), "in-game track loads: %s" % p)
+	# Options > Music: the pause between tracks is clamped, and folder import ignores folders with no audio
+	var gap_before: float = GameState.music_gap
+	GameState.set_music_gap(9999.0, false)
+	_check(GameState.music_gap <= 300.0, "music pause clamps to 300 s (%.0f)" % GameState.music_gap)
+	GameState.set_music_gap(-5.0, false)
+	_check(GameState.music_gap >= 0.0, "music pause never goes negative")
+	GameState.set_music_gap(gap_before, false)
+	_check(MenuMusic.audio_files_in("res://assets/fonts").is_empty(), "folder scan skips folders without audio")
+	_check(MenuMusic.import_folder("ingame", "res://no_such_folder").is_empty(), "importing a missing folder adds nothing")
+	# The Ops Room tooltip is its own dim hint row under the tasking
+	var card_hud := HUD.new()
+	var rows: Array = card_hud._card_rows("AIRFIELD ATTACK   30 km\n(P: skip task, F1: see controls)", UIKit.display_font(), UIKit.font(true))
+	_check(rows.size() == 2, "tasking card keeps the tooltip on its own row (%d)" % rows.size())
+	if rows.size() == 2:
+		_check(int(rows[0][0][1]) == 1, "tasking title is the card heading")
+		_check(int(rows[1][0][1]) == 2, "tooltip renders in the hint style")
+	card_hud.free()
+	# Import folder end to end: every audio file in the tree is copied, non-audio is left behind
+	var src: String = "user://music_test_src"
+	DirAccess.make_dir_recursive_absolute(src + "/sub")
+	for f in ["/one.mp3", "/two.ogg", "/sub/three.wav", "/notes.txt"]:
+		var fh: FileAccess = FileAccess.open(src + f, FileAccess.WRITE)
+		if fh != null:
+			fh.store_string("x")
+			fh = null
+	var copied: Array = MenuMusic.import_folder("menu", src)
+	_check(copied.size() == 3, "folder import copies every audio file in the tree (%d)" % copied.size())
+	for p in copied:
+		_check(FileAccess.file_exists(String(p)), "imported copy exists: %s" % p)
+		MenuMusic.delete_track(String(p))
+	for f in ["/sub/three.wav", "/sub", "/one.mp3", "/two.ogg", "/notes.txt", ""]:
+		DirAccess.remove_absolute(src + f)
 
 
 ## Every audio file in the repo must be covered by tools/audio_allowlist.json. Commercial recordings

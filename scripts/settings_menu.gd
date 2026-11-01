@@ -8,6 +8,7 @@ extends CanvasLayer
 signal closed
 
 static var start_on_controls: bool = false      # debug / shortcut: open straight on the Controls page
+static var start_page: String = ""              # open straight on a page (the pause menu's Music button)
 
 const PAGES := ["video", "render", "audio", "music", "gameplay", "realism", "controls"]
 const PAGE_LABELS := {"video": "VIDEO", "render": "RENDER", "audio": "AUDIO", "music": "MUSIC", "gameplay": "GAMEPLAY", "realism": "REALISM", "controls": "CONTROLS"}
@@ -152,6 +153,9 @@ func _ready() -> void:
 	_music_select_manager("menu")
 
 	var want: String = OS.get_environment("WW2_SETTINGS_PAGE")
+	if start_page != "":
+		want = start_page
+		start_page = ""
 	if start_on_controls:
 		want = "controls"
 	if not PAGES.has(want):
@@ -608,7 +612,7 @@ func _build_music_page() -> VBoxContainer:
 	var row1 := HBoxContainer.new()
 	row1.add_theme_constant_override("separation", 8)
 	page.add_child(row1)
-	for spec in [["Import...", _music_import], ["Delete", _music_delete], ["Play", _music_play]]:
+	for spec in [["Import...", _music_import], ["Import folder...", _music_import_folder], ["Delete", _music_delete], ["Play", _music_play]]:
 		var b: Button = UIKit.button(String(spec[0]), spec[1], 17)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row1.add_child(b)
@@ -626,6 +630,32 @@ func _build_music_page() -> VBoxContainer:
 	_music_shuffle_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row2.add_child(_music_shuffle_btn)
 
+	var gap_row := HBoxContainer.new()
+	gap_row.add_theme_constant_override("separation", 12)
+	page.add_child(gap_row)
+	var gap_l: Label = UIKit.label("PAUSE BETWEEN TRACKS", 17, UIKit.TEXT_DIM, true)
+	gap_l.custom_minimum_size = Vector2(190, 0)
+	gap_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	gap_row.add_child(gap_l)
+	var gap_sl := HSlider.new()
+	gap_sl.min_value = 0.0
+	gap_sl.max_value = 180.0
+	gap_sl.step = 5.0
+	gap_sl.value = GameState.music_gap
+	gap_sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gap_sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	gap_sl.custom_minimum_size = Vector2(280, 28)
+	gap_row.add_child(gap_sl)
+	var gap_val: Label = UIKit.label("%d s" % int(GameState.music_gap), 17)
+	gap_val.custom_minimum_size = Vector2(60, 0)
+	gap_row.add_child(gap_val)
+	gap_sl.value_changed.connect(func(v: float) -> void:
+		gap_val.text = "%d s" % int(v)
+		GameState.set_music_gap(v, false))
+	gap_sl.drag_ended.connect(func(_changed: bool) -> void:
+		GameState.save_settings()
+		_music_note.text = "In-game music waits %d s of quiet between tracks." % int(GameState.music_gap))
+
 	_music_note = UIKit.label("", 13, UIKit.TEXT_DIM)
 	_music_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	page.add_child(_music_note)
@@ -638,6 +668,7 @@ func _build_music_page() -> VBoxContainer:
 	_file_dialog.use_native_dialog = false
 	_file_dialog.size = Vector2i(760, 480)
 	_file_dialog.file_selected.connect(_on_music_file_selected)
+	_file_dialog.dir_selected.connect(_on_music_folder_selected)
 	_root.add_child(_file_dialog)
 	return page
 
@@ -659,7 +690,7 @@ func _music_select_manager(which: String) -> void:
 	if _music_shuffle_btn != null:
 		_music_shuffle_btn.text = "Shuffle: %s" % ("On" if GameState.music_shuffle(which) else "Off")
 	if _music_note != null:
-		_music_note.text = "Imports are copied into user://music/. Shipped tracks are never deleted from disk."
+		_music_note.text = "Imports are copied into user://music/; Import folder... takes a whole folder at once. Shipped tracks are never deleted from disk."
 	_music_refresh()
 
 
@@ -717,7 +748,31 @@ func _music_flip_page(dir: int) -> void:
 
 
 func _music_import() -> void:
+	_file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_file_dialog.title = "Import a music track"
 	_file_dialog.popup_centered()
+
+
+func _music_import_folder() -> void:
+	_file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_DIR
+	_file_dialog.title = "Import a folder of music"
+	_file_dialog.popup_centered()
+
+
+## A whole folder (sub-folders included) copied into user://music/<manager>/ and added to the playlist.
+func _on_music_folder_selected(dir: String) -> void:
+	var added: Array = MenuMusic.import_folder(_music_which, dir)
+	if added.is_empty():
+		_music_note.text = "No mp3 / ogg / wav files found in %s." % dir.get_file()
+		return
+	for p in added:
+		GameState.add_music_track(_music_which, p)
+	var list: Array = GameState.music_playlist(_music_which)
+	_music_selected = list.find(String(added[0]))
+	_music_page = int(floor(float(maxi(_music_selected, 0)) / float(MUSIC_PER_PAGE)))
+	_music_note.text = "Imported %d track%s from %s." % [added.size(), "" if added.size() == 1 else "s", dir.get_file()]
+	_music_sync_player(false)
+	_music_refresh()
 
 
 func _on_music_file_selected(path: String) -> void:

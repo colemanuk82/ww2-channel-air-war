@@ -162,6 +162,33 @@ static func import_track(which: String, src: String) -> String:
 	return dst
 
 
+## Copy every audio file in a folder, sub-folders included, into user://music/<manager>/ (Options > Music
+## "Import folder..."). Returns the new paths, empty when the folder holds nothing playable.
+static func import_folder(which: String, src_dir: String) -> Array:
+	var out: Array = []
+	for f in audio_files_in(src_dir):
+		var dst: String = import_track(which, f)
+		if dst != "":
+			out.append(dst)
+	return out
+
+
+## Audio files under a folder on disk, sub-folders included (a few levels is plenty for a music library).
+static func audio_files_in(dir: String, depth: int = 0) -> Array:
+	var out: Array = []
+	if depth > 6:
+		return out
+	var d: DirAccess = DirAccess.open(dir)
+	if d == null:
+		return out
+	for f in d.get_files():
+		if EXTS.has(f.get_extension().to_lower()):
+			out.append(dir.path_join(f))
+	for sub in d.get_directories():
+		out.append_array(audio_files_in(dir.path_join(sub), depth + 1))
+	return out
+
+
 ## True for a track the player imported (lives under user://), i.e. safe to delete from disk.
 static func is_imported(path: String) -> bool:
 	return path.begins_with("user://")

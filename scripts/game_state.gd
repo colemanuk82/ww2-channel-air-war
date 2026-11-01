@@ -44,6 +44,7 @@ var menu_music_shuffle: bool = true
 var ingame_music_shuffle: bool = true
 var menu_music_current: String = ""         # the track a manager should start on ("" = pick freely)
 var ingame_music_current: String = ""
+var music_gap: float = 60.0                 # silence between in-flight tracks, seconds (Options > Music)
 var show_hints: bool = true    # control hints panel on the right of the HUD (Options > Control hints)
 var first_sortie_done: bool = false   # the one-off controls / bail-out hints have been shown
 var engine_heat_on: bool = true   # Options > Realism: engine overheating (player and AI)
@@ -257,6 +258,7 @@ func _load_settings() -> void:
 	ingame_music_shuffle = bool(cf.get_value("music", "ingame_shuffle", ingame_music_shuffle))
 	menu_music_current = str(cf.get_value("music", "menu_current", menu_music_current))
 	ingame_music_current = str(cf.get_value("music", "ingame_current", ingame_music_current))
+	music_gap = clampf(float(cf.get_value("music", "gap", music_gap)), 0.0, 300.0)
 	if cf.has_section("input"):
 		for k in cf.get_section_keys("input"):
 			pad_bindings[k] = cf.get_value("input", k)
@@ -341,6 +343,7 @@ func save_settings() -> void:
 	cf.set_value("music", "ingame_shuffle", ingame_music_shuffle)
 	cf.set_value("music", "menu_current", menu_music_current)
 	cf.set_value("music", "ingame_current", ingame_music_current)
+	cf.set_value("music", "gap", music_gap)
 	for a in pad_bindings.keys():
 		cf.set_value("input", a, pad_bindings[a])
 	cf.save(SETTINGS_PATH)
@@ -362,6 +365,14 @@ func default_music_playlist(which: String) -> Array:
 
 func music_shuffle(which: String) -> bool:
 	return ingame_music_shuffle if which == "ingame" else menu_music_shuffle
+
+
+## Seconds of quiet the in-flight music waits between tracks (Options > Music). Saved unless the caller is
+## still dragging the slider, so a drag does not write settings.cfg on every step.
+func set_music_gap(seconds: float, save: bool = true) -> void:
+	music_gap = clampf(seconds, 0.0, 300.0)
+	if save:
+		save_settings()
 
 
 func set_music_shuffle(which: String, on: bool) -> void:

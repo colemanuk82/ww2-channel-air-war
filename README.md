@@ -15,7 +15,7 @@ Any suggestions or feedback? Let me know!
 ### [⬇️ Download the installer](../../releases/latest)
 
 > 🎵 **Recommended: play it with your own music.** The game ships with royalty-free tracks, but it really comes alive with something like the *Battle of Britain* film soundtrack (or any WW2-era score you own) playing over the Channel.
-> **How:** start the game, open **Options > Music**, pick **MENU MUSIC** (start screen) or **IN-GAME MUSIC** (flying), press **Import...** and choose your MP3, OGG or WAV files. Keep **Shuffle: On** to mix them, or turn it off to play in order. Use **Delete** to remove tracks you no longer want.
+> **How:** start the game, open **Options > Music** (or **Music** in the pause menu), pick **MENU MUSIC** (start screen) or **IN-GAME MUSIC** (flying), then **Import...** for chosen files or **Import folder...** to bring in a whole folder of MP3, OGG or WAV tracks in one go. **Pause between tracks** sets how much quiet you want between in-flight tracks. Keep **Shuffle: On** to mix them, or turn it off to play in order. Use **Delete** to remove tracks you no longer want.
 > Your files are copied into the game's own music folder, so the originals stay where they are. The game does not include any commercial soundtrack: bring your own. The repo only ever ships royalty-free tracks, and a licence check in the build and CI refuses to release anything else.
 
 
@@ -42,7 +42,7 @@ Any suggestions or feedback? Let me know!
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.104.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.105.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 
 2. Run it. It installs just for you, with no admin rights needed.
 
