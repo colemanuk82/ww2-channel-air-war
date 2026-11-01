@@ -33,6 +33,7 @@ Any suggestions or feedback? Let me know!
 | 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds, rain squalls, searchlights and flak at night.|
 | 🧑‍✈️ **Bail out and live** |  Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
 | 🌡️ **Realism options** | Engine overheating with its own HEAT gauge, and G-forces that grey out your vision and can knock you out. Enemy pilots suffer too. On by default, switch off any time in Options > Realism. |
+| 🛠️ **Build your own missions** | A built-in Mission Editor: place flights, convoys, ships, flak and real targets on the map, draw their routes, set objectives and script what happens with triggers, then fly it. [More below](#%EF%B8%8F-mission-editor). |
 | 🗓️ **The map follows the war** | Choose your sortie date and the ground changes with it: bomb damage that builds up through the Blitz and the bombing of Germany, the 1944 invasion build-up, Normandy after D-Day, flooded valleys, the Westwall, and bridges that fall on the day they did. Bocage, open fields, polders and the Weald, with the seasons on the farmland. |
 | 🏕️ **A living wartime map** | 116 real airfields in RAF and Luftwaffe styles, with gun pits, blast pens and dispersals. Wired army camps packed with tanks under camouflage nets, tent lines, ammo bays and fuel dumps.|
 | 🎵 **Soundtrack** | 15 royalty-free orchestral and big-band tracks, separate Allied and Axis victory music, or import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
@@ -47,6 +48,18 @@ Any suggestions or feedback? Let me know!
 
 
 **Upscaling:** the game uses AMD FSR 2 (Options > Render) to render at a lower resolution and sharpen it back up, which works on any modern graphics card. Turn it off for native resolution.
+
+## 🛠️ Mission Editor
+
+Make your own sorties from the **Mission Editor** button on the start menu.
+
+![The Mission Editor: the theatre map with a convoy, its escort and a Stuka raid, and the trigger builder](docs/promo/mission_editor.jpg)
+
+- **Place it on the real map:** your start (on a runway or in the air), aircraft flights, vehicle columns, ships, buildings, flak, or any of the real factories, ports, radar stations and batteries already on the map. Drag them around and draw their routes.
+- **Give them orders:** fighters patrol, hunt you down or fly a route; bombers fly theirs in formation; columns and convoys follow their roads and sea lanes or hold position.
+- **Set the objectives:** destroy, protect, fly to a zone, land, survive, or anything your triggers decide. Objectives can stay hidden until the story reveals them.
+- **Script it with triggers:** *when* the clock runs, a unit is lost, you enter a zone, climb too high, land, or a coin comes up heads, *then* bring in a raid, make a radio call, show a message, reveal an objective, set a flag, point your compass or end the mission.
+- **Test fly** straight from the editor and come back to it afterwards. Your missions are saved on your PC; three example missions show how it all fits together.
 
 ## ✈️ The aircraft
 
