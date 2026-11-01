@@ -112,9 +112,24 @@ func leave_view() -> void:
 		rig.current_camera().make_current()
 
 
+## The player changed to another camera view (cockpit / chase): give the aircraft back and drop the gun sight.
+func _on_rig_view_changed(_cockpit: bool) -> void:
+	if view_index >= 0:
+		leave_view()
+
+
 func _enter_view() -> void:
 	if view_index < 0 or view_index >= _turrets.size() or aircraft == null:
 		return
+	if rig != null and not rig.view_changed.is_connected(_on_rig_view_changed):
+		rig.view_changed.connect(_on_rig_view_changed)
+	# Never stack the gun station with the bombsight or the chart: both take the camera and the screen.
+	var bs: Node = get_tree().get_first_node_in_group("bombsight")
+	if bs != null:
+		if bool(bs.get("active")):
+			bs.call("set_active", false)
+		if bool(bs.get("map_open")):
+			bs.call("set_map", false)
 	if _cam == null or not is_instance_valid(_cam):
 		_cam = Camera3D.new()
 		_cam.near = 0.2

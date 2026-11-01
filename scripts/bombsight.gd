@@ -105,6 +105,14 @@ func _ready() -> void:
 		aircraft.bomb_requested.connect(_on_bomb)
 		dial_speed = 250.0
 		dial_alt = 2000.0
+	if rig != null and not rig.view_changed.is_connected(_on_rig_view_changed):
+		rig.view_changed.connect(_on_rig_view_changed)
+
+
+## The player changed to another camera view (cockpit / chase): leave the bombsight and restore the HUD.
+func _on_rig_view_changed(_cockpit: bool) -> void:
+	if active:
+		set_active(false)
 
 
 func _load_spots() -> void:
@@ -187,6 +195,12 @@ func set_active(on: bool) -> void:
 		if aircraft.altitude_agl < 250.0:
 			_say("Too low for the bombsight")
 			return
+	# Do not stack the bombsight with a manned gun position: both hide the HUD and take the camera. Leave the
+	# gun first (it releases the aircraft back to us), then take over the autopilot for the sight.
+	if on and turrets != null and is_instance_valid(turrets) and turrets.view_index >= 0:
+		turrets.leave_view()
+	if on and map_open:
+		set_map(false)
 	active = on
 	aircraft.sight_hold = on
 	if on:

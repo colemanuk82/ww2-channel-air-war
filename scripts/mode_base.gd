@@ -391,14 +391,22 @@ func reinforce_wingmen() -> void:
 	_wingmen_done = false
 
 
-## Bomber sortie support: when the player flies a bomber the rest of the squadron (other AI bombers, flying
-## the same route) and a pair of fighter escorts on the player's wing join once airborne. Opt in with
-## `bomber_support = true` (bombing + historical missions) so bomber crews are not flying on their own.
+## Bomber sortie support: when the player flies a bomber, a squadron forms up behind him and a pair of fighter
+## escorts waits at a rendezvous point ahead, then joins his wing. Opt in with `bomber_support = true`
+## (bombing + historical missions) so bomber crews are not flying on their own.
 ## Set `_support_skip_bombers` when the mission already provides its own bomber stream (then only escorts join).
 var bomber_support: bool = false
 var _support_done: bool = false
 var _support_skip_bombers: bool = false
 var _support_nodes: Array = []
+var _squadron_spawned: bool = false
+var _escorts_spawned: bool = false
+var _rv_pos: Vector3 = Vector3.ZERO
+var _rv_marker: Node3D = null
+var _rv_t: float = 0.0
+const RV_AHEAD: float = 5200.0       # the escort rendezvous, this far along the player's heading
+const RV_RADIUS: float = 2400.0      # arrive this close and the fighters join up
+const RV_FALLBACK: float = 120.0     # ... or this long after forming up, if the point was missed
 
 
 func _support_tick() -> void:
@@ -407,25 +415,34 @@ func _support_tick() -> void:
 	var pl: Aircraft = player as Aircraft
 	if pl == null or pl.state != Aircraft.State.ALIVE or pl.on_ground or pl.global_position.y < 60.0:
 		return          # wait until the player is airborne (take-off)
-	_support_done = true
 	if not AircraftCatalog.is_bomber(String(pl.stats.id)):
+		_support_done = true
 		return          # fighter pilots get wingmen instead (see _wingmen_tick)
-	spawn_bomber_support(pl)
+	if not _squadron_spawned:
+		_squadron_spawned = true
+		spawn_bomber_support(pl)
+		return
+	if _escorts_spawned:
+		return
+	_rv_t += 1.0
+	var near: bool = Vector2(pl.global_position.x - _rv_pos.x, pl.global_position.z - _rv_pos.z).length() <= RV_RADIUS
+	if near or _rv_t >= RV_FALLBACK:
+		_escorts_spawned = true
+		_support_done = true
+		_spawn_fighter_escort(pl)
 
 
-## Spawn the player's bomber squadron and escort. Modes may call this directly if they need custom timing.
+## Spawn the player's bomber squadron (flying on his wing) and set the escort rendezvous ahead.
 func spawn_bomber_support(pl: Aircraft) -> void:
 	var side: String = GameState.player_side
 	var fwd: Vector3 = Vector3(pl.get_forward().x, 0.0, pl.get_forward().z)
 	fwd = fwd.normalized() if fwd.length() > 0.1 else Vector3(0, 0, -1)
 	var hdg: float = WorldCoords.dir_to_heading(fwd)
-	var yaw: Basis = Basis.looking_at(fwd, Vector3.UP)
-	var alt: float = maxf(pl.global_position.y, 600.0)
 	var diff: float = 0.5
 	var dv: Variant = get("difficulty")
 	if dv != null:
 		diff = float(dv)
-	# the rest of the squadron, on the same route as the player
+	# the rest of the squadron, formed up behind the player
 	if not _support_skip_bombers:
 		var bid: String = String(pl.stats.id)
 		if not AircraftCatalog.is_bomber(bid):
@@ -433,40 +450,75 @@ func spawn_bomber_support(pl: Aircraft) -> void:
 			bid = String(bids[0]) if not bids.is_empty() else "b26"
 		var np: Variant = nav_point()
 		var tgt: Vector3 = (np as Vector3) if np != null else pl.global_position + fwd * 6000.0
+		var alt: float = maxf(pl.global_position.y, 200.0)
 		var route: Array[Vector3] = [Vector3(tgt.x, alt, tgt.z), pl.global_position - fwd * 1500.0]
-		var form: BomberFormation = BomberFormation.spawn(world, bid, side, 3, pl.global_position + fwd * 240.0, hdg, route, diff)
+		var start_pos: Vector3 = pl.global_position - fwd * 220.0
+		var form: BomberFormation = BomberFormation.spawn(world, bid, side, 3, start_pos, hdg, route, diff, 62.0)
 		_support_nodes.append(form)
-		# Form up first: the lead bomber flies a climbing circuit near us, then turns for the target.
-		var lead: AIPilot = AIFactory.pilot_of(form.leader) if form.leader != null else null
-		if lead != null:
-			lead.climb_center = Vector3(pl.global_position.x, pl.global_position.y, pl.global_position.z)
-			lead.climb_alt = alt + 300.0
-			lead.climb_radius = 1600.0
-			lead.after_climb = AIPilot.State.ROUTE
-			lead.climb_out_finished.connect(func() -> void:
-				Radio.say("Bomber leader", "Formed up. Proceeding to the target.", Radio.Kind.FRIENDLY, 0.5))
-			lead.begin_climb_out()
-		Radio.say("Bomber leader", "Squadron, form up on me. Climbing out over the field.", Radio.Kind.FRIENDLY, 1.0)
+		var speed_k: float = clampf(pl.stats.max_speed / AIPilot.BOMBER_CRUISE_CAP, 1.0, 1.6)
 		for m in form.members:
+			if not is_instance_valid(m):
+				continue
+			# Match the player's bomber: the AI-only speed cut (made so fighters can catch a raid) would leave the
+			# squadron trailing behind its own leader.
+			m.stats.max_speed = maxf(m.stats.max_speed, pl.stats.max_speed)
+			var mp: AIPilot = AIFactory.pilot_of(m)
+			if mp != null:
+				mp.bomber_speed_k = speed_k
 			AIFactory.add_marker(hud, m, Color(0.45, 0.85, 1.0))
-	# fighter escort on the player's wing
+		# The box flies on the player's wing: the AI leader follows the player and the rest keep station on him.
+		var lead: AIPilot = AIFactory.pilot_of(form.leader)
+		if lead != null:
+			lead.set_leader(pl, Vector3(0.0, -25.0, 220.0))
+			lead.role = AIPilot.Role.BOMBER_FOLLOWER
+			lead._set_state(AIPilot.State.FORMATION)
+		Radio.say("Bomber leader", "Squadron formed up behind you. Escort rendezvous ahead.", Radio.Kind.FRIENDLY, 1.0)
+	# the escort rendezvous: a marker on the minimap and a call to fly to it
+	_rv_pos = pl.global_position + fwd * RV_AHEAD
+	_rv_t = 0.0
+	_rv_marker = Node3D.new()
+	_rv_marker.name = "EscortRV"
+	_rv_marker.global_position = _rv_pos
+	world.add_child(_rv_marker)
+	_support_nodes.append(_rv_marker)
+	AIFactory.add_marker(hud, _rv_marker, Color(0.35, 0.9, 1.0))
+	if hud and hud.has_method("show_message"):
+		hud.call("show_message", "Squadron with you - fly on to meet your fighter escort", 5.0)
+
+
+## The fighter escort arrives at the rendezvous and takes station on the player's wing, staying close.
+func _spawn_fighter_escort(pl: Aircraft) -> void:
+	var side: String = GameState.player_side
 	var fits: Array = AircraftCatalog.fighters_for_side(side)
 	if fits.is_empty():
 		return
 	var fid: String = String(fits[0])
+	var fwd: Vector3 = Vector3(pl.get_forward().x, 0.0, pl.get_forward().z)
+	fwd = fwd.normalized() if fwd.length() > 0.1 else Vector3(0, 0, -1)
+	var hdg: float = WorldCoords.dir_to_heading(fwd)
+	var yaw: Basis = Basis.looking_at(fwd, Vector3.UP)
+	var diff: float = 0.5
+	var dv: Variant = get("difficulty")
+	if dv != null:
+		diff = float(dv)
 	for k in 2:
 		var off: Vector3 = Radio.formation_offset(k, 2)
-		var esc: Aircraft = AIFactory.spawn(world, fid, side, pl.global_position - fwd * 70.0 + yaw * off, hdg,
+		var esc: Aircraft = AIFactory.spawn(world, fid, side, _rv_pos + yaw * off, hdg,
 			maxf(pl.speed, pl.stats.stall_speed * 1.8), clampf(diff + 0.2, 0.0, 1.0), AIPilot.Role.WINGMAN, player)
 		var pilot: AIPilot = AIFactory.pilot_of(esc)
 		if pilot != null:
 			pilot.set_leader(player, off)
-			pilot.detect_range = 9000.0
+			pilot.set_order(AIPilot.Order.COVER)      # tight formation, stay with the leader
+			pilot.engage_radius = 1600.0              # only break for enemies close to the player
+			pilot.detect_range = 3000.0
 		_support_nodes.append(esc)
 		AIFactory.add_marker(hud, esc, Color(0.3, 0.85, 1.0))
+	if _rv_marker != null and is_instance_valid(_rv_marker):
+		_rv_marker.queue_free()
+		_rv_marker = null
 	if hud and hud.has_method("show_message"):
-		hud.call("show_message", "Squadron formed up: bombers ahead, escort on your wing", 4.0)
-	Radio.say("Squadron", "Formation formed up. Escort in position.", Radio.Kind.FRIENDLY, 1.0)
+		hud.call("show_message", "Fighter escort joined - on your wing", 5.0)
+	Radio.say("Escort", "Escort flight joining up. We'll stay on your wing.", Radio.Kind.FRIENDLY, 1.0)
 
 
 ## World position the compass should point at (next objective / waypoint), or null for none. Modes override it.

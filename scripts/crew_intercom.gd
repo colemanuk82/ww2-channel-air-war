@@ -200,7 +200,6 @@ func _build_crew_panel() -> void:
 	_crew_panel = Label.new()
 	_crew_panel.name = "CrewPanel"
 	_crew_panel.add_theme_font_size_override("font_size", 16)
-	_crew_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 16)
 	layer.add_child(_crew_panel)
 	_refresh_crew_panel()
 
@@ -226,6 +225,13 @@ func _refresh_crew_panel() -> void:
 	_crew_panel.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 	_crew_panel.add_theme_constant_override("shadow_offset_x", 1)
 	_crew_panel.add_theme_constant_override("shadow_offset_y", 1)
+	# Size to the text and anchor the BOTTOM edge 16 px above the screen bottom: the panel grows upward as the
+	# crew list is filled (applying the preset before the text existed let the label grow off the bottom edge).
+	# Start it clear of the two engine dials at the bottom left.
+	_crew_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_crew_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 16)
+	_crew_panel.offset_left += 414.0
+	_crew_panel.offset_right += 414.0
 
 
 ## A hit on the aircraft can cost a crew member. Small hits rarely do; heavy hits hurt more. A wounded man can be

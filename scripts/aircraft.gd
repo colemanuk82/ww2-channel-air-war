@@ -57,7 +57,8 @@ const FLAP_NAMES := ["UP", "15", "35"]
 const ENGINE_POWER: float = 0.6        # share of stats.accel available as thrust in the air
 const INDUCED_DRAG: float = 1.5        # speed lost per second per g above 1 (scaled by speed)
 const ROLL_COUPLING: float = 0.9       # rad/s of roll rate per unit of wing rolling moment
-const GROUND_RUN_K: float = 0.30       # fraction of the normal acceleration available while rolling on the ground
+const GROUND_RUN_K: float = 0.55       # fraction of the normal acceleration available on the ground (take-off roll)
+const GROUND_ENGINE_K: float = 0.30    # extra share per engine beyond the first: heavy multi-engine bombers get off the ground
 # Loaded weight: bombs, rockets and gun rounds all count, so dropping them or running the guns dry makes the
 # aircraft a little lighter. Values are shares of one bomb; the full designed load is the reference (1 = heavy).
 const LOAD_BOMB_W: float = 1.0
@@ -1384,7 +1385,7 @@ func _update_speed(delta: float) -> void:
 	if boost_on:
 		rate = stats.accel * 3.0 * thrust_k
 	if on_ground and target > speed:
-		rate *= GROUND_RUN_K      # wheels and prop wash: it takes longer to build take-off speed on the runway
+		rate *= GROUND_RUN_K * (1.0 + GROUND_ENGINE_K * float(maxi(stats.engine_count - 1, 0)))
 	if on_ground and throttle < 0.05:
 		rate = 9.0
 	if on_ground and brake_on:
