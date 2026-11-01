@@ -42,7 +42,7 @@ var sight: Bombsight = null
 const ICON_W: float = 40.0
 const ICON_H: float = 46.0
 const ICON_GAP: float = 6.0
-const CREW_GREEN := Color(0.45, 0.9, 0.45)
+const CREW_GREEN := Color(0.78, 0.8, 0.8)      # all well: a quiet light grey (amber / red still flag trouble)
 const CREW_YELLOW := Color(1.0, 0.78, 0.2)
 const CREW_RED := Color(1.0, 0.3, 0.24)
 const SLOTS: Array = ["pilot", "nav", "wop", "gun1", "gun2"]
@@ -209,7 +209,7 @@ func _init_crew() -> void:
 	_refresh_crew_panel()
 
 
-## Clickable crew icons along the bottom: pilot, bomb aimer, radio operator, both gunners. Green = good,
+## Clickable crew icons down the left edge: pilot, bomb aimer, radio operator, both gunners. Light grey = good,
 ## amber = wounded or an enemy in range / guns engaging, red = dead. Clicking opens that man's station.
 func _build_crew_panel() -> void:
 	var layer := CanvasLayer.new()
@@ -218,14 +218,16 @@ func _build_crew_panel() -> void:
 	add_child(layer)
 	_crew_ui = Control.new()
 	_crew_ui.name = "CrewIcons"
+	# a vertical column down the left edge, centred on the screen's height
+	var col_h: float = float(SLOTS.size()) * ICON_H + float(SLOTS.size() - 1) * ICON_GAP
 	_crew_ui.anchor_left = 0.0
 	_crew_ui.anchor_right = 0.0
-	_crew_ui.anchor_top = 1.0
-	_crew_ui.anchor_bottom = 1.0
-	_crew_ui.offset_left = 414.0
-	_crew_ui.offset_right = 414.0 + float(SLOTS.size()) * ICON_W + float(SLOTS.size() - 1) * ICON_GAP
-	_crew_ui.offset_top = -16.0 - ICON_H
-	_crew_ui.offset_bottom = -16.0
+	_crew_ui.anchor_top = 0.5
+	_crew_ui.anchor_bottom = 0.5
+	_crew_ui.offset_left = 10.0
+	_crew_ui.offset_right = 10.0 + ICON_W
+	_crew_ui.offset_top = -col_h * 0.5
+	_crew_ui.offset_bottom = col_h * 0.5
 	_crew_ui.mouse_filter = Control.MOUSE_FILTER_STOP
 	_crew_ui.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_crew_ui.draw.connect(_draw_crew)
@@ -263,14 +265,14 @@ func _draw_crew() -> void:
 	var labels: Dictionary = SHORT_LABEL.get(_side, SHORT_LABEL["allies"])
 	for i in SLOTS.size():
 		var id: String = String(SLOTS[i])
-		var x: float = float(i) * (ICON_W + ICON_GAP)
+		var y: float = float(i) * (ICON_H + ICON_GAP)
 		var hot: bool = _crew_hover == i
 		var col: Color = _slot_color(id)
-		_crew_ui.draw_rect(Rect2(x, 0.0, ICON_W, ICON_H), Color(0.03, 0.035, 0.03, 0.42 if not hot else 0.66))
-		_crew_ui.draw_rect(Rect2(x, 0.0, ICON_W, ICON_H), Color(col, 0.26 if not hot else 0.8), false, 1.0)
-		_draw_bust(_crew_ui, Vector2(x + ICON_W * 0.5, 16.0), col, id)
+		_crew_ui.draw_rect(Rect2(0.0, y, ICON_W, ICON_H), Color(0.03, 0.035, 0.03, 0.42 if not hot else 0.66))
+		_crew_ui.draw_rect(Rect2(0.0, y, ICON_W, ICON_H), Color(col, 0.26 if not hot else 0.8), false, 1.0)
+		_draw_bust(_crew_ui, Vector2(ICON_W * 0.5, y + 16.0), col, id)
 		var lbl: String = String(labels.get(id, id.to_upper()))
-		_crew_ui.draw_string(font, Vector2(x + 2.0, ICON_H - 4.0), lbl, HORIZONTAL_ALIGNMENT_CENTER, ICON_W - 4.0, 9, Color(col, 0.95 if hot else 0.72))
+		_crew_ui.draw_string(font, Vector2(2.0, y + ICON_H - 4.0), lbl, HORIZONTAL_ALIGNMENT_CENTER, ICON_W - 4.0, 9, Color(col, 0.95 if hot else 0.72))
 
 
 ## Small pilot bust. The role mark distinguishes the bomb aimer, radio operator and gunners.
@@ -311,13 +313,13 @@ func _crew_input(event: InputEvent) -> void:
 
 
 func _slot_at(p: Vector2) -> int:
-	if _crew_ui == null or p.y < 0.0 or p.y > ICON_H or p.x < 0.0 or p.x > _crew_ui.size.x:
+	if _crew_ui == null or p.x < 0.0 or p.x > ICON_W or p.y < 0.0 or p.y > _crew_ui.size.y:
 		return -1
-	var i: int = int(p.x / (ICON_W + ICON_GAP))
+	var i: int = int(p.y / (ICON_H + ICON_GAP))
 	if i < 0 or i >= SLOTS.size():
 		return -1
-	var off: float = p.x - float(i) * (ICON_W + ICON_GAP)
-	return i if off <= ICON_W else -1
+	var off: float = p.y - float(i) * (ICON_H + ICON_GAP)
+	return i if off <= ICON_H else -1
 
 
 func _open_slot(id: String) -> void:

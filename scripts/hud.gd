@@ -714,12 +714,14 @@ func _build() -> void:
 	_orders = Control.new()
 	_orders.anchor_left = 0.0
 	_orders.anchor_right = 0.0
-	_orders.anchor_top = 1.0
-	_orders.anchor_bottom = 1.0
-	_orders.offset_left = 680.0
-	_orders.offset_right = 680.0 + float(ORDER_ICONS.size()) * ORDER_BOX + float(ORDER_ICONS.size() - 1) * ORDER_GAP
-	_orders.offset_top = -16.0 - ORDER_BOX
-	_orders.offset_bottom = -16.0
+	# a horizontal row at the top right, just left of the time / weather box (placed every frame in _process, as
+	# that box grows leftwards with longer weather names)
+	_orders.anchor_top = 0.0
+	_orders.anchor_bottom = 0.0
+	_orders.offset_left = 0.0
+	_orders.offset_right = float(ORDER_ICONS.size()) * ORDER_BOX + float(ORDER_ICONS.size() - 1) * ORDER_GAP
+	_orders.offset_top = 16.0
+	_orders.offset_bottom = 16.0 + ORDER_BOX
 	_orders.mouse_filter = Control.MOUSE_FILTER_STOP
 	_orders.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_orders.draw.connect(_draw_orders)
@@ -907,6 +909,16 @@ func _process(delta: float) -> void:
 	# "Hide HUD" only hides the clutter: gauges, compass, map, ammo, aim and target markers always stay
 	var show: bool = GameState.show_hud
 	_radio.visible = show
+	if _orders != null and _tr_box != null:
+		var tr_c: Control = _info_lbl.get_parent_control() if _info_lbl != null and _info_lbl.get_parent_control() != null else _tr_box
+		var tr_r: Rect2 = tr_c.get_global_rect()
+		var ow: float = float(ORDER_ICONS.size()) * ORDER_BOX + float(ORDER_ICONS.size() - 1) * ORDER_GAP
+		var ox: float = tr_r.position.x - 140.0 - ow
+		var oy: float = tr_r.position.y + maxf((tr_r.size.y - ORDER_BOX) * 0.5, 0.0) - 2.0
+		_orders.offset_left = ox
+		_orders.offset_right = ox + ow
+		_orders.offset_top = oy
+		_orders.offset_bottom = oy + ORDER_BOX
 	if _orders != null:
 		_orders.visible = show and aircraft != null and is_instance_valid(aircraft) \
 			and aircraft.state == Aircraft.State.ALIVE and not aircraft.on_ground
@@ -920,6 +932,10 @@ func _process(delta: float) -> void:
 	# the radio log sits just under the top-left column, however tall the mission card has grown
 	var col_bottom: float = _extra_box.get_global_rect().end.y if _extra_box.get_child_count() > 0 else 16.0
 	_radio.offset_top = maxf(col_bottom + 12.0, 120.0)
+	# a bomber's crew-status column runs down the left edge: the radio log starts to its right
+	var crew_col: bool = aircraft != null and is_instance_valid(aircraft) and aircraft.has_node("CrewIntercom")
+	_radio.offset_left = 72.0 if crew_col else 16.0
+	_radio.offset_right = _radio.offset_left + 504.0
 	_radio.offset_bottom = _radio.offset_top + 200.0
 	# kill tally: cleared when a new life starts
 	if aircraft != null and is_instance_valid(aircraft):
