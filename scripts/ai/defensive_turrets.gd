@@ -82,6 +82,22 @@ func turret_name(i: int) -> String:
 	return String(_turrets[i]["name"]) if i >= 0 and i < _turrets.size() else ""
 
 
+## Index of a mount by name (for the crew panel's gunner icons), or -1.
+func index_of_name(n: String) -> int:
+	for i in _turrets.size():
+		if String(_turrets[i]["name"]) == n:
+			return i
+	return -1
+
+
+## Open one specific turret. Used by the clickable crew icons.
+func view_turret(i: int) -> void:
+	if i < 0 or i >= _turrets.size():
+		return
+	view_index = i
+	_enter_view()
+
+
 ## Step to the next turret; after the last one, back to flying. Bound to the gunner-view key.
 func cycle_view() -> void:
 	if _turrets.is_empty():
@@ -145,7 +161,7 @@ func _enter_view() -> void:
 	# useful context and the camera sits outside the guns, so the view of the world is clear)
 	aircraft.sight_hold = true
 	aircraft.sight_alt_y = aircraft.global_position.y
-	if hud is CanvasLayer:
+	if hud is CanvasLayer and (_ui == null or not is_instance_valid(_ui)):
 		_hud_was = (hud as CanvasLayer).visible
 		(hud as CanvasLayer).visible = false
 	if _ui == null or not is_instance_valid(_ui):

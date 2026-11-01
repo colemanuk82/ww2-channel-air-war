@@ -33,7 +33,23 @@ const STATION_LABEL := {
 const WOUNDED: int = 1
 const KILLED: int = 2
 var crew: Dictionary = {}           # station -> 0 healthy, WOUNDED or KILLED
-var _crew_panel: Label = null
+var _crew_ui: Control = null        # clickable crew icons (bottom edge)
+var _crew_hover: int = -1
+var rig: CameraRig = null           # filled lazily from the player's main node
+var turrets: DefensiveTurrets = null
+var sight: Bombsight = null
+
+const ICON_W: float = 40.0
+const ICON_H: float = 46.0
+const ICON_GAP: float = 6.0
+const CREW_GREEN := Color(0.45, 0.9, 0.45)
+const CREW_YELLOW := Color(1.0, 0.78, 0.2)
+const CREW_RED := Color(1.0, 0.3, 0.24)
+const SLOTS: Array = ["pilot", "nav", "wop", "gun1", "gun2"]
+const SHORT_LABEL := {
+	"allies": {"pilot": "PILOT", "nav": "BOMB", "wop": "W/OP", "gun1": "GUN 1", "gun2": "GUN 2"},
+	"axis": {"pilot": "PILOT", "nav": "OBS", "wop": "RADIO", "gun1": "DORSAL", "gun2": "VENTRAL"},
+}
 
 
 static func attach(p_ac: Aircraft) -> CrewIntercom:
@@ -94,6 +110,8 @@ func _process(delta: float) -> void:
 	if _step > 0.0:
 		return
 	_step = 0.5
+	if _crew_ui != null and is_instance_valid(_crew_ui):
+		_crew_ui.queue_redraw()
 	var pos: Vector3 = ac.global_position
 	# runway: crew check, then the take-off roll
 	if ac.on_ground:
@@ -191,47 +209,183 @@ func _init_crew() -> void:
 	_refresh_crew_panel()
 
 
-## Crew panel, bottom left: one line per station, red when a man is dead, amber when one is wounded.
+## Clickable crew icons along the bottom: pilot, bomb aimer, radio operator, both gunners. Green = good,
+## amber = wounded or an enemy in range / guns engaging, red = dead. Clicking opens that man's station.
 func _build_crew_panel() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "CrewStatus"
-	layer.layer = 5
+	layer.layer = 25      # above the bombsight / gunner panels but below the pause and options menus
 	add_child(layer)
-	_crew_panel = Label.new()
-	_crew_panel.name = "CrewPanel"
-	_crew_panel.add_theme_font_size_override("font_size", 16)
-	layer.add_child(_crew_panel)
+	_crew_ui = Control.new()
+	_crew_ui.name = "CrewIcons"
+	_crew_ui.anchor_left = 0.0
+	_crew_ui.anchor_right = 0.0
+	_crew_ui.anchor_top = 1.0
+	_crew_ui.anchor_bottom = 1.0
+	_crew_ui.offset_left = 414.0
+	_crew_ui.offset_right = 414.0 + float(SLOTS.size()) * ICON_W + float(SLOTS.size() - 1) * ICON_GAP
+	_crew_ui.offset_top = -16.0 - ICON_H
+	_crew_ui.offset_bottom = -16.0
+	_crew_ui.mouse_filter = Control.MOUSE_FILTER_STOP
+	_crew_ui.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_crew_ui.draw.connect(_draw_crew)
+	_crew_ui.gui_input.connect(_crew_input)
+	_crew_ui.mouse_exited.connect(func() -> void:
+		_crew_hover = -1
+		_crew_ui.queue_redraw())
+	layer.add_child(_crew_ui)
 	_refresh_crew_panel()
 
 
 func _refresh_crew_panel() -> void:
-	if _crew_panel == null:
+	if _crew_ui != null and is_instance_valid(_crew_ui):
+		_crew_ui.queue_redraw()
+
+
+func _slot_color(id: String) -> Color:
+	if id == "pilot":
+		return CREW_YELLOW if not _near.is_empty() else CREW_GREEN
+	var st: int = int(crew.get(id, 0))
+	if st == KILLED:
+		return CREW_RED
+	if st == WOUNDED:
+		return CREW_YELLOW
+	var hot: bool = not _near.is_empty()
+	if (id == "gun1" or id == "gun2") and turrets != null and is_instance_valid(turrets) and turrets.engaged:
+		hot = true
+	return CREW_YELLOW if hot else CREW_GREEN
+
+
+func _draw_crew() -> void:
+	if _crew_ui == null:
 		return
-	var labels: Dictionary = STATION_LABEL.get(_side, STATION_LABEL["allies"])
-	var lines: PackedStringArray = PackedStringArray(["CREW"])
-	var worst: int = 0
-	for s in STATIONS:
-		var st: int = int(crew.get(s, 0))
-		worst = maxi(worst, st)
-		var word: String = "OK" if st == 0 else ("WOUNDED" if st == WOUNDED else "KILLED")
-		lines.append(String(labels[s]).rpad(15) + word)
-	_crew_panel.text = "\n".join(lines)
-	var col: Color = Color(0.85, 0.95, 0.85)
-	if worst == WOUNDED:
-		col = Color(1.0, 0.75, 0.2)
-	elif worst == KILLED:
-		col = Color(1.0, 0.3, 0.25)
-	_crew_panel.add_theme_color_override("font_color", col)
-	_crew_panel.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
-	_crew_panel.add_theme_constant_override("shadow_offset_x", 1)
-	_crew_panel.add_theme_constant_override("shadow_offset_y", 1)
-	# Size to the text and anchor the BOTTOM edge 16 px above the screen bottom: the panel grows upward as the
-	# crew list is filled (applying the preset before the text existed let the label grow off the bottom edge).
-	# Start it clear of the two engine dials at the bottom left.
-	_crew_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_crew_panel.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 16)
-	_crew_panel.offset_left += 414.0
-	_crew_panel.offset_right += 414.0
+	var font: Font = UIKit.font(true)
+	var labels: Dictionary = SHORT_LABEL.get(_side, SHORT_LABEL["allies"])
+	for i in SLOTS.size():
+		var id: String = String(SLOTS[i])
+		var x: float = float(i) * (ICON_W + ICON_GAP)
+		var hot: bool = _crew_hover == i
+		var col: Color = _slot_color(id)
+		_crew_ui.draw_rect(Rect2(x, 0.0, ICON_W, ICON_H), Color(0.03, 0.035, 0.03, 0.42 if not hot else 0.66))
+		_crew_ui.draw_rect(Rect2(x, 0.0, ICON_W, ICON_H), Color(col, 0.26 if not hot else 0.8), false, 1.0)
+		_draw_bust(_crew_ui, Vector2(x + ICON_W * 0.5, 16.0), col, id)
+		var lbl: String = String(labels.get(id, id.to_upper()))
+		_crew_ui.draw_string(font, Vector2(x + 2.0, ICON_H - 4.0), lbl, HORIZONTAL_ALIGNMENT_CENTER, ICON_W - 4.0, 9, Color(col, 0.95 if hot else 0.72))
+
+
+## Small pilot bust. The role mark distinguishes the bomb aimer, radio operator and gunners.
+func _draw_bust(c: Control, p: Vector2, col: Color, id: String) -> void:
+	c.draw_circle(p + Vector2(0, -4), 4.0, col)
+	c.draw_colored_polygon(PackedVector2Array([
+		p + Vector2(-9, 10), p + Vector2(-7, 1), p + Vector2(-3, -1),
+		p + Vector2(3, -1), p + Vector2(7, 1), p + Vector2(9, 10)
+	]), col)
+	match id:
+		"nav":
+			c.draw_circle(p + Vector2(0, -4), 8.5, Color(col, 0.55), false, 1.0)
+			c.draw_line(p + Vector2(-8, -4), p + Vector2(8, -4), col, 1.0)
+			c.draw_line(p + Vector2(0, -12), p + Vector2(0, 4), col, 1.0)
+		"wop":
+			for rr in [5.0, 9.0]:
+				c.draw_arc(p + Vector2(0, -4), rr, -0.8, 0.8, 10, col, 1.0)
+		"gun1", "gun2":
+			c.draw_line(p + Vector2(-4, 9), p + Vector2(-1, -2), col, 1.4)
+			c.draw_line(p + Vector2(4, 9), p + Vector2(1, -2), col, 1.4)
+
+
+func _crew_input(event: InputEvent) -> void:
+	if _crew_ui == null:
+		return
+	if event is InputEventMouseMotion:
+		var i: int = _slot_at(event.position)
+		if i != _crew_hover:
+			_crew_hover = i
+			_crew_ui.queue_redraw()
+	elif event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			var i: int = _slot_at(mb.position)
+			if i >= 0:
+				_open_slot(String(SLOTS[i]))
+				_crew_ui.accept_event()
+
+
+func _slot_at(p: Vector2) -> int:
+	if _crew_ui == null or p.y < 0.0 or p.y > ICON_H or p.x < 0.0 or p.x > _crew_ui.size.x:
+		return -1
+	var i: int = int(p.x / (ICON_W + ICON_GAP))
+	if i < 0 or i >= SLOTS.size():
+		return -1
+	var off: float = p.x - float(i) * (ICON_W + ICON_GAP)
+	return i if off <= ICON_W else -1
+
+
+func _open_slot(id: String) -> void:
+	match id:
+		"pilot":
+			var r: CameraRig = _get_rig()
+			if r != null:
+				r.set_cockpit(true)
+		"nav":
+			var s: Bombsight = _get_sight()
+			if s != null:
+				s.set_active(true)
+		"wop":
+			var s2: Bombsight = _get_sight()
+			if s2 != null:
+				s2.set_map(true)
+		"gun1":
+			_open_gun(0)
+		"gun2":
+			_open_gun(1)
+
+
+func _open_gun(which: int) -> void:
+	var t: DefensiveTurrets = _get_turrets()
+	if t == null:
+		return
+	var idx: int = -1
+	if which == 0:
+		idx = t.index_of_name("dorsal")
+		if idx < 0:
+			idx = t.index_of_name("nose")
+		if idx < 0:
+			idx = 0
+	else:
+		idx = t.index_of_name("tail")
+		if idx < 0:
+			idx = t.index_of_name("ventral")
+		if idx < 0:
+			idx = maxi(t.turret_count() - 1, 0)
+	t.view_turret(idx)
+
+
+func _get_rig() -> CameraRig:
+	if rig == null or not is_instance_valid(rig):
+		rig = null
+		if ac != null:
+			var p: Node = ac.get_parent()
+			if p != null:
+				rig = p.get_node_or_null("CameraRig") as CameraRig
+	return rig
+
+
+func _get_turrets() -> DefensiveTurrets:
+	if turrets == null or not is_instance_valid(turrets):
+		turrets = null
+		if ac != null:
+			turrets = ac.get_node_or_null("DefensiveTurrets") as DefensiveTurrets
+	return turrets
+
+
+func _get_sight() -> Bombsight:
+	if sight == null or not is_instance_valid(sight):
+		sight = null
+		if ac != null:
+			var p: Node = ac.get_parent()
+			if p != null:
+				sight = p.get_node_or_null("Bombsight") as Bombsight
+	return sight
 
 
 ## A hit on the aircraft can cost a crew member. Small hits rarely do; heavy hits hurt more. A wounded man can be

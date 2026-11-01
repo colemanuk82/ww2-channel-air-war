@@ -39,6 +39,17 @@ var _hdg_lbl: Label
 var _inst: Control
 var _radio: Control
 var _radio_msgs: Array = []     # {"sender", "text", "kind", "t"}
+# Subtle clickable radio-order icons (form / attack / cover / RTB). Keys 1-4 still work too.
+const ORDER_ICONS := [
+	{"id": "form", "key": "1"},
+	{"id": "attack", "key": "2"},
+	{"id": "cover", "key": "3"},
+	{"id": "rtb", "key": "4"},
+]
+const ORDER_BOX: float = 34.0
+const ORDER_GAP: float = 6.0
+var _orders: Control
+var _order_hover: int = -1
 var _hints: Control
 var _tr_box: Control
 var _vsi: float = 0.0
@@ -159,6 +170,69 @@ func _wrap_text(text: String, font: Font, size: int, max_w: float, max_lines: in
 	if cur != "":
 		lines.append(cur)
 	return lines
+
+
+func _draw_orders() -> void:
+	if _orders == null:
+		return
+	var font: Font = UIKit.font(true)
+	for i in ORDER_ICONS.size():
+		var x: float = float(i) * (ORDER_BOX + ORDER_GAP)
+		var hot: bool = _order_hover == i
+		var r := Rect2(x, 0.0, ORDER_BOX, ORDER_BOX)
+		_orders.draw_rect(r, Color(0.03, 0.035, 0.03, 0.42 if not hot else 0.66))
+		_orders.draw_rect(r, Color(ACCENT, 0.24 if not hot else 0.7), false, 1.0)
+		var col: Color = Color(0.93, 0.9, 0.78, 0.62 if not hot else 1.0)
+		_draw_order_icon(_orders, String(ORDER_ICONS[i]["id"]), Vector2(x + ORDER_BOX * 0.5, ORDER_BOX * 0.5), col)
+		_orders.draw_string(font, Vector2(x + 3.0, ORDER_BOX - 3.0), String(ORDER_ICONS[i]["key"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(col, 0.55))
+
+
+func _draw_order_icon(c: Control, id: String, p: Vector2, col: Color) -> void:
+	match id:
+		"form":
+			for o in [Vector2(-8, 5), Vector2(8, 5), Vector2(0, -5)]:
+				c.draw_colored_polygon(PackedVector2Array([p + o + Vector2(-3, 3), p + o + Vector2(0, -4), p + o + Vector2(3, 3)]), col)
+		"attack":
+			c.draw_arc(p, 7.0, 0.0, TAU, 20, col, 1.4)
+			c.draw_line(p + Vector2(-10, 0), p + Vector2(-4, 0), col, 1.4)
+			c.draw_line(p + Vector2(4, 0), p + Vector2(10, 0), col, 1.4)
+			c.draw_line(p + Vector2(0, -10), p + Vector2(0, -4), col, 1.4)
+			c.draw_line(p + Vector2(0, 4), p + Vector2(0, 10), col, 1.4)
+			c.draw_circle(p, 1.6, col)
+		"cover":
+			c.draw_colored_polygon(PackedVector2Array([p + Vector2(-7, -8), p + Vector2(7, -8), p + Vector2(6, 3), p + Vector2(0, 10), p + Vector2(-6, 3)]), col)
+		"rtb":
+			c.draw_colored_polygon(PackedVector2Array([p + Vector2(-8, 1), p + Vector2(0, -8), p + Vector2(8, 1)]), col)
+			c.draw_rect(Rect2(p + Vector2(-5, 1), Vector2(10, 8)), col)
+			c.draw_line(p + Vector2(0, 4), p + Vector2(0, 11), Color(0.03, 0.035, 0.03, 0.9), 2.0)
+
+
+func _orders_input(event: InputEvent) -> void:
+	if _orders == null:
+		return
+	if event is InputEventMouseMotion:
+		var i: int = _order_at(event.position)
+		if i != _order_hover:
+			_order_hover = i
+			_orders.queue_redraw()
+	elif event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
+			var i: int = _order_at(mb.position)
+			if i >= 0:
+				Radio.order(String(ORDER_ICONS[i]["id"]))
+				_orders.accept_event()
+			_orders.queue_redraw()
+
+
+func _order_at(p: Vector2) -> int:
+	if _orders == null or p.y < 0.0 or p.y > ORDER_BOX or p.x < 0.0 or p.x > _orders.size.x:
+		return -1
+	var i: int = int(p.x / (ORDER_BOX + ORDER_GAP))
+	if i < 0 or i >= ORDER_ICONS.size():
+		return -1
+	var off: float = p.x - float(i) * (ORDER_BOX + ORDER_GAP)
+	return i if off <= ORDER_BOX else -1
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -636,6 +710,25 @@ func _build() -> void:
 	_radio.draw.connect(_draw_radio)
 	_root.add_child(_radio)
 
+	# Subtle clickable radio orders: form up, attack my target, cover me, return to base.
+	_orders = Control.new()
+	_orders.anchor_left = 0.0
+	_orders.anchor_right = 0.0
+	_orders.anchor_top = 1.0
+	_orders.anchor_bottom = 1.0
+	_orders.offset_left = 680.0
+	_orders.offset_right = 680.0 + float(ORDER_ICONS.size()) * ORDER_BOX + float(ORDER_ICONS.size() - 1) * ORDER_GAP
+	_orders.offset_top = -16.0 - ORDER_BOX
+	_orders.offset_bottom = -16.0
+	_orders.mouse_filter = Control.MOUSE_FILTER_STOP
+	_orders.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_orders.draw.connect(_draw_orders)
+	_orders.gui_input.connect(_orders_input)
+	_orders.mouse_exited.connect(func() -> void:
+		_order_hover = -1
+		_orders.queue_redraw())
+	_root.add_child(_orders)
+
 	# Top-left extension column
 	var tl := MarginContainer.new()
 	tl.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -814,6 +907,9 @@ func _process(delta: float) -> void:
 	# "Hide HUD" only hides the clutter: gauges, compass, map, ammo, aim and target markers always stay
 	var show: bool = GameState.show_hud
 	_radio.visible = show
+	if _orders != null:
+		_orders.visible = show and aircraft != null and is_instance_valid(aircraft) \
+			and aircraft.state == Aircraft.State.ALIVE and not aircraft.on_ground
 	if _tr_box:
 		_tr_box.visible = show
 	for card in _cards:
