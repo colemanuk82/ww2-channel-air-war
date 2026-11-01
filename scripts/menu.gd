@@ -93,7 +93,7 @@ void fragment() {
 	col.add_theme_constant_override("margin_bottom", 22)
 	root.add_child(col)
 	var outer := VBoxContainer.new()
-	outer.add_theme_constant_override("separation", 6)
+	outer.add_theme_constant_override("separation", 4)
 	col.add_child(outer)
 	var kicker := UIKit.label("1940  ·  1944", 16, UIKit.RED, true)
 	outer.add_child(kicker)
@@ -126,33 +126,41 @@ void fragment() {
 	var sortie := _new_page()
 	_page_host.add_child(sortie)
 	sortie.add_child(UIKit.label("SORTIE", 14, UIKit.TEXT_DIM, true))
-	_side = UIKit.option_row(sortie, "Side", ["Allies", "Axis"], 20)
-	_aircraft = UIKit.option_row(sortie, "Aircraft", [], 20)
+	# Side first, aircraft directly beneath it; the rest packed into compact rows.
+	_side = UIKit.option_field(sortie, "Side", ["Allies", "Axis"], 150, 18)
+	_aircraft = UIKit.option_field(sortie, "Aircraft", [], 320, 18)
 	_info = UIKit.label("", 15, UIKit.TEXT_DIM)
 	sortie.add_child(_info)
-	# Loadout: fewer weapons mean a lighter aircraft (a little more speed, acceleration and turn rate).
-	_bombs = UIKit.option_row(sortie, "Bombs", ["0"], 20)
-	_rockets = UIKit.option_row(sortie, "Rockets", ["0"], 20)
-	_ammo = UIKit.option_row(sortie, "Ammo", ["0"], 20)
-	_bombs.tooltip_text = "Bombs carried. Every bomb dropped makes the aircraft lighter."
-	_rockets.tooltip_text = "Rockets carried. Each pair fired makes the aircraft lighter."
-	_ammo.tooltip_text = "Gun rounds loaded. Running the guns dry makes the aircraft lighter."
 	_mode_ids = ModeRegistry.get_available_ids()
 	var mode_names: Array = []
 	for id in _mode_ids:
 		mode_names.append(ModeRegistry.display_name(id))
-	_mode = UIKit.option_row(sortie, "Mode", mode_names, 20)
+	var sortie_mid := HBoxContainer.new()
+	sortie_mid.add_theme_constant_override("separation", 18)
+	sortie.add_child(sortie_mid)
+	_mode = UIKit.option_field(sortie_mid, "Mode", mode_names, 180, 18)
 	var mission_names: Array = []
 	for m in HistoricalMissions.list():
 		_mission_ids.append(str(m.get("id", "")))
 		mission_names.append(GameState.mission_label(str(m.get("id", "")), str(m.get("name", m.get("id", "")))))
 	if mission_names.is_empty():
 		mission_names = ["(none)"]
-	_mission = UIKit.option_row(sortie, "Mission", mission_names, 20)
+	_mission = UIKit.option_field(sortie_mid, "Mission", mission_names, 180, 18)
 	_mission.get_popup().about_to_popup.connect(_open_mission_list)    # custom list so completed missions can be coloured
 	_mission.item_selected.connect(func(_i: int) -> void: _tint_mission())
 	_mission_row = _mission.get_parent()
 	_tint_mission()
+	# Loadout on one compact row: fewer weapons mean a lighter aircraft (a little more speed and agility).
+	sortie.add_child(UIKit.label("LOADOUT", 14, UIKit.TEXT_DIM, true))
+	var loadout_row := HBoxContainer.new()
+	loadout_row.add_theme_constant_override("separation", 14)
+	sortie.add_child(loadout_row)
+	_bombs = UIKit.option_field(loadout_row, "Bombs", ["0"], 70, 18, 54)
+	_rockets = UIKit.option_field(loadout_row, "Rockets", ["0"], 70, 18, 62)
+	_ammo = UIKit.option_field(loadout_row, "Ammo", ["0"], 86, 18, 48)
+	_bombs.tooltip_text = "Bombs carried. Every bomb dropped makes the aircraft lighter."
+	_rockets.tooltip_text = "Rockets carried. Each pair fired makes the aircraft lighter."
+	_ammo.tooltip_text = "Gun rounds loaded. Running the guns dry makes the aircraft lighter."
 
 	# --- START POINT (free flight) ---
 	var startpage := _new_page()
@@ -160,7 +168,7 @@ void fragment() {
 	startpage.add_child(UIKit.label("START POINT", 14, UIKit.TEXT_DIM, true))
 	_spawn_note = UIKit.label("The mission sets your airfield, altitude and heading.", 16, UIKit.TEXT_DIM)
 	startpage.add_child(_spawn_note)
-	_spawn = UIKit.option_row(startpage, "Spawn", [], 20)
+	_spawn = UIKit.option_field(startpage, "Spawn", [], 330, 18)
 	_spawn_row = _spawn.get_parent()
 	_plan_btn = UIKit.button("MAP - pick your start point / sortie", _open_planner, 20, true)
 	startpage.add_child(_plan_btn)
@@ -191,7 +199,7 @@ void fragment() {
 	_taskings.add_theme_color_override("font_hover_color", Color.WHITE)
 	_taskings.add_theme_color_override("font_focus_color", Color.WHITE)
 	startpage.add_child(_taskings)
-	_wingmen = UIKit.option_row(startpage, "Wingmen", ["None", "1", "2", "3"], 20)
+	_wingmen = UIKit.option_field(startpage, "Wingmen", ["None", "1", "2", "3"], 70, 18)
 	_wingmen.select(2)
 	_passing = CheckBox.new()
 	_passing.text = "Friendly flights you can join"
@@ -207,20 +215,23 @@ void fragment() {
 	var cond := _new_page()
 	_page_host.add_child(cond)
 	cond.add_child(UIKit.label("CONDITIONS", 14, UIKit.TEXT_DIM, true))
-	_diff = UIKit.option_row(cond, "Difficulty", DIFFICULTIES.keys(), 20)
+	var cond_top := HBoxContainer.new()
+	cond_top.add_theme_constant_override("separation", 18)
+	cond.add_child(cond_top)
+	_diff = UIKit.option_field(cond_top, "Difficulty", DIFFICULTIES.keys(), 140, 18, 80)
 	_diff.select(1)
 	_weather_names = WeatherManager.get_weather_names()
 	var wn: Array = []
 	for w in _weather_names:
 		wn.append(String(w).capitalize())
 	wn.append("Random")
-	_weather = UIKit.option_row(cond, "Weather", wn, 20)
+	_weather = UIKit.option_field(cond_top, "Weather", wn, 140, 18, 80)
 	_weather.select(wn.size() - 1)       # random by default: a different sky every sortie
 	var tn: Array = []
 	for t in TIMES:
 		tn.append(String(t).capitalize())
 	tn.append("Random")
-	_time = UIKit.option_row(cond, "Time of day", tn, 20)
+	_time = UIKit.option_field(cond, "Time of day", tn, 140, 18, 96)
 	_time.select(tn.size() - 1)
 
 	# --- BRIEFING ---
@@ -233,83 +244,73 @@ void fragment() {
 	_desc.custom_minimum_size = Vector2(500, 0)
 	brief.add_child(_desc)
 
-	outer.add_child(UIKit.rule(0.5))
+	# Take off / resume sit together as a compact pair instead of two full-width bars.
+	var take_row := HBoxContainer.new()
+	take_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	take_row.add_theme_constant_override("separation", 12)
 	# a rolling checkpoint survives a crash / hard close: offer to continue the last sortie
 	var rsave: Dictionary = SortieResume.read()
 	if SortieResume.fresh(rsave):
 		var rcfg: Dictionary = (rsave.get("config", {}) as Dictionary).duplicate(true)
 		rcfg["resume"] = true
 		var rid: String = String(rcfg.get("mode", "free"))
-		var rlabel: String = "RESUME LAST SORTIE"
-		if ModeRegistry.MODES.has(rid):
-			rlabel += "  -  " + ModeRegistry.display_name(rid)
-		var rb := UIKit.button(rlabel, func() -> void: start_requested.emit(rcfg), 20, true)
-		rb.custom_minimum_size = Vector2(0, 46)
-		outer.add_child(rb)
-	var start := UIKit.button("TAKE OFF", _on_start, 30, true)
-	start.custom_minimum_size = Vector2(0, 56)
-	outer.add_child(start)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	outer.add_child(row)
-	var cb := UIKit.button("Campaign", _open_campaign, 20)
-	cb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(cb)
-	var pl := UIKit.button("Pilot's Life", _open_career, 20)
-	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(pl)
-	var db := UIKit.button("Dam Busters [WIP]", _open_dam_busters, 20)
-	db.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(db)
-	var lb := UIKit.button("Logbook", _open_logbook, 20)
-	lb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(lb)
-	var meb := UIKit.button("Mission Editor", func() -> void: _open_mission_editor(), 20)
-	meb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(meb)
-	var tf := UIKit.button("Training Film", func() -> void: open_film(), 20)
-	tf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(tf)
-	var ob := UIKit.button("Options", func() -> void: add_child(SettingsMenu.new()), 20)
-	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(ob)
-	var crb := UIKit.button("Credits", _open_legal, 20)
-	crb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(crb)
-	var qb := UIKit.button("Quit", func() -> void: quit_requested.emit(), 20)
-	qb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(qb)
+		var rb := UIKit.button("RESUME LAST SORTIE", func() -> void: start_requested.emit(rcfg), 18)
+		rb.custom_minimum_size = Vector2(200, 46)
+		rb.tooltip_text = "Continue the previous %s sortie." % (ModeRegistry.display_name(rid) if ModeRegistry.MODES.has(rid) else "saved")
+		take_row.add_child(rb)
+	var start := UIKit.button("TAKE OFF", _on_start, 28, true)
+	start.custom_minimum_size = Vector2(200, 46)
+	take_row.add_child(start)
+	# Bottom utility buttons in a compact grid, the info buttons included.
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 5)
+	_mo_button(grid, "Campaign", _open_campaign)
+	_mo_button(grid, "Pilot's Life", _open_career)
+	_mo_button(grid, "Logbook", _open_logbook)
+	_mo_button(grid, "Mission Editor", func() -> void: _open_mission_editor())
+	_mo_button(grid, "Dam Busters [WIP]", _open_dam_busters)
+	_mo_button(grid, "Training Film", func() -> void: open_film())
+	_mo_button(grid, "Options", func() -> void: add_child(SettingsMenu.new()))
+	_mo_button(grid, "Credits", _open_legal)
+	# manual update check (a request is made only when this is pressed)
+	var upd_newer: Array = [false]
+	var upd := _mo_button(grid, "Check for updates", func() -> void: pass, 15)
+	upd.tooltip_text = "Optional. Asks GitHub whether a newer release exists; sends nothing else."
+	var logs := _mo_button(grid, "Open logs folder", func() -> void: OS.shell_open(ProjectSettings.globalize_path("user://logs")), 15)
+	logs.tooltip_text = "Opens the folder with the game's log files (useful when reporting a crash)."
+	var sup := _mo_button(grid, "Support me on PayPal", func() -> void: OS.shell_open(DONATE_URL), 15)
+	sup.tooltip_text = "Optional. Opens " + DONATE_URL + " in your web browser."
+	_mo_button(grid, "Quit", func() -> void: quit_requested.emit())
+	# Layout concept: 1 = compact left rail, 2 = right-hand action card, 3 = bottom command bar.
+	var concept_env: String = OS.get_environment("WW2_MENU_CONCEPT")
+	var concept: int = clampi(int(concept_env), 1, 3) if concept_env.is_valid_int() else 3
+	_place_actions(root, outer, col, take_row, grid, concept)
 
 	# (the gamepad quick reference that sat bottom-right was removed: the full list is in Options > Controls, F1 in flight)
 	# engine and release version (Godot from Engine.get_version_info(), game from project.godot
 	# application/config/version), small and quiet in the top-right corner
 	var gv: Dictionary = Engine.get_version_info()
 	var godot_ver: String = "Godot %d.%d%s" % [int(gv["major"]), int(gv["minor"]), (".%d" % int(gv["patch"])) if int(gv["patch"]) > 0 else ""]
-	var ver := UIKit.label("%s  ·  v%s" % [godot_ver, str(ProjectSettings.get_setting("application/config/version", "dev"))], 14, Color(0.9, 0.22, 0.16, 0.95))
-	ver.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	ver.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	ver.offset_right = -22.0
-	ver.offset_top = 14.0
-	root.add_child(ver)
-	# voluntary donation link, bottom-right (opens the player's browser; nothing is sent by the game)
-	var sup := UIKit.button("Support me on PayPal", func() -> void: OS.shell_open(DONATE_URL), 15)
-	sup.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	sup.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	sup.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	sup.offset_right = -22.0
-	sup.offset_bottom = -14.0
-	sup.tooltip_text = "Optional. Opens " + DONATE_URL + " in your web browser."
-	root.add_child(sup)
-	# manual update check (a request is made only when this is pressed)
-	var upd_newer: Array = [false]
-	var upd := UIKit.button("Check for updates", func() -> void: pass, 15)
-	upd.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	upd.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	upd.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	upd.offset_right = -22.0
-	upd.offset_bottom = -58.0
-	upd.tooltip_text = "Optional. Asks GitHub whether a newer release exists; sends nothing else."
-	root.add_child(upd)
+	var ver_box := PanelContainer.new()
+	var vb := StyleBoxFlat.new()
+	vb.bg_color = Color(0.02, 0.02, 0.02, 0.55)
+	vb.set_corner_radius_all(4)
+	vb.content_margin_left = 8
+	vb.content_margin_right = 8
+	vb.content_margin_top = 2
+	vb.content_margin_bottom = 2
+	ver_box.add_theme_stylebox_override("panel", vb)
+	var ver := UIKit.label("%s  ·  v%s" % [godot_ver, str(ProjectSettings.get_setting("application/config/version", "dev"))], 15, Color(1.0, 0.38, 0.3, 1.0), true)
+	ver.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	ver.add_theme_constant_override("outline_size", 4)
+	ver_box.add_child(ver)
+	ver_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	ver_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	ver_box.offset_right = -22.0
+	ver_box.offset_top = 28.0
+	root.add_child(ver_box)
 	var checker := UpdateCheck.new()
 	root.add_child(checker)
 	checker.result.connect(func(text: String, newer: bool) -> void:
@@ -323,14 +324,6 @@ void fragment() {
 		upd.text = "Checking..."
 		upd.disabled = true
 		checker.check())
-	var logs := UIKit.button("Open logs folder", func() -> void: OS.shell_open(ProjectSettings.globalize_path("user://logs")), 15)
-	logs.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	logs.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	logs.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	logs.offset_right = -22.0
-	logs.offset_bottom = -102.0
-	logs.tooltip_text = "Opens the folder with the game's log files (useful when reporting a crash)."
-	root.add_child(logs)
 	if FirstRun.pending():
 		_welcome_when_clear(root)
 
@@ -434,6 +427,79 @@ func _new_page() -> VBoxContainer:
 	p.add_theme_constant_override("separation", 8)
 	p.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	return p
+
+
+## One equal-width button in the bottom utility grid.
+func _mo_button(grid: GridContainer, text: String, cb: Callable, size: int = 16) -> Button:
+	var b := UIKit.button(text, cb, size)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(b)
+	return b
+
+
+func _glass_box(alpha: float) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.02, 0.02, 0.015, alpha)
+	sb.set_corner_radius_all(8)
+	sb.content_margin_left = 16
+	sb.content_margin_right = 16
+	sb.content_margin_top = 12
+	sb.content_margin_bottom = 12
+	return sb
+
+
+## Place the take-off pair and the utility grid for the chosen menu concept.
+func _place_actions(root: Control, outer: VBoxContainer, col: MarginContainer, take_row: HBoxContainer, grid: GridContainer, concept: int) -> void:
+	if concept == 2:
+		# Right-hand action card over the artwork; the left column stays a clean setup form.
+		var panel := PanelContainer.new()
+		panel.add_theme_stylebox_override("panel", _glass_box(0.80))
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 10)
+		panel.add_child(v)
+		v.add_child(UIKit.label("SORTIE ACTIONS", 12, UIKit.TEXT_DIM, true))
+		v.add_child(take_row)
+		grid.columns = 4
+		v.add_child(grid)
+		panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+		panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		panel.offset_right = -22.0
+		panel.offset_bottom = -22.0
+		root.add_child(panel)
+	elif concept == 3:
+		# A slim command bar across the bottom of the screen, balanced by a full-width top nav strip.
+		col.anchor_right = 1.0
+		col.offset_right = 0.0
+		_page_host.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		_page_host.custom_minimum_size = Vector2(610, 0)
+		for b in _nav_btns:
+			var nb: Button = b as Button
+			if nb != null:
+				nb.add_theme_font_size_override("font_size", 17)
+				nb.custom_minimum_size = Vector2(0, 36)
+		var panel := PanelContainer.new()
+		panel.add_theme_stylebox_override("panel", _glass_box(0.84))
+		var bar := HBoxContainer.new()
+		bar.add_theme_constant_override("separation", 12)
+		panel.add_child(bar)
+		take_row.alignment = BoxContainer.ALIGNMENT_BEGIN
+		bar.add_child(take_row)
+		grid.columns = 6
+		grid.add_theme_constant_override("h_separation", 6)
+		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bar.add_child(grid)
+		panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		panel.offset_left = 56.0
+		panel.offset_right = -56.0
+		panel.offset_bottom = -14.0
+		root.add_child(panel)
+	else:
+		outer.add_child(UIKit.rule(0.5))
+		grid.columns = 4
+		outer.add_child(take_row)
+		outer.add_child(grid)
 
 
 ## The first page to show: WW2_MENU_PAGE=SORTIE|START POINT|CONDITIONS|BRIEFING (for screenshots), else SORTIE.

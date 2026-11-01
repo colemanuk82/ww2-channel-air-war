@@ -19,12 +19,16 @@ const CFG_META := "ww2_cfg"
 const MENU_META := "ww2_force_menu"
 const RESUME_INTERVAL := 5.0
 const LOAD_TIPS := [
-	"FLY:  W / S pitch  ·  A / D roll  ·  Q / E yaw  (or the left stick)",
-	"BAIL OUT:  hold J briefly (about 0.6 s), above ~55 m; you can still get out just after a fatal hit.",
-	"OBJECTIVES:  the card top-left; the compass points at your target.  M opens the chart.",
-	"HELP:  Esc > Options > Controls lists every key and lets you remap gamepad buttons.",
+	"FLY:  left stick pitch and roll  ·  right trigger throttle  ·  right stick look around",
+	"FIRE:  A  ·  B switches guns / rockets / bombs  ·  RB boost  ·  LB target view",
+	"GEAR / FLAPS:  D-pad up auto-level, down gear, left flaps  ·  R3 wheel brake",
+	"BAIL OUT:  hold D-pad right briefly, above ~55 m; you can still get out just after a fatal hit.",
+	"OBJECTIVES:  the card top-left; the compass points at your target.  Y opens the chart.",
+	"T changes the time of day  ·  Y changes the weather conditions  (keyboard).",
+	"LANDING:  touching down at a friendly airfield rearms your guns, bombs and rockets.",
+	"DAMAGED?  Consider dropping your bombs to get away - a lighter aircraft is faster and turns tighter.",
 	"ENGINE HEAT:  the outer arc on the airspeed dial. Ease off or dive to cool it.",
-	"BACKSPACE respawns in free flight  ·  C changes view  ·  right stick looks around",
+	"HELP:  Start > Options > Controls lists every button and lets you remap the gamepad.",
 	"SEARCHLIGHTS, flares and distant flak are scenery: they are not aimed at you.",
 ]
 

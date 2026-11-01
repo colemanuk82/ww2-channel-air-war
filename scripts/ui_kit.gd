@@ -230,6 +230,28 @@ static func option_row(parent: Control, caption: String, items: Array, size: int
 	return ob
 
 
+## Compact form field: a caption and a fixed-width OptionButton that stays at its natural size, so it can be
+## placed two or three to a row without every dropdown stretching across the whole menu.
+static func option_field(parent: Control, caption: String, items: Array, field_width: float,
+		size: int = 18, caption_width: float = 68.0) -> OptionButton:
+	var hb := HBoxContainer.new()
+	hb.add_theme_constant_override("separation", 8)
+	hb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	parent.add_child(hb)
+	var l := label(caption.to_upper(), size - 3, TEXT_DIM, true)
+	l.custom_minimum_size = Vector2(caption_width, 0)
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hb.add_child(l)
+	var ob := OptionButton.new()
+	ob.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	ob.custom_minimum_size = Vector2(field_width, 0)
+	_style_option(ob, size)
+	for it in items:
+		ob.add_item(String(it))
+	hb.add_child(ob)
+	return ob
+
+
 ## Full-screen dimmer with a soft vignette (used behind pause / options / results).
 static func dimmer(alpha: float = 0.55) -> Control:
 	var c := ColorRect.new()
