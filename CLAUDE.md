@@ -10,3 +10,10 @@
 * Aircraft liveries are painted textures (`assets/liveries/`, see `tools/liveries/README.md`). After changing an
   aircraft model, rebuild them headless with `tools/hidden/livery_build.ps1 [-Only id,id]`; a model whose
   layout changed falls back to its old look until repainted. Never copy textures from other games.
+* **Never commit commercial audio.** Every audio file under `assets/` must be covered by
+  `tools/audio_allowlist.json`: a royalty-free Pixabay track with its title, artist and source, or the
+  `assets/voice/` prefix for our own generated voices. Film, TV, broadcast and other games' soundtracks
+  (the *Battle of Britain* score, for example) can never be redistributed with the game - players import
+  their own copies through **Options > Music** at run time. `python tools/check_audio_licences.py`, the
+  `TESTS OK` gate and the `Audio licences` workflow all enforce this; if a check fails, delete the file
+  rather than widening the allowlist.

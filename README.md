@@ -16,7 +16,7 @@ Any suggestions or feedback? Let me know!
 
 > 🎵 **Recommended: play it with your own music.** The game ships with royalty-free tracks, but it really comes alive with something like the *Battle of Britain* film soundtrack (or any WW2-era score you own) playing over the Channel.
 > **How:** start the game, open **Options > Music**, pick **MENU MUSIC** (start screen) or **IN-GAME MUSIC** (flying), press **Import...** and choose your MP3, OGG or WAV files. Keep **Shuffle: On** to mix them, or turn it off to play in order. Use **Delete** to remove tracks you no longer want.
-> Your files are copied into the game's own music folder, so the originals stay where they are. The game does not include any commercial soundtrack: bring your own.
+> Your files are copied into the game's own music folder, so the originals stay where they are. The game does not include any commercial soundtrack: bring your own. The repo only ever ships royalty-free tracks, and a licence check in the build and CI refuses to release anything else.
 
 
 </div>

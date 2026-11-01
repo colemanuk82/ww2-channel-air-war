@@ -1,0 +1,2 @@
+# Git hooks are run by sh (Git for Windows uses MSYS sh): keep them LF even with core.autocrlf=true.
+.githooks/* text eol=lf

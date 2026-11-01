@@ -34,6 +34,10 @@ Imported assets (CC0 / CC-BY) must be listed here as: name, author, licence, sou
 - Aircraft performance figures (`data/aircraft/*.tres`, derived by `tools/apply_flight_models.py`) are rounded from published specifications: Wikipedia (CC BY-SA 4.0, https://www.wikipedia.org) and https://battleofbritain1940.com, as listed in the script header. No game files were used.
 
 ## Music
+- No commercial, film, TV, broadcast or other game's music is included, and none may be added: the
+  player imports their own copies through **Options > Music** at run time. `tools/audio_allowlist.json`
+  lists every audio file that may ship, and `tools/check_audio_licences.py` (also run by the headless
+  test suite, the pre-commit hook and CI) rejects anything else.
 - Voices: generated with ElevenLabs (AI text-to-speech), https://elevenlabs.io. No human recordings.
 - In-flight music (`assets/music/ingame/`), Pixabay Content License (https://pixabay.com/service/license-summary/) — check each track page before any commercial release:
   - "Freedom" by jeremusic70 — https://pixabay.com/users/jeremusic70-25199461/

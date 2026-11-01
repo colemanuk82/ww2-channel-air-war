@@ -14,6 +14,22 @@ Run everything from the project root `F:\ww2`.
 | `fetch_landcover.py` | `data/heightmap/region_landcover.bin` + `.json` (+ `.png` debug view) | ESA WorldCover 10 m land cover (CC-BY) window-read straight from the public COGs (needs the `rasterio` package). Drives 3D placement: trees on tree cover, buildings on built-up, hedgerows on cropland. `--width/--height` (default 2048x1024) set the grid; delete the `.bin` to fall back to the painted/random scatter. |
 | `validate_data.py` | stdout | Schema checks, counts, bounds, file sizes, Dover/Channel heightmap sanity, and `latlon_to_world` for Dover, Calais, London, Antwerp. Exit 1 on error. |
 
+## Audio licences (every audio file that ships must be listed)
+`check_audio_licences.py` scans `assets/` for audio files and fails if one is not covered by
+`tools/audio_allowlist.json` — either an explicit track entry (title, artist, source) or a `generated`
+prefix for our own AI-voice output. Commercial film / TV / game recordings must never be committed:
+players import their own copies through **Options > Music** at run time.
+
+```
+python tools/check_audio_licences.py          # whole repo, exit 1 on an unlisted file
+python tools/check_audio_licences.py --staged # only what the next commit adds
+```
+
+It runs in three places, so an unlicensed file cannot ride along again: the headless test suite
+(`_test_audio_licences` in `tools/tests.gd`, part of the `TESTS OK` release gate), the
+`.githooks/pre-commit` hook (`git config core.hooksPath .githooks` once per clone) and the
+`Audio licences` GitHub workflow on every push.
+
 ## Chalk-cliff geometry (engine, not a python tool)
 `scripts/ground/cliff_skirt.gd` (`class_name CliffSkirt`) appends a near-vertical face mesh along the
 OSM coastline inside the five chalk `cliff_zones`, so Dover / South Foreland / Seven Sisters / Cap

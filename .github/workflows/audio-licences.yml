@@ -1,0 +1,19 @@
+name: Audio licences
+
+# Fails the build if any audio file in the repo has no licence entry in tools/audio_allowlist.json.
+# Commercial film / TV / game recordings must never be committed: players import their own copies
+# through Options > Music at run time.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check every audio file is licence-listed
+        run: python3 tools/check_audio_licences.py

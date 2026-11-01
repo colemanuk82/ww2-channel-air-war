@@ -20,6 +20,7 @@ func _ready() -> void:
 	_test_turret_mounts()
 	_test_scatter_masks()
 	_test_music()
+	_test_audio_licences()
 	_test_audio()
 	_test_logbook_voice()
 	_test_custom_missions()
@@ -493,11 +494,53 @@ func _test_music() -> void:
 	var menu: Array = MenuMusic.discover_in("res://assets/music/")
 	var ingame: Array = MenuMusic.discover_in("res://assets/music/ingame/")
 	_check(menu.size() >= 2, "start-menu playlist has tracks (%d)" % menu.size())
-	_check(ingame.size() >= 19, "in-game playlist has tracks (%d)" % ingame.size())
+	_check(ingame.size() >= 25, "in-game playlist has tracks (%d)" % ingame.size())
 	for p in menu:
 		_check(ResourceLoader.exists(String(p)), "menu track loads: %s" % p)
 	for p in ingame:
 		_check(ResourceLoader.exists(String(p)), "in-game track loads: %s" % p)
+
+
+## Every audio file in the repo must be covered by tools/audio_allowlist.json. Commercial recordings
+## (film, TV, game soundtracks) cannot be redistributed with the game: the player imports their own
+## copies at run time. This gate stops an unlicensed file being committed and shipped again.
+func _test_audio_licences() -> void:
+	print("-- audio licences")
+	var raw: String = FileAccess.get_file_as_string("res://tools/audio_allowlist.json")
+	if not _check(raw != "", "audio allowlist is readable"):
+		return
+	var data: Variant = JSON.parse_string(raw)
+	if not _check(data is Dictionary, "audio allowlist is valid JSON"):
+		return
+	var allowed: Dictionary = {}
+	for t in data.get("tracks", []):
+		for k in ["path", "title", "artist", "source"]:
+			_check(t.has(k) and str(t[k]) != "", "allowlist entry has %s: %s" % [k, str(t.get("path", "?"))])
+		allowed[str(t.get("path", ""))] = true
+	var generated: Array = data.get("generated", [])
+	var files: Array = _audio_files_under("res://assets/")
+	_check(files.size() > 0, "audio files found under res://assets (%d)" % files.size())
+	for f in files:
+		var rel: String = String(f).trim_prefix("res://")
+		var covered: bool = allowed.has(rel)
+		if not covered:
+			for g in generated:
+				if rel.begins_with(str(g)):
+					covered = true
+					break
+		_check(covered, "audio file is licence-listed: %s" % rel)
+
+
+func _audio_files_under(dir: String, out: Array = []) -> Array:
+	var d: DirAccess = DirAccess.open(dir)
+	if d == null:
+		return out
+	for f in d.get_files():
+		if MenuMusic.EXTS.has(dir.path_join(f).get_extension().to_lower()):
+			out.append(dir.path_join(f))
+	for sub in d.get_directories():
+		_audio_files_under(dir.path_join(sub) + "/", out)
+	return out
 
 
 func _test_audio() -> void:
