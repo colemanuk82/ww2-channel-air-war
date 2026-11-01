@@ -10,6 +10,10 @@
   missing licence. A track without a licence now fails the build instead of riding along.
 - Players still import their own music via **Options > Music**; the README's recommendation stands, the files are
   just not ours to ship.
+- The repository was deleted and re-created under the same name on 2026-11-01: after the force-push, GitHub still
+  served the removed blobs by SHA (commit page, raw URL and even a tarball of the old tree), and only deleting the
+  repo destroys its object store. Kept releases v2.18, v2.21, v2.22, v2.23 and v2.104 were re-uploaded; the older
+  release binaries (v1.0-v2.18) were not restored. Tags and history are unchanged, so links still resolve.
 
 # SESSION 2026-10-24 (v2.8): standard Godot 4.7.2, double precision
 - The game now runs on **standard Godot 4.7.2-stable**, built from the official source in `F:\godot-std` with
