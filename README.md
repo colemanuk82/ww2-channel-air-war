@@ -36,13 +36,13 @@ Any suggestions or feedback? Let me know!
 | 🛠️ **Build your own missions** | A built-in Mission Editor: place flights, convoys, ships, flak and real targets on the map, draw their routes, set objectives and script what happens with triggers, then fly it. [More below](#%EF%B8%8F-mission-editor). |
 | 🗓️ **The map follows the war** | Choose your sortie date and the ground changes with it: bomb damage that builds up through the Blitz and the bombing of Germany, the 1944 invasion build-up, Normandy after D-Day, flooded valleys, the Westwall, and bridges that fall on the day they did. Bocage, open fields, polders and the Weald, with the seasons on the farmland. |
 | 🏕️ **A living wartime map** | 116 real airfields in RAF and Luftwaffe styles, with gun pits, blast pens and dispersals. Wired army camps packed with tanks under camouflage nets, tent lines, ammo bays and fuel dumps.|
-| 🎵 **Soundtrack** | 15 royalty-free orchestral and big-band tracks, separate Allied and Axis victory music, or import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
+| 🎵 **Soundtrack** | 25 royalty-free orchestral and big-band tracks, separate Allied and Axis victory music, or import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
 | 💸 **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
 
 
 ## 🎮 Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v2.102.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v2.103.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 
 2. Run it. It installs just for you, with no admin rights needed.
 
@@ -114,7 +114,7 @@ All tracks are royalty-free from [Pixabay](https://pixabay.com) under the [Pixab
 
 | Artist | Tracks |
 |---|---|
-| [jeremusic70](https://pixabay.com/users/jeremusic70-25199461/) | "Freedom" |
+| [jeremusic70](https://pixabay.com/users/jeremusic70-25199461/) | "Freedom", "Epic Flight", "Open Skies", "Mission", "Hero", "Journey Ahead", "Victory", "Empire", "Epic Colors", "Epic Legacy", "Rise Again" |
 | [nocopyrightsound633](https://pixabay.com/users/nocopyrightsound633-47610058/) | "Rise of Shadows", "Race Against Time", "Cinematic Violin Tribal", "Rise of the Titans", "Battle Cry of the Brave" |
 | [musicwallah](https://pixabay.com/users/musicwallah-51797968/) | "Cinematic Action Movie Music", "Epic Orchestral Music with Flute", "Suspenseful Thriller Music" |
 | [The_Mountain](https://pixabay.com/users/the_mountain-3616498/) | "Cinematic War", "Trailer War" |

@@ -493,7 +493,7 @@ func _test_music() -> void:
 	var menu: Array = MenuMusic.discover_in("res://assets/music/")
 	var ingame: Array = MenuMusic.discover_in("res://assets/music/ingame/")
 	_check(menu.size() >= 2, "start-menu playlist has tracks (%d)" % menu.size())
-	_check(ingame.size() >= 9, "in-game playlist has tracks (%d)" % ingame.size())
+	_check(ingame.size() >= 19, "in-game playlist has tracks (%d)" % ingame.size())
 	for p in menu:
 		_check(ResourceLoader.exists(String(p)), "menu track loads: %s" % p)
 	for p in ingame:
