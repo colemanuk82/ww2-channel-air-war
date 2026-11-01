@@ -1,0 +1,300 @@
+{
+	"format": 1,
+	"name": "Channel Convoy",
+	"author": "WW2 Channel Air War",
+	"briefing": "August 1940. A coastal convoy of colliers is creeping west along the Kent coast under the noses of the guns at Cap Gris Nez, with one destroyer for company. Sector Control expects the Stukas to come for it.\n\nPatrol over the convoy. When the raid comes in, get among the dive-bombers before they reach the ships, then bring your section home to land.",
+	"side": "Allies",
+	"aircraft": "hurricane",
+	"time": "noon",
+	"weather": "scattered",
+	"date": "1940-08-08",
+	"difficulty": 0.5,
+	"wingmen": 2,
+	"start": {
+		"lat": 51.115,
+		"lon": 1.149,
+		"airfield": "hawkinge",
+		"airborne": true,
+		"alt": 1800.0,
+		"heading": 200.0
+	},
+	"units": [
+		{
+			"id": "convoy",
+			"name": "Coastal convoy",
+			"kind": "ships",
+			"type": "collier",
+			"side": "Allies",
+			"count": 4,
+			"lat": 51.03,
+			"lon": 1.3,
+			"alt": 0.0,
+			"heading": 240.0,
+			"route": [
+				[
+					50.98,
+					1.1
+				],
+				[
+					50.86,
+					0.95
+				],
+				[
+					50.74,
+					0.55
+				]
+			],
+			"behavior": "move",
+			"active": true,
+			"skill": 0.5
+		},
+		{
+			"id": "escort_ship",
+			"name": "HMS escort",
+			"kind": "ships",
+			"type": "destroyer",
+			"side": "Allies",
+			"count": 1,
+			"lat": 51.01,
+			"lon": 1.34,
+			"alt": 0.0,
+			"heading": 240.0,
+			"route": [
+				[
+					50.96,
+					1.13
+				],
+				[
+					50.84,
+					0.98
+				],
+				[
+					50.72,
+					0.58
+				]
+			],
+			"behavior": "move",
+			"active": true,
+			"skill": 0.5
+		},
+		{
+			"id": "stukas",
+			"name": "Stuka raid",
+			"kind": "flight",
+			"type": "ju87",
+			"side": "Axis",
+			"count": 6,
+			"lat": 50.92,
+			"lon": 1.78,
+			"alt": 2600.0,
+			"heading": 290.0,
+			"route": [
+				[
+					50.97,
+					1.2
+				],
+				[
+					50.93,
+					1.0
+				]
+			],
+			"behavior": "route",
+			"active": false,
+			"skill": 0.5
+		},
+		{
+			"id": "escort_109s",
+			"name": "109 top cover",
+			"kind": "flight",
+			"type": "bf109",
+			"side": "Axis",
+			"count": 4,
+			"lat": 50.95,
+			"lon": 1.85,
+			"alt": 3600.0,
+			"heading": 290.0,
+			"route": [],
+			"behavior": "hunt",
+			"active": false,
+			"skill": 0.5
+		},
+		{
+			"id": "second_wave",
+			"name": "Ju 88 second wave",
+			"kind": "flight",
+			"type": "ju88",
+			"side": "Axis",
+			"count": 3,
+			"lat": 50.85,
+			"lon": 1.7,
+			"alt": 3000.0,
+			"heading": 300.0,
+			"route": [
+				[
+					50.9,
+					1.0
+				],
+				[
+					50.85,
+					0.85
+				]
+			],
+			"behavior": "route",
+			"active": false,
+			"skill": 0.5
+		}
+	],
+	"zones": [
+		{
+			"id": "convoy_area",
+			"name": "Convoy",
+			"lat": 50.96,
+			"lon": 1.12,
+			"radius": 6.0
+		}
+	],
+	"objectives": [
+		{
+			"id": "obj_convoy",
+			"text": "Keep the convoy afloat",
+			"kind": "protect",
+			"target": "convoy",
+			"required": true,
+			"shown": true
+		},
+		{
+			"id": "obj_stukas",
+			"text": "Shoot down the Stukas",
+			"kind": "destroy",
+			"target": "stukas",
+			"required": true,
+			"shown": false
+		},
+		{
+			"id": "obj_land",
+			"text": "Land at a friendly airfield",
+			"kind": "land",
+			"target": "",
+			"required": true,
+			"shown": false
+		}
+	],
+	"triggers": [
+		{
+			"id": "trigger1",
+			"name": "Raid inbound",
+			"once": true,
+			"logic": "all",
+			"delay": 0.0,
+			"conditions": [
+				{
+					"type": "time",
+					"seconds": 40.0
+				}
+			],
+			"actions": [
+				{
+					"type": "radio",
+					"speaker": "Sector Control",
+					"text": "Twenty plus bandits forming up over Calais, heading for the convoy. Angels eight. Vector one-three-zero.",
+					"from": "control"
+				},
+				{
+					"type": "activate",
+					"unit": "stukas"
+				},
+				{
+					"type": "activate",
+					"unit": "escort_109s"
+				},
+				{
+					"type": "objective",
+					"objective": "obj_stukas",
+					"state": "active"
+				},
+				{
+					"type": "nav",
+					"zone": "convoy_area"
+				}
+			]
+		},
+		{
+			"id": "trigger2",
+			"name": "Ships hit",
+			"once": true,
+			"logic": "all",
+			"delay": 0.0,
+			"conditions": [
+				{
+					"type": "unit_losses",
+					"unit": "convoy",
+					"count": 2
+				}
+			],
+			"actions": [
+				{
+					"type": "radio",
+					"speaker": "Convoy commodore",
+					"text": "Two ships hit and burning! Where are those fighters?",
+					"from": "friendly"
+				}
+			]
+		},
+		{
+			"id": "trigger3",
+			"name": "Second wave (maybe)",
+			"once": true,
+			"logic": "all",
+			"delay": 0.0,
+			"conditions": [
+				{
+					"type": "time",
+					"seconds": 180.0
+				},
+				{
+					"type": "chance",
+					"percent": 50.0
+				}
+			],
+			"actions": [
+				{
+					"type": "radio",
+					"speaker": "Sector Control",
+					"text": "Another raid coming in low from the south. Ju 88s, a handful of them.",
+					"from": "control"
+				},
+				{
+					"type": "activate",
+					"unit": "second_wave"
+				}
+			]
+		},
+		{
+			"id": "trigger4",
+			"name": "Stukas beaten off",
+			"once": true,
+			"logic": "all",
+			"delay": 3.0,
+			"conditions": [
+				{
+					"type": "objective",
+					"objective": "obj_stukas",
+					"state": "complete"
+				}
+			],
+			"actions": [
+				{
+					"type": "radio",
+					"speaker": "Convoy commodore",
+					"text": "Thank you, fighters. We'll make the Downs tonight.",
+					"from": "friendly"
+				},
+				{
+					"type": "objective",
+					"objective": "obj_land",
+					"state": "active"
+				}
+			]
+		}
+	]
+}

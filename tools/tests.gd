@@ -22,6 +22,7 @@ func _ready() -> void:
 	_test_music()
 	_test_audio()
 	_test_logbook_voice()
+	_test_custom_missions()
 	_test_data_files()
 	_test_river_data()
 	_test_landmarks_all()
@@ -546,6 +547,85 @@ func _test_logbook_voice() -> void:
 			_check(pick != prev, "logbook pick never repeats")
 		LogbookMenu._last_track = pick
 		prev = pick
+
+
+func _test_custom_missions() -> void:
+	print("-- custom missions (Mission Editor)")
+	var all: Array = MissionDoc.list_all()
+	var bundled: int = 0
+	for e in all:
+		if bool(e["bundled"]):
+			bundled += 1
+			var v: Dictionary = MissionDoc.validate(e["doc"])
+			_check((v["errors"] as PackedStringArray).is_empty(), "example mission '%s' is valid %s" % [e["name"], str(v["errors"])])
+			var cfg: Dictionary = MissionDoc.start_config(e["doc"], str(e["path"]))
+			_check(str(cfg["mode"]) == "custom" and cfg.has("spawn_lat") and cfg.has("custom_doc"), "example '%s' builds a start config" % e["name"])
+	_check(bundled >= 3, "three example missions ship with the game (%d)" % bundled)
+	_check(ModeRegistry.has_mode("custom") and not ModeRegistry.get_available_ids().has("custom"), "the custom mode exists but stays out of the menu's Mode list")
+	# every unit kind makes a valid default unit for both sides
+	for kind in MissionDoc.UNIT_KINDS.keys():
+		for sd in ["Allies", "Axis"]:
+			var d0: Dictionary = MissionDoc.new_doc(sd)
+			var u: Dictionary = MissionDoc.new_unit(d0, kind, 51.0, 1.3)
+			_check(MissionDoc.unit_types(kind, str(u["side"])).has(str(u["type"])), "a new %s unit (%s) has a valid type" % [kind, sd])
+	# validation catches broken references; upgrade fills in what a hand-written file leaves out
+	var bad: Dictionary = MissionDoc.upgrade({"name": "x", "side": "Allies", "aircraft": "spitfire", "objectives": [{"id": "o1", "kind": "destroy", "target": "nope"}],
+		"triggers": [{"id": "t1", "conditions": [{"type": "unit_destroyed", "unit": "nope"}], "actions": [{"type": "warp_drive"}]}]})
+	var vb: Dictionary = MissionDoc.validate(bad)
+	_check((vb["errors"] as PackedStringArray).size() >= 3, "validation finds the missing unit, the bad reference and the unknown action (%d)" % (vb["errors"] as PackedStringArray).size())
+	_check(bad.has("start") and bad.has("units") and bool((bad["objectives"][0] as Dictionary).get("required", false)), "upgrade fills in missing keys")
+	# save, list, load and delete a mission in user://missions/
+	var doc: Dictionary = MissionDoc.new_doc("Allies")
+	doc["name"] = "Test mission %d" % randi()
+	var path: String = MissionDoc.save(doc)
+	_check(path.begins_with(MissionDoc.USER_DIR) and FileAccess.file_exists(path), "a mission saves to user://missions/")
+	_check(str(MissionDoc.load_file(path).get("name", "")) == doc["name"], "a saved mission loads back")
+	_check(MissionDoc.delete(path) and not FileAccess.file_exists(path), "a saved mission can be deleted")
+	# the trigger engine: time -> flag -> objective -> mission end; once / repeat; any / all; delays
+	var td: Dictionary = MissionDoc.new_doc("Allies")
+	td["objectives"] = [{"id": "o1", "text": "Do it", "kind": "manual", "target": "", "required": true, "shown": false}]
+	td["triggers"] = [
+		{"id": "t1", "name": "a", "once": true, "logic": "all", "delay": 0.0, "conditions": [{"type": "time", "seconds": 10.0}], "actions": [{"type": "flag", "flag": "go", "value": true}, {"type": "objective", "objective": "o1", "state": "active"}]},
+		{"id": "t2", "name": "b", "once": true, "logic": "all", "delay": 5.0, "conditions": [{"type": "flag", "flag": "go", "value": true}, {"type": "trigger_fired", "trigger": "t1"}], "actions": [{"type": "objective", "objective": "o1", "state": "complete"}]},
+		{"id": "t3", "name": "c", "once": false, "logic": "any", "delay": 0.0, "conditions": [{"type": "time", "seconds": 1.0e9}, {"type": "flag", "flag": "blink", "value": true}], "actions": [{"type": "score", "points": 1}]},
+	]
+	_check((MissionDoc.validate(td)["errors"] as PackedStringArray).is_empty(), "the trigger test mission is valid")
+	var m := CustomMissionMode.new()
+	m.configure(MissionDoc.start_config(td))
+	add_child(m)
+	m._init_state()
+	m.running = true
+	m.elapsed = 5.0
+	m._run_triggers()
+	m._run_queue()
+	_check(m._obj("o1")["state"] == "inactive" and not m._flags.has("go"), "nothing fires before its time")
+	m.elapsed = 10.0
+	m._run_triggers()
+	m._run_queue()
+	_check(bool(m._flags.get("go", false)) and m._obj("o1")["state"] == "active", "the time trigger sets the flag and shows the objective")
+	m._run_triggers()
+	m._run_queue()
+	_check(m._obj("o1")["state"] == "active", "a delayed trigger waits its delay")
+	m.elapsed = 15.5
+	m._run_triggers()
+	m._run_queue()
+	_check(m._obj("o1")["state"] == "complete", "after the delay the second trigger completes the objective")
+	m._check_end()
+	_check(m._ending, "all required objectives done: the mission ends in success")
+	var s0: int = m.score
+	for k in 3:       # a repeating trigger fires on each rising edge, not every check
+		m._flags["blink"] = true
+		m._run_triggers()
+		m._run_triggers()
+		m._run_queue()
+		m._flags["blink"] = false
+		m._run_triggers()
+	_check(m.score - s0 == 3, "a repeating trigger fires once each time its condition becomes true (%d)" % (m.score - s0))
+	var t1: Dictionary = m._trig[0]
+	m._run_triggers()
+	_check(int(t1["fired"]) == 1, "a once trigger never fires twice")
+	m.running = false
+	m.queue_free()
 
 func _peak(s: AudioStreamWAV) -> float:
 	var d: PackedByteArray = s.data

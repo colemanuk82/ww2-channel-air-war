@@ -250,6 +250,9 @@ void fragment() {
 	var lb := UIKit.button("Logbook", _open_logbook, 20)
 	lb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(lb)
+	var meb := UIKit.button("Mission Editor", func() -> void: _open_mission_editor(), 20)
+	meb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(meb)
 	var tf := UIKit.button("Training Film", func() -> void: open_film(), 20)
 	tf.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(tf)
@@ -363,6 +366,10 @@ void fragment() {
 	if Engine.has_meta("open_career"):        # returning from a Pilot's Life sortie
 		Engine.remove_meta("open_career")
 		_open_career.call_deferred()
+	if Engine.has_meta("open_mission_editor"):   # returning from a test flight: straight back into the editor
+		var mret: Dictionary = Engine.get_meta("open_mission_editor")
+		Engine.remove_meta("open_mission_editor")
+		_open_mission_editor.call_deferred(mret.get("doc", {}), str(mret.get("path", "")))
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--medal-shot="):   # debug: screenshot the start-up newsreel (1.5 s) and the medal ceremony (8 s)
 			var mshot: String = arg.substr(13)
@@ -387,6 +394,36 @@ void fragment() {
 			get_tree().create_timer(6.0).timeout.connect(_show_mission_list)
 			get_tree().create_timer(8.0).timeout.connect(func() -> void:
 				get_viewport().get_window().get_viewport().get_texture().get_image().save_png(ms_path)
+				get_tree().quit())
+		if arg.begins_with("--editor-shot="):   # debug: open the Mission Editor (on --editor-doc=<path>, tab --editor-tab=N), screenshot, quit
+			var eshot: String = arg.substr(14)
+			var edoc: String = ""
+			var etab: int = -1
+			var esel: String = ""
+			for a2 in OS.get_cmdline_user_args():
+				if a2.begins_with("--editor-doc="):
+					edoc = a2.substr(13)
+				if a2.begins_with("--editor-tab="):
+					etab = int(a2.substr(13))
+				if a2.begins_with("--editor-sel="):
+					esel = a2.substr(13)
+			get_tree().create_timer(10.0).timeout.connect(func() -> void:
+				_open_mission_editor(MissionDoc.load_file(edoc) if edoc != "" else {}, "")
+				if etab >= 0 or esel != "":
+					get_tree().create_timer(0.6).timeout.connect(func() -> void:
+						for c in get_children():
+							if c is MissionEditor:
+								if esel != "":
+									var parts: PackedStringArray = esel.split(":")
+									if parts[0] in ["objectives", "triggers"]:
+										(c as MissionEditor)._forms[parts[0] + "_sel"] = parts[1]
+										(c as MissionEditor)._build_group_page(parts[0])
+									else:
+										(c as MissionEditor).call("_select", parts[0], parts[1])
+								if etab >= 0:
+									(c as MissionEditor)._tabs.current_tab = etab))
+			get_tree().create_timer(13.0).timeout.connect(func() -> void:
+				get_viewport().get_texture().get_image().save_png(eshot)
 				get_tree().quit())
 		if arg.begins_with("--logbook-shot="):   # debug: open the logbook from the menu, save a screenshot, quit
 			var shot_path: String = arg.substr(15)
@@ -684,6 +721,19 @@ func _open_logbook() -> void:
 	var lm := LogbookMenu.new()
 	lm.closed.connect(func() -> void: layer.queue_free())
 	layer.add_child(lm)
+
+## The Mission Editor: the list of custom missions to fly or edit, and the editor itself. `d` / `p` reopen a mission
+## straight in the editor (coming back from a test flight).
+func _open_mission_editor(d: Dictionary = {}, p: String = "") -> void:
+	var me := MissionEditor.new()
+	me.open_doc = d
+	me.open_path = p
+	me.closed.connect(func() -> void: me.queue_free())
+	me.play_requested.connect(func(cfg: Dictionary) -> void:
+		me.queue_free()
+		start_requested.emit(cfg))
+	add_child(me)
+
 
 func _open_legal() -> void:
 	var layer := CanvasLayer.new()

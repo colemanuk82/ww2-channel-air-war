@@ -1,0 +1,161 @@
+{
+	"format": 1,
+	"name": "Adlertag: Blind the Radar",
+	"author": "WW2 Channel Air War",
+	"briefing": "13 August 1940, Eagle Day. Before the main raids go in, the tall masts at Dover must come down so the English cannot see us coming.\n\nTake your Bf 110s across at low level, put your bombs on the Chain Home station at Swingate, and get back across the water before the Spitfires catch you.",
+	"side": "Axis",
+	"aircraft": "bf110",
+	"time": "dawn",
+	"weather": "scattered",
+	"date": "1940-08-13",
+	"difficulty": 0.5,
+	"wingmen": 3,
+	"start": {
+		"lat": 50.962,
+		"lon": 1.954,
+		"airfield": "calais_marck",
+		"airborne": true,
+		"alt": 900.0,
+		"heading": 320.0
+	},
+	"units": [
+		{
+			"id": "radar",
+			"name": "Chain Home Dover (Swingate)",
+			"kind": "world",
+			"type": "radar_dover_ch",
+			"side": "Allies",
+			"count": 1,
+			"lat": 51.132,
+			"lon": 1.333,
+			"alt": 0.0,
+			"heading": 0.0,
+			"route": [],
+			"behavior": "hold",
+			"active": true,
+			"skill": 0.5
+		},
+		{
+			"id": "dover_flak",
+			"name": "Dover guns",
+			"kind": "flak",
+			"type": "bofors",
+			"side": "Allies",
+			"count": 4,
+			"lat": 51.128,
+			"lon": 1.32,
+			"alt": 0.0,
+			"heading": 0.0,
+			"route": [],
+			"behavior": "hold",
+			"active": true,
+			"skill": 0.5
+		},
+		{
+			"id": "spitfires",
+			"name": "Scrambled Spitfires",
+			"kind": "flight",
+			"type": "spitfire",
+			"side": "Allies",
+			"count": 4,
+			"lat": 51.2,
+			"lon": 1.15,
+			"alt": 2500.0,
+			"heading": 120.0,
+			"route": [],
+			"behavior": "hunt",
+			"active": false,
+			"skill": 0.5
+		}
+	],
+	"zones": [
+		{
+			"id": "home",
+			"name": "French coast",
+			"lat": 50.95,
+			"lon": 1.85,
+			"radius": 8.0
+		}
+	],
+	"objectives": [
+		{
+			"id": "obj_radar",
+			"text": "Bomb the radar station at Dover",
+			"kind": "destroy",
+			"target": "radar",
+			"required": true,
+			"shown": true
+		},
+		{
+			"id": "obj_home",
+			"text": "Get back across the Channel",
+			"kind": "reach",
+			"target": "home",
+			"required": true,
+			"shown": false
+		}
+	],
+	"triggers": [
+		{
+			"id": "trigger1",
+			"name": "Scramble",
+			"once": true,
+			"logic": "any",
+			"delay": 20.0,
+			"conditions": [
+				{
+					"type": "time",
+					"seconds": 120.0
+				},
+				{
+					"type": "unit_losses",
+					"unit": "radar",
+					"count": 1
+				}
+			],
+			"actions": [
+				{
+					"type": "radio",
+					"speaker": "Leader",
+					"text": "Achtung, Spitfires coming up from Hawkinge!",
+					"from": "friendly"
+				},
+				{
+					"type": "activate",
+					"unit": "spitfires"
+				}
+			]
+		},
+		{
+			"id": "trigger2",
+			"name": "Masts down",
+			"once": true,
+			"logic": "all",
+			"delay": 1.0,
+			"conditions": [
+				{
+					"type": "objective",
+					"objective": "obj_radar",
+					"state": "complete"
+				}
+			],
+			"actions": [
+				{
+					"type": "radio",
+					"speaker": "Leader",
+					"text": "The masts are down! All aircraft, home, home!",
+					"from": "friendly"
+				},
+				{
+					"type": "objective",
+					"objective": "obj_home",
+					"state": "active"
+				},
+				{
+					"type": "nav",
+					"zone": "home"
+				}
+			]
+		}
+	]
+}

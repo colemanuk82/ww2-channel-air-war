@@ -1,0 +1,222 @@
+{
+	"format": 1,
+	"name": "Night Strike on Boulogne",
+	"author": "WW2 Channel Air War",
+	"briefing": "March 1943. Fast attack boats have been raiding the east coast convoys and lying up in Boulogne harbour by day.\n\nCross the Channel low and fast in the dark, keep under the flak, and wreck the boats at their moorings. Night fighters are about once the searchlights find you. Then get home and land.\n\nTip: stay under 300 m over the harbour.",
+	"side": "Allies",
+	"aircraft": "mosquito",
+	"time": "night",
+	"weather": "clear",
+	"date": "1943-03-10",
+	"difficulty": 0.5,
+	"wingmen": 1,
+	"start": {
+		"lat": 51.05,
+		"lon": 1.25,
+		"airfield": "",
+		"airborne": true,
+		"alt": 600.0,
+		"heading": 200.0
+	},
+	"units": [
+		{
+			"id": "boats",
+			"name": "Boats at their moorings",
+			"kind": "ships",
+			"type": "trawler",
+			"side": "Axis",
+			"count": 4,
+			"lat": 50.727,
+			"lon": 1.592,
+			"alt": 0.0,
+			"heading": 270.0,
+			"route": [],
+			"behavior": "hold",
+			"active": true,
+			"skill": 0.5
+		},
+		{
+			"id": "heavy_flak",
+			"name": "88s on the cliffs",
+			"kind": "flak",
+			"type": "88mm",
+			"side": "Axis",
+			"count": 2,
+			"lat": 50.745,
+			"lon": 1.615,
+			"alt": 0.0,
+			"heading": 0.0,
+			"route": [],
+			"behavior": "hold",
+			"active": true,
+			"skill": 0.5
+		},
+		{
+			"id": "light_flak",
+			"name": "Harbour Bofors",
+			"kind": "flak",
+			"type": "bofors",
+			"side": "Axis",
+			"count": 3,
+			"lat": 50.722,
+			"lon": 1.6,
+			"alt": 0.0,
+			"heading": 0.0,
+			"route": [],
+			"behavior": "hold",
+			"active": true,
+			"skill": 0.5
+		},
+		{
+			"id": "nightfighters",
+			"name": "Night fighters",
+			"kind": "flight",
+			"type": "bf110",
+			"side": "Axis",
+			"count": 2,
+			"lat": 50.78,
+			"lon": 1.75,
+			"alt": 1500.0,
+			"heading": 270.0,
+			"route": [],
+			"behavior": "hunt",
+			"active": false,
+			"skill": 0.5
+		}
+	],
+	"zones": [
+		{
+			"id": "harbour",
+			"name": "Boulogne harbour",
+			"lat": 50.727,
+			"lon": 1.595,
+			"radius": 2.5
+		},
+		{
+			"id": "approach",
+			"name": "French coast",
+			"lat": 50.75,
+			"lon": 1.58,
+			"radius": 12.0
+		}
+	],
+	"objectives": [
+		{
+			"id": "obj_boats",
+			"text": "Sink the boats in Boulogne harbour",
+			"kind": "destroy",
+			"target": "boats",
+			"required": true,
+			"shown": true
+		},
+		{
+			"id": "obj_home",
+			"text": "Fly home and land",
+			"kind": "land",
+			"target": "",
+			"required": true,
+			"shown": false
+		}
+	],
+	"triggers": [
+		{
+			"id": "trigger1",
+			"name": "Briefing",
+			"once": true,
+			"logic": "all",
+			"delay": 2.0,
+			"conditions": [],
+			"actions": [
+				{
+					"type": "radio",
+					"speaker": "Navigator",
+					"text": "Boulogne dead ahead, twenty miles. Keep her down on the water, skipper.",
+					"from": "friendly"
+				},
+				{
+					"type": "nav",
+					"zone": "harbour"
+				}
+			]
+		},
+		{
+			"id": "trigger2",
+			"name": "Coast crossed",
+			"once": true,
+			"logic": "all",
+			"delay": 0.0,
+			"conditions": [
+				{
+					"type": "player_in_zone",
+					"zone": "approach"
+				}
+			],
+			"actions": [
+				{
+					"type": "message",
+					"text": "Searchlights! The night fighters are up.",
+					"seconds": 4.0
+				},
+				{
+					"type": "activate",
+					"unit": "nightfighters"
+				}
+			]
+		},
+		{
+			"id": "trigger3",
+			"name": "Too high over the harbour",
+			"once": false,
+			"logic": "all",
+			"delay": 0.0,
+			"conditions": [
+				{
+					"type": "player_in_zone",
+					"zone": "approach"
+				},
+				{
+					"type": "player_alt_above",
+					"metres": 400.0
+				}
+			],
+			"actions": [
+				{
+					"type": "message",
+					"text": "Too high - the flak has you. Get down low!",
+					"seconds": 3.0
+				}
+			]
+		},
+		{
+			"id": "trigger4",
+			"name": "Boats burning",
+			"once": true,
+			"logic": "all",
+			"delay": 2.0,
+			"conditions": [
+				{
+					"type": "objective",
+					"objective": "obj_boats",
+					"state": "complete"
+				}
+			],
+			"actions": [
+				{
+					"type": "radio",
+					"speaker": "Navigator",
+					"text": "They're burning! Good show. Course three-four-zero for home.",
+					"from": "friendly"
+				},
+				{
+					"type": "objective",
+					"objective": "obj_home",
+					"state": "active"
+				},
+				{
+					"type": "score",
+					"points": 300
+				}
+			]
+		}
+	]
+}

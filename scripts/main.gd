@@ -1383,10 +1383,16 @@ func _initial_config() -> Dictionary:
 		return Engine.get_meta(CFG_META) as Dictionary
 	var skip: bool = _args.has("--skip-menu")
 	for a in _args:
-		if a.begins_with("--mode=") or a.begins_with("--shot=") or a.begins_with("--tour=") or a.begins_with("--dam-day=") or a.begins_with("--pow-op=") or a.begins_with("--air-op=") or a == "--resume":
+		if a.begins_with("--mode=") or a.begins_with("--shot=") or a.begins_with("--tour=") or a.begins_with("--dam-day=") or a.begins_with("--pow-op=") or a.begins_with("--air-op=") or a.begins_with("--custom=") or a == "--resume":
 			skip = true
 	if not skip:
 		return {}
+	for a in _args:       # debug: fly a Mission Editor file directly (--custom=res://data/custom_missions/x.json or a user:// path)
+		if a.begins_with("--custom="):
+			var cpath: String = a.substr(9)
+			var cdoc: Dictionary = MissionDoc.load_file(cpath)
+			if not cdoc.is_empty():
+				return MissionDoc.start_config(cdoc, cpath)
 	for a in _args:       # debug: start a Dam Busters course day directly (--dam-day=N, 0-based)
 		if a.begins_with("--dam-day="):
 			return DamCampaign.config_for(int(a.substr(10)))
@@ -1760,7 +1766,7 @@ func start_game(cfg: Dictionary) -> void:
 
 	var mid: String = String(config.get("mode", "free"))
 	# moving weather fronts in the open modes; scripted / training sorties keep the weather they were set with
-	WeatherManager.fronts_enabled = not (mid in ["training", "dambuster", "historical", "pow_escape", "airborne"]) and not _args.has("--no-fronts")
+	WeatherManager.fronts_enabled = not (mid in ["training", "dambuster", "historical", "pow_escape", "airborne", "custom"]) and not _args.has("--no-fronts")
 	if _args.has("--front-now"):      # debug: a front from the west-south-west, close by (look along 250 to see it)
 		WeatherManager.wind_dir_deg = 250.0
 		WeatherManager._wind_target_dir = 250.0
@@ -1994,7 +2000,10 @@ void fragment(){ COLOR = vec4(0.02, 0.02, 0.015, smoothstep(0.62, 1.0, UV.y) * 0
 	var st: AircraftStats = AircraftCatalog.load_stats(String(config.get("aircraft", "")))
 	var head := UIKit.label("PREPARING SORTIE", 15, UIKit.RED, true)
 	box.add_child(head)
-	var title := UIKit.label(ModeRegistry.display_name(mode_id).to_upper() if ModeRegistry.MODES.has(mode_id) else "CHANNEL AIR WAR", 40, UIKit.TEXT, true)
+	var title_text: String = ModeRegistry.display_name(mode_id).to_upper() if ModeRegistry.MODES.has(mode_id) else "CHANNEL AIR WAR"
+	if mode_id == "custom":
+		title_text = str((config.get("custom_doc", {}) as Dictionary).get("name", "Custom mission")).to_upper()
+	var title := UIKit.label(title_text, 40, UIKit.TEXT, true)
 	title.add_theme_constant_override("outline_size", 6)
 	box.add_child(title)
 	if st != null:
@@ -2080,6 +2089,8 @@ func quit_to_menu() -> void:
 		Engine.set_meta("open_campaign", true)
 	if bool(config.get("career", false)):
 		Engine.set_meta("open_career", true)
+	if bool(config.get("editor_return", false)):
+		Engine.set_meta("open_mission_editor", {"doc": config.get("custom_doc", {}), "path": str(config.get("custom_path", ""))})
 	get_tree().reload_current_scene()
 
 
