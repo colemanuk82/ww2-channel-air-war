@@ -23,6 +23,7 @@ func _ready() -> void:
 	_test_audio()
 	_test_logbook_voice()
 	_test_custom_missions()
+	_test_escape_and_backup()
 	_test_data_files()
 	_test_river_data()
 	_test_landmarks_all()
@@ -885,6 +886,67 @@ func _test_airborne() -> void:
 	var rig: TowRig = TowRig.make(null, "waco", Vector3.ZERO)
 	_check(rig.state == "towed", "tow rig starts towed")
 	rig.free()
+
+
+## A damaged player can be spared or lost by an enemy pilot; the backup caller never calls twice for the same thing.
+func _test_escape_and_backup() -> void:
+	print("-- escape and backup")
+	var side: String = GameState.player_side
+	var foe: String = AircraftCatalog.opposite(side)
+	var me: Aircraft = AIFactory.spawn(self, "spitfire" if side == "Allies" else "bf109", side, Vector3(0.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
+	me.player_controlled = true
+	var e: Aircraft = AIFactory.spawn(self, "bf109" if foe == "Axis" else "spitfire", foe, Vector3(-800.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
+	var p: AIPilot = AIFactory.pilot_of(e)
+	_check(p._target_valid(me, 5000.0), "the enemy can target a healthy player")
+	p._release_player(60.0)
+	_check(not p._target_valid(me, 5000.0) and p._find_target(5000.0) == null, "a released player is left alone")
+	_check(p.target == null, "releasing clears the target")
+	p._let_go_until = 0
+	_check(p._target_valid(me, 5000.0), "the pilot hunts again once the time is up")
+	# sparing is decided once per player aircraft
+	me.health = me.stats.max_health * 0.3
+	p.target = me
+	var spared: int = 0
+	for i in 200:
+		p._spare_rolled = 0
+		p._let_go_until = 0
+		p.target = me
+		p._lose_check_t = 99.0
+		p._maybe_let_player_go()
+		if p._let_go():
+			spared += 1
+	_check(spared > 5 and spared < 150, "a hurt player is sometimes spared, not always (%d / 200)" % spared)
+	p._spare_rolled = me.get_instance_id()
+	p._let_go_until = 0
+	p.target = me
+	p._lose_check_t = 99.0
+	p._maybe_let_player_go()
+	_check(not p._let_go(), "no second roll to spare the same aircraft")
+	# backup: one consideration per incident, none while busy / cooling / backup up, never from a backup aircraft
+	var bc: BackupCaller = BackupCaller.new()
+	bc.player = me
+	bc.chance = 0.0
+	bc._cool = 0.0
+	add_child(bc)
+	bc._on_player_hit(e, 5.0)
+	_check(bc._seen.size() == 1, "an attacked flight is considered for a call")
+	bc.chance = 1.0
+	bc._on_player_hit(e, 5.0)
+	_check(not bc._busy, "the same flight is not considered twice")
+	e.set_meta("backup", true)
+	_check(bc._incident_of(e).is_empty(), "an aircraft that came as backup never calls for backup")
+	e.remove_meta("backup")
+	bc._seen.clear()
+	bc._cool = 10.0
+	bc._on_player_hit(e, 5.0)
+	_check(bc._seen.is_empty(), "no call during the quiet spell")
+	bc._cool = 0.0
+	bc._calls = BackupCaller.MAX_CALLS
+	bc._on_player_hit(e, 5.0)
+	_check(bc._seen.is_empty(), "no more calls once the sortie's allowance is used")
+	bc.queue_free()
+	me.queue_free()
+	e.queue_free()
 
 
 ## Structural failure: a lost wing or tail spins the aircraft out; a twin loses an engine but keeps flying.

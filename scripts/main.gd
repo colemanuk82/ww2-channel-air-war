@@ -1788,6 +1788,9 @@ func start_game(cfg: Dictionary) -> void:
 	# the war going on around you: distant flak, searchlights, raids on towns, the V-weapons blitz (scenery only)
 	if not (mid in ["dambuster", "training", "pow_escape", "airborne"]) and not _args.has("--no-skywar"):
 		add_child(SkyWar.new().setup(self, player, hud, mid))
+	# under attack, the enemy now and then radios for help: nearby fighters vectored in, or a few scrambled
+	if (not (mid in ["dambuster", "training", "pow_escape", "airborne", "custom", "dogfight"]) or _args.has("--debug-backup")) and not _args.has("--no-backup"):
+		add_child(BackupCaller.new().setup(self, player, hud, float(config.get("difficulty", 0.5))))
 
 	_pause = PauseMenu.new()
 	add_child(_pause)

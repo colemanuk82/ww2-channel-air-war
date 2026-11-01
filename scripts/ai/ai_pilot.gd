@@ -768,6 +768,7 @@ func _think() -> void:
 	if state == State.RETURN:
 		return
 	var dr: float = detect_range * clampf(sqrt(_vis), 0.35, 1.0)
+	_maybe_let_player_go()
 	if not _target_valid(target, dr * 1.4):
 		target = _find_target(dr)
 	elif randf() < 0.3:
@@ -822,8 +823,80 @@ func _cloud_field() -> CloudField:
 	return wm.get("cloud_field") as CloudField
 
 
+var _let_go_until: int = 0        # msec: the player is left alone (spared, or lost) until then
+var _spare_rolled: int = 0        # instance id of the player aircraft this pilot has already decided to spare or not
+var _lose_check_t: float = 0.0
+static var _spare_call_ms: int = -100000
+
+
+func _let_go() -> bool:
+	return Time.get_ticks_msec() < _let_go_until
+
+
+## A damaged player can get away. An enemy pilot chasing him sometimes lets him go -- low on fuel or ammunition, told
+## to stay with the bombers, or just sparing a beaten man -- and sometimes loses him: a smoking aircraft running for
+## home low down, far off and out of the pilot's forward view is hard to keep sight of. Not every time, and never for
+## good: after a while the pilot hunts again.
+func _maybe_let_player_go() -> void:
+	if ac.team == GameState.player_side or role == Role.WINGMAN or not is_instance_valid(target) or not target.player_controlled:
+		return
+	if target.state != Aircraft.State.ALIVE or _let_go():
+		return
+	var p: Aircraft = target
+	var hp: float = p.health / maxf(p.stats.max_health, 1.0)
+	var dm: AircraftDamageModel = p.damage_model
+	var crippled: bool = p.has_meta("on_fire") or (dm != null and dm.engines_out_frac() > 0.0)
+	var hurt: bool = hp < 0.6 or crippled
+	var now: int = Time.get_ticks_msec()
+	# spare him: decided once per pilot for each of the player's aircraft, when it is first seen badly hurt
+	if hurt and (hp < 0.45 or crippled) and _spare_rolled != p.get_instance_id():
+		_spare_rolled = p.get_instance_id()
+		var low_ammo: bool = ac.ammo < int(ac.stats.ammo * 0.25)
+		var k: float = 0.22 * (1.3 - aggression) + (0.25 if low_ammo else 0.0)
+		if randf() < k:
+			_release_player(randf_range(60.0, 120.0))
+			if now - _spare_call_ms > 30000 and randf() < 0.6:
+				_spare_call_ms = now
+				var lines: Array = ["That one's breaking off, leader!", "He's turned away. Looks like he's letting you go.", "Bandit breaking off. Get out while you can."]
+				Radio.say("Wingman" if GameState.player_side == p.team else "Control", lines[randi() % lines.size()], Radio.Kind.FRIENDLY, 1.0)
+			return
+	# lose him: checked every few seconds; likelier when he is hurt, far off, low down or out of the pilot's view
+	_lose_check_t -= reaction * 2.0 + 0.4
+	if _lose_check_t > 0.0:
+		return
+	_lose_check_t = 4.0
+	var rel: Vector3 = p.global_position - ac.global_position
+	var d: float = rel.length()
+	if d < 1200.0:
+		return
+	var behind: bool = ac.get_forward().angle_to(rel) > 1.2
+	var low: bool = p.altitude_agl < 200.0
+	var chance: float = 0.0
+	if d > 2500.0:
+		chance += 0.08
+	if behind:
+		chance += 0.1
+	if low:
+		chance += 0.1
+	if hurt:
+		chance *= 2.0
+	chance *= lerpf(1.3, 0.6, difficulty)
+	if randf() < chance:
+		_release_player(randf_range(40.0, 90.0))
+
+
+func _release_player(secs: float) -> void:
+	_let_go_until = Time.get_ticks_msec() + int(secs * 1000.0)
+	target = null
+	ac.cmd_fire = false
+	if state == State.ATTACK or state == State.INTERCEPT or state == State.ENERGY:
+		_set_state(State.ROUTE if not waypoints.is_empty() and wp_index < waypoints.size() else State.PATROL)
+
+
 func _target_valid(t: Aircraft, max_range: float) -> bool:
 	if t == null or not is_instance_valid(t) or t.state != Aircraft.State.ALIVE:
+		return false
+	if t.player_controlled and _let_go():
 		return false
 	if t.global_position.distance_to(ac.global_position) > max_range:
 		return false
@@ -843,6 +916,8 @@ func _find_target(max_range: float) -> Aircraft:
 	for n in get_tree().get_nodes_in_group("aircraft"):
 		var o: Aircraft = n as Aircraft
 		if o == null or o == ac or o.state != Aircraft.State.ALIVE or o.team == ac.team or o.team == "Neutral":
+			continue
+		if o.player_controlled and _let_go():
 			continue
 		var d: float = o.global_position.distance_to(pos)
 		if d > max_range * sun_glare(pos, o.global_position):     # coming out of the sun: seen much later
