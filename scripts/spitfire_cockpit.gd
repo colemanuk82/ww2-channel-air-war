@@ -365,7 +365,7 @@ func _draw_panel_109(c: Control, font: Font) -> void:
 	# flying group (metric, German captions: plain ASCII so every font draws them)
 	_dial_asi(c, font, Vector2(165, 175), 82.0, kmh, 800.0, 100.0, 50.0, 200.0, "FAHRT  KM/H")
 	_dial_alt(c, font, Vector2(375, 175), 82.0, alt_m, "HOEHE  KM")
-	_dial_turn(c, font, Vector2(585, 175), 82.0)
+	_dial_horizon_de(c, font, Vector2(585, 175), 82.0)
 	_dial_vsi(c, font, Vector2(165, 350), 82.0, climb_fpm, "STEIGEN")
 	_dial_di(c, font, Vector2(375, 350), 82.0, heading)
 	_dial_small(c, font, Vector2(585, 350), 82.0, "KRAFTSTOFF", 0.0, 100.0, 0.8, [0, 50, 100])
@@ -555,8 +555,7 @@ func _dial_di(c: Control, font: Font, ctr: Vector2, r: float, heading: float) ->
 	_lume_poly(c, PackedVector2Array([ctr + Vector2(0, -r * 0.98), ctr + Vector2(-8, -r * 0.84), ctr + Vector2(8, -r * 0.84)]))
 
 
-func _dial_horizon(c: Control, font: Font, ctr: Vector2, r: float) -> void:
-	_dial_face(c, ctr, r)
+func _update_attitude() -> void:
 	var a: Aircraft = aircraft
 	if a != null and is_instance_valid(a):
 		var b: Basis = a.global_transform.basis
@@ -564,6 +563,70 @@ func _dial_horizon(c: Control, font: Font, ctr: Vector2, r: float) -> void:
 		var right: Vector3 = b.x
 		_pitch = lerpf(_pitch, asin(clampf(fwd.y, -1.0, 1.0)), 0.5)
 		_roll = lerpf(_roll, atan2(right.y, b.y.y), 0.5)
+
+
+## German artificial horizon (Askania / Siemens pattern): scalloped caging bezel marked Los / Fest, a rounded square
+## window, a gull-wing horizon bar that banks and rises / falls with the aircraft, a vertical turn pointer and a
+## slip-ball tube along the bottom. Bar, pointer, tube and index are radium paint.
+func _dial_horizon_de(c: Control, font: Font, ctr: Vector2, r: float) -> void:
+	_update_attitude()
+	# scalloped caging ring
+	var rim := PackedVector2Array()
+	for i in 96:
+		var ang: float = TAU * float(i) / 96.0
+		rim.append(ctr + Vector2(sin(ang), -cos(ang)) * (r + 13.0 + 3.0 * cos(ang * 16.0)))
+	c.draw_colored_polygon(rim, Color(0.075, 0.065, 0.055))
+	c.draw_circle(ctr, r + 4.0, Color(0.16, 0.16, 0.17))
+	c.draw_circle(ctr, r, Color(0.03, 0.03, 0.035))
+	for k in 4:
+		var sa: float = TAU * (float(k) + 0.5) / 4.0
+		var sp: Vector2 = ctr + Vector2(sin(sa), -cos(sa)) * (r - 7.0)
+		c.draw_circle(sp, 3.2, Color(0.22, 0.2, 0.18))
+		c.draw_line(sp - Vector2(2.4, 1.2), sp + Vector2(2.4, 1.2), Color(0.05, 0.05, 0.05), 1.2)
+	c.draw_string(font, ctr + Vector2(-r - 13.0, -r * 0.2), "Los", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.85, 0.83, 0.72, 0.8))
+	c.draw_string(font, ctr + Vector2(-r - 16.0, r * 0.62), "Fest", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.85, 0.83, 0.72, 0.8))
+	# window
+	var win := Rect2(ctr + Vector2(-r * 0.66, -r * 0.62), Vector2(r * 1.32, r * 1.0))
+	c.draw_rect(win, Color(0.012, 0.012, 0.014))
+	# horizon bar: banks with the aircraft, drops as the nose climbs
+	var n := Vector2(sin(_roll), -cos(_roll))
+	var along := Vector2(-n.y, n.x)
+	var off: float = clampf(_pitch / deg_to_rad(30.0), -1.0, 1.0) * r * 0.38
+	var mid: Vector2 = ctr + Vector2(0.0, -r * 0.12) - n * off
+	var shape: Array = [[-0.82, 0.07], [-0.7, 0.0], [-0.13, 0.0], [-0.06, -0.075], [0.0, -0.02], [0.06, -0.075], [0.13, 0.0], [0.7, 0.0], [0.82, 0.07]]
+	var prev: Vector2 = Vector2.ZERO
+	for i in shape.size():
+		var q: Vector2 = mid + along * float(shape[i][0]) * r + n * float(shape[i][1]) * r
+		if i > 0:
+			_lume_line(c, prev, q, 4.5)
+		prev = q
+	# turn pointer: hangs from the top, swings with the rate of turn
+	var turn: float = clampf(tan(clampf(_roll, -1.3, 1.3)) * 0.35, -1.0, 1.0) * deg_to_rad(18.0)
+	var piv: Vector2 = ctr + Vector2(0.0, r * 0.42)
+	var dirv := Vector2(sin(turn), -cos(turn))
+	var top: Vector2 = piv + dirv * r * 0.98
+	_lume_line(c, piv, top, 3.0)
+	var pv := Vector2(-dirv.y, dirv.x)
+	_lume_poly(c, PackedVector2Array([top + pv * 6.0, top - pv * 6.0, top - pv * 6.0 + dirv * 13.0, top + pv * 6.0 + dirv * 13.0]))
+	# slip tube with its ball, and the index under it
+	var tube := Rect2(ctr + Vector2(-r * 0.56, r * 0.5), Vector2(r * 1.12, r * 0.15))
+	_lume_poly(c, PackedVector2Array([tube.position, Vector2(tube.end.x, tube.position.y), tube.end, Vector2(tube.position.x, tube.end.y)]), Color(LUME, 0.42))
+	var slip: float = 0.0
+	if aircraft != null and is_instance_valid(aircraft):
+		slip = clampf(-aircraft.cmd_yaw * 0.6, -1.0, 1.0)
+	# the ball and the centre marks sit in front of the luminous tube, so they are replayed with it at night
+	var ball := func() -> void:
+		c.draw_circle(Vector2(ctr.x + slip * r * 0.42, tube.get_center().y), r * 0.075, Color(0.03, 0.03, 0.03))
+		for sx in [-0.09, 0.09]:
+			c.draw_line(Vector2(ctr.x + sx * r, tube.position.y), Vector2(ctr.x + sx * r, tube.end.y), Color(0.03, 0.03, 0.03), 2.0)
+	ball.call()
+	_lq.append(ball)
+	_lume_poly(c, PackedVector2Array([Vector2(ctr.x, tube.end.y + 13.0), Vector2(ctr.x - 6.0, tube.end.y + 4.0), Vector2(ctr.x + 6.0, tube.end.y + 4.0)]))
+
+
+func _dial_horizon(c: Control, font: Font, ctr: Vector2, r: float) -> void:
+	_dial_face(c, ctr, r)
+	_update_attitude()
 	var off: float = clampf(_pitch / deg_to_rad(40.0), -1.0, 1.0) * r * 0.8   # horizon sinks as the nose climbs
 	var n := Vector2(sin(_roll), -cos(_roll))     # screen "up" of the rotating card
 	# half-planes: sky above the horizon line (dot(p, n) > -off), ground below
