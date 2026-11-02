@@ -617,15 +617,15 @@ static func flat_canopy(canopy: Node3D, rings: Array, glass: Material, frame: Ma
 	g.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# hoop frames at every station and longitudinal frames along the roof edges and the sills
 	for r in rings:
-		var a: PackedVector3Array = _flat_ring(float(r[0]) - 0.02, float(r[1]) * 1.03 + 0.006, float(r[2]) * 1.03 + 0.006, float(r[3]), 1.0)
-		var b: PackedVector3Array = _flat_ring(float(r[0]) + 0.02, float(r[1]) * 1.03 + 0.006, float(r[2]) * 1.03 + 0.006, float(r[3]), 1.0)
+		var a: PackedVector3Array = _flat_ring(float(r[0]) - 0.035, float(r[1]) * 1.03 + 0.008, float(r[2]) * 1.03 + 0.006, float(r[3]), 1.0)
+		var b: PackedVector3Array = _flat_ring(float(r[0]) + 0.035, float(r[1]) * 1.03 + 0.008, float(r[2]) * 1.03 + 0.006, float(r[3]), 1.0)
 		_mi(canopy, MeshUtil.loft([a, b], false, false), frame, Vector3.ZERO, "CanopyFrame")
-	for k in [0, 1, 2, 5]:
+	for k in [0, 1, 2, 3, 4, 5]:
 		var pts: Array = []
 		for r in rings:
 			var ring: PackedVector3Array = _flat_ring(float(r[0]), float(r[1]) * 1.03 + 0.008, float(r[2]) * 1.03 + 0.008, float(r[3]), 1.0)
 			pts.append(ring[k])
-		_mi(canopy, _strip(pts, 0.016, 0.016), frame, Vector3.ZERO, "CanopyFrame")
+		_mi(canopy, _strip(pts, 0.032, 0.03), frame, Vector3.ZERO, "CanopyFrame")
 
 
 static func _flat_ring(z: float, hw: float, hh: float, cy: float, _k: float) -> PackedVector3Array:

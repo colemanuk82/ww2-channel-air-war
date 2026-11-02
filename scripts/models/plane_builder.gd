@@ -7,6 +7,8 @@ extends RefCounted
 # [t along fuselage 0..1 (nose->tail), width frac, height frac, centre-y offset (x hh)]
 const PROFILES := {
 	"inline": [[0.0, 0.10, 0.09, 0.0], [0.015, 0.34, 0.31, 0.0], [0.035, 0.56, 0.52, 0.0], [0.06, 0.74, 0.70, 0.0], [0.10, 0.90, 0.86, 0.0], [0.17, 1.0, 0.95, 0.0], [0.33, 0.96, 1.0, 0.1], [0.5, 0.78, 0.85, 0.1], [0.7, 0.5, 0.6, 0.12], [0.88, 0.26, 0.38, 0.16], [1.0, 0.1, 0.2, 0.2]],
+	# Bf 109 (traced from a G side view): spinner low in the nose, cowl top near the sill, hood roof flush with the spine, straight spine to the fin
+	"bf109": [[0.0, 0.4, 0.33, 0.43], [0.035, 0.62, 0.63, 0.43], [0.08, 0.78, 0.75, 0.38], [0.17, 0.95, 0.84, 0.39], [0.27, 1.0, 0.925, 0.39], [0.33, 1.0, 0.95, 0.37], [0.42, 0.97, 0.91, 0.225], [0.5, 0.85, 1.06, 0.575], [0.56, 0.78, 0.98, 0.62], [0.65, 0.65, 0.86, 0.66], [0.75, 0.5, 0.72, 0.7], [0.85, 0.35, 0.525, 0.74], [0.93, 0.2, 0.28, 0.85], [1.0, 0.1, 0.11, 0.89]],
 	# Hawker hump-back (Hurricane, Defiant): the top line climbs to a high cockpit and the rear fuselage stays deep
 	"hump": [[0.0, 0.10, 0.09, 0.0], [0.015, 0.34, 0.31, 0.0], [0.035, 0.56, 0.52, 0.0], [0.06, 0.74, 0.70, 0.02], [0.10, 0.88, 0.84, 0.05], [0.17, 0.97, 0.95, 0.09], [0.33, 1.0, 1.1, 0.2], [0.5, 0.86, 1.02, 0.24], [0.7, 0.6, 0.8, 0.26], [0.88, 0.34, 0.52, 0.28], [1.0, 0.12, 0.26, 0.3]],
 	"radial": [[0.0, 0.8, 0.8, 0.0], [0.05, 1.0, 1.0, 0.0], [0.2, 0.98, 1.0, 0.02], [0.4, 0.8, 0.9, 0.04], [0.6, 0.6, 0.72, 0.08], [0.8, 0.36, 0.5, 0.12], [0.93, 0.2, 0.3, 0.16], [1.0, 0.1, 0.18, 0.2]],
@@ -66,11 +68,13 @@ static func _fuselage_mesh(f: Dictionary) -> ArrayMesh:
 
 
 static func _fus_slice(f: Dictionary, za: float, zb: float, grow: float = 1.03) -> ArrayMesh:
-	var da: Array = fus_at(f, za)
-	var db: Array = fus_at(f, zb)
-	return MeshUtil.loft([
-		MeshUtil.ring_xy(za, da[0] * grow + 0.01, da[1] * grow + 0.01, da[2], 10),
-		MeshUtil.ring_xy(zb, db[0] * grow + 0.01, db[1] * grow + 0.01, db[2], 10)])
+	var rings: Array = []
+	var n: int = maxi(2, int(ceil(absf(zb - za) / 0.25)))
+	for k in n + 1:
+		var z: float = lerpf(za, zb, float(k) / float(n))
+		var d: Array = fus_at(f, z)
+		rings.append(MeshUtil.ring_xy(z, d[0] * grow + 0.01, d[1] * grow + 0.01, d[2], 10))
+	return MeshUtil.loft(rings)
 
 
 # ---------------------------------------------------------------- wings
@@ -777,6 +781,8 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	var glass := ToonUtil.make_glass({"opacity": 0.2, "rim": 0.5, "tint": Color(0.58, 0.70, 0.76)})
 	# frames are painted in the airframe colours on the outside (photos), so they use the camouflage skin
 	var cid: String = String(spec.get("id", ""))
+	if cid in FLAT_CANOPY:
+		glass = ToonUtil.make_glass({"opacity": 0.4, "rim": 0.6, "tint": Color(0.5, 0.64, 0.7)})
 	for c in spec.get("canopies", []):
 		if cid in FLAT_CANOPY:
 			PlaneParts.flat_canopy(canopy, c, glass, camo)
@@ -880,7 +886,7 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		_mi(body, lm, ToonUtil.make_toon(lc, {"outline": false, "rim": 0.0, "emission": lc, "emission_energy": 1.1}), Vector3(side * float(wtip["x"]), float(wtip["yc"]), float(wtip["zle"]) + float(wtip["chord"]) * 0.5))
 
 	# Exhaust stacks down the nose of inline (liquid-cooled) engines
-	if spec.has("nose_prop") and String(f.get("profile", "inline")) in ["inline", "hump"]:
+	if spec.has("nose_prop") and String(f.get("profile", "inline")) in ["inline", "hump", "bf109"]:
 		PlaneParts.exhaust_stacks(body, f, float(f["z0"]) + 0.55, 5, 0.27)
 
 	# Landing gear
@@ -904,6 +910,10 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 	if spec.has("tail_wheel"):
 		var tw: Array = spec["tail_wheel"]
 		PlaneParts.tail_wheel(body, float(tw[0]), float(tw[1]))
+		var twd: Array = fus_at(f, float(tw[1]))
+		var tw_top: float = float(twd[2]) - float(twd[1]) * 0.9
+		if tw_top > float(tw[0]) + 0.3:
+			PlaneDetails.rod(body, Vector3(0, float(tw[0]) + 0.2, float(tw[1]) - 0.04), Vector3(0, tw_top, float(tw[1]) - 0.2), 0.035, PlaneParts.mat(PlaneParts.DARKMETAL), "TailWheelLeg")
 
 	_fit_details(body, spec)
 
@@ -969,6 +979,9 @@ static func build(spec: Dictionary, nation_override: String = "") -> Node3D:
 		PlaneParts.le_strip(body, wing_le, 0.55, 0.96, Color(0.82, 0.66, 0.12))
 	if cid == "bf109":
 		fin_paint(body, fin, 0.0, 0.66, Color(0.84, 0.66, 0.10))
+		for sd in [-1.0, 1.0]:
+			for sf in [1.0, -1.0]:
+				PlaneParts.skin_patch(body, wing_le, sd, 0.88, 1.0, 0.0, 1.0, sf, Color(0.84, 0.66, 0.10), "DecalWingtip")
 
 	# D-Day invasion stripes
 	if spec.get("stripes", false):
