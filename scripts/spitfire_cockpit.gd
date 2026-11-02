@@ -290,6 +290,7 @@ void fragment() {
 ## At night the panel goes dark and only the radium paint glows: everything is drawn, then dimmed, then the
 ## luminous marks (queued while drawing) are drawn again on top.
 func _draw_panel() -> void:
+	_lume = LUME_DE if style == "bf109" else LUME_RAF
 	_lq.clear()
 	_draw_panel_body()
 	var na: float = maxf(_night_now, 0.0)
@@ -401,29 +402,33 @@ func _draw_switch_strip(c: Control, font: Font) -> void:
 
 
 # radium luminous paint on ticks, numerals and needles: pale green with a soft glow halo
-const LUME := Color(0.60, 0.98, 0.50)
+const LUME_DE := Color(0.60, 0.98, 0.50)    # Luftwaffe: green radium paint
+const LUME_RAF := Color(1.0, 0.86, 0.42)    # RAF: yellow radium paint
+var _lume: Color = LUME_RAF
 var _lq: Array = []      # luminous draws of this frame, replayed over the night dimming
 
 
 func _lume_line(c: Control, a: Vector2, b: Vector2, w: float) -> void:
 	var f := func() -> void:
-		c.draw_line(a, b, Color(LUME, 0.10), w + 9.0)
-		c.draw_line(a, b, Color(LUME, 0.22), w + 4.0)
-		c.draw_line(a, b, LUME, w)
+		c.draw_line(a, b, Color(_lume, 0.10), w + 9.0)
+		c.draw_line(a, b, Color(_lume, 0.22), w + 4.0)
+		c.draw_line(a, b, _lume, w)
 	f.call()
 	_lq.append(f)
 
 
 func _lume_text(c: Control, font: Font, p: Vector2, s: String, fs: int) -> void:
 	var f := func() -> void:
-		c.draw_string_outline(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 9, Color(LUME, 0.10))
-		c.draw_string_outline(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(LUME, 0.24))
-		c.draw_string(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, LUME)
+		c.draw_string_outline(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 9, Color(_lume, 0.10))
+		c.draw_string_outline(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(_lume, 0.24))
+		c.draw_string(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, _lume)
 	f.call()
 	_lq.append(f)
 
 
-func _lume_poly(c: Control, pts: PackedVector2Array, col: Color = LUME) -> void:
+func _lume_poly(c: Control, pts: PackedVector2Array, col: Color = Color(0, 0, 0, 0)) -> void:
+	if col.a == 0.0:
+		col = _lume
 	var f := func() -> void:
 		c.draw_colored_polygon(pts, col)
 	f.call()
@@ -456,7 +461,9 @@ func _dial_scale(c: Control, font: Font, ctr: Vector2, r: float, a0: float, a1: 
 			_lume_text(c, font, p, s, fs)
 
 
-func _needle(c: Control, ctr: Vector2, r: float, deg: float, len_k: float = 0.85, w: float = 5.0, col: Color = LUME) -> void:
+func _needle(c: Control, ctr: Vector2, r: float, deg: float, len_k: float = 0.85, w: float = 5.0, col: Color = Color(0, 0, 0, 0)) -> void:
+	if col.a == 0.0:
+		col = _lume
 	var ang: float = deg_to_rad(deg)
 	var dir := Vector2(sin(ang), -cos(ang))
 	var perp := Vector2(-dir.y, dir.x)
@@ -610,7 +617,7 @@ func _dial_horizon_de(c: Control, font: Font, ctr: Vector2, r: float) -> void:
 	_lume_poly(c, PackedVector2Array([top + pv * 6.0, top - pv * 6.0, top - pv * 6.0 + dirv * 13.0, top + pv * 6.0 + dirv * 13.0]))
 	# slip tube with its ball, and the index under it
 	var tube := Rect2(ctr + Vector2(-r * 0.56, r * 0.5), Vector2(r * 1.12, r * 0.15))
-	_lume_poly(c, PackedVector2Array([tube.position, Vector2(tube.end.x, tube.position.y), tube.end, Vector2(tube.position.x, tube.end.y)]), Color(LUME, 0.42))
+	_lume_poly(c, PackedVector2Array([tube.position, Vector2(tube.end.x, tube.position.y), tube.end, Vector2(tube.position.x, tube.end.y)]), Color(_lume, 0.42))
 	var slip: float = 0.0
 	if aircraft != null and is_instance_valid(aircraft):
 		slip = clampf(-aircraft.cmd_yaw * 0.6, -1.0, 1.0)
@@ -637,21 +644,24 @@ func _dial_horizon(c: Control, font: Font, ctr: Vector2, r: float) -> void:
 		pts.append(Vector2(sin(ang), -cos(ang)) * (r - 1.0))
 	var sky: PackedVector2Array = _clip_half(pts, n, -off)
 	var gnd: PackedVector2Array = _clip_half(pts, -n, off)
+	# dark sky and ground halves; the horizon bar, ladder and aircraft symbol are radium paint
 	if sky.size() >= 3:
-		c.draw_colored_polygon(_offset(sky, ctr), Color(0.22, 0.38, 0.62))
+		c.draw_colored_polygon(_offset(sky, ctr), Color(0.05, 0.07, 0.10))
 	if gnd.size() >= 3:
-		c.draw_colored_polygon(_offset(gnd, ctr), Color(0.36, 0.24, 0.14))
+		c.draw_colored_polygon(_offset(gnd, ctr), Color(0.07, 0.05, 0.035))
 	var along := Vector2(-n.y, n.x)
 	var mid: Vector2 = ctr - n * off
-	c.draw_line(mid - along * r, mid + along * r, Color(0.95, 0.95, 0.9), 3.0)
+	var hw: float = sqrt(maxf(r * r - off * off, 0.0)) * 0.96
+	_lume_line(c, mid - along * hw, mid + along * hw, 3.0)
 	# pitch ladder marks
 	for k in [-2, -1, 1, 2]:
 		var o: Vector2 = mid + n * float(k) * r * 0.22
-		c.draw_line(o - along * r * 0.18, o + along * r * 0.18, Color(0.95, 0.95, 0.9, 0.8), 2.0)
+		if (o - ctr).length() < r * 0.85:
+			_lume_line(c, o - along * r * 0.18, o + along * r * 0.18, 1.8)
 	# fixed aircraft symbol
-	c.draw_line(ctr + Vector2(-r * 0.55, 0), ctr + Vector2(-r * 0.18, 0), Color(1.0, 0.85, 0.3), 5.0)
-	c.draw_line(ctr + Vector2(r * 0.18, 0), ctr + Vector2(r * 0.55, 0), Color(1.0, 0.85, 0.3), 5.0)
-	c.draw_circle(ctr, 6.0, Color(1.0, 0.85, 0.3))
+	_lume_line(c, ctr + Vector2(-r * 0.55, 0), ctr + Vector2(-r * 0.18, 0), 5.0)
+	_lume_line(c, ctr + Vector2(r * 0.18, 0), ctr + Vector2(r * 0.55, 0), 5.0)
+	_lume_poly(c, _offset(PackedVector2Array([Vector2(-6, 0), Vector2(0, -6), Vector2(6, 0), Vector2(0, 6)]), ctr))
 	c.draw_arc(ctr, r, 0.0, TAU, 48, Color(0.02, 0.02, 0.02), 3.0)
 
 
