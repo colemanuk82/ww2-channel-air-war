@@ -620,7 +620,7 @@ static func flat_canopy(canopy: Node3D, rings: Array, glass: Material, frame: Ma
 		var a: PackedVector3Array = _flat_ring(float(r[0]) - 0.035, float(r[1]) * 1.03 + 0.008, float(r[2]) * 1.03 + 0.006, float(r[3]), 1.0)
 		var b: PackedVector3Array = _flat_ring(float(r[0]) + 0.035, float(r[1]) * 1.03 + 0.008, float(r[2]) * 1.03 + 0.006, float(r[3]), 1.0)
 		_mi(canopy, MeshUtil.loft([a, b], false, false), frame, Vector3.ZERO, "CanopyFrame")
-	for k in [0, 1, 2, 3, 4, 5]:
+	for k in [0, 1, 3, 4]:     # roof edges and sills only: the side panes have no horizontal bar
 		var pts: Array = []
 		for r in rings:
 			var ring: PackedVector3Array = _flat_ring(float(r[0]), float(r[1]) * 1.03 + 0.008, float(r[2]) * 1.03 + 0.008, float(r[3]), 1.0)

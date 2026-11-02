@@ -287,7 +287,19 @@ void fragment() {
 	_cyl(self, "CompassCard", 0.036, 0.004, Vector3(0.0, -0.558, -0.505), _mat(Color(0.85, 0.82, 0.72)), Vector3(-15, 0, 0))
 
 
+## At night the panel goes dark and only the radium paint glows: everything is drawn, then dimmed, then the
+## luminous marks (queued while drawing) are drawn again on top.
 func _draw_panel() -> void:
+	_lq.clear()
+	_draw_panel_body()
+	var na: float = maxf(_night_now, 0.0)
+	if na > 0.01:
+		_ctrl.draw_rect(Rect2(Vector2.ZERO, Vector2(PANEL_PX)), Color(0.0, 0.0, 0.0, 0.9 * na))
+		for f in _lq:
+			(f as Callable).call()
+
+
+func _draw_panel_body() -> void:
 	var c: Control = _ctrl
 	var font: Font = UIKit.font(true)
 	c.draw_rect(Rect2(Vector2.ZERO, Vector2(PANEL_PX)), Color(0.06, 0.06, 0.065))
@@ -388,6 +400,36 @@ func _draw_switch_strip(c: Control, font: Font) -> void:
 		c.draw_string(font, Vector2(110, y + 7.0), String(labels[i]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.8, 0.78, 0.68, 0.7))
 
 
+# radium luminous paint on ticks, numerals and needles: pale green with a soft glow halo
+const LUME := Color(0.60, 0.98, 0.50)
+var _lq: Array = []      # luminous draws of this frame, replayed over the night dimming
+
+
+func _lume_line(c: Control, a: Vector2, b: Vector2, w: float) -> void:
+	var f := func() -> void:
+		c.draw_line(a, b, Color(LUME, 0.10), w + 9.0)
+		c.draw_line(a, b, Color(LUME, 0.22), w + 4.0)
+		c.draw_line(a, b, LUME, w)
+	f.call()
+	_lq.append(f)
+
+
+func _lume_text(c: Control, font: Font, p: Vector2, s: String, fs: int) -> void:
+	var f := func() -> void:
+		c.draw_string_outline(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 9, Color(LUME, 0.10))
+		c.draw_string_outline(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(LUME, 0.24))
+		c.draw_string(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, LUME)
+	f.call()
+	_lq.append(f)
+
+
+func _lume_poly(c: Control, pts: PackedVector2Array, col: Color = LUME) -> void:
+	var f := func() -> void:
+		c.draw_colored_polygon(pts, col)
+	f.call()
+	_lq.append(f)
+
+
 # a dial: bezel, black face, ticks, numerals
 func _dial_face(c: Control, ctr: Vector2, r: float) -> void:
 	c.draw_circle(ctr, r + 12.0, Color(0.02, 0.02, 0.02))
@@ -398,7 +440,6 @@ func _dial_face(c: Control, ctr: Vector2, r: float) -> void:
 
 ## Ticks and numerals round a dial. Angles in degrees clockwise from 12 o'clock.
 func _dial_scale(c: Control, font: Font, ctr: Vector2, r: float, a0: float, a1: float, v0: float, v1: float, major: float, minor: float, num_every: float = 0.0, num_div: float = 1.0, fs: int = 22) -> void:
-	var ink := Color(0.92, 0.90, 0.80)
 	var n_minor: int = int(roundf((v1 - v0) / minor))
 	for i in n_minor + 1:
 		var v: float = v0 + float(i) * minor
@@ -407,19 +448,22 @@ func _dial_scale(c: Control, font: Font, ctr: Vector2, r: float, a0: float, a1: 
 		var dir := Vector2(sin(ang), -cos(ang))
 		var is_major: bool = absf(fmod(v - v0, major)) < minor * 0.01 or absf(fmod(v - v0, major) - major) < minor * 0.01
 		var l: float = r * (0.16 if is_major else 0.08)
-		c.draw_line(ctr + dir * (r * 0.93), ctr + dir * (r * 0.93 - l), ink, 3.0 if is_major else 1.6)
+		_lume_line(c, ctr + dir * (r * 0.93), ctr + dir * (r * 0.93 - l), 3.0 if is_major else 1.6)
 		if num_every > 0.0 and absf(fmod(v - v0, num_every)) < minor * 0.01 and not (a1 - a0 >= 359.0 and i == n_minor):
 			var s: String = str(int(roundf(v / num_div)))
 			var sz: Vector2 = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 			var p: Vector2 = ctr + dir * (r * 0.66) + Vector2(-sz.x * 0.5, sz.y * 0.32)
-			c.draw_string(font, p, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, ink)
+			_lume_text(c, font, p, s, fs)
 
 
-func _needle(c: Control, ctr: Vector2, r: float, deg: float, len_k: float = 0.85, w: float = 5.0, col: Color = Color(0.95, 0.93, 0.85)) -> void:
+func _needle(c: Control, ctr: Vector2, r: float, deg: float, len_k: float = 0.85, w: float = 5.0, col: Color = LUME) -> void:
 	var ang: float = deg_to_rad(deg)
 	var dir := Vector2(sin(ang), -cos(ang))
 	var perp := Vector2(-dir.y, dir.x)
-	c.draw_colored_polygon(PackedVector2Array([ctr + dir * (r * len_k), ctr + perp * w, ctr - dir * (r * 0.18), ctr - perp * w]), col)
+	for g in [[5.0, 0.10], [2.5, 0.22]]:
+		var gw: float = float(g[0])
+		_lume_poly(c, PackedVector2Array([ctr + dir * (r * len_k + gw), ctr + perp * (w + gw), ctr - dir * (r * 0.18 + gw), ctr - perp * (w + gw)]), Color(col, float(g[1])))
+	_lume_poly(c, PackedVector2Array([ctr + dir * (r * len_k), ctr + perp * w, ctr - dir * (r * 0.18), ctr - perp * w]), col)
 	c.draw_circle(ctr, w * 1.6, Color(0.2, 0.2, 0.22))
 
 
@@ -439,8 +483,8 @@ func _dial_alt(c: Control, font: Font, ctr: Vector2, r: float, ft: float, cap: S
 	_dial_face(c, ctr, r)
 	_dial_scale(c, font, ctr, r, 0.0, 360.0, 0.0, 10.0, 1.0, 0.5, 1.0, 1.0, 26)
 	_caption(c, font, ctr, r, cap)
-	_needle(c, ctr, r, fmod(ft, 10000.0) / 10000.0 * 360.0, 0.55, 7.0, Color(0.95, 0.93, 0.85))
-	_needle(c, ctr, r, fmod(ft, 1000.0) / 1000.0 * 360.0, 0.88, 4.0, Color(0.95, 0.93, 0.85))
+	_needle(c, ctr, r, fmod(ft, 10000.0) / 10000.0 * 360.0, 0.55, 7.0)
+	_needle(c, ctr, r, fmod(ft, 1000.0) / 1000.0 * 360.0, 0.88, 4.0)
 
 
 func _dial_vsi(c: Control, font: Font, ctr: Vector2, r: float, fpm: float, cap: String = "RATE OF CLIMB") -> void:
@@ -475,11 +519,10 @@ func _dial_small(c: Control, font: Font, ctr: Vector2, r: float, cap: String, v0
 
 func _dial_turn(c: Control, font: Font, ctr: Vector2, r: float) -> void:
 	_dial_face(c, ctr, r)
-	var ink := Color(0.92, 0.90, 0.80)
 	for k in [-2, -1, 0, 1, 2]:
 		var ang: float = deg_to_rad(float(k) * 18.0)
 		var dir := Vector2(sin(ang), -cos(ang))
-		c.draw_line(ctr + dir * r * 0.9, ctr + dir * r * 0.72, ink, 3.0)
+		_lume_line(c, ctr + dir * r * 0.9, ctr + dir * r * 0.72, 3.0)
 	var roll_bias: float = 0.0
 	if aircraft != null and is_instance_valid(aircraft):
 		roll_bias = clampf(-aircraft.cmd_yaw * 0.5, -1.0, 1.0)
@@ -492,25 +535,24 @@ func _dial_turn(c: Control, font: Font, ctr: Vector2, r: float) -> void:
 
 func _dial_di(c: Control, font: Font, ctr: Vector2, r: float, heading: float) -> void:
 	_dial_face(c, ctr, r)
-	var ink := Color(0.92, 0.90, 0.80)
 	for i in 36:
 		var ang: float = deg_to_rad(float(i) * 10.0 - heading)
 		var dir := Vector2(sin(ang), -cos(ang))
 		var major: bool = i % 3 == 0
-		c.draw_line(ctr + dir * r * 0.93, ctr + dir * (r * 0.93 - (r * 0.15 if major else r * 0.07)), ink, 3.0 if major else 1.6)
+		_lume_line(c, ctr + dir * r * 0.93, ctr + dir * (r * 0.93 - (r * 0.15 if major else r * 0.07)), 3.0 if major else 1.6)
 		if major and i % 9 != 0:
 			var s: String = str(i)
 			var sz: Vector2 = font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, 17)
-			c.draw_string(font, ctr + dir * r * 0.66 + Vector2(-sz.x * 0.5, 6.0), s, HORIZONTAL_ALIGNMENT_LEFT, -1, 17, ink)
+			_lume_text(c, font, ctr + dir * r * 0.66 + Vector2(-sz.x * 0.5, 6.0), s, 17)
 		elif i % 9 == 0:
 			var s2: String = ["N", "E", "S", "W"][i / 9]
 			var sz2: Vector2 = font.get_string_size(s2, HORIZONTAL_ALIGNMENT_LEFT, -1, 24)
-			c.draw_string(font, ctr + dir * r * 0.64 + Vector2(-sz2.x * 0.5, 8.0), s2, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(1.0, 0.95, 0.7))
+			_lume_text(c, font, ctr + dir * r * 0.64 + Vector2(-sz2.x * 0.5, 8.0), s2, 24)
 	# fixed aircraft symbol
-	c.draw_line(ctr + Vector2(0, -r * 0.22), ctr + Vector2(0, r * 0.25), Color(1.0, 0.85, 0.3), 4.0)
-	c.draw_line(ctr + Vector2(-r * 0.26, 0), ctr + Vector2(r * 0.26, 0), Color(1.0, 0.85, 0.3), 4.0)
-	c.draw_line(ctr + Vector2(-r * 0.1, r * 0.2), ctr + Vector2(r * 0.1, r * 0.2), Color(1.0, 0.85, 0.3), 4.0)
-	c.draw_colored_polygon(PackedVector2Array([ctr + Vector2(0, -r * 0.98), ctr + Vector2(-8, -r * 0.84), ctr + Vector2(8, -r * 0.84)]), Color(1.0, 0.85, 0.3))
+	_lume_line(c, ctr + Vector2(0, -r * 0.22), ctr + Vector2(0, r * 0.25), 4.0)
+	_lume_line(c, ctr + Vector2(-r * 0.26, 0), ctr + Vector2(r * 0.26, 0), 4.0)
+	_lume_line(c, ctr + Vector2(-r * 0.1, r * 0.2), ctr + Vector2(r * 0.1, r * 0.2), 4.0)
+	_lume_poly(c, PackedVector2Array([ctr + Vector2(0, -r * 0.98), ctr + Vector2(-8, -r * 0.84), ctr + Vector2(8, -r * 0.84)]))
 
 
 func _dial_horizon(c: Control, font: Font, ctr: Vector2, r: float) -> void:
