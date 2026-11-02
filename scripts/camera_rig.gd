@@ -50,9 +50,18 @@ var _cockpit_fov_t: float = 80.0    # target the numpad steps toward
 const ZOOM_SAVE_PATH := "user://chase_zoom.cfg"   # chase distance per plane, kept between sessions
 var _zoom_plane: String = ""                       # stats id of the plane the chase zoom belongs to
 
+# Cockpit head position: numpad 8/2 forward/back, 4/6 left/right, 9/3 up/down, 5 resets. Kept per aircraft type.
+const HEAD_SAVE_PATH := "user://cockpit_head.cfg"
+const HEAD_MIN := Vector3(-0.12, -0.14, -0.16)   # eye-frame metres: x right, y up, -z forward
+const HEAD_MAX := Vector3(0.12, 0.16, 0.22)
+const HEAD_RATE: float = 0.22                    # metres per second while a key is held
+var _head: Vector3 = Vector3.ZERO
+var _head_dirty: bool = false
+
 const LOOK_RATE: float = 3.2        # rad/s while the stick is held
 const LOOK_DEAD: float = 0.18       # stick deadzone
 const LOOK_MAX_PITCH: float = 1.35  # ~77 deg
+const COCKPIT_LOOK_DOWN: float = 0.37   # ~21 deg: free-look in the cockpit cannot drop to the pilot's feet
 const ORBIT_MIN_EL: float = -1.15   # lowest the orbit camera may sit below the aircraft
 const ORBIT_MAX_EL: float = 1.30    # highest it may rise above (keeps looking_at well defined)
 const DIST_SCALE_MIN: float = 0.35  # numpad minus floor: how close the chase camera may pull in
@@ -83,6 +92,8 @@ func bind(a: Aircraft) -> void:
 	target = a
 	_zoom_plane = str(a.stats.id) if a.stats else ""
 	_dist_scale_t = _read_zoom(_zoom_plane)
+	_head = _read_head(_zoom_plane)
+	_head_dirty = false
 	_dist_scale = _dist_scale_t
 	if cockpit_cam and is_instance_valid(cockpit_cam):
 		cockpit_cam.queue_free()
@@ -142,6 +153,46 @@ func set_orbit(yaw_deg: float, pitch_deg: float) -> void:
 
 
 ## Chase distance for one plane, from its own file (settings.cfg is rewritten by GameState, so it stays separate).
+static func _read_head(plane: String) -> Vector3:
+	var cf := ConfigFile.new()
+	if plane == "" or cf.load(HEAD_SAVE_PATH) != OK:
+		return Vector3.ZERO
+	var v: Variant = cf.get_value(plane, "head", Vector3.ZERO)
+	return (v as Vector3).clamp(HEAD_MIN, HEAD_MAX) if v is Vector3 else Vector3.ZERO
+
+
+func _save_head() -> void:
+	if _zoom_plane == "":
+		return
+	var cf := ConfigFile.new()
+	cf.load(HEAD_SAVE_PATH)
+	cf.set_value(_zoom_plane, "head", _head)
+	cf.save(HEAD_SAVE_PATH)
+
+
+## Hold numpad keys to move the head about the seat; the position is saved when the keys are released.
+func _update_head(delta: float) -> void:
+	var d := Vector3.ZERO
+	if Input.is_physical_key_pressed(KEY_KP_4):
+		d.x -= 1.0
+	if Input.is_physical_key_pressed(KEY_KP_6):
+		d.x += 1.0
+	if Input.is_physical_key_pressed(KEY_KP_9):
+		d.y += 1.0
+	if Input.is_physical_key_pressed(KEY_KP_3):
+		d.y -= 1.0
+	if Input.is_physical_key_pressed(KEY_KP_8):
+		d.z -= 1.0
+	if Input.is_physical_key_pressed(KEY_KP_2):
+		d.z += 1.0
+	if d != Vector3.ZERO:
+		_head = (_head + d * HEAD_RATE * delta).clamp(HEAD_MIN, HEAD_MAX)
+		_head_dirty = true
+	elif _head_dirty:
+		_head_dirty = false
+		_save_head()
+
+
 static func _read_zoom(plane: String) -> float:
 	var cf := ConfigFile.new()
 	if plane == "" or cf.load(ZOOM_SAVE_PATH) != OK:
@@ -226,6 +277,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		adjust_view_distance(-1.0)
 	elif event.is_action_pressed("view_dist_reset"):
 		reset_view_distance()
+	elif is_cockpit and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_KP_5:
+		_head = Vector3.ZERO
+		_save_head()
 
 
 func _snap() -> void:
@@ -277,7 +331,7 @@ func _process(delta: float) -> void:
 	var rx: float = _look_axis("look_left", "look_right")
 	var ry: float = _look_axis("look_up", "look_down")
 	_look_yaw = wrapf(_look_yaw - rx * LOOK_RATE * delta, -PI, PI)
-	_look_pitch = clampf(_look_pitch - ry * LOOK_RATE * delta, -LOOK_MAX_PITCH, LOOK_MAX_PITCH)
+	_look_pitch = clampf(_look_pitch - ry * LOOK_RATE * delta, -(COCKPIT_LOOK_DOWN if is_cockpit else LOOK_MAX_PITCH), LOOK_MAX_PITCH)
 
 	# Bouncing bomb: on release the chase camera follows the bomb from the side so the skips are visible.
 	var sv: Dictionary = Weapons.skip_bomb_view()
@@ -389,7 +443,7 @@ func _process(delta: float) -> void:
 			var hd: float = Vector2(local.x, local.z).length()
 			look = Vector3(atan2(local.y, maxf(hd, 0.001)), atan2(-local.x, -local.z), 0.0)
 		else:
-			look = Vector3(_look_pitch, _look_yaw, 0.0)
+			look = Vector3(maxf(_look_pitch, -COCKPIT_LOOK_DOWN), _look_yaw, 0.0)
 		_steady_cockpit(delta, look)
 		cockpit_cam.h_offset = sin(_t * 47.0) * clampf(_shake, 0.0, 1.5) * 0.05
 		cockpit_cam.v_offset = cos(_t * 39.0) * clampf(_shake, 0.0, 1.5) * 0.05
@@ -409,7 +463,12 @@ func _steady_cockpit(delta: float, look: Vector3) -> void:
 	var mount_basis: Basis = Basis.IDENTITY
 	if mount:
 		mount_basis = (target.global_transform.basis.inverse() * mount.global_transform.basis).orthonormalized()
-	cockpit_cam.global_transform = Transform3D(_cock_basis * mount_basis * Basis.from_euler(look), origin)
+	_update_head(delta)
+	# a modelled interior has parts well inside the usual 0.3 m near plane (seat, panel): pull it in so they do not
+	# clip into odd shapes as the view turns
+	cockpit_cam.near = 0.05 if (target.cockpit_interior != null and is_instance_valid(target.cockpit_interior)) else 0.3
+	var eye_basis: Basis = _cock_basis * mount_basis
+	cockpit_cam.global_transform = Transform3D(eye_basis * Basis.from_euler(look), origin + eye_basis * _head)
 
 
 ## Normalised lerp: same as slerp for the small per-frame steps used here, but never trips Godot's

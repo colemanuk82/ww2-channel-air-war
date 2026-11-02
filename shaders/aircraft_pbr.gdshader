@@ -31,6 +31,9 @@ varying vec3 o_n;
 // Structural loss (see AircraftDamageModel): fragments past these object-space limits are cut away.
 // x = starboard wing from this |x| outward, y = port wing, z = everything aft of this z (the tail); 0 = intact.
 instance uniform vec4 cut = vec4(0.0);
+// Cockpit interior view: object-space box (hole_a.xyz .. hole_b) cut out of the hull while hole_a.w > 0.
+instance uniform vec4 hole_a = vec4(0.0);
+instance uniform vec3 hole_b = vec3(0.0);
 // National markings painted into the skin (GltfModels bakes each marking group into a slot of decal_atlas and a
 // planar projector here): no separate decal meshes, so nothing can sink into or float off the airframe.
 const int MAX_DECALS = 8;
@@ -79,6 +82,9 @@ float rivet_row(float a, float c, float spacing, float off, float pitch) {
 
 void fragment() {
 	if ((cut.x > 0.0 && o_p.x > cut.x) || (cut.y > 0.0 && o_p.x < -cut.y) || (cut.z > 0.0 && o_p.z > cut.z)) {
+		discard;
+	}
+	if (hole_a.w > 0.0 && all(greaterThan(o_p, hole_a.xyz)) && all(lessThan(o_p, hole_b))) {
 		discard;
 	}
 	vec3 n = o_n;

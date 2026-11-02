@@ -167,6 +167,12 @@ func _process(delta: float) -> void:
 	_over.cockpit = cockpit
 	_over.cam = cam
 	_over.aircraft = pl
+	# with a modelled interior shown the drops belong on its glass only (see RainOverlay._on_glass)
+	_over.interior = pl.cockpit_interior if (pl != null and cockpit and pl.cockpit_interior != null and is_instance_valid(pl.cockpit_interior) and pl.cockpit_interior.visible) else null
+	# the 3D streak particles fill the whole view, cabin walls included: with a modelled interior the 2D drops on the glass are the rain
+	_parts.visible = _over.interior == null
+	if _over.interior != null:
+		_over.intensity = 0.0      # the modelled interior carries its own beads and runs on its glass (SpitfireCockpit glass shader)
 	_over.air_vel = _vel
 	# sound: louder drumming on the canopy than the hiss outside
 	var want: float = intensity * (1.0 if cockpit else 0.45)
@@ -198,6 +204,7 @@ class RainOverlay extends Control:
 	var cockpit: bool = false
 	var cam: Camera3D
 	var aircraft: Aircraft
+	var interior: Node3D = null        # modelled cockpit interior while shown: drops only land on its glass
 	var air_vel: Vector3 = Vector3.ZERO
 	var _drops: Array = []        # {p, r, vs, stick, life, trail: PackedVector2Array, moved}
 	var _flash: float = 0.0
@@ -225,6 +232,33 @@ class RainOverlay extends Control:
 			_update_flow()
 			_update_drops(delta, wet)
 		queue_redraw()
+
+	## True where the view looks through glass rather than at the cockpit structure. Casts the pixel's ray into
+	## the cabin (eye-relative, +X right, +Y up, nose -Z): the first wall it meets is the side ledge, the coaming
+	## and panel ahead, or the seat armour behind. Above that wall's top edge is hood or windscreen glass.
+	func _on_glass(p: Vector2) -> bool:
+		if interior == null or cam == null:
+			return true
+		# the ray is cast from where the head really is (the numpad head offsets move it off the cabin origin)
+		var inv: Transform3D = interior.global_transform.affine_inverse()
+		var o: Vector3 = inv * cam.global_position
+		var d: Vector3 = inv.basis * cam.project_ray_normal(p)
+		var t: float = 1.0e9
+		var top: float = -0.115
+		if absf(d.x) > 0.0001:
+			var tx: float = ((0.43 if d.x > 0.0 else -0.43) - o.x) / d.x
+			if tx > 0.0:
+				t = tx
+		if d.z < -0.0001:
+			var tf: float = (-0.75 - o.z) / d.z
+			if tf > 0.0 and tf < t:
+				t = tf
+		elif d.z > 0.0001:
+			var tb: float = (0.50 - o.z) / d.z
+			if tb > 0.0 and tb < t:
+				t = tb
+				top = 0.12
+		return o.y + d.y * t > top
 
 	## Airflow over the glass for this view: from the point where the flight path meets the screen.
 	func _update_flow() -> void:
@@ -265,6 +299,13 @@ class RainOverlay extends Control:
 				if _drops.size() >= 150:
 					break
 				var p := Vector2(randf() * sz.x, randf() * sz.y)
+				if interior != null:
+					var tries: int = 0
+					while tries < 8 and not _on_glass(p):
+						p = Vector2(randf() * sz.x, randf() * sz.y)
+						tries += 1
+					if not _on_glass(p):
+						continue
 				var big: bool = randf() < 0.3
 				_drops.append({"p": p, "r": randf_range(3.5, 7.5) if big else randf_range(1.2, 3.2), "vs": randf_range(0.6, 1.4),
 					"stick": randf_range(0.0, 0.5), "life": randf_range(4.0, 9.0), "trail": PackedVector2Array([p]), "moved": 0.0})
@@ -295,12 +336,15 @@ class RainOverlay extends Control:
 					d["stick"] = randf_range(0.05, 0.35)
 				# a running drop sheds water and shrinks
 				d["r"] = maxf(r - step.length() * 0.004, 1.0)
+			if interior != null and not _on_glass(p):
+				_drops.remove_at(i)       # ran off the glass onto the structure
+				continue
 			if float(d["life"]) <= 0.0 or p.x < -40.0 or p.y < -40.0 or p.x > sz.x + 40.0 or p.y > sz.y + 40.0:
 				_drops.remove_at(i)
 
 	func _draw() -> void:
 		var sz: Vector2 = size
-		if intensity > 0.04:
+		if intensity > 0.04 and interior == null:
 			# a grey wet veil: stronger in the cockpit (water film on the glass)
 			draw_rect(Rect2(Vector2.ZERO, sz), Color(0.10, 0.13, 0.18, (0.13 if cockpit else 0.07) * intensity))
 		var L: float = _light

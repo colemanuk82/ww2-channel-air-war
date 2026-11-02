@@ -26,6 +26,7 @@ func _ready() -> void:
 	_test_logbook_voice()
 	_test_custom_missions()
 	_test_escape_and_backup()
+	_test_interior_cockpit()
 	_test_data_files()
 	_test_river_data()
 	_test_landmarks_all()
@@ -211,6 +212,27 @@ func _test_era_damage() -> void:
 		_check(str(rr.get("source", "")) != "" and str(rr["from"]) <= str(rr["to"]), "dated war-ground row %s has a source and a sane window" % str(rr["id"]))
 	EraClock.set_date("" if keep == EraClock.DEFAULT else keep)
 	WarDamage.refresh()
+
+
+func _test_interior_cockpit() -> void:
+	print("-- interior cockpit")
+	_check(SpitfireCockpit.style_for_id("spitfire") == "spitfire" and SpitfireCockpit.style_for_id("spitfire_mkxiv") == "spitfire", "every Spitfire mark gets the Spitfire interior")
+	_check(SpitfireCockpit.style_for_id("bf109") == "bf109" and SpitfireCockpit.style_for_id("bf109g") == "bf109", "every Bf 109 mark gets the Bf 109 interior")
+	_check(not SpitfireCockpit.id_supported("fw190") and not SpitfireCockpit.id_supported(""), "other aircraft keep the standard cockpit")
+	for id in ["spitfire_mkix", "bf109f"]:
+		var side: String = "Allies" if id.begins_with("spitfire") else "Axis"
+		var a: Aircraft = AIFactory.spawn(self, id, side, Vector3(0.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
+		var c: SpitfireCockpit = SpitfireCockpit.attach(a)
+		_check(c != null and a.cockpit_interior == c, "%s: the interior attaches" % id)
+		if c == null:
+			continue
+		_check(not c.visible, "%s: the interior is hidden until the cockpit view is chosen" % id)
+		a.set_cockpit_view(true)
+		_check(c.visible, "%s: the cockpit view shows the interior" % id)
+		a.set_cockpit_view(false)
+		_check(not c.visible, "%s: leaving the cockpit view hides it again" % id)
+	_check(CameraRig._read_head("") == Vector3.ZERO, "no saved head position gives the default eye point")
+	_check(CameraRig.HEAD_MIN.x < 0.0 and CameraRig.HEAD_MAX.x > 0.0 and CameraRig.HEAD_MIN.z < 0.0, "the head can move both ways about the eye point")
 
 
 func _check(ok: bool, what: String) -> bool:

@@ -1424,6 +1424,8 @@ func _initial_config() -> Dictionary:
 			cfg["side"] = "Axis" if a.substr(7).to_lower() == "axis" else "Allies"
 		elif a.begins_with("--aircraft="):
 			cfg["aircraft"] = a.substr(11)
+		elif a.begins_with("--cockpit-style="):      # debug: standard | spitfire
+			cfg["cockpit_style"] = a.substr(16)
 		elif a.begins_with("--difficulty="):
 			var v: String = a.substr(13).to_lower()
 			cfg["difficulty"] = {"easy": 0.2, "normal": 0.5, "hard": 0.85}.get(v, float(v) if v.is_valid_float() else 0.5)
@@ -1722,6 +1724,9 @@ func start_game(cfg: Dictionary) -> void:
 	add_child(player)
 	if AircraftCatalog.is_bomber(aid):
 		CrewIntercom.attach(player)
+	# EXPERIMENTAL modelled cockpit (sortie setup > Cockpit view); the standard view stays the default
+	if String(config.get("cockpit_style", "standard")) in ["spitfire", "interior"] and SpitfireCockpit.wanted_for(player):
+		SpitfireCockpit.attach(player)
 	player.crashed.connect(_on_player_crashed)
 	player.landed.connect(func(_a: Aircraft) -> void: hud.show_message("Landed", 1.5))
 	player.took_off.connect(func(_a: Aircraft) -> void: hud.show_message("Airborne", 1.5))

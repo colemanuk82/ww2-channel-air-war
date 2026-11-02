@@ -27,6 +27,8 @@ var _spawn_note: Label
 var _spawn_entries: Array = []
 var _desc: Label
 var _info: Label
+var _cockpit: OptionButton        # experimental cockpit view (Spitfire and Bf 109 only)
+var _cockpit_row: Control
 var _plan: Dictionary = {}      # result of the map planner (free flight)
 var _plan_label: Label
 var _plan_btn: Button
@@ -150,6 +152,10 @@ void fragment() {
 	_mission.item_selected.connect(func(_i: int) -> void: _tint_mission())
 	_mission_row = _mission.get_parent()
 	_tint_mission()
+	# Experimental modelled cockpit: only offered for the Spitfire and Bf 109 marks (the standard view stays available)
+	_cockpit = UIKit.option_field(sortie, "Cockpit view", ["Standard", "Interior (experimental)"], 300, 18)
+	_cockpit.tooltip_text = "Standard: the original view along the nose. Interior: a modelled cockpit with instrument panel, gunsight, windscreen and consoles (experimental). Look around with the right stick / mouse."
+	_cockpit_row = _cockpit.get_parent()
 	# Loadout on one compact row: fewer weapons mean a lighter aircraft (a little more speed and agility).
 	sortie.add_child(UIKit.label("LOADOUT", 14, UIKit.TEXT_DIM, true))
 	var loadout_row := HBoxContainer.new()
@@ -558,6 +564,8 @@ func _refresh_info() -> void:
 		return
 	var st: AircraftStats = AircraftCatalog.load_stats(_ids[_aircraft.selected])
 	_info.text = "Speed %d km/h   Hull %d   Bombs %d" % [int(st.max_speed * 3.6), int(st.max_health), st.bombs]
+	if _cockpit_row != null:
+		_cockpit_row.visible = SpitfireCockpit.id_supported(String(st.id))
 
 
 ## Rebuild the loadout lists for the selected aircraft. Every row starts at the full load.
@@ -986,6 +994,7 @@ func _on_start() -> void:
 		cfg["passing_flights"] = _passing.button_pressed
 		if not _plan.is_empty():
 			cfg.merge(_plan, true)      # map planner overrides spawn, scenario (mode), targets, enemy strength
+	cfg["cockpit_style"] = "interior" if _cockpit != null and _cockpit.selected == 1 and _cockpit_row.visible else "standard"
 	_remember_sortie(cfg)
 	start_requested.emit(cfg)
 
@@ -994,7 +1003,7 @@ func _on_start() -> void:
 ## start point (spawn list or planner coordinates) and the mission where applicable.
 func _remember_sortie(cfg: Dictionary) -> void:
 	var rec: Dictionary = {}
-	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout"]:
+	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style"]:
 		if cfg.has(k):
 			rec[k] = cfg[k]
 	GameState.last_sortie = rec
@@ -1044,6 +1053,8 @@ func _restore_last_sortie() -> void:
 			break
 	if c.has("wingmen"):
 		_wingmen.select(clampi(int(c["wingmen"]), 0, 3))
+	if c.has("cockpit_style") and _cockpit != null:
+		_cockpit.select(1 if String(c["cockpit_style"]) in ["spitfire", "interior"] else 0)
 	if c.has("passing_flights"):
 		_passing.button_pressed = bool(c["passing_flights"])
 	if c.has("spawn_lat") or c.has("spawn_lon") or c.has("spawn_airfield"):

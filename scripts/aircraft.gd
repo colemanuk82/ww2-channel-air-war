@@ -147,6 +147,7 @@ var _canopy: Node3D
 var _eye: Node3D
 var _dying_spin: float = 0.0
 var _cockpit_view: bool = false
+var cockpit_interior: Node3D = null    # optional modelled interior (SpitfireCockpit), shown only in the cockpit view
 
 
 func _ready() -> void:
@@ -459,6 +460,10 @@ func get_cockpit_mount() -> Node3D:
 
 func set_cockpit_view(on: bool) -> void:
 	_cockpit_view = on
+	if on:
+		_ensure_blackout()      # the interior cuts the hull's black twin too, so it must exist first
+	if cockpit_interior != null and is_instance_valid(cockpit_interior) and cockpit_interior.has_method("set_active"):
+		cockpit_interior.call("set_active", on)
 	if _canopy:
 		_canopy.visible = not on
 	if on:
