@@ -31,6 +31,7 @@ var moon_illum: float = 1.0              # 0..1 moon brightness for this mission
 
 var sun_dir: Vector3 = Vector3.UP        # direction TOWARDS the sun
 var sun_color: Color = Color.WHITE
+var ssr_allowed: bool = false            # set by apply_post: screen-space reflections only on the high preset
 var light_level: float = 1.0             # 0..1 overall brightness (for clouds, cockpit dimming)
 var horizon_color: Color = Color.WHITE
 
@@ -112,6 +113,21 @@ func _build_nodes() -> void:
 
 ## Post-processing level (GameState.post_fx): 0 = plain linear look, 1 = filmic tonemap + bloom + colour grade,
 ## 2 = also screen-space ambient occlusion and a sun-scatter glow in the fog / haze.
+## Screen-space reflections, only while the ground is wet (puddles and wet tarmac mirror the hangars, lamps
+## and aircraft); off otherwise, since they cost a full-screen pass.
+func set_wet_reflections(on: bool) -> void:
+	if environment == null:
+		return
+	var want: bool = on and ssr_allowed
+	if environment.ssr_enabled == want:
+		return
+	environment.ssr_enabled = want
+	environment.ssr_max_steps = 48
+	environment.ssr_fade_in = 0.15
+	environment.ssr_fade_out = 2.0
+	environment.ssr_depth_tolerance = 0.4
+
+
 func apply_post(level: int) -> void:
 	var on: bool = level >= 1
 	var high: bool = level >= 2
@@ -136,6 +152,8 @@ func apply_post(level: int) -> void:
 	environment.adjustment_contrast = 1.05 if on else 1.0
 	environment.adjustment_saturation = 1.05 if on else 1.0
 	environment.ssao_enabled = high
+	ssr_allowed = high
+	set_wet_reflections(environment.ssr_enabled)
 	# AO can be real now: it used to fight the flat-shaded buildings, but the world is proper surfaces
 	environment.ssao_radius = 2.4
 	environment.ssao_intensity = 0.62

@@ -839,10 +839,13 @@ static var _puddle_mat: StandardMaterial3D
 func _build_puddles() -> void:
 	if _puddle_mat == null:
 		_puddle_mat = StandardMaterial3D.new()
-		_puddle_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_puddle_mat.albedo_color = Color(0.10, 0.14, 0.17, 0.62)
-		_puddle_mat.metallic = 0.45
-		_puddle_mat.roughness = 0.06
+		# opaque standing water: a dark, mirror-smooth surface. Opaque so it takes screen-space reflections
+		# (transparent surfaces never do) and the sky reflection; it used to be a half-transparent disc that
+		# just tinted the runway and showed up as pale blobs.
+		_puddle_mat.albedo_color = Color(0.03, 0.04, 0.05)
+		_puddle_mat.metallic = 1.0
+		_puddle_mat.metallic_specular = 0.6
+		_puddle_mat.roughness = 0.02
 		_puddle_mat.disable_receive_shadows = true
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(airfield_name) + 1771

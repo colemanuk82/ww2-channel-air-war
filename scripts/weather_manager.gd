@@ -245,6 +245,7 @@ func _update_rain(delta: float) -> void:
 		target = 1.0
 	rain = move_toward(rain, target, delta * 0.5)
 	wetness = move_toward(wetness, 1.0 if rain > 0.15 else 0.0, delta * (0.08 if rain > 0.15 else 0.012))
+	TimeOfDay.set_wet_reflections(wetness > 0.12)
 	RenderingServer.global_shader_parameter_set("wetness", wetness)
 	if rain_fx:
 		rain_fx.intensity = rain
