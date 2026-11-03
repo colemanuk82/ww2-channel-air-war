@@ -745,6 +745,10 @@ func _think() -> void:
 		return
 	var dr: float = detect_range * clampf(sqrt(_vis), 0.35, 1.0)
 	_maybe_let_player_go()
+	# a target shot down and freed must be dropped before it is passed to a typed parameter: in a release build
+	# that type check on a freed object crashes the game (Variant::callp access violation), in the editor it only errors
+	if not is_instance_valid(target):
+		target = null
 	if not _target_valid(target, dr * 1.4):
 		target = _find_target(dr)
 	elif randf() < 0.3:
@@ -869,8 +873,12 @@ func _release_player(secs: float) -> void:
 		_set_state(State.ROUTE if not waypoints.is_empty() and wp_index < waypoints.size() else State.PATROL)
 
 
-func _target_valid(t: Aircraft, max_range: float) -> bool:
-	if t == null or not is_instance_valid(t) or t.state != Aircraft.State.ALIVE:
+## t is untyped on purpose: a freed Aircraft must reach the is_instance_valid check, not a typed-argument check.
+func _target_valid(tv: Variant, max_range: float) -> bool:
+	if tv == null or not is_instance_valid(tv):
+		return false
+	var t: Aircraft = tv as Aircraft
+	if t == null or t.state != Aircraft.State.ALIVE:
 		return false
 	if t.player_controlled and _let_go():
 		return false
