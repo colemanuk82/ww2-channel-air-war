@@ -1818,7 +1818,10 @@ func start_game(cfg: Dictionary) -> void:
 	_pause.stats_provider = func() -> Dictionary: return mode.call("live_stats") if is_instance_valid(mode) and mode.has_method("live_stats") else {}
 	_pause.restart_requested.connect(restart)
 	_pause.menu_requested.connect(quit_to_menu)
-	_pause.show_end_sortie = bool(config.get("career", false))
+	_pause.show_end_sortie = bool(config.get("career", false)) or mid == "free"
+	if mid == "free" and not bool(config.get("career", false)):
+		_pause.end_sortie_text = "End sortie and show scores"
+		_pause.end_only_on_ground = func() -> bool: return is_instance_valid(player) and (player as Aircraft).state == Aircraft.State.ALIVE and (player as Aircraft).on_ground
 	_pause.end_sortie_requested.connect(_end_career_sortie)
 	_pause.quit_requested.connect(func() -> void: get_tree().quit())
 	_pause.warp_requested.connect(func(mult: int) -> void: _set_sim_warp(mult))
@@ -2413,6 +2416,13 @@ func _respawn_watchdog(delta: float) -> void:
 
 ## Pilot's Life: a free-flight sortie has no objective, so the pilot ends it himself once he is down.
 func _end_career_sortie() -> void:
+	if not bool(config.get("career", false)):
+		# free flight: only offered on the ground (the pause menu hides the button in the air); the results screen shows the score, kills and time, then "menu"
+		if not (is_instance_valid(player) and (player as Aircraft).on_ground):
+			return
+		if mode != null and is_instance_valid(mode) and mode.has_method("finish"):
+			mode.call("finish", true, {"reason": "Sortie ended"})
+		return
 	if player == null or not is_instance_valid(player) or player.state != Aircraft.State.ALIVE:
 		return
 	if not player.on_ground:

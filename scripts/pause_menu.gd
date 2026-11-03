@@ -16,7 +16,9 @@ var enabled: bool = true
 var stats_provider: Callable = Callable()   # returns the live mode stats Dictionary (set by main)
 var warp_reset: Callable = Callable()       # main resets the warp to 1x when this menu opens (set by main)
 var _score_panel: Control
-var show_end_sortie: bool = false       # set by main for career sorties
+var show_end_sortie: bool = false       # set by main for career sorties and free flight
+var end_sortie_text: String = "End sortie (land first)"   # free flight: goes straight to the scores
+var end_only_on_ground: Callable = Callable()   # when set, the button only shows while this returns true (free flight: on the ground)
 var _end_btn: Button
 
 
@@ -110,7 +112,8 @@ func _cycle_warp() -> void:
 func set_open(open: bool) -> void:
 	_root.visible = open
 	if _end_btn != null:
-		_end_btn.visible = open and show_end_sortie
+		_end_btn.visible = open and show_end_sortie and (not end_only_on_ground.is_valid() or bool(end_only_on_ground.call()))
+		_end_btn.text = end_sortie_text
 	get_tree().paused = open
 	GameState.paused = open
 	if open:
