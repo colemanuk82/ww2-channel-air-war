@@ -214,7 +214,8 @@ func _process(delta: float) -> void:
 		if not _snd.playing:
 			_snd.bus = &"SFX" if AudioServer.get_bus_index("SFX") >= 0 else &"Master"
 			_snd.play()
-		_snd.volume_db = linear_to_db(maxf(_snd_level, 0.0001)) + (7.0 if cockpit else 1.0)    # loud: heavy rain drums on the hood
+		# loud drumming on the hood; the modelled (experimental) interior is quieter - it sounded overpowering there
+		_snd.volume_db = linear_to_db(maxf(_snd_level, 0.0001)) + (-4.0 if _over.interior != null else (7.0 if cockpit else 1.0))
 		_snd.pitch_scale = 0.85 + 0.35 * clampf(_vel.length() / 200.0, 0.0, 1.0)
 	elif _snd.playing:
 		_snd.stop()

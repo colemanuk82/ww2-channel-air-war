@@ -302,7 +302,9 @@ void fragment() {
 			c += texture(tex, UV + o).rgb;
 		}
 	}
-	ALBEDO = c * 0.0625;
+	// kept under the glow threshold (1.0): the luminous marks carry their own drawn halo, and engine bloom taken from
+	// the low-res internal image made the thin bright lines flicker from frame to frame
+	ALBEDO = min(c * 0.0625, vec3(0.88));
 }
 """
 	var pm := ShaderMaterial.new()
@@ -808,6 +810,8 @@ func _build_coaming_and_sight() -> void:
 		(sight_glass as ShaderMaterial).set_shader_parameter("wet", 0.0)    # inside the cockpit: stays dry
 	_quad(sight, "Glass", Vector2(0.085, 0.075), Vector3(0, 0.08, 0.02), Vector3(-30, 0, 0), sight_glass)
 	var gold: Material = _mat(Color(1.0, 0.8, 0.3), 0.5, 0.0, Color(1.0, 0.72, 0.18))
+	if gold is StandardMaterial3D:
+		(gold as StandardMaterial3D).emission_energy_multiplier = 0.55     # below the glow threshold: no bloom flicker
 	var ring := MeshInstance3D.new()
 	ring.name = "Reticle"
 	var tm := TorusMesh.new()
