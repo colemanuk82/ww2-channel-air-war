@@ -51,6 +51,20 @@ Imported assets (CC0 / CC-BY) must be listed here as: name, author, licence, sou
 - Menu paintings (`assets/menu/`) are AI-generated; no photographic content.
 - Menu music (`assets/music/freedom.mp3`, `assets/music/cinematic_violin_tribal.mp3`) and Allied victory music (`assets/music/victory/allies.mp3`, a copy of "Battle Cry of the Brave") are copies of the Pixabay tracks listed above, under the same licence.
 - Menu music (Pixabay Content License): "Remembering Our Veterans - Heroic Cinematic Music" by Luis_Humanoide — https://pixabay.com/users/luis_humanoide-12661853/ ; "Swing That Jazz - 1940s Big Band Dance Music" by kaazoom — https://pixabay.com/users/kaazoom-448850/
+- Additional menu music (Pixabay Content License; direct track pages):
+  - "Echoes of Remembrance" by jplenio — https://pixabay.com/music/modern-classical-echoes-of-remembrance-202759/
+  - "Exodus, The Weight of Remembrance" by Emand_Edroff — https://pixabay.com/music/orchestral-exodus-the-weight-of-remembrance-531812/
+  - "Memories Remain" by _Music_for_Creators_ — https://pixabay.com/music/modern-classical-memories-remain-171862/
+  - "Emotional Piano and Cinematic Strings" by _Music_for_Creators_ — https://pixabay.com/music/main-title-emotional-piano-and-cinematic-strings-156711/
+  - "Reverie in a Heartbeat" by _Music_for_Creators_ — https://pixabay.com/music/modern-classical-reverie-in-a-heartbeat-178704/
+  - "Calm Piano Music (Days To Remember)" by Evgeny_Bardyuzha — https://pixabay.com/music/solo-piano-calm-piano-music-days-to-remember-18539/
+  - "Just Swing - 1940s Big Band Swing" by kaazoom — https://pixabay.com/music/big-band-just-swing-1940s-big-band-swing-361070/
+  - "Swing the Night Away - 1940s Big Band Dance Music" by kaazoom — https://pixabay.com/music/big-band-swing-the-night-away-1940s-big-band-dance-music-338040/
+  - "Swing Street Nights" by mcanden — https://pixabay.com/music/cafe-swing-street-nights-514185/
+  - "Classic Big Band Swing Music" by NickPanek — https://pixabay.com/music/big-band-classic-big-band-swing-music-230397/
+  - "War Epic" by PaulYudin — https://pixabay.com/music/main-title-war-epic-182501/
+  - "Cinematic War" and "Trailer War" by The_Mountain — https://pixabay.com/users/the_mountain-3616498/ (menu copies of the in-flight tracks listed above).
+  - "Echoes of Remembrance", "Calm Piano Music (Days To Remember)" and "War Epic" are marked Content ID registered on their Pixabay pages; the Pixabay Content License still permits use in the game.
 - Axis victory music (`assets/music/victory/axis.mp3`, Pixabay Content License): "Epic Military March – Heroic Snare Drum Theme" by DesiFreeMusic — https://pixabay.com/users/desifreemusic-28163210/
 
 ## Aircraft and mission sources (POW escape, D-Day airborne)
