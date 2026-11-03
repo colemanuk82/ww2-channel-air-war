@@ -292,7 +292,7 @@ func _snap() -> void:
 	chase_cam.global_position = p - _fwd * distance + _up * height
 	var look: Vector3 = p + _fwd * 30.0
 	if look.distance_squared_to(chase_cam.global_position) > 0.0001:
-		chase_cam.look_at(look, Vector3.UP)
+		LookUtil.look(chase_cam, look, Vector3.UP)
 
 
 func _process(delta: float) -> void:

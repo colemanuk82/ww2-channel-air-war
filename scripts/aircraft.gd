@@ -724,7 +724,7 @@ func take_damage(amount: float, source: Node = null) -> void:
 		# sometimes a kill detonates in the air rather than gliding down (fuel / ammo going up)
 		if randf() < 0.35 and not has_meta("bailed"):     # an abandoned aircraft flies on and crashes, it never airbursts
 			_explode_t = randf_range(0.4, 2.2)
-		destroyed.emit(self, source)
+		destroyed.emit(self, source if is_instance_valid(source) else null)
 		if not player_controlled and WeaponWorld.is_player_source(source):
 			Weapons.player_kill.emit(self)
 
@@ -744,7 +744,7 @@ func fire_kill(blow_up: bool, fuse: float = -1.0) -> void:
 	_dying_spin = randf_range(-1.5, 1.5)
 	if blow_up and not has_meta("bailed"):
 		_explode_t = fuse if fuse >= 0.0 else randf_range(0.4, 2.0)
-	destroyed.emit(self, last_attacker)
+	destroyed.emit(self, last_attacker if is_instance_valid(last_attacker) else null)
 	if not player_controlled and last_attacker != null and WeaponWorld.is_player_source(last_attacker):
 		Weapons.player_kill.emit(self)
 
@@ -767,7 +767,7 @@ func start_breakup(part: String, source: Node = null) -> void:
 		_dying_spin = 1.0
 	else:
 		_dying_spin = randf_range(-1.0, 1.0)
-	destroyed.emit(self, source)
+	destroyed.emit(self, source if is_instance_valid(source) else null)
 	if not player_controlled and WeaponWorld.is_player_source(source):
 		Weapons.player_kill.emit(self)
 

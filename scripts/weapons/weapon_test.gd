@@ -128,7 +128,7 @@ func _process(delta: float) -> void:
 		look = player.global_position + player.get_forward() * 80.0
 		want = player.global_position + player.global_transform.basis.z * 55.0 + Vector3(0, 14, 0)
 	cam.global_position = cam.global_position.lerp(want, 1.0 - exp(-6.0 * delta))
-	cam.look_at(look, Vector3.UP)
+	LookUtil.look(cam, look, Vector3.UP)
 	# strafe the dummy between t=1.2 and 3.4
 	player.cmd_fire = t > 0.8 and t < 2.6
 	player.cmd_pitch = 0.0

@@ -103,7 +103,7 @@ func start() -> void:
 		_setup_dam()
 		if kind == "dam":
 			_add_nav_dot(_dam_pos)
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if pl != null:
 		pl.destroyed.connect(_on_player_down)
 	_find_home()
@@ -430,7 +430,7 @@ func _process(delta: float) -> void:
 		return
 	elapsed += delta
 	_cine_update(delta)
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if kind == "low":
 		_check_rings(pl)
 		_animate_rings(delta)
@@ -603,7 +603,7 @@ func _cine_enter_flood() -> void:
 	var cam_p: Vector3 = _dam_pos + fwd * 170.0
 	cam_p.y = GroundKit.ground_y(cam_p.x, cam_p.z) + 48.0
 	_flood_cam.global_position = cam_p
-	_flood_cam.look_at(_dam_pos + Vector3.UP * 14.0, Vector3.UP)
+	LookUtil.look(_flood_cam, _dam_pos + Vector3.UP * 14.0, Vector3.UP)
 	_flood_cam.make_current()
 
 

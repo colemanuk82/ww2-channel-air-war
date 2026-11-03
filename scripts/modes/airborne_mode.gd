@@ -86,7 +86,7 @@ func start() -> void:
 	var pop: WorldPopulator = WorldPopulator.instance
 	if pop != null and pop.has_method("pin_site"):
 		pop.pin_site("lz_" + zone_id)
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if pl != null:
 		_gate = pl.global_position
 		pl.set_meta("unarmed", true)
@@ -167,7 +167,7 @@ func _spawn_plane(pos: Vector3, fwd: Vector3) -> Node3D:
 		n.add_child(c47)
 	n.global_position = pos
 	world.add_child(n)
-	n.look_at(pos + fwd, Vector3.UP)
+	LookUtil.look(n, pos + fwd, Vector3.UP)
 	_own(n)
 	return n
 
@@ -223,7 +223,7 @@ func _tick_formation(delta: float) -> void:
 			n.global_position += fwd * FORM_SPEED * delta + Vector3(0.0, -2.0 * delta, 0.0)
 		else:
 			n.global_position += fwd * FORM_SPEED * delta
-		n.look_at(n.global_position + fwd, Vector3.UP)
+		LookUtil.look(n, n.global_position + fwd, Vector3.UP)
 		var d: float = Vector2(n.global_position.x - _zone.x, n.global_position.z - _zone.z).length()
 		if kind == "tow":
 			var rig: TowRig = fd["rig"]
@@ -422,7 +422,7 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	if not running or _ended or not (player is Aircraft) or not _have_zone:
 		return
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	_tick_formation(delta)
 	_tick_men(delta)
 	if kind == "tow":
@@ -438,7 +438,7 @@ func _process(delta: float) -> void:
 func _update_status() -> void:
 	if hud == null or not hud.has_method("set_readout_extra") or not _have_zone:
 		return
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if pl == null:
 		return
 	var d: float = _flat_dist(pl.global_position, _zone)

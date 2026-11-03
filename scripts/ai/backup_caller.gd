@@ -69,7 +69,7 @@ func _incident_of(node: Node) -> Dictionary:
 	var cur: Variant = world.get("player") if world != null else null
 	if cur is Aircraft and is_instance_valid(cur):
 		player = cur        # the player respawns as a new aircraft
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if pl == null or not is_instance_valid(pl):
 		return {}
 	if node is GroundTarget:

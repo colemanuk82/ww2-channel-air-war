@@ -1625,7 +1625,7 @@ func _update_menu_cam(delta: float) -> void:
 	var p: Vector3 = c + Vector3(cos(_menu_t), 0.0, sin(_menu_t)) * 3200.0
 	p.y = 1400.0
 	_menu_anchor.global_position = p
-	_menu_cam.look_at(Vector3(c.x, 150.0, c.z), Vector3.UP)
+	LookUtil.look(_menu_cam, Vector3(c.x, 150.0, c.z), Vector3.UP)
 
 
 # ---------------------------------------------------------------- session
@@ -1641,6 +1641,7 @@ var _resume_t: float = RESUME_INTERVAL
 
 func start_game(cfg: Dictionary) -> void:
 	GroundKit.lp("start_game begin")
+	BlackBox.note("sortie start: mode %s aircraft %s side %s weather %s time %s season %s date %s cockpit %s" % [cfg.get("mode", "?"), cfg.get("aircraft", "?"), cfg.get("side", "?"), cfg.get("weather", "?"), cfg.get("time", "?"), cfg.get("season", "?"), cfg.get("era_date", ""), cfg.get("cockpit_style", "")])
 	_reset_sim_warp()      # every sortie starts at 1x: a warp never carries in from the menu, a replay or the results screen
 	config = cfg.duplicate()
 	_resume_pending = bool(config.get("resume", false))
@@ -2607,11 +2608,11 @@ func _bomber_demo_tick() -> void:
 		return
 	var c: Vector3 = sum / float(n)
 	_demo_cam.global_position = c + _demo_side * 450.0 - Vector3.UP * 200.0
-	_demo_cam.look_at(c, Vector3.UP)
+	LookUtil.look(_demo_cam, c, Vector3.UP)
 
 
 func _update_sim_warp(delta: float) -> void:
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	var bailing: bool = _bail != null and _bail.active       # floating down on the parachute: warp allowed
 	var can_warp: bool = bailing or (pl != null and pl.state == Aircraft.State.ALIVE and not pl.on_ground and not GameState.paused)
 	if _warp_forced:
@@ -3013,7 +3014,7 @@ func _parse_debug_args() -> void:
 					cc.fov = 58.0
 					ch.add_child(cc)
 					cc.position = Vector3(5.0, 4.5, 12.0)
-					cc.look_at(ch.global_position + Vector3(0, 3.6, 0), Vector3.UP)
+					LookUtil.look(cc, ch.global_position + Vector3(0, 3.6, 0), Vector3.UP)
 					cc.make_current())
 		elif a == "--noout":
 			GameState.outlines_enabled = false

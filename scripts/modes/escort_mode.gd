@@ -92,7 +92,7 @@ func _process(delta: float) -> void:
 			bp.bomber_speed_k = ramp
 	var lp: Vector3 = lead.global_position
 	if GroundKit.has_arg("--escort-debug"):
-		var pl: Aircraft = player as Aircraft
+		var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 		print("[escort] t=%3.0f  bomber %.0f u/s (%.0f km/h) alt %.0f m  | player %.0f u/s alt %.0f m  | gap %.1f km (real)" % [elapsed, lead.speed, lead.speed * 3.6, lp.y / 2.0, pl.speed, pl.global_position.y / 2.0, Vector2(lp.x - pl.global_position.x, lp.z - pl.global_position.z).length() * WorldCoords.HORIZ_COMPRESSION / 1000.0])
 	if not _bombed and Vector2(lp.x - _target_pos.x, lp.z - _target_pos.z).length() < 1800.0:
 		_bombed = true

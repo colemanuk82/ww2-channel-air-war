@@ -347,7 +347,7 @@ func _in_zone(p: Vector3, zid: String) -> bool:
 
 
 func _landed() -> bool:
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	return pl != null and is_instance_valid(pl) and pl.on_ground and pl.speed < 8.0 and pl.state == Aircraft.State.ALIVE
 
 
@@ -410,7 +410,7 @@ func _obj(id: String) -> Dictionary:
 
 
 func _cond(c: Dictionary, tr: Dictionary) -> bool:
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	match str(c.get("type", "")):
 		"time":
 			return elapsed >= float(c.get("seconds", 0.0))

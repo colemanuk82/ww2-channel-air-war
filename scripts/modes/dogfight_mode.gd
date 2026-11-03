@@ -124,7 +124,7 @@ func _process(delta: float) -> void:
 			_phase_t -= delta
 			if _phase_t <= 0.0:
 				# never launch a wave at a player still on the airfield or hugging the ground: wait (up to 90 s) until he is up
-				var pl: Aircraft = player as Aircraft
+				var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 				if pl != null and is_instance_valid(pl) and (pl.on_ground or pl.altitude_agl < 450.0) and _low_wait < 90.0:
 					_low_wait += delta
 				else:
@@ -159,7 +159,7 @@ func _wave_cleared() -> void:
 	_announce("WAVE %d CLEARED  +%d" % [wave, bonus], "Wave %d cleared - prepare for the next" % wave)
 	radio_call_any("dog_clear", 2, 1.0)
 	_set_phase(Phase.BREAK, 20.0)     # a longer breather between waves: rearm, climb back up, get set
-	enemies = enemies.filter(func(e: Aircraft) -> bool: return is_instance_valid(e))
+	enemies = AircraftList.alive_or_valid(enemies, false)
 	_top_up_wingmen()
 
 
@@ -296,11 +296,11 @@ func _player_pos() -> Vector3:
 func _top_up_wingmen() -> void:
 	if not (player and is_instance_valid(player)) or _player_dead:
 		return
-	wingmen = wingmen.filter(func(w: Aircraft) -> bool: return is_instance_valid(w) and w.state == Aircraft.State.ALIVE)
+	wingmen = AircraftList.alive_or_valid(wingmen, true)
 	var id: String = player_aircraft_id
 	if AircraftCatalog.is_bomber(id):
 		id = AircraftCatalog.default_fighter(side)
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	var yaw: Basis = Basis.looking_at(Vector3(pl.get_forward().x, 0.0, pl.get_forward().z).normalized() if absf(pl.get_forward().y) < 0.99 else Vector3.FORWARD, Vector3.UP)
 	while wingmen.size() < wingmen_max:
 		var k: int = wingmen.size()
@@ -362,7 +362,7 @@ func _on_player_destroyed(_a: Aircraft, _killer: Node) -> void:
 func _respawn_player() -> void:
 	_player_dead = false
 	# a life was used: lost wingmen are replaced, but the flight never grows beyond its configured size
-	wingmen = wingmen.filter(func(w: Aircraft) -> bool: return is_instance_valid(w) and w.state == Aircraft.State.ALIVE)
+	wingmen = AircraftList.alive_or_valid(wingmen, true)
 	if world and world.has_method("respawn_player"):
 		world.call("respawn_player")
 	_top_up_wingmen()

@@ -99,7 +99,7 @@ func start() -> void:
 				_center = (n as Convoy).get_center()
 	_build_label()
 	if player and is_instance_valid(player):
-		var p: Aircraft = player as Aircraft
+		var p: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 		p.destroyed.connect(_on_player_destroyed)
 		p.crashed.connect(func(_a: Aircraft, r: String) -> void:
 			_death_note = "killed - crashed (%s)" % r

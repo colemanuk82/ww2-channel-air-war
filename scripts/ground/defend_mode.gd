@@ -58,7 +58,7 @@ func start() -> void:
 			protected_nodes.append(n)
 	_build_label()
 	if player and is_instance_valid(player):
-		var p: Aircraft = player as Aircraft
+		var p: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 		p.destroyed.connect(_on_player_destroyed)
 		p.crashed.connect(func(_a: Aircraft, _r: String) -> void: _on_player_destroyed(p, null))
 		if teleport and not protected_nodes.is_empty():

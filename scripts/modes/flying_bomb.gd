@@ -35,7 +35,7 @@ static func launch_from_ramp(parent: Node, from: Vector3, to: Vector3) -> Flying
 	d.y = 0.0
 	b._dir = d.normalized()
 	b._ramping = true
-	b.look_at(b.global_position + b._dir, Vector3.UP)
+	LookUtil.look(b, b.global_position + b._dir, Vector3.UP)
 	return b
 
 
@@ -47,7 +47,7 @@ static func launch(parent: Node, from: Vector3, to: Vector3) -> FlyingBomb:
 	var d: Vector3 = to - from
 	d.y = 0.0
 	b._dir = d.normalized()
-	b.look_at(b.global_position + b._dir, Vector3.UP)
+	LookUtil.look(b, b.global_position + b._dir, Vector3.UP)
 	return b
 
 
@@ -116,7 +116,7 @@ func _process(delta: float) -> void:
 		var to: Vector3 = (target - p).normalized()
 		_dir = _dir.lerp(to, clampf(delta * 1.5, 0.0, 1.0)).normalized()
 	global_position = p + _dir * speed * delta
-	look_at(global_position + _dir, Vector3.UP if absf(_dir.y) < 0.95 else Vector3.FORWARD)
+	LookUtil.look(self, global_position + _dir, Vector3.UP if absf(_dir.y) < 0.95 else Vector3.FORWARD)
 	if not _diving:
 		_flame.scale = Vector3.ONE * (0.7 + 0.6 * absf(sin(Time.get_ticks_msec() * 0.06)))
 		_trail_t -= delta
@@ -141,7 +141,7 @@ func _ramp(delta: float) -> void:
 	var fwd: float = minf(40.0 + _ramp_v * 1.2, speed)
 	var ny: float = minf(p.y + _ramp_v * delta, g + 1200.0)
 	global_position = Vector3(p.x, ny, p.z) + _dir * fwd * delta
-	look_at(global_position + (_dir + Vector3.UP * 0.7).normalized(), Vector3.UP)
+	LookUtil.look(self, global_position + (_dir + Vector3.UP * 0.7).normalized(), Vector3.UP)
 	if ny >= g + 1199.0:
 		_ramping = false
 	_trail_t -= delta

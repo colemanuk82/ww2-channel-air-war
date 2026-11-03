@@ -327,6 +327,15 @@ void fragment() {
 	ver_box.offset_right = -22.0
 	ver_box.offset_top = 28.0
 	root.add_child(ver_box)
+	if BlackBox.crashed_last_time != "":
+		var cn := UIKit.label("The game closed unexpectedly last time. A crash report was saved (Open logs folder).", 15, Color(1.0, 0.75, 0.4), true)
+		cn.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		cn.add_theme_constant_override("outline_size", 4)
+		cn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		cn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		cn.offset_right = -22.0
+		cn.offset_top = 70.0
+		root.add_child(cn)
 	var checker := UpdateCheck.new()
 	root.add_child(checker)
 	checker.result.connect(func(text: String, newer: bool) -> void:

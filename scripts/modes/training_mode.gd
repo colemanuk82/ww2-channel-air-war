@@ -98,7 +98,7 @@ func start() -> void:
 	super.start()
 	_build_label()
 	if player and is_instance_valid(player):
-		var p: Aircraft = player as Aircraft
+		var p: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 		p.crashed.connect(func(_a: Aircraft, _r: String) -> void: _dead_t = 2.5)
 		p.destroyed.connect(func(_a: Aircraft, _k: Node) -> void: _dead_t = 2.5)
 		p.took_off.connect(func(_a: Aircraft) -> void: _on_took_off())
@@ -192,7 +192,7 @@ func _pose(pos: Vector3, heading: float, airborne: bool, speed: float = -1.0) ->
 
 
 func _reset_player() -> void:
-	var p: Aircraft = player as Aircraft
+	var p: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if p == null:
 		return
 	p.reset_pose(_pose_pos, _pose_heading, _pose_air, _pose_speed)
@@ -578,7 +578,7 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	if not running or player == null or not is_instance_valid(player) or _done:
 		return
-	var p: Aircraft = player as Aircraft
+	var p: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if _dead_t >= 0.0:
 		_dead_t -= delta
 		if _dead_t < 0.0:

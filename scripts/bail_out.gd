@@ -156,7 +156,7 @@ func _follow(delta: float) -> void:
 	want.y = maxf(want.y, gh + 3.0)
 	if _cam != null and is_instance_valid(_cam):
 		_cam.global_position = _cam.global_position.lerp(want, clampf(delta * 3.0, 0.0, 1.0))
-		_cam.look_at(cp + Vector3(0, 3.5, 0), Vector3.UP)
+		LookUtil.look(_cam, cp + Vector3(0, 3.5, 0), Vector3.UP)
 	var landed: bool = not _chute.active or cp.y <= FX.ground_height(cp) + 1.2
 	if landed and _land_t < 0.0:
 		_land_t = _t
@@ -184,7 +184,7 @@ func _resolve() -> void:
 	# Keep the landing view through the respawn cool-off. Freeing this camera here makes the view snap
 	# back to the abandoned aircraft, which is still falling, until _spawn_player runs.
 	if _cam != null and is_instance_valid(_cam):
-		_cam.look_at(pos + Vector3(0, 1.0, 0), Vector3.UP)
+		LookUtil.look(_cam, pos + Vector3(0, 1.0, 0), Vector3.UP)
 	active = false
 	resolved.emit(fate, pos)
 

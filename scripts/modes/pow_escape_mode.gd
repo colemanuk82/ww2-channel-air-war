@@ -94,7 +94,7 @@ func start() -> void:
 		_build_group_and_torches()
 	_build_defences()
 	_nav_dots.append(_add_nav_dot(_camp if kind == "scout" else _strip_pos))
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if pl != null:
 		pl.destroyed.connect(_on_player_down)
 	if kind == "pickup":
@@ -264,7 +264,7 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	if not running or _ended or not (player is Aircraft) or not _have_places:
 		return
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if kind == "scout":
 		_tick_scout(pl, delta)
 	else:
@@ -417,7 +417,7 @@ func _animate_men(pl: Aircraft, delta: float) -> void:
 		var step: Vector3 = to / dist * minf(RUN_SPEED * delta, dist)
 		node.global_position += step
 		node.global_position.y = GroundKit.ground_y(node.global_position.x, node.global_position.z)
-		node.look_at(node.global_position - to, Vector3.UP)
+		LookUtil.look(node, node.global_position - to, Vector3.UP)
 		md["t"] = float(md["t"]) + delta
 		var phase: int = int(float(md["t"]) / 0.22) % 2
 		(node as MeshInstance3D).mesh = CrewFigure.mesh("Allies", CrewFigure.Pose.WALK_A if phase == 0 else CrewFigure.Pose.WALK_B, 2)

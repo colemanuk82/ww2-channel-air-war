@@ -181,6 +181,7 @@ func _blend_to(weather_name: String, blend_time: float) -> void:
 	_retarget_wind(true)
 	_front_timer = randf_range(420.0, 780.0)
 	weather_changed.emit(weather_name)
+	BlackBox.note("weather -> %s (blend %.0fs)" % [weather_name, blend_time])
 
 
 ## A front moves through: step one rung up or down the ladder (slow 70 s blend, wind veers).

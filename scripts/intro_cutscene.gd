@@ -466,7 +466,7 @@ func _orient(n: Node3D, p: Vector3, ahead: Vector3, bank: float) -> void:
 	var f: Vector3 = ahead - p
 	if f.length() < 0.01:
 		return
-	n.look_at(p + f, Vector3.UP)
+	LookUtil.look(n, p + f, Vector3.UP)
 	n.rotate_object_local(Vector3.FORWARD, bank)
 
 
@@ -611,7 +611,7 @@ func _update_bombs(t: float, delta: float) -> void:
 		b[1] = v
 		mi.global_position += v * delta
 		if v.length_squared() > 0.0001:
-			mi.look_at(mi.global_position + v, Vector3.UP)
+			LookUtil.look(mi, mi.global_position + v, Vector3.UP)
 		if mi.global_position.y <= _gh(mi.global_position) + 1.0:
 			var gp: Vector3 = mi.global_position
 			gp.y = _gh(gp)
@@ -683,7 +683,7 @@ func _update_fight(t: float, delta: float) -> void:
 		_hero.global_position += _hero_vel * delta
 		var ahead: Vector3 = _hero.global_position + _hero_vel
 		if _hero_vel.length_squared() > 0.0001:
-			_hero.look_at(ahead, Vector3.UP)
+			LookUtil.look(_hero, ahead, Vector3.UP)
 		_hero.rotate_object_local(Vector3.FORWARD, (t - T_H) * 3.2)
 		_spin(_hero)
 		if t >= T_H + 1.7 and not _bail:
@@ -720,7 +720,7 @@ func _spawn_bullet(p: Vector3, dir: Vector3) -> void:
 	get_tree().current_scene.add_child(mi)
 	mi.global_position = p
 	if dir.length_squared() > 0.0001:
-		mi.look_at(p + dir, Vector3.UP)
+		LookUtil.look(mi, p + dir, Vector3.UP)
 	_bullets.append([mi, dir * 520.0, 0.9])
 
 
@@ -863,7 +863,7 @@ func _camera(t: float, delta: float) -> void:
 	_anchor.global_position = next_origin if next_origin != Vector3.INF else pos
 	_cam.global_position = pos
 	if look.distance_to(pos) > 0.5:
-		_cam.look_at(look, Vector3.UP)
+		LookUtil.look(_cam, look, Vector3.UP)
 	_cam.fov = fov
 
 

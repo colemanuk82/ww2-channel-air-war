@@ -57,7 +57,7 @@ var _wingmen_done: bool = false
 func _wingmen_tick() -> void:
 	if _wingmen_done or not running or player == null or not is_instance_valid(player):
 		return
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if pl == null or pl.state != Aircraft.State.ALIVE:
 		return
 	var id: String = pl.stats.id
@@ -141,7 +141,7 @@ func _runs_own_wingmen() -> bool:
 
 ## How far up the runway a ground start is moved so the wingmen rolling after the player have room behind him.
 func runway_queue_length() -> float:
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if pl == null or pl.stats == null or _runs_own_wingmen() or AircraftCatalog.is_bomber(pl.stats.id):
 		return 0.0
 	var alive: int = 0
@@ -236,7 +236,7 @@ func _rw_park(id: String, pos: Vector3, hdg: float, k: int, want: int) -> Aircra
 func _rw_tick() -> void:
 	if not _rw_active or not running:
 		return
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if pl == null or not is_instance_valid(pl) or pl.state != Aircraft.State.ALIVE:
 		_rw_active = false
 		for e in _rw_before + _rw_after:          # the player is gone: anyone still parked goes up anyway
@@ -412,7 +412,7 @@ const RV_FALLBACK: float = 120.0     # ... or this long after forming up, if the
 func _support_tick() -> void:
 	if _support_done or not running or player == null or not is_instance_valid(player):
 		return
-	var pl: Aircraft = player as Aircraft
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if pl == null or pl.state != Aircraft.State.ALIVE or pl.on_ground or pl.global_position.y < 60.0:
 		return          # wait until the player is airborne (take-off)
 	if not AircraftCatalog.is_bomber(String(pl.stats.id)):
@@ -651,7 +651,7 @@ func _process(delta: float) -> void:
 	if running:
 		elapsed += delta
 		# hours flown go into the logbook a minute at a time
-		var pl: Aircraft = player as Aircraft
+		var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 		if pl != null and is_instance_valid(pl) and pl.state == Aircraft.State.ALIVE and not pl.on_ground:
 			_air_log_t += delta
 			if _air_log_t >= 60.0:

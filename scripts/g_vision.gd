@@ -47,7 +47,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	var a: Aircraft = null
 	if hud != null and is_instance_valid(hud):
-		a = hud.get("aircraft") as Aircraft
+		var ha: Variant = hud.get("aircraft")
+		a = (ha as Aircraft) if is_instance_valid(ha) else null
 	var gray: float = 0.0
 	var red: float = 0.0
 	if a != null and is_instance_valid(a) and GameState.g_effects_on and a.state == Aircraft.State.ALIVE:

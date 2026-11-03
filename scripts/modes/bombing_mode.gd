@@ -127,7 +127,7 @@ func start() -> void:
 	_make_beacon()
 	_build_label()
 	if player and is_instance_valid(player):
-		var p: Aircraft = player as Aircraft
+		var p: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 		p.destroyed.connect(_on_player_destroyed)
 		p.crashed.connect(func(_a: Aircraft, r: String) -> void:
 			_death_note = "killed - crashed (%s)" % r
@@ -262,7 +262,7 @@ func _refresh_label() -> void:
 	elif phase == "rtb" and _have_home:
 		var tb: Vector3 = _home - player.global_position
 		txt += "BASE  %.1f km  BRG %03d\n" % [Vector2(tb.x, tb.z).length() * WorldCoords.HORIZ_COMPRESSION / 1000.0, int(WorldCoords.dir_to_heading(Vector3(tb.x, 0, tb.z)))]
-	var p: Aircraft = player as Aircraft
+	var p: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if p:
 		txt += "BOMBS %d  SCORE %d" % [p.bombs, score]
 	_label.text = txt
@@ -416,7 +416,7 @@ func _process(delta: float) -> void:
 				finish(true, _stats("debug rtb"))
 				return
 		if _have_home:
-			var p: Aircraft = player as Aircraft
+			var p: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 			var dh: float = Vector2(player.global_position.x - _home.x, player.global_position.z - _home.z).length()
 			if dh < rtb_radius and (p.on_ground or p.altitude_agl < 220.0):
 				add_score(500)
