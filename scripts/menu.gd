@@ -9,6 +9,9 @@ signal quit_requested
 
 const DIFFICULTIES := {"Easy": 0.2, "Normal": 0.5, "Hard": 0.85}
 const TIMES := ["dawn", "noon", "dusk", "night"]
+## Season picker (free flight and dogfights): the sortie gets a random day of the war in those months, so the fields,
+## the harvest and the war's stage on the ground all follow it.
+const SEASONS := [["Spring", [3, 4, 5]], ["Summer", [6, 7, 8]], ["Autumn", [9, 10, 11]], ["Winter", [12, 1, 2]]]
 const PAGES := ["SORTIE", "START POINT", "CONDITIONS", "BRIEFING"]
 
 const DONATE_URL := "https://paypal.me/colemanuk82"
@@ -21,6 +24,7 @@ var _mission_row: Control
 var _diff: OptionButton
 var _weather: OptionButton
 var _time: OptionButton
+var _season: OptionButton
 var _spawn: OptionButton
 var _spawn_row: Control
 var _spawn_note: Label
@@ -233,6 +237,12 @@ void fragment() {
 	wn.append("Random")
 	_weather = UIKit.option_field(cond_top, "Weather", wn, 140, 18, 80)
 	_weather.select(wn.size() - 1)       # random by default: a different sky every sortie
+	var sn: Array = []
+	for se in SEASONS:
+		sn.append(String(se[0]))
+	sn.append("Random")
+	_season = UIKit.option_field(cond_top, "Season", sn, 140, 18, 80)
+	_season.select(sn.size() - 1)
 	var tn: Array = []
 	for t in TIMES:
 		tn.append(String(t).capitalize())
@@ -975,7 +985,7 @@ func _on_start() -> void:
 		"mode": mode_id,
 		"mission": _mission_ids[_mission.selected] if ((mode_id == "historical" or mode_id == "training") and not _mission_ids.is_empty()) else "",
 		"difficulty": DIFFICULTIES[_diff.get_item_text(_diff.selected)],
-		"weather": _weather_names[_weather.selected] if _weather.selected < _weather_names.size() else _weather_names[randi() % _weather_names.size()],
+		"weather": _weather_names[_weather.selected] if _weather.selected < _weather_names.size() else MoonWeather.random_weather(),
 		"time": TIMES[_time.selected] if _time.selected < TIMES.size() else TIMES[randi() % TIMES.size()],
 		"ambient": _ambient.button_pressed,
 		"taskings": _taskings.button_pressed and mode_id == "free",
@@ -985,8 +995,14 @@ func _on_start() -> void:
 			"ammo": _selected_count(_ammo, _ammo_vals),
 		},
 	}
-	if (mode_id == "free" or mode_id == "dogfight") and not cfg.has("era_date") and _random_date_ok():
+	if (mode_id == "free" or mode_id == "dogfight") and _season != null and _season.selected < SEASONS.size():
+		cfg["era_date"] = _random_war_date(SEASONS[_season.selected][1])      # a day of the war in the chosen season
+	elif (mode_id == "free" or mode_id == "dogfight") and not cfg.has("era_date") and _random_date_ok():
 		cfg["era_date"] = _random_war_date()      # a random day of the war, so the ground and the airfields change too
+	cfg["season"] = _season.selected if _season != null else SEASONS.size()
+	if _weather.selected >= _weather_names.size():
+		# random weather follows the sortie's season (the mix of a summer day differs from a winter one)
+		cfg["weather"] = MoonWeather.random_weather(int(String(cfg.get("era_date", "")).substr(5, 2)) if cfg.has("era_date") else 0)
 	if mode_id == "free":
 		if _spawn.selected >= 0 and _spawn.selected < _spawn_entries.size():
 			cfg["spawn"] = String(_spawn_entries[_spawn.selected]["id"])
@@ -1003,7 +1019,7 @@ func _on_start() -> void:
 ## start point (spawn list or planner coordinates) and the mission where applicable.
 func _remember_sortie(cfg: Dictionary) -> void:
 	var rec: Dictionary = {}
-	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style"]:
+	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style", "season"]:
 		if cfg.has(k):
 			rec[k] = cfg[k]
 	GameState.last_sortie = rec
@@ -1057,6 +1073,8 @@ func _restore_last_sortie() -> void:
 		_cockpit.select(1 if String(c["cockpit_style"]) in ["spitfire", "interior"] else 0)
 	if c.has("passing_flights"):
 		_passing.button_pressed = bool(c["passing_flights"])
+	if c.has("season") and _season != null:
+		_season.select(clampi(int(c["season"]), 0, SEASONS.size()))
 	if c.has("spawn_lat") or c.has("spawn_lon") or c.has("spawn_airfield"):
 		_plan = {}
 		for k in ["spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading"]:
@@ -1072,8 +1090,13 @@ func _random_date_ok() -> bool:
 	return _weather.selected >= _weather_names.size() or _time.selected >= TIMES.size()
 
 
-func _random_war_date() -> String:
+## A random day of the war (10 July 1940 .. 30 April 1945), optionally only in the given months.
+func _random_war_date(months: Array = []) -> String:
 	var t0: int = int(Time.get_unix_time_from_datetime_string("1940-07-10"))
 	var t1: int = int(Time.get_unix_time_from_datetime_string("1945-04-30"))
-	var d: Dictionary = Time.get_datetime_dict_from_unix_time(randi_range(t0, t1))
+	var d: Dictionary = {}
+	for tries in 400:
+		d = Time.get_datetime_dict_from_unix_time(randi_range(t0, t1))
+		if months.is_empty() or months.has(int(d["month"])):
+			break
 	return "%04d-%02d-%02d" % [int(d["year"]), int(d["month"]), int(d["day"])]

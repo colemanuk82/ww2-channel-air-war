@@ -122,6 +122,16 @@ func get_turbulence(agl: float) -> float:
 	return clampf(base * low + stormy, 0.0, 1.0)
 
 
+## Rain at a world point (0..1) from a rain cloud overhead: light showers under most, a torrent under storm cells.
+func rain_at(p: Vector3) -> float:
+	var r: float = 0.0       # as at the camera: rain falls only under a rain cloud
+	if cloud_field != null:
+		r = cloud_field.rain_at(p)
+	if _force_rain:
+		r = 1.0
+	return clampf(r, 0.0, 1.0)
+
+
 func get_visibility_multiplier() -> float:
 	return 1.0 / maxf(float(_cur["fog"]), 0.5)
 
@@ -187,7 +197,10 @@ func advance_front() -> void:
 	set_weather(FRONT_LADDER[clampi(i + _front_dir, 0, FRONT_LADDER.size() - 1)], 70.0)
 
 
+## The pilot's own weather key. A passing front used to swallow the change (set_weather defers to an active
+## front), so the key did nothing on about half the free flights: the pilot's choice now ends the front.
 func cycle_weather() -> void:
+	cancel_front()
 	var i: int = ORDER.find(current)
 	set_weather(ORDER[(i + 1) % ORDER.size()])
 
@@ -255,6 +268,8 @@ func _apply() -> void:
 		cloud_field.mat.set_shader_parameter("shade_color", shade.lerp(Color(0.22, 0.23, 0.28), dark))
 		cloud_field.mat.set_shader_parameter("light_level", lerpf(0.05, 1.0, ll * ll) * (1.0 - dark * 0.3))
 		cloud_field.mat.set_shader_parameter("density_scale", 1.0 + dark * 1.2)
+		# the stormier the weather, the more of the towering rain clouds are dark storm cells (fair ~1 in 6, storm ~3 in 5)
+		cloud_field.storm_frac = 0.15 + 0.65 * dark
 
 
 # ------------------------------------------------------------------ moving fronts

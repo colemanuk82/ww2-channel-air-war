@@ -27,6 +27,8 @@ instance uniform float seed = 0.0;
 instance uniform float ctype = 0.0;   // 0 cumulus, 1 towering cumulus / anvil, 2 stratocumulus deck, 3 cirrus, 4 altocumulus,
                                       // 5 lenticular, 6 castellanus, 7 cirrocumulus, 8 congestus, 9 stratus
 instance uniform float nfreq = 2.1;   // noise frequency (bigger clouds get finer lumps)
+instance uniform float rseed = 1.0;   // per-cloud 0..1: a towering cell with rseed < storm_frac is a dark storm cell
+uniform float storm_frac = 0.0;       // share of towering cells that are storm cells (set from the weather)
 
 varying vec3 l_cam;
 varying vec3 l_pos;
@@ -243,7 +245,9 @@ void fragment() {
 	float tm = ty < 0.5 ? 1.0 : (ty < 1.5 ? 1.3 : (ty < 2.5 ? 0.75 : (ty < 3.5 ? 0.32 : (ty < 4.5 ? 0.55 :
 		(ty < 5.5 ? 0.8 : (ty < 6.5 ? 0.9 : (ty < 7.5 ? 0.35 : (ty < 8.5 ? 1.15 : 0.7))))))));
 	bool thin_hi = (ty > 2.5 && ty < 3.5) || (ty > 6.5 && ty < 7.5);     // cirrus, cirrocumulus
-	float sigma_m = 0.014 * density_scale * tm;     // extinction per world metre at density 1
+	// storm cells: towering clouds that bring the torrential rain are denser and much darker underneath
+	float stormy = (ty > 0.5 && ty < 1.5) ? smoothstep(storm_frac, storm_frac - 0.02, rseed) : 0.0;
+	float sigma_m = 0.014 * density_scale * tm * (1.0 + 0.9 * stormy);     // extinction per world metre at density 1
 	float sd = seed;
 	float sh1 = clamp(v_ry * 0.30, 60.0, 360.0);
 	float sh2 = sh1 * 2.3;
@@ -285,6 +289,6 @@ void fragment() {
 	}
 	float alpha = 1.0 - T;
 	float fade = 1.0 - smoothstep(fade_near, fade_far, dist_cam);
-	ALBEDO = min(acc / max(alpha, 0.001) * light_level, vec3(1.15));
+	ALBEDO = min(acc / max(alpha, 0.001) * light_level, vec3(1.15)) * mix(1.0, 0.40, stormy);
 	ALPHA = clamp(alpha, 0.0, 1.0) * fade;
 }

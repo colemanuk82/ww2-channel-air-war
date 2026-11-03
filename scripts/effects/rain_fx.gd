@@ -13,10 +13,32 @@ extends Node3D
 
 var intensity: float = 0.0
 var storm: float = 0.0
+const STREAK_SHADER := """shader_type spatial;
+render_mode unshaded, blend_mix, cull_disabled, depth_draw_never, shadows_disabled;
+uniform sampler2D tex : source_color, filter_linear;
+uniform vec4 col : source_color = vec4(0.8, 0.85, 0.92, 0.3);
+void vertex() {
+	vec3 c = MODEL_MATRIX[3].xyz;
+	vec3 ay = MODEL_MATRIX[1].xyz;                 // the drop's direction of motion, scaled
+	float ly = length(ay);
+	vec3 y = ay / max(ly, 1e-4);
+	vec3 to_cam = normalize(INV_VIEW_MATRIX[3].xyz - c);
+	vec3 x = cross(y, to_cam);
+	float lx = length(x);
+	x = lx > 1e-3 ? x / lx : normalize(cross(y, vec3(0.0, 1.0, 0.0001)));
+	vec3 wp = c + x * VERTEX.x * length(MODEL_MATRIX[0].xyz) + y * VERTEX.y * ly;
+	POSITION = PROJECTION_MATRIX * VIEW_MATRIX * vec4(wp, 1.0);
+}
+void fragment() {
+	ALBEDO = col.rgb;
+	ALPHA = col.a * texture(tex, UV).a;
+}
+"""
+var _dbg_left: int = 1200 if OS.get_cmdline_user_args().has("--rain-debug") else 0
 var _parts: GPUParticles3D
 var _pm: ParticleProcessMaterial
 var _quad: QuadMesh
-var _mat: StandardMaterial3D
+var _mat: ShaderMaterial
 var _over: RainOverlay
 var _cam_prev: Vector3 = Vector3.ZERO
 var _vel: Vector3 = Vector3.ZERO
@@ -32,7 +54,7 @@ func _ready() -> void:
 	top_level = true
 	_pm = ParticleProcessMaterial.new()
 	_pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
-	_pm.emission_box_extents = Vector3(40.0, 30.0, 40.0)
+	_pm.emission_box_extents = Vector3(26.0, 20.0, 26.0)     # packed close round the camera: a dense downpour
 	_pm.direction = Vector3(0, -1, 0)
 	_pm.spread = 2.0
 	_pm.initial_velocity_min = 40.0
@@ -43,18 +65,18 @@ func _ready() -> void:
 	_pm.scale_max = 1.3
 	_quad = QuadMesh.new()
 	_quad.size = Vector2(0.025, 1.0)
-	_mat = StandardMaterial3D.new()
-	_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-	_mat.billboard_keep_scale = true
-	_mat.albedo_texture = _streak_tex()
-	_mat.albedo_color = Color(0.8, 0.85, 0.92, 0.3)
-	_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_mat.disable_receive_shadows = true
+	# Each streak lies along its drop's own motion relative to us (particle Y, aligned to velocity) and turns about
+	# that line to face the camera. A plain particle billboard only spins in the screen plane, which stood every
+	# streak upright; this way, at speed, the rain sweeps back past the aircraft.
+	var sh := Shader.new()
+	sh.code = STREAK_SHADER
+	_mat = ShaderMaterial.new()
+	_mat.shader = sh
+	_mat.set_shader_parameter("tex", _streak_tex())
+	_mat.set_shader_parameter("col", Color(0.8, 0.85, 0.92, 0.3))
 	_quad.material = _mat
 	_parts = GPUParticles3D.new()
-	_parts.amount = 6000
+	_parts.amount = 14000
 	_parts.lifetime = 1.0
 	_parts.local_coords = true          # simulated in the camera's (translating) frame: velocity = relative velocity
 	_parts.visibility_aabb = AABB(Vector3(-120, -90, -120), Vector3(240, 180, 240))
@@ -98,15 +120,18 @@ static func _rain_loop() -> AudioStreamWAV:
 	rng.seed = 77
 	var lp: float = 0.0
 	var lp2: float = 0.0
+	var lp3: float = 0.0
 	var tick: float = 0.0
 	for i in n:
 		var w: float = rng.randf_range(-1.0, 1.0)
 		lp += (w - lp) * 0.35
 		lp2 += (lp - lp2) * 0.6
-		if rng.randf() < 0.004:
-			tick = rng.randf_range(0.3, 1.0)
-		tick *= 0.93
-		var s: float = (lp2 * 0.5 + (lp - lp2) * 0.6 + tick * rng.randf_range(-1.0, 1.0)) * 0.6
+		# heavy rain: dense drumming on the canopy over a loud hiss and a low body of roar
+		if rng.randf() < 0.014:
+			tick = rng.randf_range(0.4, 1.0)
+		tick *= 0.9
+		lp3 += (lp2 - lp3) * 0.05
+		var s: float = (lp2 * 0.7 + (lp - lp2) * 0.75 + lp3 * 1.6 + tick * rng.randf_range(-1.0, 1.0)) * 0.75
 		# cross-fade the ends so the loop has no click
 		var e: float = minf(float(i), float(n - 1 - i)) / 400.0
 		s *= clampf(e, 0.0, 1.0) if e < 1.0 else 1.0
@@ -144,6 +169,14 @@ func _process(delta: float) -> void:
 	var on: bool = intensity > 0.03
 	_parts.emitting = on
 	var pl: Aircraft = _player()
+	# our own speed through the rain: the player's aircraft when there is one (exact, whatever the camera does),
+	# so the streaks sweep back past the aircraft at its airspeed instead of falling straight down
+	if pl != null and is_instance_valid(pl) and pl.state == Aircraft.State.ALIVE:
+		_vel = _vel.lerp(pl.velocity, minf(delta * 6.0, 1.0))
+	if _dbg_left > 0 and on:
+		_dbg_left -= 1
+		if _dbg_left % 120 == 0:
+			print("[rain-debug] vel=", _vel, " |vel|=", _vel.length(), " pl=", pl != null)
 	var cockpit: bool = pl != null and pl._cockpit_view and pl.state == Aircraft.State.ALIVE
 	if on:
 		_parts.amount_ratio = clampf(intensity, 0.05, 1.0)
@@ -156,12 +189,12 @@ func _process(delta: float) -> void:
 		_pm.initial_velocity_min = rs * 0.92
 		_pm.initial_velocity_max = rs * 1.08
 		# drops are born upstream so the box ahead of us is always full; they live long enough to sweep past
-		_parts.lifetime = clampf(110.0 / rs, 0.35, 2.4)
-		global_position = cp - rd * 45.0
+		_parts.lifetime = clampf(75.0 / rs, 0.3, 1.8)
+		global_position = cp - rd * 30.0
 		# motion blur: the faster they pass, the longer and fainter the streak
-		_quad.size = Vector2(0.022 + 0.01 * storm, clampf(rs * 0.016, 0.7, 4.5))
+		_quad.size = Vector2(0.032 + 0.014 * storm, clampf(rs * 0.018, 0.9, 5.0))
 		var light: float = clampf(0.25 + TimeOfDay.light_level * 0.85, 0.2, 1.0)
-		_mat.albedo_color = Color(0.8 * light, 0.85 * light, 0.92 * light, clampf(0.34 - rs * 0.0006, 0.16, 0.34))
+		_mat.set_shader_parameter("col", Color(0.82 * light, 0.87 * light, 0.94 * light, clampf(0.62 - rs * 0.0007, 0.34, 0.62)))
 	# overlay
 	_over.intensity = intensity
 	_over.cockpit = cockpit
@@ -175,13 +208,13 @@ func _process(delta: float) -> void:
 		_over.intensity = 0.0      # the modelled interior carries its own beads and runs on its glass (SpitfireCockpit glass shader)
 	_over.air_vel = _vel
 	# sound: louder drumming on the canopy than the hiss outside
-	var want: float = intensity * (1.0 if cockpit else 0.45)
+	var want: float = intensity * (1.0 if cockpit else 0.6)
 	_snd_level = move_toward(_snd_level, want, delta * 0.5)
 	if _snd_level > 0.02:
 		if not _snd.playing:
 			_snd.bus = &"SFX" if AudioServer.get_bus_index("SFX") >= 0 else &"Master"
 			_snd.play()
-		_snd.volume_db = linear_to_db(maxf(_snd_level * 0.55, 0.0001)) + (2.0 if cockpit else -4.0)
+		_snd.volume_db = linear_to_db(maxf(_snd_level, 0.0001)) + (7.0 if cockpit else 1.0)    # loud: heavy rain drums on the hood
 		_snd.pitch_scale = 0.85 + 0.35 * clampf(_vel.length() / 200.0, 0.0, 1.0)
 	elif _snd.playing:
 		_snd.stop()

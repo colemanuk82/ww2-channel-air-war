@@ -86,6 +86,10 @@ func _test_moon_weather() -> void:
 	_check(WeatherManager.PRESETS.has(fc), "forecast is a WeatherManager preset")
 	_check(MoonWeather.nav_penalty("fog") > MoonWeather.nav_penalty("clear"), "fog is harder to navigate than clear")
 	_check(is_equal_approx(MoonWeather.moon_light(), TimeOfDay.moon_illum), "moon_light reads TimeOfDay")
+	_check(WeatherManager.PRESETS.has(MoonWeather.random_weather(1)) and WeatherManager.PRESETS.has(MoonWeather.random_weather(0)), "random weather is a preset, with or without a season")
+	_check(float(MoonWeather.SEASON_WEATHER["winter"]["fog"]) > float(MoonWeather.SEASON_WEATHER["summer"]["fog"]) and float(MoonWeather.SEASON_WEATHER["summer"]["storm"]) > float(MoonWeather.SEASON_WEATHER["winter"]["storm"]), "winter brings more fog, summer more thunderstorms")
+	var ra: float = WeatherManager.rain_at(Vector3(0.0, 800.0, 0.0))
+	_check(ra >= 0.0 and ra <= 1.0, "rain at a point is 0..1")
 
 
 func _test_era_damage() -> void:
@@ -218,9 +222,12 @@ func _test_interior_cockpit() -> void:
 	print("-- interior cockpit")
 	_check(SpitfireCockpit.style_for_id("spitfire") == "spitfire" and SpitfireCockpit.style_for_id("spitfire_mkxiv") == "spitfire", "every Spitfire mark gets the Spitfire interior")
 	_check(SpitfireCockpit.style_for_id("bf109") == "bf109" and SpitfireCockpit.style_for_id("bf109g") == "bf109", "every Bf 109 mark gets the Bf 109 interior")
-	_check(not SpitfireCockpit.id_supported("fw190") and not SpitfireCockpit.id_supported(""), "other aircraft keep the standard cockpit")
-	for id in ["spitfire_mkix", "bf109f"]:
-		var side: String = "Allies" if id.begins_with("spitfire") else "Axis"
+	for fid in ["hurricane", "defiant", "typhoon", "tempest", "fw190", "me262", "p51", "p47", "p38"]:
+		_check(SpitfireCockpit.id_supported(fid), "%s gets a modelled interior" % fid)
+	_check(SpitfireCockpit.PROFILES["p38"].get("yoke", false) and SpitfireCockpit.PROFILES["me262"].get("twin", false), "the P-38 flies with a control wheel; the twins get twin engine gauges")
+	_check(not SpitfireCockpit.id_supported("lancaster") and not SpitfireCockpit.id_supported("bf110") and not SpitfireCockpit.id_supported("mosquito") and not SpitfireCockpit.id_supported(""), "bombers and the two-seat heavy fighters keep the standard cockpit")
+	for id in ["spitfire_mkix", "bf109f", "p38", "me262"]:
+		var side: String = "Axis" if (id.begins_with("bf109") or id == "me262") else "Allies"
 		var a: Aircraft = AIFactory.spawn(self, id, side, Vector3(0.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
 		var c: SpitfireCockpit = SpitfireCockpit.attach(a)
 		_check(c != null and a.cockpit_interior == c, "%s: the interior attaches" % id)
@@ -231,6 +238,15 @@ func _test_interior_cockpit() -> void:
 		_check(c.visible, "%s: the cockpit view shows the interior" % id)
 		a.set_cockpit_view(false)
 		_check(not c.visible, "%s: leaving the cockpit view hides it again" % id)
+	# AI pilots see poorly astern: the blind spot behind and below the tail
+	var hunter: Aircraft = AIFactory.spawn(self, "bf109", "Axis", Vector3(3000.0, 1500.0, 3000.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
+	var hp: AIPilot = AIFactory.pilot_of(hunter)
+	if hp != null:
+		var fwd: Vector3 = hunter.get_forward()
+		var ahead: float = hp.view_factor(hunter.global_position + fwd * 500.0)
+		var astern: float = hp.view_factor(hunter.global_position - fwd * 500.0)
+		var low_astern: float = hp.view_factor(hunter.global_position - fwd * 500.0 - Vector3(0.0, 200.0, 0.0))
+		_check(ahead > 0.99 and astern < 0.6 and low_astern < astern, "AI pilots spot an attacker astern (and lower still, below the tail) much later than one ahead")
 	_check(CameraRig._read_head("") == Vector3.ZERO, "no saved head position gives the default eye point")
 	_check(CameraRig.HEAD_MIN.x < 0.0 and CameraRig.HEAD_MAX.x > 0.0 and CameraRig.HEAD_MIN.z < 0.0, "the head can move both ways about the eye point")
 

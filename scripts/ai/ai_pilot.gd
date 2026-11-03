@@ -107,6 +107,8 @@ var _route_alt_err: float = 0.0	# last route/slot altitude error (target y - own
 var _boost: bool = false
 var _pull: float = 1.0
 var _vis: float = 1.0
+var _rain_here: float = 0.0
+var _rain_poll: int = 0
 var _orbit_dir: float = 1.0
 var _tactic: int = Tactic.PURSUIT
 var _tactic_t: float = 0.0
@@ -894,7 +896,8 @@ func _find_target(max_range: float) -> Aircraft:
 		if o.player_controlled and _let_go():
 			continue
 		var d: float = o.global_position.distance_to(pos)
-		if d > max_range * sun_glare(pos, o.global_position):     # coming out of the sun: seen much later
+		# coming out of the sun, or from the blind spot astern: seen much later
+		if d > max_range * sun_glare(pos, o.global_position) * view_factor(o.global_position):
 			continue
 		if not _has_los(o):
 			continue
@@ -912,6 +915,23 @@ func _find_target(max_range: float) -> Aircraft:
 			best_score = score
 			best = o
 	return best
+
+
+## How well this pilot can see a point from his cockpit (1 = clear): full ahead and out to the sides, falling away
+## behind him, worst in the blind spot astern and below the tail (0.2). Better pilots check their six more often.
+func view_factor(to: Vector3) -> float:
+	if not is_instance_valid(ac):
+		return 1.0
+	var rel: Vector3 = to - ac.global_position
+	var d: float = rel.length()
+	if d < 1.0:
+		return 1.0
+	var dir: Vector3 = rel / d
+	var ang: float = rad_to_deg(ac.get_forward().angle_to(dir))
+	var k: float = 1.0 - smoothstep(100.0, 165.0, ang) * 0.68                       # 1 ahead .. 0.32 dead astern
+	var below: float = clampf(-dir.dot(ac.global_transform.basis.y), 0.0, 1.0)      # under the aircraft's own belly
+	k -= smoothstep(120.0, 170.0, ang) * below * 0.25                              # astern and low: the real blind spot
+	return clampf(k + 0.15 * difficulty, 0.2, 1.0)
 
 
 ## 1 = clear view; down to 0.25 when `to` sits close to the sun as seen from `from` (an attacker "out of the sun").
@@ -936,8 +956,12 @@ func _is_threatened() -> bool:
 			continue
 		var rel: Vector3 = pos - o.global_position
 		var d: float = rel.length()
-		var seen_at: float = 650.0 * sun_glare(pos, o.global_position)
-		if d < seen_at and d > 1.0 and o.get_forward().dot(rel / d) > 0.93 and (o.cmd_fire or d < 220.0):
+		# an attacker sneaking up astern is seen late; once he opens fire his tracers give him away
+		var aspect: float = view_factor(o.global_position)
+		if o.cmd_fire:
+			aspect = maxf(aspect, 0.65)
+		var seen_at: float = 650.0 * sun_glare(pos, o.global_position) * aspect * clampf(sqrt(_vis), 0.35, 1.0)
+		if d < seen_at and d > 1.0 and o.get_forward().dot(rel / d) > 0.93 and (o.cmd_fire or d < 220.0 * aspect):
 			_threat = o
 			return true
 	return false
@@ -1735,7 +1759,13 @@ func _weather_visibility() -> float:
 	var v: float = 1.0
 	if wm and wm.has_method("get_visibility_multiplier"):
 		v = float(wm.call("get_visibility_multiplier"))
-	return v * night_vis()
+	# flying through rain: the pilot sees far less through a streaming windscreen and the murk (heavy rain roughly
+	# halves the range he spots others at, and spoils his aim). Looked up every few thinks, the cloud scan is not free.
+	_rain_poll -= 1
+	if _rain_poll <= 0 and wm and wm.has_method("rain_at") and is_instance_valid(ac):
+		_rain_poll = 4
+		_rain_here = float(wm.call("rain_at", ac.global_position))
+	return v * night_vis() * lerpf(1.0, 0.25, _rain_here)
 
 
 ## Dark skies hide the player's bomber from enemy fighters: 1.0 by day, down at night to ~0.18 under a new moon and

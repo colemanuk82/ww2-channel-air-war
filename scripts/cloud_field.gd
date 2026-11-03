@@ -154,6 +154,7 @@ func _ready() -> void:
 		mi.set_instance_shader_parameter("seed", rng.randf() * 60.0)
 		mi.set_instance_shader_parameter("ctype", float(_kinds[i]))
 		mi.set_instance_shader_parameter("nfreq", 1.8 * clampf(sqrt(maxf(r.x, r.z) / 450.0), 1.0, 2.6))
+		mi.set_instance_shader_parameter("rseed", _rseed(i))
 		mi.position = _centers[i]
 		# Past the shader's fade-out the cloud is fully transparent already: don't submit it at all.
 		# Leave room for the cloud's radius: the node origin is its centre, not its nearest edge.
@@ -224,7 +225,8 @@ func _add(rng: RandomNumberGenerator, kind: int, xz: Vector2, size_k: float, yaw
 			r = Vector3(rng.randf_range(380.0, 850.0), rng.randf_range(230.0, 430.0), rng.randf_range(320.0, 700.0))
 			base = rng.randf_range(950.0, 1350.0)
 		Kind.TOWER:
-			r = Vector3(rng.randf_range(750.0, 1300.0), rng.randf_range(1200.0, 2100.0), rng.randf_range(650.0, 1150.0))
+			# the rain cells: big towering cumulonimbus, so a downpour covers a wide area
+			r = Vector3(rng.randf_range(1600.0, 2800.0), rng.randf_range(1600.0, 2800.0), rng.randf_range(1400.0, 2400.0))   # a real Cb is 5-10 km across
 			base = rng.randf_range(850.0, 1100.0)
 		Kind.STRATO:
 			r = Vector3(rng.randf_range(1900.0, 3600.0), rng.randf_range(140.0, 260.0), rng.randf_range(1500.0, 2900.0))
@@ -367,13 +369,16 @@ func _alto_patch(rng: RandomNumberGenerator, fc: Vector2) -> void:
 		_add(rng, Kind.ALTO, p, 0.35 + 0.85 * pow(rng.randf(), 1.6), rng.randf() * TAU, base + rng.randf_range(-350.0, 350.0))
 
 
-## Storm cell: one to three big cumulonimbus ringed by cumulus and a skirt of strato.
+## Storm cell: one to three big cumulonimbus ringed by cumulus and a skirt of strato. About a third are multicell
+## storm complexes instead: five to nine towers spread over a wide area, so the rain covers a big region.
 func _storm_cell(rng: RandomNumberGenerator, fc: Vector2) -> void:
-	for i in rng.randi_range(1, 3):
-		_add(rng, Kind.TOWER, fc + Vector2(rng.randf_range(-2500, 2500), rng.randf_range(-2500, 2500)), rng.randf_range(0.85, 1.3), rng.randf() * TAU)
-	for i in rng.randi_range(5, 9):
+	var complex: bool = rng.randf() < 0.35
+	var spread: float = 10000.0 if complex else 2500.0      # a multicell cluster is 20-30 km across
+	for i in (rng.randi_range(5, 9) if complex else rng.randi_range(1, 3)):
+		_add(rng, Kind.TOWER, fc + Vector2(rng.randf_range(-spread, spread), rng.randf_range(-spread, spread) * 0.7), rng.randf_range(0.85, 1.3), rng.randf() * TAU)
+	for i in (rng.randi_range(9, 15) if complex else rng.randi_range(5, 9)):
 		var a: float = rng.randf() * TAU
-		var r: float = rng.randf_range(2500.0, 6500.0)
+		var r: float = rng.randf_range(2500.0, 6500.0) * (1.8 if complex else 1.0)
 		_add(rng, Kind.CUMULUS, fc + Vector2(cos(a), sin(a)) * r, rng.randf_range(0.6, 1.1), rng.randf() * TAU, rng.randf_range(900.0, 1100.0))
 	for i in rng.randi_range(2, 4):
 		_add(rng, Kind.STRATO, fc + Vector2(rng.randf_range(-4000, 4000), rng.randf_range(-4000, 4000)), rng.randf_range(0.8, 1.1), _wind_yaw, rng.randf_range(760.0, 900.0))
@@ -510,6 +515,35 @@ func set_rain_level(v: float) -> void:
 ## Rain falling on this point from a rain cloud overhead (towering cells at full strength, low deck at ~60%).
 ## Result in rain_here (0..1). Only meaningful while the clouds themselves are visible.
 func sample_rain(p: Vector3) -> void:
+	rain_here = rain_at(p)
+
+
+## Share of towering cells that are dark storm cells (WeatherManager sets it from how stormy the weather is).
+var storm_frac: float = 0.15:
+	set(v):
+		storm_frac = v
+		if mat != null:
+			mat.set_shader_parameter("storm_frac", v)
+
+
+## A fixed 0..1 value per cloud (hashed from its index, so the cloud layout's random sequence is untouched).
+static func _rseed(i: int) -> float:
+	return fposmod(sin(float(i) * 12.9898 + 78.233) * 43758.5453, 1.0)
+
+
+## How hard it rains under the heart of cloud i: storm cells pour (1.0), other rain clouds give showers from a
+## light sprinkle to a moderate shower, low decks only drizzle.
+func cell_rain(i: int) -> float:
+	var k: int = _kinds[i]
+	if k == Kind.TOWER and _rseed(i) < storm_frac:
+		return 1.0
+	var h: float = fposmod(sin(float(i) * 39.346 + 11.135) * 24634.6345, 1.0)
+	var light: float = 0.12 + 0.43 * h
+	return light * (1.0 if k == Kind.TOWER else (0.75 if k == Kind.CONGESTUS else (0.6 if k == Kind.STRATO else 0.4)))
+
+
+## Rain falling at any point from a rain cloud overhead (0..1), e.g. where an AI pilot is flying.
+func rain_at(p: Vector3) -> float:
 	var best: float = 0.0
 	var half: float = wrap_size * 0.5
 	var dr: Vector2 = WeatherManager.cloud_drift
@@ -522,12 +556,12 @@ func sample_rain(p: Vector3) -> void:
 			continue      # above the cloud's heart: not under its rain
 		var wx: float = p.x + fposmod(c.x - p.x + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5
 		var wz: float = p.z + fposmod(c.z - p.z + _wraps[i] * 0.5, _wraps[i]) - _wraps[i] * 0.5
-		var rh: float = (_radii[i].x + _radii[i].z) * 0.5 * 0.55
+		var rh: float = (_radii[i].x + _radii[i].z) * 0.5 * 0.75
 		var d: float = Vector2(p.x - wx, p.z - wz).length() / rh
 		if d < 1.0:
-			var w: float = (1.0 - d * d) * (1.0 if k == Kind.TOWER else (0.6 if k == Kind.STRATO else (0.5 if k == Kind.CONGESTUS else 0.35)))
+			var w: float = (1.0 - d * d * 0.6) * cell_rain(i)      # heaviest under the heart, easing towards the edge
 			best = maxf(best, w)
-	rain_here = clampf(best * 1.4, 0.0, 1.0)
+	return clampf(best, 0.0, 1.0)
 
 
 var _front_vis_t: float = 0.0

@@ -1,6 +1,9 @@
 class_name SpitfireCockpit
 extends Node3D
-## EXPERIMENTAL interior for the Spitfire and the Bf 109 (every mark of each shares one; "style" picks the look): a modelled cockpit in the style of the later
+## EXPERIMENTAL modelled interior for the single-seat fighters (every mark of a type shares one). PROFILES picks, per
+## type, the nation's paint and luminous dials (RAF / USAAF / Luftwaffe), the hood framing (Spitfire hood, clear
+## bubble or framed hood), the engine plate, twin-engine gauges and a control wheel (P-38). Originally the Spitfire
+## and Bf 109 interior: a modelled cockpit in the style of the later
 ## bubble-hood marks -- black instrument panel with the flying group and engine instruments, reflector gunsight,
 ## armoured windscreen, pale "interior green" tub, side consoles, spade-grip stick, rudder pedals, seat and armour.
 ##
@@ -28,8 +31,30 @@ const BRASS := Color(0.70, 0.55, 0.22)
 const LEATHER := Color(0.30, 0.20, 0.12)
 const WEB := Color(0.62, 0.58, 0.46)
 
+## per type: nation (raf / us / de), hood (spitfire = blown hood with three bows, bubble = clear bubble with only
+## the front and rear frames, framed = greenhouse hood with extra bows and side rails), the engine plate text, twin
+## engines (two sets of engine gauges) and a control wheel instead of a stick
+const PROFILES := {
+	"spitfire": {"nat": "raf", "hood": "spitfire", "engine": "MERLIN"},
+	"hurricane": {"nat": "raf", "hood": "framed", "engine": "MERLIN"},
+	"defiant": {"nat": "raf", "hood": "framed", "engine": "MERLIN"},
+	"typhoon": {"nat": "raf", "hood": "bubble", "engine": "SABRE"},
+	"tempest": {"nat": "raf", "hood": "bubble", "engine": "SABRE"},
+	"bf109": {"nat": "de", "hood": "spitfire", "engine": "DB 605"},
+	"fw190": {"nat": "de", "hood": "bubble", "engine": "BMW 801"},
+	"me262": {"nat": "de", "hood": "bubble", "engine": "JUMO 004", "twin": true},
+	"p51": {"nat": "us", "hood": "bubble", "engine": "PACKARD V-1650"},
+	"p47": {"nat": "us", "hood": "bubble", "engine": "P & W  R-2800"},
+	"p38": {"nat": "us", "hood": "framed", "engine": "ALLISON V-1710", "twin": true, "yoke": true},
+}
+
 var aircraft: Aircraft = null
-var style: String = "spitfire"                # "spitfire" | "bf109"
+var style: String = "spitfire"                # a PROFILES key
+var nat: String = "raf"                       # raf | us | de
+var hood: String = "spitfire"                 # spitfire | bubble | framed
+var engine: String = "MERLIN"
+var twin: bool = false
+var yoke: bool = false
 var _fk: float = 1.0                          # frame thickness factor
 
 var _mats: Dictionary = {}
@@ -48,10 +73,9 @@ var _pitch: float = 0.0
 
 
 static func style_for_id(id: String) -> String:
-	if id.begins_with("spitfire"):
-		return "spitfire"
-	if id.begins_with("bf109"):
-		return "bf109"
+	for k in PROFILES:
+		if id.begins_with(String(k)):
+			return String(k)
 	return ""
 
 
@@ -73,6 +97,12 @@ static func attach(a: Aircraft) -> SpitfireCockpit:
 	c.name = "SpitfireCockpit"
 	c.aircraft = a
 	c.style = style_for_id(String(a.stats.id))
+	var pf: Dictionary = PROFILES.get(c.style, {})
+	c.nat = String(pf.get("nat", "raf"))
+	c.hood = String(pf.get("hood", "spitfire"))
+	c.engine = String(pf.get("engine", "MERLIN"))
+	c.twin = bool(pf.get("twin", false))
+	c.yoke = bool(pf.get("yoke", false))
 	mount.add_child(c)
 	c.build()
 	c.set_active(false)
@@ -86,6 +116,16 @@ func build() -> void:
 		GREEN_DARK = Color(0.21, 0.22, 0.235)
 		FRAME = Color(0.10, 0.105, 0.11)
 		_fk = 1.35
+	elif nat == "de":
+		GREEN = Color(0.25, 0.26, 0.27)        # RLM 66 black-grey (Fw 190, Me 262), darker than life
+		GREEN_DARK = Color(0.16, 0.165, 0.175)
+		FRAME = Color(0.09, 0.095, 0.10)
+		_fk = 1.3
+	elif nat == "us":
+		GREEN = Color(0.29, 0.32, 0.19)        # US interior green (zinc chromate), darker than life
+		GREEN_DARK = Color(0.18, 0.20, 0.115)
+		FRAME = Color(0.11, 0.12, 0.10)
+		_fk = 1.15
 	else:
 		GREEN = Color(0.30, 0.37, 0.27)        # interior green, deliberately darker than the real paint
 		GREEN_DARK = Color(0.185, 0.235, 0.165)
@@ -290,7 +330,7 @@ void fragment() {
 ## At night the panel goes dark and only the radium paint glows: everything is drawn, then dimmed, then the
 ## luminous marks (queued while drawing) are drawn again on top.
 func _draw_panel() -> void:
-	_lume = LUME_DE if style == "bf109" else LUME_RAF
+	_lume = LUME_DE if nat == "de" else (LUME_US if nat == "us" else LUME_RAF)
 	_lq.clear()
 	_draw_panel_body()
 	var na: float = maxf(_night_now, 0.0)
@@ -304,8 +344,11 @@ func _draw_panel_body() -> void:
 	var c: Control = _ctrl
 	var font: Font = UIKit.font(true)
 	c.draw_rect(Rect2(Vector2.ZERO, Vector2(PANEL_PX)), Color(0.06, 0.06, 0.065))
-	if style == "bf109":
+	if nat == "de":
 		_draw_panel_109(c, font)
+		return
+	if nat == "us":
+		_draw_panel_us(c, font)
 		return
 	# subtle panel grain: a few faint lighter strokes
 	for i in 26:
@@ -342,7 +385,7 @@ func _draw_panel_body() -> void:
 	_dial_small(c, font, Vector2(880, 545), 58.0, "FUEL", 0.0, 100.0, 0.8, [0, 50, 100])
 	# lower strip: engraved maker's plate and a lamp
 	c.draw_rect(Rect2(Vector2(250, 660), Vector2(640, 52)), Color(0.10, 0.10, 0.11))
-	c.draw_string(font, Vector2(268, 693), "MERLIN  .  BOOST  .  RADIATOR  .  FUEL", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.78, 0.76, 0.66, 0.55))
+	c.draw_string(font, Vector2(268, 693), engine + "  .  BOOST  .  RADIATOR  .  FUEL", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.78, 0.76, 0.66, 0.55))
 	c.draw_circle(Vector2(940, 686), 16.0, Color(0.55, 0.08, 0.06))
 	c.draw_arc(Vector2(940, 686), 18.0, 0.0, TAU, 20, Color(0.5, 0.5, 0.5), 3.0)
 
@@ -371,8 +414,15 @@ func _draw_panel_109(c: Control, font: Font) -> void:
 	_dial_di(c, font, Vector2(375, 350), 82.0, heading)
 	_dial_small(c, font, Vector2(585, 350), 82.0, "KRAFTSTOFF", 0.0, 100.0, 0.8, [0, 50, 100])
 	# engine group
-	_dial_rev(c, font, Vector2(860, 175), 82.0, 600.0 + thr * 2200.0, "DREHZAHL  x1000")
-	_dial_small(c, font, Vector2(860, 350), 82.0, "LADEDRUCK  ATA x10", 0.0, 20.0, 0.25 + thr * 0.55, [0, 10, 20])
+	if twin:
+		# two turbojets: revs and gas temperature for each
+		_dial_small(c, font, Vector2(800, 175), 58.0, "DREHZ. L x1000", 0.0, 10.0, 0.45 + thr * 0.45, [0, 5, 10])
+		_dial_small(c, font, Vector2(930, 175), 58.0, "DREHZ. R x1000", 0.0, 10.0, 0.45 + thr * 0.45, [0, 5, 10])
+		_dial_small(c, font, Vector2(800, 350), 58.0, "GASTEMP L", 0.0, 800.0, 0.35 + thr * 0.4, [0, 400, 800])
+		_dial_small(c, font, Vector2(930, 350), 58.0, "GASTEMP R", 0.0, 800.0, 0.35 + thr * 0.4, [0, 400, 800])
+	else:
+		_dial_rev(c, font, Vector2(860, 175), 82.0, 600.0 + thr * 2200.0, "DREHZAHL  x1000")
+		_dial_small(c, font, Vector2(860, 350), 82.0, "LADEDRUCK  ATA x10", 0.0, 20.0, 0.25 + thr * 0.55, [0, 10, 20])
 	# minor engine dials
 	_dial_small(c, font, Vector2(165, 545), 58.0, "OELDRUCK", 0.0, 100.0, 0.74, [0, 50, 100])
 	_dial_small(c, font, Vector2(345, 545), 58.0, "KRAFTST.DR", 0.0, 20.0, 0.62, [0, 10, 20])
@@ -381,12 +431,58 @@ func _draw_panel_109(c: Control, font: Font) -> void:
 	_dial_small(c, font, Vector2(880, 545), 58.0, "TANK", 0.0, 100.0, 0.8, [0, 50, 100])
 	# lower strip: maker's plate, a row of small toggles and a lamp
 	c.draw_rect(Rect2(Vector2(110, 660), Vector2(640, 52)), Color(0.10, 0.10, 0.11))
-	c.draw_string(font, Vector2(128, 693), "DB 605  .  LADEDRUCK  .  KUEHLER  .  KRAFTSTOFF", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.78, 0.76, 0.66, 0.55))
+	c.draw_string(font, Vector2(128, 693), engine + ("  .  DREHZAHL  .  GASTEMP  .  KRAFTSTOFF" if twin else "  .  LADEDRUCK  .  KUEHLER  .  KRAFTSTOFF"), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.78, 0.76, 0.66, 0.55))
 	for i in 4:
 		var x: float = 790.0 + float(i) * 50.0
 		c.draw_circle(Vector2(x, 686), 13.0, Color(0.26, 0.26, 0.28))
 		c.draw_line(Vector2(x, 686), Vector2(x, 664), Color(0.8, 0.8, 0.82), 5.0)
 	c.draw_circle(Vector2(985, 686), 14.0, Color(0.55, 0.08, 0.06))
+
+
+## USAAF panel: imperial units, the flying group in the centre, tachometer and manifold pressure on the right (a pair of
+## each for a twin), engine dials along the bottom.
+func _draw_panel_us(c: Control, font: Font) -> void:
+	for i in 26:
+		var y: float = 20.0 + float(i) * 29.0
+		c.draw_line(Vector2(8, y), Vector2(PANEL_PX.x - 8, y + 3.0), Color(1, 1, 1, 0.012), 1.0)
+	var a: Aircraft = aircraft
+	var mph: float = 0.0
+	var alt_ft: float = 0.0
+	var climb_fpm: float = 0.0
+	var thr: float = 0.6
+	var heading: float = 0.0
+	if a != null and is_instance_valid(a):
+		mph = a.speed * 2.237
+		alt_ft = a.global_position.y / WorldCoords.VERTICAL_SCALE * 3.281
+		climb_fpm = a.velocity.y / WorldCoords.VERTICAL_SCALE * 196.85
+		thr = clampf(a.throttle, 0.0, 1.0)
+		heading = WorldCoords.dir_to_heading(a.get_forward())
+	_dial_asi(c, font, Vector2(165, 175), 82.0, mph, 500.0, 50.0, 25.0, 100.0, "AIRSPEED  MPH")
+	_dial_horizon(c, font, Vector2(375, 175), 82.0)
+	_dial_alt(c, font, Vector2(585, 175), 82.0, alt_ft, "ALTIMETER")
+	_dial_vsi(c, font, Vector2(165, 350), 82.0, climb_fpm, "RATE OF CLIMB")
+	_dial_di(c, font, Vector2(375, 350), 82.0, heading)
+	_dial_turn(c, font, Vector2(585, 350), 82.0)
+	if twin:
+		_dial_small(c, font, Vector2(800, 175), 58.0, "TACH L  x100", 0.0, 40.0, 0.4 + thr * 0.45, [0, 20, 40])
+		_dial_small(c, font, Vector2(930, 175), 58.0, "TACH R  x100", 0.0, 40.0, 0.4 + thr * 0.45, [0, 20, 40])
+		_dial_small(c, font, Vector2(800, 350), 58.0, "MAN. PRESS L", 0.0, 80.0, 0.3 + thr * 0.5, [0, 40, 80])
+		_dial_small(c, font, Vector2(930, 350), 58.0, "MAN. PRESS R", 0.0, 80.0, 0.3 + thr * 0.5, [0, 40, 80])
+	else:
+		_dial_rev(c, font, Vector2(860, 175), 82.0, 600.0 + thr * 2400.0, "TACHOMETER  x1000")
+		_dial_small(c, font, Vector2(860, 350), 82.0, "MANIFOLD  IN. HG", 0.0, 80.0, 0.3 + thr * 0.5, [0, 40, 80])
+	_dial_small(c, font, Vector2(165, 545), 58.0, "OIL PRESS", 0.0, 200.0, 0.4, [0, 100, 200])
+	_dial_small(c, font, Vector2(345, 545), 58.0, "FUEL PRESS", 0.0, 25.0, 0.62, [0, 12, 25])
+	_dial_small(c, font, Vector2(525, 545), 58.0, "OIL TEMP", 0.0, 100.0, 0.6, [0, 50, 100])
+	_dial_small(c, font, Vector2(705, 545), 58.0, "CYL HEAD" if style == "p47" else "COOLANT", 0.0, 300.0, 0.55, [0, 150, 300])
+	_dial_small(c, font, Vector2(880, 545), 58.0, "FUEL  GAL", 0.0, 300.0, 0.75, [0, 150, 300])
+	c.draw_rect(Rect2(Vector2(110, 660), Vector2(640, 52)), Color(0.10, 0.10, 0.11))
+	c.draw_string(font, Vector2(128, 693), engine + "  .  MANIFOLD  .  TACH  .  FUEL", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(0.78, 0.76, 0.66, 0.55))
+	for i in 3:
+		var x: float = 800.0 + float(i) * 55.0
+		c.draw_circle(Vector2(x, 686), 13.0, Color(0.26, 0.26, 0.28))
+		c.draw_line(Vector2(x, 686), Vector2(x, 664), Color(0.8, 0.8, 0.82), 5.0)
+	c.draw_circle(Vector2(975, 686), 14.0, Color(0.10, 0.45, 0.12))
 
 
 func _draw_switch_strip(c: Control, font: Font) -> void:
@@ -404,6 +500,7 @@ func _draw_switch_strip(c: Control, font: Font) -> void:
 # radium luminous paint on ticks, numerals and needles: pale green with a soft glow halo
 const LUME_DE := Color(0.60, 0.98, 0.50)    # Luftwaffe: green radium paint
 const LUME_RAF := Color(1.0, 0.86, 0.42)    # RAF: yellow radium paint
+const LUME_US := Color(0.82, 1.0, 0.80)     # USAAF: pale green-white luminous paint
 var _lume: Color = LUME_RAF
 var _lq: Array = []      # luminous draws of this frame, replayed over the night dimming
 
@@ -698,7 +795,7 @@ func _build_coaming_and_sight() -> void:
 	var sight := Node3D.new()
 	sight.name = "Gunsight"
 	sight.position = Vector3(0.0, -0.08, -0.60)
-	if style == "bf109":
+	if nat == "de":
 		sight.scale = Vector3(1.25, 1.1, 1.0)     # the big square Revi housing
 	add_child(sight)
 	_box(sight, "Base", Vector3(0.11, 0.025, 0.12), Vector3(0, 0, 0), _mat(BLACK, 0.5, 0.4))
@@ -706,7 +803,10 @@ func _build_coaming_and_sight() -> void:
 	_box(sight, "Hood", Vector3(0.09, 0.012, 0.08), Vector3(0, 0.085, -0.03), _mat(BLACK, 0.5, 0.4))
 	_box(sight, "FrameL", Vector3(0.006, 0.075, 0.006), Vector3(-0.045, 0.08, 0.02), _mat(BLACK, 0.5, 0.4), Vector3(-30, 0, 0))
 	_box(sight, "FrameR", Vector3(0.006, 0.075, 0.006), Vector3(0.045, 0.08, 0.02), _mat(BLACK, 0.5, 0.4), Vector3(-30, 0, 0))
-	_quad(sight, "Glass", Vector2(0.085, 0.075), Vector3(0, 0.08, 0.02), Vector3(-30, 0, 0), _mat(Color(0.7, 0.85, 0.9), 0.1, 0.0, Color(0, 0, 0), 0.14))
+	var sight_glass: Material = _mat(Color(0.7, 0.85, 0.9), 0.1, 0.0, Color(0, 0, 0), 0.14)
+	if sight_glass is ShaderMaterial:
+		(sight_glass as ShaderMaterial).set_shader_parameter("wet", 0.0)    # inside the cockpit: stays dry
+	_quad(sight, "Glass", Vector2(0.085, 0.075), Vector3(0, 0.08, 0.02), Vector3(-30, 0, 0), sight_glass)
 	var gold: Material = _mat(Color(1.0, 0.8, 0.3), 0.5, 0.0, Color(1.0, 0.72, 0.18))
 	var ring := MeshInstance3D.new()
 	ring.name = "Reticle"
@@ -761,16 +861,31 @@ func _build_hood() -> void:
 	for s in [-1.0, 1.0]:
 		var side: float = float(s)
 		_bar(self, "SillRail", Vector3(side * 0.40, -0.12, -0.38), Vector3(side * 0.40, -0.12, 0.92), 0.04 * _fk, fm)
-	for z in [-0.34, 0.42, 0.95]:
+	# bows overhead: the clear bubble has only its front and rear frames, a framed hood has extra bows
+	var bows: Array = [-0.34, 0.42, 0.95]
+	if hood == "bubble":
+		bows = [-0.34, 0.95]
+	elif hood == "framed":
+		bows = [-0.34, 0.04, 0.42, 0.95]
+	for z in bows:
 		var prev := Vector3(-0.40, -0.12, z)
 		var segs: int = 28
-		var h: float = 0.52 if z < 0.0 else (0.50 if z < 0.9 else 0.30)
+		var h: float = _hood_h(float(z))
 		for i in range(1, segs + 1):
 			var t: float = float(i) / float(segs)
 			var ang: float = PI - PI * t
 			var p := Vector3(cos(ang) * 0.40, -0.12 + sin(ang) * (h + 0.12), z)
 			_bar(self, "Bow", prev, p, 0.028 * _fk, fm)
 			prev = p
+	if hood == "framed":
+		# greenhouse hood: longitudinal rails along each side of the glazing, front bow to rear frame
+		for u in [0.24, 0.76]:
+			var pv: Vector3 = _hood_pt(-0.34, u)
+			for k in range(1, 13):
+				var zz: float = lerpf(-0.34, 0.95, float(k) / 12.0)
+				var q: Vector3 = _hood_pt(zz, u) * Vector3(1.01, 1.0, 1.0)
+				_bar(self, "HoodRail", pv, q, 0.022 * _fk, fm)
+				pv = q
 
 
 ## One smooth glass bubble over the hood: a lofted half-ellipse tube through the bow positions, smooth-shaded so
@@ -785,9 +900,9 @@ func _hood_h(z: float) -> float:
 	return 0.30
 
 
-func _hood_pt(z: float, u: float) -> Vector3:
+func _hood_pt(z: float, u: float, rad: float = 0.395, lift: float = 0.115) -> Vector3:
 	var ang: float = PI - PI * u
-	return Vector3(cos(ang) * 0.395, -0.12 + sin(ang) * (_hood_h(z) + 0.115), z)
+	return Vector3(cos(ang) * rad, -0.12 + sin(ang) * (_hood_h(z) + lift), z)
 
 
 func _build_hood_glass() -> void:
@@ -801,10 +916,11 @@ func _build_hood_glass() -> void:
 		for i in nu:
 			var u0: float = float(i) / float(nu)
 			var u1: float = float(i + 1) / float(nu)
-			var a: Vector3 = _hood_pt(z0, u0)
-			var b: Vector3 = _hood_pt(z0, u1)
-			var c: Vector3 = _hood_pt(z1, u1)
-			var d: Vector3 = _hood_pt(z1, u0)
+			# the glass sits just outside the bows, so the frame bars hide the water on it
+			var a: Vector3 = _hood_pt(z0, u0, 0.418, 0.138)
+			var b: Vector3 = _hood_pt(z0, u1, 0.418, 0.138)
+			var c: Vector3 = _hood_pt(z1, u1, 0.418, 0.138)
+			var d: Vector3 = _hood_pt(z1, u0, 0.418, 0.138)
 			for v in [a, b, c, a, c, d]:
 				st.add_vertex(v)
 	st.generate_normals()
@@ -898,13 +1014,26 @@ func _build_stick_and_pedals() -> void:
 	add_child(_stick)
 	_cyl(_stick, "Shaft", 0.013, 0.25, Vector3(0, 0.125, 0), met)
 	_cyl(_stick, "Boot", 0.04, 0.07, Vector3(0, 0.035, 0), blk)
-	# spade grip: a D-shaped frame with the gun button on top
 	var top := Vector3(0, 0.25, 0)
+	if yoke:
+		# P-38 control wheel: a half wheel ("ram's horns") on the column, gun buttons on the grips
+		_box(_stick, "WheelHub", Vector3(0.06, 0.04, 0.04), top, blk)
+		_bar(_stick, "WheelBar", top + Vector3(-0.15, 0.0, 0.0), top + Vector3(0.15, 0.0, 0.0), 0.022, blk)
+		for sx in [-1.0, 1.0]:
+			_bar(_stick, "WheelHorn", top + Vector3(sx * 0.15, 0.0, 0.0), top + Vector3(sx * 0.17, 0.10, 0.0), 0.026, blk)
+			_cyl(_stick, "WheelButton", 0.008, 0.012, top + Vector3(sx * 0.17, 0.11, 0.0), red)
+		_add_pedals(blk, met)
+		return
+	# spade grip: a D-shaped frame with the gun button on top
 	_box(_stick, "GripHead", Vector3(0.08, 0.025, 0.04), top, blk)
 	_box(_stick, "GripL", Vector3(0.016, 0.05, 0.03), top + Vector3(-0.032, 0.032, 0.0), blk)
 	_box(_stick, "GripR", Vector3(0.016, 0.05, 0.03), top + Vector3(0.032, 0.032, 0.0), blk)
 	_box(_stick, "GripTop", Vector3(0.08, 0.016, 0.03), top + Vector3(0, 0.06, 0.0), blk)
 	_cyl(_stick, "FireButton", 0.009, 0.012, top + Vector3(0.0, 0.074, 0.0), red)
+	_add_pedals(blk, met)
+
+
+func _add_pedals(blk: Material, met: Material) -> void:
 	# rudder pedals on their rails
 	_pedal_l = Node3D.new()
 	_pedal_l.position = Vector3(-0.12, -0.55, -0.62)
@@ -1041,6 +1170,7 @@ uniform vec3 tint = vec3(0.45, 0.70, 0.80);
 uniform float alpha = 0.10;
 uniform float rough = 0.05;
 uniform float rain = 0.0;
+uniform float wet = 1.0;      // 0 for glass inside the cockpit (the gunsight reflector)
 uniform float dim = 1.0;
 uniform mat4 root_inv;
 varying vec3 cp;
@@ -1050,36 +1180,52 @@ void vertex() {
 }
 void fragment() {
 	// water beads and runs live on the glass itself: cp is the point's place in the cockpit, so they stay put on the
-	// panes and the frame bars hide them
-	vec2 uv = vec2(cp.x, cp.y * 0.75 - cp.z * 0.65);
+	// panes and the frame bars hide them. The airflow streams them outward from the gunsight point (dead ahead) and
+	// back round the hood, so the grid is laid out in view directions about that point: across = angle round it,
+	// along = angle out from it. Runs slide outward along their line and leave a trail behind them.
+	vec3 dir = normalize(cp - vec3(0.0, -0.02, 0.0));
+	vec3 c0 = normalize(vec3(0.0, 0.05, -1.0));
+	vec3 ax = vec3(1.0, 0.0, 0.0);
+	vec3 ay = normalize(cross(c0, ax));
+	float th = acos(clamp(dot(dir, c0), -1.0, 1.0));
+	float ph = atan(dot(dir, ay), dot(dir, ax));
+	vec2 uv = vec2(ph * max(th, 0.3) * 0.9, th);    // across = arc length, held open near the centre so drops do not crowd round the sight
 	float bead = 0.0;
 	float ring = 0.0;
 	float trail = 0.0;
-	if (rain > 0.02) {
-		for (int layer = 0; layer < 2; layer++) {
-			float scale = layer == 0 ? 30.0 : 58.0;
+	float lit = 0.5;      // across a bead: 0 = its dark (refracting) side, 1 = its bright side
+	if (rain * wet > 0.02) {
+		for (int layer = 0; layer < 3; layer++) {
+			float scale = layer == 0 ? 22.0 : (layer == 1 ? 42.0 : 70.0);
 			vec2 g = uv * scale + float(layer) * 17.3;
 			vec2 id = floor(g);
 			vec2 f = fract(g);
 			float h = h21(id + float(layer) * 13.1);
-			float on = step(h, rain * 0.85);
-			float run = step(0.72, h21(id + 4.2));
-			float r = mix(0.08, 0.15, h21(id + 9.1)) * (layer == 0 ? 1.0 : 0.62);
+			float on = step(h, rain * 1.0);
+			float run = step(0.52, h21(id + 4.2));
+			float r = mix(0.08, 0.15, h21(id + 9.1)) * (layer == 0 ? 1.0 : (layer == 1 ? 0.62 : 0.45));
 			vec2 c = vec2(0.22 + 0.56 * h21(id + 1.7), 0.22 + 0.56 * h21(id + 2.9));
 			if (run > 0.5) {
-				c.y = 0.12 + 0.76 * fract(h21(id + 3.3) - TIME * 0.025 * (0.6 + h));
+				c.y = 0.12 + 0.76 * fract(h21(id + 3.3) + TIME * 0.18 * (0.6 + h));
 			}
 			vec2 d = f - c;
 			float dist = length(d);
-			bead = max(bead, smoothstep(r, r * 0.6, dist) * on);
+			float bb = smoothstep(r, r * 0.6, dist) * on;
+			if (bb > bead) {
+				lit = smoothstep(-0.8, 0.8, dot(d / r, vec2(-0.5, -0.85)));
+			}
+			bead = max(bead, bb);
 			ring = max(ring, smoothstep(r * 0.55, r, dist) * smoothstep(r * 1.2, r, dist) * on);
-			trail = max(trail, run * on * step(0.0, d.y) * smoothstep(r * 0.4, 0.0, abs(d.x)) * smoothstep(0.42, 0.0, d.y));
+			trail = max(trail, run * on * step(0.0, -d.y) * smoothstep(r * 0.4, 0.0, abs(d.x)) * smoothstep(0.55, 0.0, -d.y));
 		}
 	}
 	vec3 base = tint * dim;
-	ALBEDO = mix(base, vec3(0.75, 0.82, 0.88) * dim, clamp(bead * 0.8 + trail * 0.4, 0.0, 1.0));
-	ALBEDO = mix(ALBEDO, vec3(0.02) * dim, ring * 0.5);
-	ALPHA = clamp(alpha + bead * 0.40 + ring * 0.22 + trail * 0.16, 0.0, 0.7);
+	// a drop refracts the scene upside down: a dark side, a bright side and a dark rim, so it reads on grey cloud too
+	vec3 drop = mix(vec3(0.10, 0.12, 0.14), vec3(0.95, 0.97, 1.0), lit);
+	ALBEDO = mix(base, drop * dim, clamp(bead, 0.0, 1.0));
+	ALBEDO = mix(ALBEDO, vec3(0.80, 0.85, 0.90) * dim, clamp(trail * 0.5, 0.0, 1.0));
+	ALBEDO = mix(ALBEDO, vec3(0.02) * dim, ring * 0.7);
+	ALPHA = clamp(alpha + bead * 0.62 + ring * 0.38 + trail * 0.26 + rain * 0.06, 0.0, 0.85);
 	ROUGHNESS = rough;
 	SPECULAR = 0.9;
 }
@@ -1140,7 +1286,7 @@ func _build_ribs() -> void:
 	var rivet_mat: Material = _paint(GREEN.lightened(0.10), 0.7, 0.0, 0.0)
 	var chip_mat: Material = _mat(Color(0.55, 0.55, 0.53), 0.35, 0.7)
 	var pts := PackedVector3Array()
-	var is109: bool = style == "bf109"
+	var is109: bool = nat == "de"
 	var tilt: float = -3.0 if is109 else -7.0
 	var bw: float = 0.050 if is109 else 0.024
 	var bt: float = 0.005 if is109 else 0.006
@@ -1189,56 +1335,76 @@ func _build_ribs() -> void:
 
 # ------------------------------------------------------------------ run time
 var _night_now := -1.0
-var _hole_mi: MeshInstance3D = null
-var _twin_mi: MeshInstance3D = null
-var _twin_old: Material = null
-var _twin_mat: ShaderMaterial = null
+var _holes: Array = []                 # hull meshes with the cockpit box cut out
+var _twins: Array = []                 # [blackout twin, its own material] pairs swapped for a cut version
+var _twin_shader: Shader = null
+var _dbg_t: float = 0.0
+
+
+## debug (--ck-debug): name every visible exterior part that reaches into the space between the eye and the panel
+func _ck_debug() -> void:
+	var seen: Dictionary = {}
+	for n2 in aircraft.find_children("*", "GeometryInstance3D", true, false):
+		var g2: GeometryInstance3D = n2 as GeometryInstance3D
+		if is_ancestor_of(g2) or not g2.is_visible_in_tree():
+			continue
+		var gb: AABB = g2.global_transform * g2.get_aabb()
+		for iy in 7:
+			for iz in 6:
+				var pt := Vector3(0.0, -0.08 - 0.08 * float(iy), -0.15 - 0.09 * float(iz))
+				if gb.has_point(global_transform * pt) and not seen.has(g2):
+					seen[g2] = true
+					print("[ck-debug] ", aircraft.get_path_to(g2), " ", g2.get_class(), " in_holes=", _holes.has(g2), " aabb=", gb)
 
 
 ## The airframe skin is a solid hull whose top rises through the cockpit floor and lower panel. While the
 ## interior is shown, the skin shader (aircraft_pbr) discards a box around the cockpit so the interior shows clean.
+## Every hull mesh that passes through the box is cut (a single fuselage, or a twin-boom nacelle and its parts).
 func _set_fuselage_hole(on: bool) -> void:
-	if not on:
-		if _hole_mi != null and is_instance_valid(_hole_mi):
-			_hole_mi.set_instance_shader_parameter("hole_a", Vector4(0, 0, 0, 0))
-		_hole_mi = null
-		if _twin_mi != null and is_instance_valid(_twin_mi):
-			_twin_mi.material_override = _twin_old
-		_twin_mi = null
+	for mi in _holes:
+		if is_instance_valid(mi):
+			(mi as MeshInstance3D).set_instance_shader_parameter("hole_a", Vector4(0, 0, 0, 0))
+	_holes.clear()
+	for pr in _twins:
+		if is_instance_valid(pr[0]):
+			(pr[0] as MeshInstance3D).material_override = pr[1]
+	_twins.clear()
+	if not on or aircraft == null or not is_instance_valid(aircraft):
 		return
-	if aircraft == null or not is_instance_valid(aircraft):
-		return
-	var fus: MeshInstance3D = aircraft.find_child("Fuselage", true, false) as MeshInstance3D
-	if fus == null:
-		return
-	var sm: ShaderMaterial = fus.material_override as ShaderMaterial
-	if sm == null or sm.shader == null or not sm.shader.code.contains("hole_a"):
-		return
-	var to_local: Transform3D = fus.global_transform.affine_inverse() * global_transform
-	var lo := Vector3(1e9, 1e9, 1e9)
-	var hi := Vector3(-1e9, -1e9, -1e9)
-	for k in 8:
-		var c := Vector3(-0.455 if (k & 1) == 0 else 0.455, -1.2 if (k & 2) == 0 else -0.28, -0.93 if (k & 4) == 0 else 0.62)
-		var q: Vector3 = to_local * c
-		lo = lo.min(q)
-		hi = hi.max(q)
-	fus.set_instance_shader_parameter("hole_a", Vector4(lo.x, lo.y, lo.z, 1.0))
-	fus.set_instance_shader_parameter("hole_b", hi)
-	_hole_mi = fus
-	# the hull's black "inside faces" twin (Aircraft._ensure_blackout) must be cut the same way, or its black
-	# faces fill the cockpit and fight the interior surfaces
-	var twin: MeshInstance3D = fus.get_node_or_null("Blackout") as MeshInstance3D
-	if twin != null:
-		if _twin_mat == null:
-			var sh := Shader.new()
-			sh.code = "shader_type spatial;\nrender_mode unshaded, cull_front;\nuniform vec3 lo;\nuniform vec3 hi;\nvarying vec3 lp;\nvoid vertex() { lp = VERTEX; }\nvoid fragment() {\n\tif (all(greaterThan(lp, lo)) && all(lessThan(lp, hi))) { discard; }\n\tALBEDO = vec3(0.0);\n}\n"
-			_twin_mat = ShaderMaterial.new()
-			_twin_mat.shader = sh
-		_twin_mat.set_shader_parameter("lo", lo)
-		_twin_mat.set_shader_parameter("hi", hi)
-		_twin_old = twin.material_override
-		twin.material_override = _twin_mat
-		_twin_mi = twin
+	for n in aircraft.find_children("*", "MeshInstance3D", true, false):
+		var mi: MeshInstance3D = n as MeshInstance3D
+		if is_ancestor_of(mi) or mi.mesh == null or String(mi.name) == "Blackout":
+			continue
+		var sm: ShaderMaterial = mi.material_override as ShaderMaterial
+		if sm == null or sm.shader == null or not sm.shader.code.contains("hole_a"):
+			continue
+		var to_local: Transform3D = mi.global_transform.affine_inverse() * global_transform
+		var lo := Vector3(1e9, 1e9, 1e9)
+		var hi := Vector3(-1e9, -1e9, -1e9)
+		for k in 8:
+			# up to eye level: a tall hull (the P-38 nacelle tops out just under the eye) must not show over the panel
+			var c := Vector3(-0.455 if (k & 1) == 0 else 0.455, -1.2 if (k & 2) == 0 else 0.05, -0.93 if (k & 4) == 0 else 0.62)
+			var q: Vector3 = to_local * c
+			lo = lo.min(q)
+			hi = hi.max(q)
+		if not mi.mesh.get_aabb().intersects(AABB(lo, hi - lo)):
+			continue
+		mi.set_instance_shader_parameter("hole_a", Vector4(lo.x, lo.y, lo.z, 1.0))
+		mi.set_instance_shader_parameter("hole_b", hi)
+		_holes.append(mi)
+		# the hull's black "inside faces" twin (Aircraft._ensure_blackout) must be cut the same way, or its black
+		# faces fill the cockpit and fight the interior surfaces
+		var twin: MeshInstance3D = mi.get_node_or_null("Blackout") as MeshInstance3D
+		if twin != null:
+			if _twin_shader == null:
+				_twin_shader = Shader.new()
+				_twin_shader.code = "shader_type spatial;\nrender_mode unshaded, cull_front;\nuniform vec3 lo;\nuniform vec3 hi;\nvarying vec3 lp;\nvoid vertex() { lp = VERTEX; }\nvoid fragment() {\n\tif (all(greaterThan(lp, lo)) && all(lessThan(lp, hi))) { discard; }\n\tALBEDO = vec3(0.0);\n}\n"
+			var tm := ShaderMaterial.new()
+			tm.shader = _twin_shader
+			tm.set_shader_parameter("lo", lo)
+			tm.set_shader_parameter("hi", hi)
+			_twins.append([twin, twin.material_override])
+			twin.material_override = tm
 
 
 ## At night the structure goes black and only the instruments (unshaded panel texture) and the sight stay lit.
@@ -1279,11 +1445,18 @@ func set_active(on: bool) -> void:
 		elif not on and _hidden_pilot != null and is_instance_valid(_hidden_pilot):
 			_hidden_pilot.visible = true
 			_hidden_pilot = null
+		# the exterior model's simple cockpit (seat, dials, stick for the outside views) would float inside this one
+		var ext: Node3D = aircraft.find_child("CockpitInterior", true, false) as Node3D
+		if ext != null:
+			ext.visible = not on
 
 
 func _process(_delta: float) -> void:
 	if not _active or aircraft == null or not is_instance_valid(aircraft):
 		return
+	_dbg_t += _delta
+	if _dbg_t > 4.0 and _dbg_t < 4.0 + _delta * 1.5 and "--ck-debug" in OS.get_cmdline_user_args():
+		_ck_debug()
 	if _ctrl != null:
 		_ctrl.queue_redraw()
 	_apply_night()

@@ -14,6 +14,8 @@ const DATE_SPAN_DAYS: int = 213                  # to 1940-12-31
 const DEFAULT_DATE: String = "1940-09-15"
 
 ## Forecast weights for a planned sortie (sum 1.0). Names are WeatherManager presets.
+## Proportions follow the summer 1940 Channel weather diaries: mostly fair or showers with bright intervals and
+## cloudy days, some rain, morning fog now and then, thunderstorms on a few days.
 const FORECAST_WEIGHTS := [["clear", 0.30], ["scattered", 0.25], ["overcast", 0.20], ["rain", 0.10], ["fog", 0.10], ["storm", 0.05]]
 ## Navigation difficulty per preset: cuts map detail back and makes the planner warn.
 const NAV_PENALTY := {"clear": 0.0, "scattered": 0.05, "overcast": 0.25, "rain": 0.35, "storm": 0.5, "fog": 0.6}
@@ -96,6 +98,44 @@ static func forecast(date: String, lat: float, lon: float) -> String:
 		if roll < acc:
 			return String(w[0])
 	return "clear"
+
+
+## A random day's weather in the same realistic proportions (free flight "Random"): fair and showery days are
+## common, fog and thunderstorms rare, as in the summer 1940 Channel records.
+## `month` (1..12, 0 = none) shifts the mix with the season: winter brings more overcast, rain and fog and few
+## thunderstorms; summer more fair days, showers and thunderstorms; autumn more fog and rain.
+static func random_weather(month: int = 0) -> String:
+	var mul: Dictionary = SEASON_WEATHER.get(_season_of(month), {})
+	var total: float = 0.0
+	for w in FORECAST_WEIGHTS:
+		total += float(w[1]) * float(mul.get(w[0], 1.0))
+	var roll: float = randf() * total
+	var acc: float = 0.0
+	for w in FORECAST_WEIGHTS:
+		acc += float(w[1]) * float(mul.get(w[0], 1.0))
+		if roll < acc:
+			return String(w[0])
+	return "clear"
+
+
+const SEASON_WEATHER := {
+	"winter": {"clear": 0.8, "scattered": 0.8, "overcast": 1.5, "rain": 1.4, "fog": 2.0, "storm": 0.3},
+	"spring": {"clear": 1.0, "scattered": 1.2, "overcast": 1.0, "rain": 1.0, "fog": 0.8, "storm": 0.6},
+	"summer": {"clear": 1.1, "scattered": 1.1, "overcast": 0.8, "rain": 0.7, "fog": 0.5, "storm": 1.6},
+	"autumn": {"clear": 0.8, "scattered": 1.0, "overcast": 1.2, "rain": 1.3, "fog": 1.6, "storm": 0.6},
+}
+
+
+static func _season_of(month: int) -> String:
+	if month in [12, 1, 2]:
+		return "winter"
+	if month in [3, 4, 5]:
+		return "spring"
+	if month in [6, 7, 8]:
+		return "summer"
+	if month in [9, 10, 11]:
+		return "autumn"
+	return ""
 
 
 static func nav_penalty(weather: String) -> float:
