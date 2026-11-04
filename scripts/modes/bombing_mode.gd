@@ -197,6 +197,10 @@ func _alive_targets() -> Array:
 	return out
 
 
+func strike_targets() -> Array:
+	return targets
+
+
 func _nearest_target() -> Node:
 	if player == null:
 		return null

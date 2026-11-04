@@ -526,6 +526,12 @@ func nav_point() -> Variant:
 	return null
 
 
+## The buildings the player has been sent to destroy right now (TargetSpotter calls them out and marks them when
+## they come into view). Modes with a specific target override it.
+func strike_targets() -> Array:
+	return []
+
+
 ## Helper for nav_point(): position of the node in `nodes` nearest the player (skipping destroyed ones).
 func _nearest_pos(nodes: Array) -> Variant:
 	if player == null or not is_instance_valid(player):
@@ -647,9 +653,16 @@ func finish(success: bool, extra: Dictionary = {}) -> void:
 	mission_complete.emit(success, stats)
 
 
+var _spotter: TargetSpotter = null
+
+
 func _process(delta: float) -> void:
 	if running:
 		elapsed += delta
+		if _spotter == null:
+			_spotter = TargetSpotter.new()
+			_spotter.mode = self
+			add_child(_spotter)
 		# hours flown go into the logbook a minute at a time
 		var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 		if pl != null and is_instance_valid(pl) and pl.state == Aircraft.State.ALIVE and not pl.on_ground:

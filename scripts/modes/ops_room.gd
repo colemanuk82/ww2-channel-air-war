@@ -92,6 +92,13 @@ var _streak: int = 0                    # jobs done in a row without a miss
 var _await_rearm: bool = false          # out of ammunition: no new jobs until the player has landed and rearmed
 
 
+## The buildings of the current "destroy" tasking (TargetSpotter: "there it is" and the red X).
+func strike_targets() -> Array:
+	if active.is_empty() or str(active.get("goal", "")) != "destroy":
+		return []
+	return active.get("nodes", []) as Array
+
+
 func setup(p_world: Node3D, p_player: Aircraft, p_hud: Node, p_mode: ModeBase, p_side: String, p_difficulty: float) -> void:
 	world = p_world
 	player = p_player

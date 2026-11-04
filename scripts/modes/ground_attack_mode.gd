@@ -237,6 +237,10 @@ func nav_point() -> Variant:
 	return p if p != null else (_center if _center != Vector3.ZERO else null)
 
 
+func strike_targets() -> Array:
+	return _target_nodes
+
+
 func _stats() -> Dictionary:
 	return {"kills": total_kills, "tanks": kills["tanks"], "vehicles": kills["vehicles"], "trains": kills["trains"], "ships": kills["ships"], "aa": kills["aa"]}
 

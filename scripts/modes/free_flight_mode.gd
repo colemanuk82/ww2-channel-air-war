@@ -92,6 +92,13 @@ func map_pins() -> Array:
 	return []
 
 
+## The ops room's current strike tasking (a factory, a radar station...).
+func strike_targets() -> Array:
+	if ops != null and is_instance_valid(ops):
+		return ops.strike_targets()
+	return []
+
+
 func _stats() -> Dictionary:
 	var d: Dictionary = {}
 	if ops != null and is_instance_valid(ops):
