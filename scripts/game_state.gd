@@ -67,6 +67,7 @@ var post_fx: int = 2         # post effects: 0 off, 1 medium (filmic tonemap, bl
 var view_distance: int = 1   # 0 near, 1 normal, 2 far
 var cloud_detail: int = 1    # volumetric clouds: 0 low, 1 medium, 2 high (raymarch step size / sample count)
 var fullscreen: bool = true
+var resolution: int = 0      # 0 = native (desktop); else an index into RESOLUTIONS. Windowed: the window size. Fullscreen: the 3D render resolution
 var ui_scale: float = 1.0
 var paused: bool = false
 
@@ -146,6 +147,8 @@ func _ready() -> void:
 const SETTINGS_PATH := "user://settings.cfg"
 const VIEW_SCALES := [0.7, 1.0, 1.35]
 const UI_SCALES := [0.85, 1.0, 1.25, 1.5]
+const RESOLUTIONS := [Vector2i(0, 0), Vector2i(1280, 720), Vector2i(1600, 900), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3840, 2160)]
+const RESOLUTION_NAMES := ["Native", "1280 x 720", "1600 x 900", "1920 x 1080", "2560 x 1440", "3840 x 2160"]
 
 
 ## True only on the NVIDIA RTX engine fork (Streamline built in). The standard Godot build has no DLSS, no frame
@@ -219,6 +222,7 @@ func _load_settings() -> void:
 	view_distance = int(cf.get_value("gfx", "view_distance", view_distance))
 	cloud_detail = clampi(int(cf.get_value("gfx", "cloud_detail", cloud_detail)), 0, 2)
 	fullscreen = cf.get_value("gfx", "fullscreen", fullscreen)
+	resolution = clampi(int(cf.get_value("gfx", "resolution", resolution)), 0, RESOLUTIONS.size() - 1)
 	ui_scale = float(cf.get_value("gfx", "ui_scale", ui_scale))
 	upscaler = int(cf.get_value("gfx", "upscaler", upscaler))
 	upscale_quality = int(cf.get_value("gfx", "upscale_quality", upscale_quality))
@@ -321,6 +325,7 @@ func save_settings() -> void:
 	cf.set_value("gfx", "view_distance", view_distance)
 	cf.set_value("gfx", "cloud_detail", cloud_detail)
 	cf.set_value("gfx", "fullscreen", fullscreen)
+	cf.set_value("gfx", "resolution", resolution)
 	cf.set_value("gfx", "ui_scale", ui_scale)
 	cf.set_value("gfx", "upscaler", upscaler)
 	cf.set_value("gfx", "upscale_quality", upscale_quality)
@@ -558,6 +563,8 @@ func set_graphic(key: String, value: Variant) -> void:
 			cloud_detail = clampi(int(value), 0, 2)
 		"fullscreen":
 			fullscreen = bool(value)
+		"resolution":
+			resolution = clampi(int(value), 0, RESOLUTIONS.size() - 1)
 		"ui_scale":
 			ui_scale = float(value)
 		"upscaler":
@@ -651,6 +658,7 @@ func apply_graphics() -> void:
 	var win: Window = get_window()
 	if win:
 		win.mode = Window.MODE_FULLSCREEN if fullscreen else Window.MODE_WINDOWED
+		_apply_window_size(win)
 		win.content_scale_factor = ui_scale
 		var vp: Viewport = win
 		_apply_upscaler(vp)
@@ -897,19 +905,44 @@ static func _decode_pad(enc: Array) -> InputEvent:
 
 ## Set the 3D scaling mode, render scale and frame generation on the root viewport.
 ## Mode ids: 0 bilinear (off), 2 FSR 2, 6 DLSS (only exists on the RTX engine, so it is set by number).
+## Windowed: size (and centre) the window for the chosen resolution. Fullscreen keeps the desktop size; the chosen
+## resolution is applied to the 3D render instead (render_res_factor).
+func _apply_window_size(win: Window) -> void:
+	if fullscreen or resolution <= 0 or DisplayServer.get_name() == "headless":
+		return
+	var want: Vector2i = RESOLUTIONS[resolution]
+	var scr: int = win.current_screen
+	var area: Rect2i = DisplayServer.screen_get_usable_rect(scr)
+	want = Vector2i(mini(want.x, area.size.x), mini(want.y, area.size.y))
+	if win.size != want:
+		win.size = want
+		win.position = area.position + (area.size - want) / 2
+
+
+## Fullscreen with a resolution below the desktop's: the 3D scene renders at that resolution and is scaled up.
+func render_res_factor() -> float:
+	if not fullscreen or resolution <= 0 or DisplayServer.get_name() == "headless":
+		return 1.0
+	var scr: Vector2i = DisplayServer.screen_get_size(get_window().current_screen)
+	if scr.y <= 0:
+		return 1.0
+	return clampf(float(RESOLUTIONS[resolution].y) / float(scr.y), 0.25, 1.0)
+
+
 func _apply_upscaler(vp: Viewport) -> void:
+	var rf: float = render_res_factor()
 	var u: int = effective_upscaler()
 	print("[gfx] upscaler=%s  dlss_supported=%s  framegen_supported=%s  frame_gen_wanted=%s  scale=%.3f" % [["off", "fsr2", "dlss"][u], dlss_supported(), framegen_supported(), frame_gen, float(UPSCALE_SCALES[clampi(upscale_quality, 0, 3)])])
 	match u:
 		Upscaler.DLSS:
 			vp.scaling_3d_mode = 6 as Viewport.Scaling3DMode
-			vp.scaling_3d_scale = float(UPSCALE_SCALES[clampi(upscale_quality, 0, 3)])
+			vp.scaling_3d_scale = float(UPSCALE_SCALES[clampi(upscale_quality, 0, 3)]) * rf
 		Upscaler.FSR2:
 			vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2
-			vp.scaling_3d_scale = float(UPSCALE_SCALES[clampi(upscale_quality, 0, 3)])
+			vp.scaling_3d_scale = float(UPSCALE_SCALES[clampi(upscale_quality, 0, 3)]) * rf
 		_:
 			vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
-			vp.scaling_3d_scale = 1.0
+			vp.scaling_3d_scale = rf
 	# frame generation only exists on the RTX engine, needs DLSS, and is only valid on RTX 40-series or newer
 	if "frame_generation" in vp:
 		vp.set("frame_generation", frame_gen and u == Upscaler.DLSS and framegen_supported())

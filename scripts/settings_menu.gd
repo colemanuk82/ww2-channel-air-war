@@ -42,6 +42,7 @@ var _post: OptionButton
 var _view: OptionButton
 var _clouds: OptionButton
 var _fullscreen: OptionButton
+var _resolution: OptionButton
 var _ui_scale: OptionButton
 
 # Controls page
@@ -236,6 +237,8 @@ func _build_video_page() -> VBoxContainer:
 		GameState.set_graphic("cloud_detail", i))
 	_fullscreen = _row(page, "Fullscreen", ["Off", "On"], 1 if GameState.fullscreen else 0, func(i: int) -> void:
 		GameState.set_graphic("fullscreen", i == 1))
+	_resolution = _row(page, "Resolution", GameState.RESOLUTION_NAMES, GameState.resolution, func(i: int) -> void:
+		GameState.set_graphic("resolution", i))
 	return page
 
 
@@ -946,6 +949,7 @@ func _refresh() -> void:
 	_view.select(clampi(GameState.view_distance, 0, 2))
 	_clouds.select(clampi(GameState.cloud_detail, 0, 2))
 	_fullscreen.select(1 if GameState.fullscreen else 0)
+	_resolution.select(clampi(GameState.resolution, 0, GameState.RESOLUTION_NAMES.size() - 1))
 	_ui_scale.select(_ui_index())
 
 
