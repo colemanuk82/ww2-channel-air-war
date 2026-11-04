@@ -410,6 +410,8 @@ static var _blade_mat: ShaderMaterial
 
 
 func _grass_blades(L: float) -> void:
+	if OS.get_environment("WW2_NO_BLADES") == "1":
+		return
 	if _blade_meshes.is_empty():
 		_blade_mat = ShaderMaterial.new()
 		_blade_mat.shader = load("res://shaders/grass_blades.gdshader")
