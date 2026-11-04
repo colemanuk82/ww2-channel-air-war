@@ -262,6 +262,7 @@ func _set_state(s: int) -> void:
 
 
 func _on_damaged(_a: Aircraft, amount: float, health: float) -> void:
+	notice_player()          # hit: he knows someone is there
 	if role != Role.FIGHTER and role != Role.WINGMAN:
 		return
 	if state == State.TAKEOFF or state == State.LAND:
@@ -905,7 +906,10 @@ func _find_target(max_range: float) -> Aircraft:
 			continue
 		var d: float = o.global_position.distance_to(pos)
 		# coming out of the sun, or from the blind spot astern: seen much later
-		if d > max_range * sun_glare(pos, o.global_position) * view_factor(o.global_position):
+		var reach: float = max_range * sun_glare(pos, o.global_position) * view_factor(o.global_position)
+		if d > reach:
+			continue
+		if o.player_controlled and not _aware_of_player(o, d, reach):
 			continue
 		if not _has_los(o):
 			continue
@@ -923,6 +927,43 @@ func _find_target(max_range: float) -> Aircraft:
 			best_score = score
 			best = o
 	return best
+
+
+## Spotting the player takes time. Inside the envelope above, the chance of picking him out builds up each second -
+## slowly at the edge of it, quickly up close (a small aircraft is hard to see at a few kilometres, harder still
+## astern or out of the sun) - so a careful approach can get in unseen. Once seen he is remembered for a while;
+## hits on this aircraft, or his tracers close by, give him away at once.
+const PLAYER_MEMORY_MS := 25000
+var _player_aware_until: int = 0
+var _spot_acc: float = 0.0
+var _spot_need: float = randf_range(0.7, 1.4)
+var _spot_last_ms: int = 0
+
+
+func _aware_of_player(o: Aircraft, d: float, reach: float) -> bool:
+	var now: int = Time.get_ticks_msec()
+	if now < _player_aware_until:
+		return true
+	var dt: float = clampf(float(now - _spot_last_ms) / 1000.0, 0.0, 0.5)
+	if now - _spot_last_ms > 3000:
+		_spot_acc *= 0.4                  # he dropped out of sight for a while: the half-noticed speck is lost
+	_spot_last_ms = now
+	if o.cmd_fire and d < 900.0 * view_factor(o.global_position):
+		notice_player()
+		return true
+	var close: float = clampf(1.0 - d / maxf(reach, 1.0), 0.0, 1.0)
+	var rate: float = (0.02 + 1.2 * close * close * close) * (0.6 + 0.5 * difficulty) * clampf(sqrt(_vis), 0.35, 1.0)
+	_spot_acc += rate * dt
+	if _spot_acc >= _spot_need:
+		notice_player()
+		return true
+	return false
+
+
+func notice_player() -> void:
+	_player_aware_until = Time.get_ticks_msec() + PLAYER_MEMORY_MS
+	_spot_acc = 0.0
+	_spot_need = randf_range(0.7, 1.4)
 
 
 ## How well this pilot can see a point from his cockpit (1 = clear): full ahead and out to the sides, falling away

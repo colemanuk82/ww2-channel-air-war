@@ -406,6 +406,7 @@ func _issue_inner(scramble: bool, followup: bool) -> void:
 		if kind != "escort" and not scramble:
 			_maybe_rv(info)
 		active = info
+		_watch_downs(info)
 		_last_kind = kind
 		_friends = info.get("friends", [])
 		_announce(info)
@@ -1335,10 +1336,24 @@ func _update_active(dt: float) -> void:
 			var need: int = int(active["need"])
 			var got: int = int(active.get("got", 0))
 			if str(active["goal"]) == "kills_of":
+				# Only real losses count. A freed node used to count as "down", so enemy fighters that ran low and
+				# landed at their own airfield (and were removed) completed a fighter sweep before the player got
+				# there. Each node's destroyed signal is recorded instead; one that just left is replaced.
 				got = 0
-				for n in active["nodes"]:
-					if not is_instance_valid(n) or _is_down(n):
+				var downed: Dictionary = active.get("downed", {})
+				var nodes: Array = active["nodes"]
+				for i in nodes.size():
+					var n: Variant = nodes[i]
+					if n != null and is_instance_valid(n):
+						if downed.has((n as Node).get_instance_id()) or _is_down(n):
+							got += 1
+					elif downed.has(int(active.get("node_ids", {}).get(i, -1))):
 						got += 1
+					elif str(active.get("kind", "")) == "sweep":
+						var rep: Aircraft = _sweep_replacement()
+						if rep != null:
+							nodes[i] = rep
+							_watch_node(active, i, rep)
 				active["got"] = got
 			if got >= need:
 				_end_active(true)
@@ -1369,6 +1384,7 @@ func _bounce() -> void:
 		var nd: Array = active.get("nodes", [])
 		nd.append(ac)
 		active["nodes"] = nd
+		_watch_node(active, nd.size() - 1, ac)
 	_say("Bandits behind you, %s! Break, break!" % Radio.player_callsign, 0.0, "bounce_1")
 
 
@@ -1428,6 +1444,7 @@ func _twist() -> void:
 				var nd: Array = active.get("nodes", [])
 				nd.append(ac)
 				active["nodes"] = nd
+				_watch_node(active, nd.size() - 1, ac)
 			_say("Heads up - they're scrambling fighters off that airfield.", 0.0, "twist_scramble_1")
 		"sweep":
 			var pool2: Array = AircraftCatalog.fighters_for_side(enemy).filter(func(i: String) -> bool: return i != "me262")
@@ -1442,6 +1459,7 @@ func _twist() -> void:
 					pil2.detect_range = 7000.0
 				AIFactory.add_marker(hud, ac2, Color(1.0, 0.25, 0.2))
 				(active["nodes"] as Array).append(ac2)
+				_watch_node(active, (active["nodes"] as Array).size() - 1, ac2)
 				(active["hit"] as Array).append(ac2)
 			_say("Two more bandits joining them. Watch yourself.", 0.0, "twist_more_bandits_1")
 		"rescue":
@@ -1455,6 +1473,50 @@ func _twist() -> void:
 			active["eboat"] = boat
 			AIFactory.add_marker(hud, boat, Color(1.0, 0.25, 0.2))
 			_say("Enemy boat heading for the dinghy! Don't let them pick him up.", 0.0, "twist_eboat_1")
+
+
+## Record real losses of the tasking's nodes (Aircraft and GroundTarget emit destroyed); see the kills_of check.
+func _watch_downs(info: Dictionary) -> void:
+	var nodes: Array = info.get("nodes", [])
+	for i in nodes.size():
+		if nodes[i] != null and is_instance_valid(nodes[i]):
+			_watch_node(info, i, nodes[i])
+
+
+func _watch_node(info: Dictionary, i: int, n: Node) -> void:
+	if not info.has("downed"):
+		info["downed"] = {}
+	if not info.has("node_ids"):
+		info["node_ids"] = {}
+	var id: int = n.get_instance_id()
+	(info["node_ids"] as Dictionary)[i] = id
+	if n.has_signal("destroyed"):
+		var downed: Dictionary = info["downed"]
+		n.connect("destroyed", func(_a: Variant = null, _b: Variant = null) -> void: downed[id] = true)
+
+
+## A sweep's enemy fighter that went home (landed and was removed) is replaced by a fresh one over the patrol area,
+## so the job can still be done. Spawned well away from the player so it never pops in on screen.
+func _sweep_replacement() -> Aircraft:
+	if active.is_empty() or not (active.get("pos") is Vector3):
+		return null
+	var pool: Array = AircraftCatalog.fighters_for_side(enemy).filter(func(i: String) -> bool: return i != "me262")
+	if pool.is_empty() or AIFactory.ai_room(get_tree()) <= 0:
+		return null
+	var p: Vector3 = active["pos"]
+	var alt_y: float = float(active.get("angels", 6)) * 1000.0 / 3.281 * WorldCoords.VERTICAL_SCALE
+	var pos := Vector3(p.x, alt_y, p.z) + WorldCoords.heading_to_dir(_rng.randf() * 360.0) * 3500.0
+	if player != null and is_instance_valid(player) and pos.distance_to(player.global_position) < 6000.0:
+		return null
+	var ac: Aircraft = AIFactory.spawn(world, pool[_rng.randi() % pool.size()], enemy, pos, _rng.randf() * 360.0, -1.0, difficulty)
+	var pil: AIPilot = AIFactory.pilot_of(ac)
+	if pil != null:
+		pil.patrol_center = Vector3(p.x, alt_y, p.z)
+		pil.patrol_radius = 3500.0
+		pil.patrol_alt = alt_y
+		pil.detect_range = 7000.0
+	AIFactory.add_marker(hud, ac, Color(1.0, 0.25, 0.2))
+	return ac
 
 
 func _is_down(n: Node) -> bool:

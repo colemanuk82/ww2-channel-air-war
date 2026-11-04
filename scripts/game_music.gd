@@ -145,10 +145,17 @@ func _bag_pick() -> int:
 		for k in _tracks.size():
 			_bag.append(k)
 		_bag.shuffle()
-		if _bag.size() > 1 and String(_tracks[int(_bag[_bag.size() - 1])]) == _last_path:
-			var t: Variant = _bag[0]
-			_bag[0] = _bag[_bag.size() - 1]
-			_bag[_bag.size() - 1] = t
+		# tracks heard recently (this launch or the last ones) go to the bottom of the bag: they come round last
+		var recent: Array = GameState.music_recent.get("ingame", [])
+		var fresh: Array = []
+		var heard: Array = []
+		for k in _bag:
+			if recent.has(String(_tracks[int(k)])) or String(_tracks[int(k)]) == _last_path:
+				heard.append(k)
+			else:
+				fresh.append(k)
+		_bag = heard + fresh          # pop_back takes from the end: the fresh ones first
 	var idx: int = int(_bag.pop_back()) % maxi(_tracks.size(), 1)
 	_last_path = String(_tracks[idx])
+	GameState.note_music_played("ingame", _last_path)
 	return idx

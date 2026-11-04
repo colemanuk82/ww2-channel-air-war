@@ -1134,6 +1134,9 @@ func _stick(cur: float, want: float, dt: float) -> float:
 	return move_toward(cur, want, (5.5 if pushing else 8.5) * dt)
 
 
+const BOOST_RECHARGE_MULT := 3.0
+
+
 func _update_throttle_boost(delta: float) -> void:
 	throttle = move_toward(throttle, throttle_target, 0.7 * delta)
 	var want: bool = cmd_boost and not boost_locked and boost_energy > 0.0 and state == State.ALIVE and not on_ground and not overheated and engine_wear < 0.7
@@ -1142,7 +1145,8 @@ func _update_throttle_boost(delta: float) -> void:
 		if boost_energy <= 0.0:
 			boost_locked = true
 	else:
-		boost_energy = minf(boost_energy + delta / stats.boost_cooldown, 1.0)
+		# recharges three times slower than the per-aircraft boost_cooldown (it came back too quickly to matter)
+		boost_energy = minf(boost_energy + delta / (stats.boost_cooldown * BOOST_RECHARGE_MULT), 1.0)
 		if boost_locked and boost_energy >= 0.5:
 			boost_locked = false
 	if want != boosting:
@@ -1820,19 +1824,22 @@ func _ground_dust(delta: float) -> void:
 	var grass: bool = af != null and (af.style == "grass" or af.style == "raf_grass" or af.style == "lw_field") \
 		and not af.near_paved(global_position, 3.0)
 	var col := Color(0.30, 0.29, 0.16) if grass else Color(0.43, 0.41, 0.37)
-	var size: float = (1.35 if grass else 0.9) * (0.70 + 0.30 * clampf(speed / stats.max_speed, 0.0, 1.0))
+	# turf throws a little grit and clippings, not clouds: the grass puffs are small and faint (at 0.5 alpha they
+	# read as big green discs drifting behind a taxiing aircraft)
+	var size: float = (0.75 if grass else 0.9) * (0.70 + 0.30 * clampf(speed / stats.max_speed, 0.0, 1.0))
+	var dust_a: float = 0.16 if grass else 0.5
 	var fwd: Vector3 = get_forward()
 	# both main wheels throw their own ribbon of dust/grit
 	for sx in [-1.8, 1.8]:
 		var w: Vector3 = global_position + global_transform.basis.x * sx + global_transform.basis.z * 0.5
 		w.y = FX.ground_height(w) + 0.25
 		if not FX.is_water(w):
-			FX.runway_dust(w, size, col, 2, fwd)
+			FX.runway_dust(w, size, col, 1 if grass else 2, fwd, dust_a)
 	# propeller wash and exhaust kick the loose surface up behind the tail
 	var tail: Vector3 = global_position + global_transform.basis.z * 4.0
 	tail.y = FX.ground_height(tail) + 0.4
 	if not FX.is_water(tail):
-		FX.runway_dust(tail, size * 1.15, col, 1, fwd)
+		FX.runway_dust(tail, size * 1.15, col, 1, fwd, dust_a)
 
 
 var _was_ground: bool = true
@@ -1852,7 +1859,7 @@ func _touchdown_and_wash(delta: float) -> void:
 			var w: Vector3 = global_position + global_transform.basis.x * sx + global_transform.basis.z * 0.4
 			w.y = FX.ground_height(w) + 0.2
 			if grass:
-				FX.runway_dust(w, 1.6, col, 4, get_forward())
+				FX.runway_dust(w, 1.0, col, 3, get_forward(), 0.25)
 			else:
 				FX.tyre_smoke(w, 1.6)
 	# lift-off: a final burst of grit/grass from the wheels
@@ -1861,7 +1868,7 @@ func _touchdown_and_wash(delta: float) -> void:
 			var w: Vector3 = global_position + global_transform.basis.x * sx + global_transform.basis.z * 0.4
 			w.y = FX.ground_height(w) + 0.25
 			if not FX.is_water(w):
-				FX.runway_dust(w, 1.3 if grass else 0.8, col, 4, get_forward())
+				FX.runway_dust(w, 0.9 if grass else 0.8, col, 3 if grass else 4, get_forward(), 0.22 if grass else 0.5)
 	_was_ground = on_ground
 	if on_ground or speed < 20.0:
 		return

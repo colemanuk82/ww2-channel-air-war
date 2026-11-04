@@ -334,7 +334,8 @@ func _apply() -> void:
 	RenderingServer.global_shader_parameter_set("night_amount", na)
 	# Airfield lamps: full at night, and still visible through dawn / dusk while the sun is low, so a grass
 	# strip has a lit edge instead of going flat dark before the sun is fully up.
-	var low_sun: float = smoothstep(0.34, 0.0, sun_dir.y) * 0.6
+	# (only really low: a winter noon sun sits at ~15 degrees, and the lamps glowed as big white blobs at midday)
+	var low_sun: float = smoothstep(0.14, 0.0, sun_dir.y) * 0.6 * clampf((0.8 - light_level) / 0.3, 0.0, 1.0)
 	RenderingServer.global_shader_parameter_set("lamp_amount", clampf(maxf(na, low_sun), 0.0, 1.0))
 	# Wartime blackout: at night the towns go almost fully dark, leaving only a few dim windows (toon.gdshader
 	# scales the lit-window emission by `blackout`). Zero by day, so nothing changes in daylight.

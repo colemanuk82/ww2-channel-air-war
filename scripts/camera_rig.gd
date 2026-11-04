@@ -56,6 +56,10 @@ const HEAD_MIN := Vector3(-0.12, -0.14, -0.16)   # eye-frame metres: x right, y 
 const HEAD_MAX := Vector3(0.12, 0.16, 0.22)
 const HEAD_RATE: float = 0.22                    # metres per second while a key is held
 var _head: Vector3 = Vector3.ZERO
+var _head_saved: bool = false                   # the player has set a head position for this plane
+## Modelled (experimental) interior: the eye sits a little higher than the seat reference by default, so the
+## reflector sight's centre lines up with where the guns' fire converges (the position players were setting by hand).
+const HEAD_INTERIOR_DEFAULT := Vector3(0.0, 0.09, 0.0)
 var _head_dirty: bool = false
 
 const LOOK_RATE: float = 3.2        # rad/s while the stick is held
@@ -88,11 +92,25 @@ func _ready() -> void:
 	chase_cam.make_current()
 
 
+var _was_alive: bool = true
+
+
+## Free-look and shake cleared, the cockpit view re-seated straight ahead.
+func reset_look() -> void:
+	_look_yaw = 0.0
+	_look_pitch = 0.0
+	_shake = 0.0
+	_cock_ready = false
+
+
 func bind(a: Aircraft) -> void:
 	target = a
+	reset_look()
+	_was_alive = a.state == Aircraft.State.ALIVE
 	_zoom_plane = str(a.stats.id) if a.stats else ""
 	_dist_scale_t = _read_zoom(_zoom_plane)
 	_head = _read_head(_zoom_plane)
+	_head_saved = _has_head(_zoom_plane)
 	_head_dirty = false
 	_dist_scale = _dist_scale_t
 	if cockpit_cam and is_instance_valid(cockpit_cam):
@@ -161,6 +179,17 @@ static func _read_head(plane: String) -> Vector3:
 	return (v as Vector3).clamp(HEAD_MIN, HEAD_MAX) if v is Vector3 else Vector3.ZERO
 
 
+static func _has_head(plane: String) -> bool:
+	var cf := ConfigFile.new()
+	return plane != "" and cf.load(HEAD_SAVE_PATH) == OK and cf.has_section_key(plane, "head")
+
+
+## The head position when the player has not set one: raised in the modelled interior (see HEAD_INTERIOR_DEFAULT).
+func _default_head() -> Vector3:
+	var interior: bool = target != null and is_instance_valid(target) and target.cockpit_interior != null and is_instance_valid(target.cockpit_interior)
+	return HEAD_INTERIOR_DEFAULT if interior else Vector3.ZERO
+
+
 func _save_head() -> void:
 	if _zoom_plane == "":
 		return
@@ -168,6 +197,7 @@ func _save_head() -> void:
 	cf.load(HEAD_SAVE_PATH)
 	cf.set_value(_zoom_plane, "head", _head)
 	cf.save(HEAD_SAVE_PATH)
+	_head_saved = true
 
 
 ## Hold numpad keys to move the head about the seat; the position is saved when the keys are released.
@@ -185,6 +215,8 @@ func _update_head(delta: float) -> void:
 		d.z -= 1.0
 	if Input.is_physical_key_pressed(KEY_KP_2):
 		d.z += 1.0
+	if not _head_saved and not _head_dirty:
+		_head = _default_head()          # follows the interior appearing / going until the player moves the head
 	if d != Vector3.ZERO:
 		_head = (_head + d * HEAD_RATE * delta).clamp(HEAD_MIN, HEAD_MAX)
 		_head_dirty = true
@@ -278,8 +310,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("view_dist_reset"):
 		reset_view_distance()
 	elif is_cockpit and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_KP_5:
-		_head = Vector3.ZERO
-		_save_head()
+		# numpad 5: back to the default eye position (and forget the saved one)
+		var cf := ConfigFile.new()
+		if cf.load(HEAD_SAVE_PATH) == OK and cf.has_section(_zoom_plane):
+			cf.erase_section(_zoom_plane)
+			cf.save(HEAD_SAVE_PATH)
+		_head_saved = false
+		_head = _default_head()
 
 
 func _snap() -> void:
@@ -300,6 +337,11 @@ func _process(delta: float) -> void:
 		return
 	delta = minf(delta, 0.05)
 	_t += delta
+	# back in an aircraft after being shot down (respawn): the view starts centred, not where it was left
+	var alive_now: bool = target.state == Aircraft.State.ALIVE
+	if alive_now and not _was_alive:
+		reset_look()
+	_was_alive = alive_now
 	# Target view is held, not toggled: while the key/button is down the view points at the nearest
 	# aircraft, and letting go returns to the normal view.
 	padlock = Input.is_action_pressed("padlock")

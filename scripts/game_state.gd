@@ -44,6 +44,8 @@ var menu_music_shuffle: bool = true
 var ingame_music_shuffle: bool = true
 var menu_music_current: String = ""         # the track a manager should start on ("" = pick freely)
 var ingame_music_current: String = ""
+var music_known: Dictionary = {"menu": [], "ingame": []}   # shipped tracks a saved playlist has already been offered
+var music_recent: Dictionary = {"menu": [], "ingame": []}  # last tracks played (across launches): a new shuffle plays them last
 var music_gap: float = 60.0                 # silence between in-flight tracks, seconds (Options > Music)
 var show_hints: bool = true    # control hints panel on the right of the HUD (Options > Control hints)
 var first_sortie_done: bool = false   # the one-off controls / bail-out hints have been shown
@@ -266,6 +268,12 @@ func _load_settings() -> void:
 	if not MenuMusic.exists(ingame_music_current):
 		ingame_music_current = ""
 	music_gap = clampf(float(cf.get_value("music", "gap", music_gap)), 0.0, 300.0)
+	for w in ["menu", "ingame"]:
+		music_recent[w] = _str_array(cf.get_value("music", w + "_recent", []))
+	# Tracks shipped since the player last saved a playlist join it. An edited playlist used to freeze the list,
+	# so the 13 menu tracks added in v3.10 never played and the same three came round again and again.
+	if _merge_new_tracks(cf):
+		playlists_pruned = true
 	if cf.has_section("input"):
 		for k in cf.get_section_keys("input"):
 			pad_bindings[k] = cf.get_value("input", k)
@@ -353,6 +361,10 @@ func save_settings() -> void:
 	cf.set_value("music", "menu_current", menu_music_current)
 	cf.set_value("music", "ingame_current", ingame_music_current)
 	cf.set_value("music", "gap", music_gap)
+	cf.set_value("music", "menu_known", music_known["menu"])
+	cf.set_value("music", "ingame_known", music_known["ingame"])
+	cf.set_value("music", "menu_recent", music_recent["menu"])
+	cf.set_value("music", "ingame_recent", music_recent["ingame"])
 	for a in pad_bindings.keys():
 		cf.set_value("input", a, pad_bindings[a])
 	cf.save(SETTINGS_PATH)
@@ -366,6 +378,38 @@ func music_playlist(which: String) -> Array:
 	if which == "ingame":
 		return music_existing(ingame_music_playlist) if ingame_music_configured else default_music_playlist("ingame")
 	return music_existing(menu_music_playlist) if menu_music_configured else default_music_playlist("menu")
+
+
+## Add shipped tracks the player has never been offered to their edited playlists (once: a track they then remove
+## stays removed). Returns true when something changed.
+func _merge_new_tracks(cf: ConfigFile) -> bool:
+	var changed: bool = false
+	for w in ["menu", "ingame"]:
+		var known: Array = _str_array(cf.get_value("music", w + "_known", []))
+		var shipped: Array = default_music_playlist(w)
+		var configured: bool = ingame_music_configured if w == "ingame" else menu_music_configured
+		var pl: Array = ingame_music_playlist if w == "ingame" else menu_music_playlist
+		for t in shipped:
+			if known.has(t):
+				continue
+			known.append(t)
+			changed = true
+			if configured and not pl.has(t):
+				pl.append(t)
+		music_known[w] = known
+	return changed
+
+
+## A track has started: remember it (the next launch's shuffle plays the recent ones last).
+func note_music_played(which: String, path: String) -> void:
+	var r: Array = music_recent.get(which, [])
+	r.erase(path)
+	r.append(path)
+	var keep: int = maxi(3, music_playlist(which).size() / 2)
+	while r.size() > keep:
+		r.pop_front()
+	music_recent[which] = r
+	save_settings()
 
 
 ## Only the entries that still exist (a saved playlist can name a track the game no longer ships, or an import

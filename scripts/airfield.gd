@@ -354,45 +354,136 @@ func _build_parallel(earth: Material) -> void:
 	_frying_pans(loop, pan, 190.0, Vector2(ax - 20.0, -L * 0.1), 260.0)
 
 
-## Close-range 3D grass tufts along a grass strip. One MultiMesh, distance-culled, shadowless.
-static var _tuft_mesh: Mesh
-static var _tuft_mat: Material
+## The grass landing ground as one surface (shaders/grass_field.gdshader): mown bands, the RAF cross-mown
+## direction, a ragged edge into longer grass, wandering wheel ruts and worn patches, faded into the terrain at its
+## border. It replaced a stack of thin boxes, whose stepped edges and depth fighting showed as artefacts.
+static var _field_shader: Shader
 
 
-func _grass_tufts(L: float, count: int, inside: bool = false) -> void:
-	if _tuft_mesh == null:
-		var bm := BoxMesh.new()
-		bm.size = Vector3(0.09, 0.42, 0.09)
-		_tuft_mesh = bm
-		_tuft_mat = ToonUtil.make_toon(Color(0.20, 0.29, 0.12), {"outline": false, "detail": 4})
+func _grass_surface(L: float, a: Material, b: Material, edge: Material, bare: Material, cross: bool) -> void:
+	if _field_shader == null:
+		_field_shader = load("res://shaders/grass_field.gdshader")
+	var sm := ShaderMaterial.new()
+	sm.shader = _field_shader
+	var hw: float = runway_width * 1.55
+	var hl: float = L * 0.53
+	sm.set_shader_parameter("half_w", hw)
+	sm.set_shader_parameter("half_l", hl)
+	sm.set_shader_parameter("rw", runway_width)
+	sm.set_shader_parameter("seed", float(absi(hash(airfield_name)) % 1000))
+	sm.set_shader_parameter("col_a", _mat_col(a))
+	sm.set_shader_parameter("col_b", _mat_col(b))
+	sm.set_shader_parameter("col_edge", _mat_col(edge))
+	sm.set_shader_parameter("col_bare", _mat_col(bare))
+	sm.set_shader_parameter("cross_on", 1.0 if cross else 0.0)
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(hw * 2.0, hl * 2.0)
+	var mi := MeshInstance3D.new()
+	mi.mesh = pm
+	mi.material_override = sm
+	mi.position = Vector3(0.0, 0.07, 0.0)
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.name = "GrassField"
+	add_child(mi)
+
+
+## Base colour of a toon material (the field shader takes the same palette).
+func _mat_col(m: Material) -> Color:
+	if m is ShaderMaterial:
+		var v: Variant = (m as ShaderMaterial).get_shader_parameter("base_color")
+		if v is Color:
+			return v
+		v = (m as ShaderMaterial).get_shader_parameter("albedo")
+		if v is Color:
+			return v
+	if m is BaseMaterial3D:
+		return (m as BaseMaterial3D).albedo_color
+	return Color(0.24, 0.31, 0.15)
+
+
+## Grass blades on the landing ground: clumps of thin swaying blades (shaders/grass_blades.gdshader), short on the
+## mown strip and longer along its ragged edge. Laid out in tiles so only the ones near the camera are drawn.
+const BLADE_TILE := 120.0
+const BLADE_RANGE := 190.0
+static var _blade_meshes: Array = []
+static var _blade_mat: ShaderMaterial
+
+
+func _grass_blades(L: float) -> void:
+	if _blade_meshes.is_empty():
+		_blade_mat = ShaderMaterial.new()
+		_blade_mat.shader = load("res://shaders/grass_blades.gdshader")
+		var mrng := RandomNumberGenerator.new()
+		mrng.seed = 7741
+		for k in 3:
+			_blade_meshes.append(_blade_clump(mrng, 13 + k * 3))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(airfield_name) + 991
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.instance_count = count
-	mm.mesh = _tuft_mesh
-	for i in count:
-		var s: float
-		var x: float
-		if inside and i % 3 == 0:
-			# a sparse fringe of short tufts inside the mown area, not just a clean edge
-			x = rng.randf_range(-runway_width * 0.95, runway_width * 0.95)
-			s = rng.randf_range(0.30, 0.65)
-		else:
-			var side: float = -1.0 if i % 2 == 0 else 1.0
-			x = side * rng.randf_range(runway_width * 1.04, runway_width * 1.55)
-			s = rng.randf_range(0.65, 1.35)
-		var z: float = rng.randf_range(-L * 0.49, L * 0.49)
-		var b := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * rng.randf_range(0.8, 1.5), s))
-		mm.set_instance_transform(i, Transform3D(b, Vector3(x, 0.06, z)))
-	var mi := MultiMeshInstance3D.new()
-	mi.multimesh = mm
-	mi.material_override = _tuft_mat
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.visibility_range_end = 700.0
-	mi.visibility_range_end_margin = 70.0
-	mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
-	add_child(mi)
+	var hw: float = runway_width * 1.5
+	var hl: float = L * 0.5
+	var nx: int = int(ceil(hw * 2.0 / BLADE_TILE))
+	var nz: int = int(ceil(hl * 2.0 / BLADE_TILE))
+	for ix in nx:
+		for iz in nz:
+			var x0: float = -hw + float(ix) * BLADE_TILE
+			var z0: float = -hl + float(iz) * BLADE_TILE
+			var x1: float = minf(x0 + BLADE_TILE, hw)
+			var z1: float = minf(z0 + BLADE_TILE, hl)
+			var area: float = (x1 - x0) * (z1 - z0)
+			var count: int = int(area / 1.7)
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.mesh = _blade_meshes[(ix + iz) % _blade_meshes.size()]
+			mm.instance_count = count
+			var buf := PackedFloat32Array()
+			buf.resize(count * 12)
+			var cx: float = (x0 + x1) * 0.5
+			var cz: float = (z0 + z1) * 0.5
+			for i in count:
+				var x: float = rng.randf_range(x0, x1)
+				var z: float = rng.randf_range(z0, z1)
+				# mown strip: short; the ragged edge and beyond: longer and denser-looking
+				var edge: float = clampf((absf(x) - runway_width * 1.08) / (runway_width * 0.2), 0.0, 1.0)
+				var hgt: float = lerpf(rng.randf_range(0.35, 0.6), rng.randf_range(1.0, 1.7), edge)
+				var wid: float = rng.randf_range(0.8, 1.3)
+				var b := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(wid, hgt, wid))
+				var o: int = i * 12
+				buf[o] = b.x.x; buf[o + 1] = b.y.x; buf[o + 2] = b.z.x; buf[o + 3] = x - cx
+				buf[o + 4] = b.x.y; buf[o + 5] = b.y.y; buf[o + 6] = b.z.y; buf[o + 7] = 0.07
+				buf[o + 8] = b.x.z; buf[o + 9] = b.y.z; buf[o + 10] = b.z.z; buf[o + 11] = z - cz
+			mm.buffer = buf
+			var mi := MultiMeshInstance3D.new()
+			mi.multimesh = mm
+			mi.material_override = _blade_mat
+			mi.position = Vector3(cx, 0.0, cz)
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mi.visibility_range_end = BLADE_RANGE
+			mi.visibility_range_end_margin = 30.0
+			mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+			add_child(mi)
+
+
+## One clump: n thin tapering blades leaning out from a common root, darker at the base.
+static func _blade_clump(rng: RandomNumberGenerator, n: int) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for i in n:
+		var ang: float = rng.randf() * TAU
+		var r: float = rng.randf_range(0.0, 0.28)
+		var root := Vector3(cos(ang) * r, 0.0, sin(ang) * r)
+		var lean_a: float = rng.randf() * TAU
+		var lean: float = rng.randf_range(0.03, 0.12)
+		var hgt: float = rng.randf_range(0.14, 0.30)
+		var tip := root + Vector3(cos(lean_a) * lean, hgt, sin(lean_a) * lean)
+		var side := Vector3(-sin(lean_a), 0.0, cos(lean_a)) * rng.randf_range(0.010, 0.018)
+		var g: float = rng.randf_range(0.85, 1.15)
+		var base_c := Color(0.16 * g, 0.22 * g, 0.09 * g, 0.0)
+		var tip_c := Color(0.33 * g, 0.41 * g, 0.18 * g, 1.0)
+		st.set_color(base_c); st.add_vertex(root - side)
+		st.set_color(base_c); st.add_vertex(root + side)
+		st.set_color(tip_c); st.add_vertex(tip)
+	st.generate_normals()
+	return st.commit()
 
 
 ## Scatter thin ground patches as one MultiMesh per material: cheap, and the irregular shapes break up the
@@ -419,65 +510,6 @@ func _patch_mm(mat: Material, patches: Array) -> void:
 	add_child(mi)
 
 
-## Fray the mown landing area into the surrounding grass: a ragged edge band, outward scuffs, worn inside
-## patches, two pairs of gently wandering wheel ruts and worn ground round the thresholds.
-func _grass_scatter(L: float, rw: float, rng: RandomNumberGenerator, mown: Material, dark: Material,
-		edge: Material, bare: Material) -> void:
-	var a_mown: Array = []
-	var a_dark: Array = []
-	var a_edge: Array = []
-	var a_bare: Array = []
-	# a continuous but jittered edge band covers the old hard rectangle
-	for side in [-1.0, 1.0]:
-		var z: float = -L * 0.5
-		while z < L * 0.5:
-			var step: float = rng.randf_range(14.0, 30.0)
-			var ex: float = rw * (1.18 + rng.randf_range(-0.06, 0.10))
-			var w: float = rng.randf_range(4.0, 10.0)
-			var l: float = step + rng.randf_range(1.0, 8.0)
-			var arr: Array = a_mown if rng.randf() < 0.42 else (a_dark if rng.randf() < 0.55 else a_edge)
-			arr.append({"pos": Vector3(side * ex, 0.075, z + l * 0.5), "w": w, "l": l, "h": 0.012, "yaw": rng.randf_range(-0.03, 0.03)})
-			z += step
-	# loose tufts of longer grass fraying outward
-	for i in 80:
-		var side2: float = -1.0 if i % 2 == 0 else 1.0
-		var z2: float = rng.randf_range(-L * 0.5, L * 0.5)
-		var ex2: float = rw * rng.randf_range(1.26, 1.48)
-		var arr2: Array = a_edge if rng.randf() < 0.5 else a_dark
-		if rng.randf() < 0.18:
-			arr2 = a_mown
-		arr2.append({"pos": Vector3(side2 * ex2, 0.075, z2), "w": rng.randf_range(3.0, 10.0),
-			"l": rng.randf_range(4.0, 16.0), "h": 0.010, "yaw": rng.randf_range(-0.25, 0.25)})
-	# small scuffed / bare patches inside the mown grass
-	for i in 30:
-		var x: float = rng.randf_range(-rw * 1.12, rw * 1.12)
-		var z3: float = rng.randf_range(-L * 0.48, L * 0.48)
-		var arr3: Array = a_bare if rng.randf() < 0.30 else a_edge
-		arr3.append({"pos": Vector3(x, 0.076, z3), "w": rng.randf_range(1.5, 6.0),
-			"l": rng.randf_range(1.5, 7.0), "h": 0.010, "yaw": rng.randf_range(-0.6, 0.6)})
-	# wheel ruts: two pairs, gently wandering along the strip
-	for pair in [[-0.30, 0.30], [-0.50, 0.50]]:
-		for sx in pair:
-			var x0: float = float(sx) * rw
-			var zr: float = -L * 0.45
-			while zr < L * 0.45:
-				var step2: float = rng.randf_range(8.0, 16.0)
-				var xx: float = x0 + sin(zr * 0.018 + float(sx) * 7.0) * 1.6 + rng.randf_range(-0.6, 0.6)
-				a_bare.append({"pos": Vector3(xx, 0.080, zr + step2 * 0.5), "w": rng.randf_range(1.2, 1.9),
-					"l": step2 + 2.0, "h": 0.012, "yaw": rng.randf_range(-0.035, 0.035)})
-				zr += step2
-	# worn ground where aircraft turn and wait at the thresholds
-	for i in 6:
-		var side3: float = -1.0 if i % 2 == 0 else 1.0
-		var z4: float = side3 * rng.randf_range(L * 0.36, L * 0.49)
-		a_bare.append({"pos": Vector3(rng.randf_range(-rw * 0.78, rw * 0.78), 0.077, z4),
-			"w": rng.randf_range(3.0, 8.0), "l": rng.randf_range(6.0, 14.0), "h": 0.010, "yaw": rng.randf_range(-0.3, 0.3)})
-	_patch_mm(mown, a_mown)
-	_patch_mm(dark, a_dark)
-	_patch_mm(edge, a_edge)
-	_patch_mm(bare, a_bare)
-
-
 ## Pre-war RAF grass station (Biggin Hill, Hornchurch, Kenley... in 1940): no paved runway - a mown landing area
 ## inside boundary markers - with a concrete apron and an arc of big hangars on the west side, a tarmac perimeter
 ## track, and E-type blast pens round it, each pen holding two fighters.
@@ -487,27 +519,11 @@ func _build_raf_grass(earth: Material) -> void:
 	var mown2: Material = ToonUtil.make_toon(Color(0.20, 0.26, 0.12), {"outline": false, "detail": 4, "patch": Color(0.31, 0.27, 0.16), "patch_amount": 0.18, "patch_scale": 1.3})
 	var mown_edge: Material = ToonUtil.make_toon(Color(0.37, 0.44, 0.24), {"outline": false, "detail": 4})
 	var bare: Material = ToonUtil.make_toon(Color(0.27, 0.23, 0.14), {"outline": false, "detail": 4, "patch": Color(0.20, 0.23, 0.11), "patch_amount": 0.38, "patch_scale": 1.8})
-	# mown landing area: the main direction and a cross direction, in slightly different stripes of grass.
-	# A lighter clipped centre defines the strip when the sun is low; the edges are frayed by _grass_scatter.
-	_box(Vector3(runway_width * 2.4, 0.3, L), Vector3(0, -0.12, 0), mown)
-	_box(Vector3(runway_width * 1.45, 0.31, L * 0.96), Vector3(0, -0.10, 0), mown2)
-	_box(Vector3(runway_width * 2.0, 0.3, L * 0.75), Vector3(0, -0.14, 0), mown2, deg_to_rad(65.0))
-	# mown bands, wheel ruts and scuffed earth patches break up the flat green
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(airfield_name)
-	# irregular mown bands of varying width and a slight swing, rather than a perfect striped carpet
-	var bx: float = -runway_width * 1.12
-	var bi: int = 0
-	while bx < runway_width * 1.12:
-		var bw: float = rng.randf_range(runway_width * 0.18, runway_width * 0.42)
-		var bz: float = rng.randf_range(-L * 0.03, L * 0.03)
-		var bl: float = L * rng.randf_range(0.88, 0.97)
-		_box(Vector3(bw, 0.02, bl), Vector3(bx + bw * 0.5, 0.060, bz), mown if bi % 2 == 0 else mown2, rng.randf_range(-0.012, 0.012))
-		bx += bw
-		bi += 1
-	_grass_scatter(L, runway_width, rng, mown, mown2, mown_edge, bare)
+	# the mown landing area (two mown directions, ragged edge, ruts, worn patches) is one shaded surface, and
+	# real grass blades grow on it close up - see _grass_surface / _grass_blades
+	_grass_surface(L, mown, mown2, mown_edge, bare, true)
 	_strip_lamps(runway_width * 1.12, L)
-	_grass_tufts(L, 620, true)
+	_grass_blades(L)
 	# perimeter track: an ellipse of tarmac round the landing ground
 	# sized so the track and pens stay inside the terrain's flattened zone (~1 km radius)
 	var rx: float = L * 0.38
@@ -552,22 +568,10 @@ func _build_lw_field(earth: Material) -> void:
 	var worn: Material = ToonUtil.make_toon(Color(0.38, 0.33, 0.22), {"outline": false, "detail": 4, "patch": Color(0.24, 0.27, 0.14), "patch_amount": 0.30, "patch_scale": 1.6})
 	var mown2: Material = ToonUtil.make_toon(Color(0.21, 0.27, 0.13), {"outline": false, "detail": 4, "patch": Color(0.33, 0.28, 0.17), "patch_amount": 0.20, "patch_scale": 1.4})
 	var edge: Material = ToonUtil.make_toon(Color(0.35, 0.40, 0.23), {"outline": false, "detail": 4})
-	_box(Vector3(runway_width * 2.0, 0.3, L), Vector3(0, -0.12, 0), rolled)
-	_box(Vector3(runway_width * 1.25, 0.31, L * 0.96), Vector3(0, -0.10, 0), mown2)
-	# rolled bands, then the same frayed edge, wandering ruts and worn patches as the RAF grass fields
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(airfield_name)
-	var bx2: float = -runway_width * 0.95
-	var bi2: int = 0
-	while bx2 < runway_width * 0.95:
-		var bw2: float = rng.randf_range(runway_width * 0.20, runway_width * 0.45)
-		var bl2: float = L * rng.randf_range(0.88, 0.96)
-		_box(Vector3(bw2, 0.02, bl2), Vector3(bx2 + bw2 * 0.5, 0.060, rng.randf_range(-L * 0.03, L * 0.03)), rolled if bi2 % 2 == 0 else mown2, rng.randf_range(-0.012, 0.012))
-		bx2 += bw2
-		bi2 += 1
-	_grass_scatter(L, runway_width, rng, rolled, mown2, edge, worn)
+	# rolled bands, ragged edge, wandering ruts and worn patches: one shaded surface plus grass blades close up
+	_grass_surface(L, rolled, mown2, edge, worn, false)
 	_strip_lamps(runway_width * 0.95, L)
-	_grass_tufts(L, 560, true)
+	_grass_blades(L)
 	# dispersal pads along both long edges and across the far end, each a worn earth patch under a net
 	var ex: float = L * 0.34
 	var n: int = int(L / 120.0)
