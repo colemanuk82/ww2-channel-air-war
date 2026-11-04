@@ -281,10 +281,23 @@ func _process(delta: float) -> void:
 		return
 	if ac.state != Aircraft.State.ALIVE:
 		ac.cmd_fire = false
+		if ac.far_sim:
+			ac.set_far_sim(false)
+		return
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	# far mode: well out of the player's range the aircraft flies a simple path (Aircraft._far_step) and this
+	# pilot only decides where to go, twice a second
+	_far_chk -= delta
+	if _far_chk <= 0.0:
+		_far_chk = 0.8 + randf() * 0.4
+		var want_far: bool = _far_eligible(cam)
+		if want_far != ac.far_sim:
+			ac.set_far_sim(want_far)
+	if ac.far_sim:
+		_far_tick(delta)
 		return
 	# Far aircraft do not need control updates every frame: run their decisions at ~20 Hz while
 	# their ordinary aircraft physics keeps them flying smoothly. Near aircraft stay at full rate.
-	var cam: Camera3D = get_viewport().get_camera_3d()
 	if cam != null and cam.global_position.distance_squared_to(ac.global_position) > 2500.0 * 2500.0:
 		_lod_acc += delta
 		if _lod_acc < 0.05:
@@ -927,6 +940,100 @@ func _find_target(max_range: float) -> Aircraft:
 			best_score = score
 			best = o
 	return best
+
+
+# ------------------------------------------------------------------ far mode
+const FAR_ON := 10000.0             # further than this from the camera and the player: simple simulation
+const FAR_OFF := 8000.0             # back to the full flight model inside this
+static var far_mode_enabled: bool = OS.get_environment("WW2_FAR_SIM") != "0"
+var _far_chk: float = randf() * 1.0
+var _far_t: float = 0.0
+var _far_scan_t: float = 0.0
+
+
+func _far_eligible(cam: Camera3D) -> bool:
+	if not far_mode_enabled or ac.on_ground or ac.player_controlled or bomb_armed:
+		return false
+	if state == State.TAKEOFF or state == State.LAND or state == State.CLIMB_OUT or state == State.STRIKE:
+		return false
+	if is_instance_valid(leader) and leader is Aircraft and (leader as Aircraft).player_controlled:
+		return false                # the player's own wingmen stay fully simulated
+	var lim: float = FAR_OFF if ac.far_sim else FAR_ON
+	var p: Vector3 = ac.global_position
+	if cam != null and cam.global_position.distance_squared_to(p) < lim * lim:
+		return false
+	for n in get_tree().get_nodes_in_group("aircraft"):
+		var a: Aircraft = n as Aircraft
+		if a != null and a.player_controlled and is_instance_valid(a) and a.global_position.distance_squared_to(p) < lim * lim:
+			return false
+	return true
+
+
+func _far_tick(delta: float) -> void:
+	_far_t -= delta
+	if _far_t > 0.0:
+		return
+	_far_t = 0.5
+	# a wingman / bomber whose leader is also far away holds its slot rigidly
+	if (role == Role.WINGMAN or role == Role.BOMBER_FOLLOWER) and is_instance_valid(leader) and leader is Aircraft and (leader as Aircraft).far_sim:
+		ac.far_follow = leader as Aircraft
+		ac.far_slot = formation_offset * formation_scale
+		return
+	ac.far_follow = null
+	var dir: Vector3 = ac.get_forward()
+	var spd: float = ac.stats.max_speed * 0.72
+	match state:
+		State.PATROL:
+			dir = _dir_orbit(patrol_center, patrol_radius, patrol_alt)
+		State.ROUTE:
+			_run_route()
+			dir = _dir
+		State.RETURN:
+			dir = _dir_to(home + Vector3.UP * 300.0)
+		State.FORMATION:
+			dir = _dir_to(leader.global_position) if is_instance_valid(leader) else _dir_orbit(patrol_center, patrol_radius, patrol_alt)
+			spd = ac.stats.max_speed * 0.8
+		_:
+			# INTERCEPT / ATTACK / EVADE / ENERGY: close on the target if there still is one, else back to patrol
+			if target != null and is_instance_valid(target) and target.state == Aircraft.State.ALIVE:
+				dir = _dir_to(target.global_position)
+				spd = ac.stats.max_speed * 0.85
+				_far_fight(target)
+			else:
+				target = null
+				_set_state(State.ROUTE if not waypoints.is_empty() else State.PATROL)
+	if role == Role.BOMBER_LEADER or role == Role.BOMBER_FOLLOWER:
+		spd = minf(ac.stats.max_speed * 0.85, BOMBER_CRUISE_CAP) * bomber_speed_k
+	# fighters out of range still find each other now and then (a cheap scan, no sight lines)
+	_far_scan_t -= 0.5
+	if _far_scan_t <= 0.0 and (role == Role.FIGHTER) and (state == State.PATROL or state == State.ROUTE):
+		_far_scan_t = 3.0
+		var best: Aircraft = null
+		var bd: float = 3000.0 * 3000.0
+		for n in get_tree().get_nodes_in_group("aircraft"):
+			var o: Aircraft = n as Aircraft
+			if o == null or o == ac or not is_instance_valid(o) or o.state != Aircraft.State.ALIVE or o.team == ac.team or o.team == "Neutral" or o.player_controlled:
+				continue
+			var d2: float = o.global_position.distance_squared_to(ac.global_position)
+			if d2 < bd:
+				bd = d2
+				best = o
+		if best != null:
+			target = best
+			_set_state(State.INTERCEPT)
+	ac.far_dir = _guard_ground(dir)
+	ac.far_speed = spd
+
+
+## Two far-away aircraft in a fight: the outcome is rolled rather than flown (nobody can see it). Within 1.5 km,
+## a small chance every half second that the target goes down, better for aggressive and skilled pilots.
+func _far_fight(t: Aircraft) -> void:
+	if role != Role.FIGHTER and role != Role.WINGMAN:
+		return
+	if not t.far_sim or t.global_position.distance_squared_to(ac.global_position) > 1500.0 * 1500.0:
+		return
+	if randf() < 0.02 * (0.6 + aggression) * (0.6 + difficulty):
+		t.take_damage(t.stats.max_health * 3.0, ac)
 
 
 ## Spotting the player takes time. Inside the envelope above, the chance of picking him out builds up each second -

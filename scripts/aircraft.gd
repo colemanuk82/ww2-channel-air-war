@@ -296,6 +296,14 @@ func _lod_box(size: Vector3, pos: Vector3, col: Color) -> void:
 func _update_lod(delta: float) -> void:
 	if _model == null or _lod_model == null:
 		return
+	# the player's own aircraft never swaps to the low-poly model: switching from the cockpit to the chase view
+	# could find the chase camera still parked far away for a moment, which showed the LOD model on your own plane
+	if player_controlled:
+		if _lod_shown:
+			_lod_shown = false
+			_model.visible = true
+			_lod_model.visible = false
+		return
 	_lod_t -= delta
 	if _lod_t > 0.0:
 		return
@@ -775,6 +783,9 @@ func start_breakup(part: String, source: Node = null) -> void:
 # ---------------------------------------------------------------- process
 
 func _process(delta: float) -> void:
+	if far_sim and state == State.ALIVE:
+		_far_step(minf(delta, 0.1))
+		return
 	_check_collisions(delta)
 	delta = minf(delta, 0.05)
 	if state == State.DEAD:
@@ -830,6 +841,83 @@ func _process(delta: float) -> void:
 	if player_controlled:
 		AudioManager.set_engine_state(throttle, speed / stats.max_speed)
 		FX.audio.wind(speed / stats.max_speed, wind.length(), turbulence, _cockpit_view, on_ground)
+
+
+## ---- far mode (AIPilot decides): an AI aircraft well out of the player's range flies a simple kinematic path
+## instead of the full flight model - no collisions, wind, damage checks, engine sound, vapour or dust. It
+## follows far_dir at far_speed with gentle turns and climbs, banks into its turns and keeps clear of the ground,
+## or holds its formation slot on a leader that is also in far mode. Position, heading and speed carry straight
+## over when it comes back into range, so nothing pops.
+var far_sim: bool = false
+var far_dir: Vector3 = Vector3.ZERO
+var far_speed: float = 0.0
+var far_follow: Aircraft = null
+var far_slot: Vector3 = Vector3.ZERO
+var _far_bank: float = 0.0
+const FAR_TURN_RATE := 9.0          # degrees per second
+const FAR_MIN_AGL := 300.0          # world units (~150 m) above the ground
+
+
+func set_far_sim(on: bool) -> void:
+	if on == far_sim:
+		return
+	far_sim = on
+	cmd_fire = false
+	cmd_boost = false
+	if on:
+		far_speed = maxf(speed, stats.max_speed * 0.6)
+		far_dir = velocity.normalized() if velocity.length_squared() > 1.0 else get_forward()
+		_far_bank = 0.0
+		if _engine3d != null and _engine3d.playing:
+			_engine3d.stop()
+	else:
+		far_follow = null
+		speed = velocity.length()
+
+
+func _far_step(delta: float) -> void:
+	if far_follow != null and is_instance_valid(far_follow) and far_follow.far_sim and far_follow.state == State.ALIVE:
+		# hold the formation slot on the leader, rigidly (both far away: nobody can see the difference)
+		var lf: Vector3 = far_follow.get_forward()
+		var lflat := Vector3(lf.x, 0.0, lf.z)
+		if lflat.length_squared() < 1.0e-4:
+			lflat = Vector3.FORWARD
+		var yb: Basis = Basis.looking_at(lflat.normalized(), Vector3.UP)
+		var sc0: Vector3 = global_basis.get_scale()
+		global_transform = Transform3D(far_follow.global_basis.orthonormalized() * Basis.from_scale(sc0), far_follow.global_position + yb * far_slot)
+		velocity = far_follow.velocity
+		speed = far_follow.speed
+		return
+	var cur: Vector3 = velocity.normalized() if velocity.length_squared() > 1.0 else get_forward()
+	var want: Vector3 = far_dir.normalized() if far_dir.length_squared() > 1.0e-6 else cur
+	want.y = clampf(want.y, -0.3, 0.3)
+	want = want.normalized()
+	var ang: float = cur.angle_to(want)
+	var nd: Vector3 = cur
+	if ang > 1.0e-4:
+		var axis: Vector3 = cur.cross(want)
+		if axis.length_squared() < 1.0e-8:
+			axis = Vector3.UP              # straight behind: turn level
+		nd = cur.rotated(axis.normalized(), minf(ang, deg_to_rad(FAR_TURN_RATE) * delta)).normalized()
+	speed = move_toward(speed, far_speed, 6.0 * delta)
+	var p: Vector3 = global_position + nd * speed * delta
+	var g: float = GroundKit.ground_y(p.x, p.z)
+	if p.y < g + FAR_MIN_AGL:
+		p.y = move_toward(p.y, g + FAR_MIN_AGL, 60.0 * delta)
+		nd.y = maxf(nd.y, 0.0)
+		nd = nd.normalized()
+	velocity = nd * speed
+	altitude_agl = p.y - maxf(g, 0.0)
+	# bank into the turn
+	var yaw_rate: float = cur.cross(nd).y / maxf(delta, 0.001)
+	_far_bank = lerpf(_far_bank, clampf(-yaw_rate * 2.5, -1.0, 1.0), minf(2.0 * delta, 1.0))
+	var sc: Vector3 = global_basis.get_scale()
+	var up: Vector3 = Vector3.UP if absf(nd.y) < 0.98 else Vector3.FORWARD
+	var b: Basis = Basis.looking_at(nd, up)
+	b = b.rotated(nd, _far_bank)
+	global_transform = Transform3D(b * Basis.from_scale(sc), p)
+	if p.y / WorldCoords.VERTICAL_SCALE > CONTRAIL_ALT_M * 0.9:
+		_contrails(delta)               # keep a high aircraft's contrail streaming behind it
 
 
 ## Optional very slow self-repair for the player (Options > Player repairs). Paused for a few seconds after a hit.

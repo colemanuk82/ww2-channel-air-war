@@ -117,6 +117,9 @@ func _ready() -> void:
 	GroundKit.lp("main _ready start")
 	randomize()
 	_args = OS.get_cmdline_user_args()
+	for a in _args:       # debug: --seed=N makes every randf()/randi() repeatable (fair A/B perf runs)
+		if a.begins_with("--seed="):
+			seed(int(a.substr(7)))
 	get_viewport().use_occlusion_culling = true
 	_build_perf_overlay()
 	HeightField.force_procedural = _args.has("--procedural")

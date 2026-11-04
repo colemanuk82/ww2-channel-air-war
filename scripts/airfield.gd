@@ -403,6 +403,7 @@ func _mat_col(m: Material) -> Color:
 
 ## Grass blades on the landing ground: clumps of thin swaying blades (shaders/grass_blades.gdshader), short on the
 ## mown strip and longer along its ragged edge. Laid out in tiles so only the ones near the camera are drawn.
+const GRASS_BLADES := false      # off (v3.15): the blade clumps cost too much for what they add
 const BLADE_TILE := 120.0
 const BLADE_RANGE := 190.0
 static var _blade_meshes: Array = []
@@ -410,7 +411,7 @@ static var _blade_mat: ShaderMaterial
 
 
 func _grass_blades(L: float) -> void:
-	if OS.get_environment("WW2_NO_BLADES") == "1":
+	if not GRASS_BLADES:
 		return
 	if _blade_meshes.is_empty():
 		_blade_mat = ShaderMaterial.new()
