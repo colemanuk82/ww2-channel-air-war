@@ -13,6 +13,11 @@ render_mode depth_draw_never, ambient_light_disabled, cull_disabled;
 // The old sea read white-blue and flat: its albedo was 0.3-0.4 and lit by a 0.35 floor + toon band, so in noon
 // sun it was a bright matte plane, and the fog then washed it to the horizon colour.
 uniform sampler2D depth_tex : hint_depth_texture, repeat_disable, filter_nearest;
+// Desert map: the sea-distance texture of the terrain (texels above 0 are land). With cut_land the water is not drawn
+// over land at all, so sea never paints over the desert ground (set by WaterPlane; off on Channel).
+uniform sampler2D land_tex : filter_linear, repeat_disable;
+uniform vec4 land_rect = vec4(0.0);
+uniform bool cut_land = false;
 uniform vec3 shallow_color : source_color = vec3(0.10, 0.24, 0.21);
 uniform vec3 mid_color : source_color = vec3(0.055, 0.145, 0.16);
 uniform vec3 deep_color : source_color = vec3(0.035, 0.095, 0.125);   // Channel grey-green, not ocean blue
@@ -112,6 +117,12 @@ void fragment() {
 	col = mix(col, deep_color, smoothstep(0.4, 1.0, banded));
 
 	vec2 wp = w_pos.xz;
+	if (cut_land) {
+		vec2 luv = clamp((wp - land_rect.xy) * land_rect.zw, vec2(0.0), vec2(1.0));
+		if (texture(land_tex, luv).r > 0.0001) {
+			discard;
+		}
+	}
 	float tw = TIME * 0.5;
 	float e = 1.6;
 	float dist = length(w_pos - CAMERA_POSITION_WORLD);

@@ -51,6 +51,17 @@ const EXTRA_SEA_LANES := [
 ]
 
 
+static func reset_cache() -> void:
+	loaded = false
+	roads = []
+	rails = []
+	rail_chains = []
+	sea_lanes = []
+	roads_from_osm = false
+	rails_from_osm = false
+	_cities = {}
+
+
 static func ensure_loaded() -> void:
 	if loaded:
 		return
@@ -58,15 +69,15 @@ static func ensure_loaded() -> void:
 	_load_cities()
 	# The real (large) road network is drawn and trafficked tile by tile by RoadMesh / WorldPopulator, so only the
 	# small synthetic fallback file is turned into RoutePath routes here.
-	if _file_size("res://data/osm/roads.json") > 300000:
+	if _file_size((WorldCoords.osm_dir() + "/roads.json")) > 300000:
 		roads = []
 		roads_from_osm = true
 	else:
-		roads = _load_osm("res://data/osm/roads.json", 350.0, RoutePath.curve_radius("secondary"))
+		roads = _load_osm((WorldCoords.osm_dir() + "/roads.json"), 350.0, RoutePath.curve_radius("secondary"))
 		roads_from_osm = not roads.is_empty()
 		if roads.is_empty():
 			roads = _fallback(ROAD_PAIRS, 11)
-	rails = _load_osm("res://data/osm/rails.json", 450.0, RoutePath.curve_radius("rail"))
+	rails = _load_osm((WorldCoords.osm_dir() + "/rails.json"), 450.0, RoutePath.curve_radius("rail"))
 	rails_from_osm = not rails.is_empty()
 	if rails.is_empty():
 		rails = _fallback(RAIL_PAIRS, 23)
@@ -82,7 +93,7 @@ static func _file_size(path: String) -> int:
 
 
 static func _load_cities() -> void:
-	var f: FileAccess = FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var f: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if f == null:
 		return
 	var d: Variant = JSON.parse_string(f.get_as_text())

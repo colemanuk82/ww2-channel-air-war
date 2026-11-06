@@ -20,6 +20,8 @@ static var _data: Dictionary = {}
 
 
 static func data() -> Dictionary:
+	if GameState.current_map != "channel":
+		return {}       # the 1944 invasion build-up is Channel data: none on the desert map
 	if _data.is_empty():
 		var f: FileAccess = FileAccess.open(JSON_PATH, FileAccess.READ)
 		if f != null:

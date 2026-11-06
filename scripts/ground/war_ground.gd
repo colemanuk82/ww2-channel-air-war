@@ -22,6 +22,8 @@ static var _data: Dictionary = {}
 
 
 static func data() -> Dictionary:
+	if GameState.current_map != "channel":
+		return {}       # floods, battlefields and beaches are Channel data (Normandy, Dunkirk, the Blitz): none on the desert map
 	if _data.is_empty():
 		var f: FileAccess = FileAccess.open(JSON_PATH, FileAccess.READ)
 		if f != null:

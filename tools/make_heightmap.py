@@ -7,6 +7,7 @@ Sources, in order:
   3. Procedural fallback: hand-authored coastline polygon + fBm noise + chalk cliffs (offline).
 
 Usage: python tools/make_heightmap.py [--force-procedural] [--zoom 9] [--width 2048] [--height 1024]
+       [--lat-min 48.9] [--lat-max 53.0] [--lon-min -4.6] [--lon-max 9.0] [--out-dir data/heightmap]
 """
 import argparse
 import io
@@ -22,6 +23,7 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_DIR = os.path.join(ROOT, "data", "heightmap")
 CACHE_DIR = os.path.join(ROOT, "tools", "cache", "terrarium")
+# Channel map: defaults for --lat-min / --lat-max / --lon-min / --lon-max
 LAT_MIN, LAT_MAX, LON_MIN, LON_MAX = 48.9, 53.0, -4.6, 9.0
 MAX_ELEV = 1000.0
 
@@ -62,9 +64,9 @@ def fetch_tile(z, x, y):
     raise RuntimeError(last)
 
 
-def build_from_dem(zoom, W, H):
-    x0f, y0f = merc_px(LAT_MAX, LON_MIN, zoom)  # top-left
-    x1f, y1f = merc_px(LAT_MIN, LON_MAX, zoom)  # bottom-right
+def build_from_dem(zoom, W, H, lat_min, lat_max, lon_min, lon_max):
+    x0f, y0f = merc_px(lat_max, lon_min, zoom)  # top-left
+    x1f, y1f = merc_px(lat_min, lon_max, zoom)  # bottom-right
     tx0, tx1 = int(x0f // 256), int((x1f - 1e-6) // 256)
     ty0, ty1 = int(y0f // 256), int((y1f - 1e-6) // 256)
     tiles = [(tx, ty) for ty in range(ty0, ty1 + 1) for tx in range(tx0, tx1 + 1)]
@@ -78,8 +80,8 @@ def build_from_dem(zoom, W, H):
         mosaic[(ty - ty0) * 256:(ty - ty0 + 1) * 256, (tx - tx0) * 256:(tx - tx0 + 1) * 256] = h
     # resample (equirectangular output) with 2x supersampling
     S = 2
-    lats = LAT_MAX - (np.arange(H * S) + 0.5) / (H * S) * (LAT_MAX - LAT_MIN)
-    lons = LON_MIN + (np.arange(W * S) + 0.5) / (W * S) * (LON_MAX - LON_MIN)
+    lats = lat_max - (np.arange(H * S) + 0.5) / (H * S) * (lat_max - lat_min)
+    lons = lon_min + (np.arange(W * S) + 0.5) / (W * S) * (lon_max - lon_min)
     _, py = merc_px(lats, np.zeros_like(lats), zoom)
     px, _ = merc_px(np.zeros_like(lons), lons, zoom)
     py = py - ty0 * 256 - 0.5
@@ -162,10 +164,10 @@ def fbm(H, W, rng, octaves=6, base=4):
     return out / tot
 
 
-def build_procedural(W, H, seed=1944):
+def build_procedural(W, H, lat_min, lat_max, lon_min, lon_max, seed=1944):
     rng = np.random.default_rng(seed)
-    sx = lambda lon: (lon - LON_MIN) / (LON_MAX - LON_MIN) * W
-    sy = lambda lat: (LAT_MAX - lat) / (LAT_MAX - LAT_MIN) * H
+    sx = lambda lon: (lon - lon_min) / (lon_max - lon_min) * W
+    sy = lambda lat: (lat_max - lat) / (lat_max - lat_min) * H
     ring = lambda pts: [(sx(lo), sy(la)) for la, lo in pts]
     img = Image.new("L", (W * 2, H * 2), 0)
     dr = ImageDraw.Draw(img)
@@ -173,15 +175,15 @@ def build_procedural(W, H, seed=1944):
         dr.polygon([(x * 2, y * 2) for x, y in ring(poly)], fill=255)
     land = np.asarray(img.resize((W, H), Image.BOX)).astype(np.float32) / 255.0
     # distance-from-coast proxy: blurred land mask
-    km_px = 111.32 * math.cos(math.radians(50.3)) * (LON_MAX - LON_MIN) / W  # km per pixel (x)
+    km_px = 111.32 * math.cos(math.radians(50.3)) * (lon_max - lon_min) / W  # km per pixel (x)
     def blur_km(arr, km):
         im = Image.fromarray((arr * 255).astype(np.uint8))
         return np.asarray(im.filter(ImageFilter.GaussianBlur(km / km_px))).astype(np.float32) / 255.0
     inland = np.clip((blur_km(land, 12.0) - 0.5) * 2.0, 0, 1)
     # hills
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    lat = LAT_MAX - (yy + 0.5) / H * (LAT_MAX - LAT_MIN)
-    lon = LON_MIN + (xx + 0.5) / W * (LON_MAX - LON_MIN)
+    lat = lat_max - (yy + 0.5) / H * (lat_max - lat_min)
+    lon = lon_min + (xx + 0.5) / W * (lon_max - lon_min)
     elev = np.zeros((H, W), np.float32)
     n_big = fbm(H, W, rng, 6, 5)
     for hlat, hlon, rkm, hm in HILLS:
@@ -207,47 +209,68 @@ def build_procedural(W, H, seed=1944):
 
 
 # ------------------------------------------------------------------ output
-def sample(h, lat, lon):
+def sample(h, lat, lon, bounds):
+    """Elevation at (lat, lon), or None when the point lies outside the map bounds."""
+    lat_min, lat_max, lon_min, lon_max = bounds
+    if not (lat_min <= lat <= lat_max and lon_min <= lon <= lon_max):
+        return None
     H, W = h.shape
-    x = int((lon - LON_MIN) / (LON_MAX - LON_MIN) * W)
-    y = int((LAT_MAX - lat) / (LAT_MAX - LAT_MIN) * H)
+    x = min(W - 1, int((lon - lon_min) / (lon_max - lon_min) * W))
+    y = min(H - 1, int((lat_max - lat) / (lat_max - lat_min) * H))
     return float(h[y, x])
 
 
-def write_outputs(elev, source, W, H):
-    os.makedirs(OUT_DIR, exist_ok=True)
+def write_outputs(elev, source, W, H, bounds, out_dir):
+    lat_min, lat_max, lon_min, lon_max = bounds
+    os.makedirs(out_dir, exist_ok=True)
     v = np.clip(elev / MAX_ELEV * 65535.0, 0, 65535).round().astype(np.uint16)
-    Image.fromarray(v).save(os.path.join(OUT_DIR, "region_height.png"))
-    meta = dict(width=W, height=H, lat_min=LAT_MIN, lat_max=LAT_MAX, lon_min=LON_MIN, lon_max=LON_MAX,
-                max_elev_m=1000, sea_level_value=0, source=source)
-    with open(os.path.join(OUT_DIR, "region_meta.json"), "w") as f:
+    Image.fromarray(v).save(os.path.join(out_dir, "region_height.png"))
+    meta = dict(width=W, height=H, lat_min=lat_min, lat_max=lat_max, lon_min=lon_min, lon_max=lon_max,
+                max_elev_m=int(MAX_ELEV), sea_level_value=0, source=source)
+    with open(os.path.join(out_dir, "region_meta.json"), "w") as f:
         json.dump(meta, f, indent=1)
     print(f"[out] {W}x{H}  min {elev.min():.1f} m  max {elev.max():.1f} m  land {(elev > 0).mean() * 100:.1f}%")
-    print(f"[check] Dover cliffs (51.13,1.35): {sample(elev, 51.13, 1.35):.0f} m")
-    print(f"[check] mid-Channel (50.5,0.5):    {sample(elev, 50.5, 0.5):.0f} m")
-    print(f"[check] Ardennes (50.1,4.6):       {sample(elev, 50.1, 4.6):.0f} m")
-    print(f"[check] London (51.5,-0.12):       {sample(elev, 51.5, -0.12):.0f} m")
+    for name, la, lo in [("Dover cliffs", 51.13, 1.35), ("mid-Channel", 50.5, 0.5),
+                         ("Ardennes", 50.1, 4.6), ("London", 51.5, -0.12)]:
+        val = sample(elev, la, lo, bounds)
+        if val is not None:  # checks are Channel landmarks; skip any that fall outside this region
+            print(f"[check] {name} ({la},{lo}): {val:.0f} m")
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--force-procedural", action="store_true")
     ap.add_argument("--zoom", type=int, default=9)
+    ap.add_argument("--max-elev", type=float, default=1000.0, help="metres encoded as 65535")
     ap.add_argument("--width", type=int, default=3072)
     ap.add_argument("--height", type=int, default=1500)
+    ap.add_argument("--lat-min", type=float, default=LAT_MIN)
+    ap.add_argument("--lat-max", type=float, default=LAT_MAX)
+    ap.add_argument("--lon-min", type=float, default=LON_MIN)
+    ap.add_argument("--lon-max", type=float, default=LON_MAX)
+    ap.add_argument("--out-dir", default=OUT_DIR,
+                    help="folder for region_height.png and region_meta.json (default: data/heightmap)")
     a = ap.parse_args()
+    global MAX_ELEV
+    MAX_ELEV = a.max_elev
+    if not (a.lat_min < a.lat_max and a.lon_min < a.lon_max):
+        ap.error("--lat-min must be < --lat-max and --lon-min must be < --lon-max")
+    bounds = (a.lat_min, a.lat_max, a.lon_min, a.lon_max)
     elev, source = None, None
     if not a.force_procedural:
         try:
-            elev = build_from_dem(a.zoom, a.width, a.height)
+            elev = build_from_dem(a.zoom, a.width, a.height, *bounds)
             source = f"AWS terrain tiles (terrarium) z{a.zoom}"
         except Exception as e:  # noqa: BLE001
             print(f"[dem] failed ({e}); using procedural fallback", file=sys.stderr)
     if elev is None:
-        elev = build_procedural(a.width, a.height)
+        if bounds != (LAT_MIN, LAT_MAX, LON_MIN, LON_MAX):
+            print("[warn] procedural fallback geography is hand-authored for the Channel box only",
+                  file=sys.stderr)
+        elev = build_procedural(a.width, a.height, *bounds)
         source = "PROCEDURAL FALLBACK (hand-authored coastline + noise)"
     print("[source]", source)
-    write_outputs(elev, source, a.width, a.height)
+    write_outputs(elev, source, a.width, a.height, bounds, a.out_dir)
 
 
 if __name__ == "__main__":

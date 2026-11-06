@@ -19,7 +19,7 @@ static func _load() -> bool:
 	if _loaded:
 		return _w > 0 and _h > 0
 	_loaded = true
-	var jf: FileAccess = FileAccess.open("res://data/heightmap/region_landcover.json", FileAccess.READ)
+	var jf: FileAccess = FileAccess.open((WorldCoords.heightmap_dir() + "/region_landcover.json"), FileAccess.READ)
 	if jf == null:
 		return false
 	var d: Variant = JSON.parse_string(jf.get_as_text())
@@ -33,7 +33,7 @@ static func _load() -> bool:
 	_lat_max = float(dd.get("lat_max", 0.0))
 	_lon_min = float(dd.get("lon_min", 0.0))
 	_lon_max = float(dd.get("lon_max", 0.0))
-	var bf: FileAccess = FileAccess.open("res://data/heightmap/region_landcover.bin", FileAccess.READ)
+	var bf: FileAccess = FileAccess.open((WorldCoords.heightmap_dir() + "/region_landcover.bin"), FileAccess.READ)
 	if bf == null:
 		_w = 0
 		return false

@@ -26,6 +26,16 @@ var historical_markings: bool = false
 const TIME_SPEEDS := [0.0, 1.0, 6.0, 12.0, 30.0, 120.0]
 const TIME_SPEED_NAMES := ["Frozen", "Real time", "6x", "12x", "30x", "120x"]
 var time_speed: int = 2        # day/night cycle speed (index into TIME_SPEEDS; Options > Time passes)
+var current_map: String = MapDef.DEFAULT_ID:   # playable map id ("channel", "desert"); WorldCoords applies it when it changes
+	set(v):
+		var changed: bool = MapDef.by_id(v).id != current_map
+		current_map = MapDef.by_id(v).id
+		var wc: Node = get_node_or_null("/root/WorldCoords")
+		if wc != null:
+			wc.set_map(current_map)
+		if changed:
+			MapDef.reset_map_caches()
+var map_debug_override: bool = false   # --map= debug arg: do not persist the map choice
 var completed_missions: Array = []   # ids of historical missions the player has completed (shown as [DONE] in the list)
 # Audio mixer (Options > Audio): 0..1 per category, persisted in settings.cfg [audio]; AudioManager reads them from here.
 var vol_master: float = 1.0
@@ -231,6 +241,7 @@ func _load_settings() -> void:
 	vsync_on = bool(cf.get_value("gfx", "vsync", vsync_on))
 	fps_cap = clampi(int(cf.get_value("gfx", "fps_cap", fps_cap)), 0, 1000)
 	show_hints = bool(cf.get_value("ui", "show_hints", show_hints))
+	current_map = str(cf.get_value("map", "current", current_map))
 	first_sortie_done = bool(cf.get_value("gameplay", "first_sortie_done", first_sortie_done))
 	player_heal = bool(cf.get_value("gameplay", "player_heal", player_heal))
 	heat_level = clampi(int(cf.get_value("realism", "heat_level", (2 if bool(cf.get_value("realism", "engine_heat", true)) else 0))), 0, 3)
@@ -334,6 +345,8 @@ func save_settings() -> void:
 	cf.set_value("gfx", "vsync", vsync_on)
 	cf.set_value("gfx", "fps_cap", fps_cap)
 	cf.set_value("ui", "show_hints", show_hints)
+	if not map_debug_override:
+		cf.set_value("map", "current", current_map)
 	cf.set_value("gameplay", "first_sortie_done", first_sortie_done)
 	cf.set_value("gameplay", "player_heal", player_heal)
 	cf.set_value("realism", "engine_heat", engine_heat_on)

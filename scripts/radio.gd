@@ -1263,7 +1263,48 @@ const CHATTER_AXIS := [
 ]
 
 
+## Desert map: its own frequency traffic (Tobruk, the Via Balbia, the Afrika staffeln). Spoken as text only: the
+## recorded chatter_NN clips belong to the Channel lines.
+const DESERT_CHATTER_ALLIES := [
+	["Western Desert Control", "All aircraft, enemy fighters reported over the desert road west of Mersa Matruh. Keep a lookout."],
+	["Tobruk Control", "Hello all aircraft, Tobruk. Dust storm building to the south-west. Visibility poor."],
+	["Western Desert Control", "Hello Blue Leader, vector two-seven-zero, angels ten. Bandits over the coast road."],
+	["Tobruk Control", "Enemy aircraft reported over the escarpment. Keep clear of the Derna road."],
+	["Western Desert Control", "All aircraft, convoy on the Via Balbia under air attack. Fighter cover requested."],
+	["Western Desert Control", "Hello Red Leader, your bandits are heading east along the wadi. Buster."],
+	["Tobruk Control", "All aircraft, landing ground is clear. Refuel and stand by."],
+	["Western Desert Control", "Hello all aircraft, Ju 88s reported over the Gulf of Sirte. Height unknown."],
+	["Tobruk Control", "Hello Tiger Leader, return to base. The raid has passed over the port."],
+]
+const DESERT_CHATTER_AXIS := [
+	["Afrika Control", "All Staffeln, enemy fighters over the coast road near Sollum. Free hunt approved."],
+	["Afrika Control", "Hello all aircraft, dust storm over the desert. Fly on instruments if needed."],
+	["Radar Sollum", "Single aircraft crossing the escarpment at low level, heading east."],
+	["Radar Sollum", "Large formation forming over the Qattara depression. Course one-four-zero."],
+	["Afrika Control", "All Schwarme, Hurricanes above you over the wadi. Watch the sun."],
+	["Jafu Afrika", "Convoy on the Via Balbia. Stukas are on their way. Escort them in."],
+	["Afrika Control", "Weather over the desert clearing. Visibility good by noon."],
+	["Radar Sollum", "Plots over the desert road are fading. They have landed."],
+	["Jafu Afrika", "Enemy bombers over Tobruk. Cover the port."],
+]
+
+
+func _desert_chatter(pl: Aircraft) -> void:
+	var lines: Array = DESERT_CHATTER_AXIS if pl.team == "Axis" else DESERT_CHATTER_ALLIES
+	var ci: int = randi() % lines.size()
+	if ci == int(_last_pick.get("desert_chatter", -1)):
+		ci = (ci + 1) % lines.size()
+	_last_pick["desert_chatter"] = ci
+	var ln: Array = lines[ci]
+	var sender: String = String(ln[0])
+	var ctl: bool = "Control" in sender or "Jafu" in sender or "Radar" in sender
+	say(sender, String(ln[1]), Kind.CONTROL if ctl else Kind.FRIENDLY)
+
+
 func _ambient_chatter(pl: Aircraft) -> void:
+	if GameState.current_map == "desert":
+		_desert_chatter(pl)
+		return
 	var lines: Array = CHATTER_AXIS if pl.team == "Axis" else CHATTER_ALLIES
 	# only lines with a recording (the newer chatter may not be generated yet); never the same one twice running
 	var avail: Array = []

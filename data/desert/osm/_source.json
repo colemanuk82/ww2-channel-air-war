@@ -1,0 +1,9 @@
+{
+ "coast": "natural_earth",
+ "roads": "natural_earth",
+ "rails": "natural_earth",
+ "rivers": "natural_earth",
+ "woods": "none (no forest/wood polygons used for desert)",
+ "power": "none (no 1940 grid in desert region)",
+ "towns": "natural_earth"
+}

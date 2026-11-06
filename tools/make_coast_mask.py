@@ -20,6 +20,8 @@ rasterising data/osm/coast.json + COAST_STRIPS polylines (see --from-json). Repo
 Usage:
   PYTHONPATH=F:/ww2_dlss/tools/cache/pylibs python3 tools/make_coast_mask.py
   python3 -m pip install --target tools/cache/pylibs pyshp     # once
+Region: [--lat-min 48.9] [--lat-max 53.0] [--lon-min -4.6] [--lon-max 9.0] [--width W --height H]
+        [--out-dir data/heightmap] [--osm-dir data/osm]   (Channel box and folders are the defaults)
 
 OSM data (c) OpenStreetMap contributors, ODbL.
 """
@@ -39,6 +41,7 @@ from PIL import Image, ImageDraw, ImageFilter
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_PNG = os.path.join(ROOT, "data", "heightmap", "region_coast.png")
 OUT_META = os.path.join(ROOT, "data", "heightmap", "region_coast_meta.json")
+OSM_DIR = os.path.join(ROOT, "data", "osm")
 CACHE = os.path.join(ROOT, "tools", "cache")
 SHP_DIR = os.path.join(CACHE, "landpolys")
 ZIP_PRIMARY = "land-polygons-split-4326.zip"
@@ -225,7 +228,7 @@ def rasterize(shp, W, H, ss):
 def rings_from_coast_json():
     """Last-resort fallback: rasterise data/osm/coast.json line stubs as an implicit
     polygon (only meaningful if the caller accepts the deficiency)."""
-    p = os.path.join(ROOT, "data", "osm", "coast.json")
+    p = os.path.join(OSM_DIR, "coast.json")
     lines = []
     try:
         d = json.load(open(p))
@@ -240,13 +243,28 @@ def rings_from_coast_json():
 
 # --------------------------------------------------------------- main
 def main():
+    global LAT_MIN, LAT_MAX, LON_MIN, LON_MAX, OUT_PNG, OUT_META, OSM_DIR
     ap = argparse.ArgumentParser()
     ap.add_argument("--width", type=int, default=7680)
     ap.add_argument("--height", type=int, default=3616)
     ap.add_argument("--ss", type=int, default=2, help="supersample factor for anti-aliasing")
     ap.add_argument("--blur", type=float, default=0.7, help="final gaussian blur radius (px)")
     ap.add_argument("--from-json", action="store_true", help="skip the vector download, use data/osm/coast.json")
+    ap.add_argument("--lat-min", type=float, default=LAT_MIN, help="region bounds (default: Channel box)")
+    ap.add_argument("--lat-max", type=float, default=LAT_MAX)
+    ap.add_argument("--lon-min", type=float, default=LON_MIN)
+    ap.add_argument("--lon-max", type=float, default=LON_MAX)
+    ap.add_argument("--out-dir", default=os.path.join(ROOT, "data", "heightmap"),
+                    help="folder for region_coast.png + region_coast_meta.json (default: data/heightmap)")
+    ap.add_argument("--osm-dir", default=OSM_DIR, help="folder with coast.json for --from-json (default: data/osm)")
     a = ap.parse_args()
+    if not (a.lat_min < a.lat_max and a.lon_min < a.lon_max):
+        ap.error("--lat-min must be < --lat-max and --lon-min must be < --lon-max")
+    LAT_MIN, LAT_MAX, LON_MIN, LON_MAX = a.lat_min, a.lat_max, a.lon_min, a.lon_max
+    OUT_PNG = os.path.join(a.out_dir, "region_coast.png")
+    OUT_META = os.path.join(a.out_dir, "region_coast_meta.json")
+    OSM_DIR = a.osm_dir
+    channel = (LAT_MIN, LAT_MAX, LON_MIN, LON_MAX) == (48.9, 53.0, -4.6, 9.0)
 
     W, H = a.width, a.height
     print("[out] %dx%d  (%.0f x %.0f m/px)" % (W, H, (LON_MAX - LON_MIN) * M_LON / W, (LAT_MAX - LAT_MIN) * M_LAT / H))
@@ -298,6 +316,9 @@ def main():
               ("Bournemouth (land)", 50.720, -1.870, 1), ("Dover (land)", 51.130, 1.320, 1),
               ("mid-Channel (sea)", 50.500, 0.500, 0), ("London (land)", 51.500, -0.120, 1),
               ("Isle of Wight (land)", 50.680, -1.300, 1), ("Poole Bay (sea)", 50.700, -1.750, 0)]
+    if not channel:
+        print("[check] geography checks are Channel-only; skipped for this region")
+        checks = []
     ok = 0
     for name, lat, lon, want in checks:
         v = s(lat, lon)

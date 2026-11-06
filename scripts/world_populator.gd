@@ -175,9 +175,9 @@ func _exit_tree() -> void:
 
 
 func _load_locations() -> void:
-	var f: FileAccess = FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var f: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if f == null:
-		push_warning("WorldPopulator: data/locations.json missing")
+		push_warning("WorldPopulator: %s missing" % WorldCoords.locations_path())
 		return
 	var d: Variant = JSON.parse_string(f.get_as_text())
 	if d is Dictionary:
@@ -233,6 +233,8 @@ func _register_airfields() -> void:
 	var zones: Array = []
 	for a in loc.get("airfields", []):
 		var d: Dictionary = a
+		if d.get("heading_deg") == null:   # locations.json leaves some fields (desert) without a heading
+			d["heading_deg"] = 0.0
 		if not bool(d.get("in_bounds", true)):
 			continue
 		var id: String = d["id"]
@@ -574,10 +576,10 @@ const COAST_STRIPS := [
 func _register_coast_defences() -> void:
 	var idx: int = 0
 	var placed: int = 0
-	var f: FileAccess = FileAccess.open("res://data/osm/coast.json", FileAccess.READ)
+	var f: FileAccess = FileAccess.open((WorldCoords.osm_dir() + "/coast.json"), FileAccess.READ)
 	var src_ok: bool = false
 	if f != null:
-		var sj: FileAccess = FileAccess.open("res://data/osm/_source.json", FileAccess.READ)
+		var sj: FileAccess = FileAccess.open((WorldCoords.osm_dir() + "/_source.json"), FileAccess.READ)
 		if sj != null:
 			var sd: Variant = JSON.parse_string(sj.get_as_text())
 			src_ok = sd is Dictionary and str((sd as Dictionary).get("coast", "")) == "overpass"
@@ -845,6 +847,8 @@ func _register_buildup() -> void:
 
 ## Prisoner-of-war and labour camps (PowCampKit.CAMPS) at their real locations.
 func _register_pow_camps() -> void:
+	if GameState.current_map != "channel":
+		return   # the camps are Channel-only data
 	for c in PowCampKit.CAMPS:
 		var style: String = str(c[5])
 		var size: int = int(c[6])
@@ -2959,6 +2963,10 @@ func _build_airfield(s: Dictionary) -> Node3D:
 		var pos: Vector3 = s["pos"]
 		af = Airfield.create(str(d["name"]), pos, float(d["heading_deg"]), float(s["y"]))
 		af.style = Airfield.style_for(id)
+		if GameState.current_map == "desert":
+			# desert fields: a packed-steel strip with tented dispersals; the length comes from the data (1200 m default)
+			af.style = "forward"
+			af.runway_length = float(d["runway_len_m"]) if d.get("runway_len_m") != null else 1200.0
 		container.add_child(af)
 		af.build_layout()      # the layout must exist now: the field is dressed below, before it enters the tree
 	# give every populated field its side and register it, so landing there rearms (main.gd) and the tower calls

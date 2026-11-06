@@ -154,7 +154,7 @@ static func airfields() -> Array:
 static func _load_locations() -> void:
 	if not _targets.is_empty():
 		return
-	var f: FileAccess = FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var f: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if f == null:
 		return
 	var d: Variant = JSON.parse_string(f.get_as_text())

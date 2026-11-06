@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Validate all generated data against the contract in SPEC.md and print a summary.
-Exit code 1 if any hard error is found. Usage: python tools/validate_data.py"""
+Exit code 1 if any hard error is found. Usage: python tools/validate_data.py [--data-dir data/regions/NAME]
+--data-dir is a region root holding heightmap/ and osm/: only those checks run, with bounds taken from its
+heightmap/region_meta.json. Without it, every check runs against data/ (Channel).
+"""
+import argparse
 import json
 import math
 import os
@@ -8,6 +12,9 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 D = os.path.join(ROOT, "data")
+HM = os.path.join(D, "heightmap")
+OSMD = os.path.join(D, "osm")
+CHANNEL_CHECKS = True  # Dover / mid-Channel sample points, Channel-only
 LAT_MIN, LAT_MAX, LON_MIN, LON_MAX = 48.9, 53.0, -4.6, 9.0
 # Generous per-file size cap. The *accepted* real roads.json is ~19.7 MB (a genuine OSM road
 # network, not a bug), so the guard exists only to catch an accidental multi-hundred-MB blow-up.
@@ -107,7 +114,7 @@ def check_locations():
 
 def check_heightmap():
     print("== heightmap")
-    meta = load(os.path.join(D, "heightmap", "region_meta.json"))
+    meta = load(os.path.join(HM, "region_meta.json"))
     if not meta:
         return
     for k in ("width", "height", "lat_min", "lat_max", "lon_min", "lon_max", "max_elev_m", "sea_level_value"):
@@ -116,36 +123,38 @@ def check_heightmap():
     try:
         import numpy as np
         from PIL import Image
-        im = Image.open(os.path.join(D, "heightmap", "region_height.png"))
+        im = Image.open(os.path.join(HM, "region_height.png"))
         a = np.asarray(im)
         print(f"  image mode={im.mode} dtype={a.dtype} size={im.size} meta={meta['width']}x{meta['height']}")
         if a.dtype != np.uint16:
             err("heightmap is not 16-bit")
         if im.size != (meta["width"], meta["height"]):
             err("heightmap size != meta")
-        e = a.astype(float) / 65535 * 1000
+        max_elev = float(meta.get("max_elev_m", 1000.0))  # desert is 3000 m; was hardcoded 1000
+        e = a.astype(float) / 65535 * max_elev
         print(f"  elevation min {e.min():.0f} m  max {e.max():.0f} m  land {(a > 0).mean() * 100:.1f}%  source: {meta.get('source', '?')}")
 
         def s(lat, lon):
             x = int((lon - meta["lon_min"]) / (meta["lon_max"] - meta["lon_min"]) * meta["width"])
             y = int((meta["lat_max"] - lat) / (meta["lat_max"] - meta["lat_min"]) * meta["height"])
             return e[max(0, y - 3):y + 4, max(0, x - 3):x + 4].max()
-        dover, chan = s(51.13, 1.35), s(50.5, 0.5)
-        print(f"  Dover cliffs (51.13,1.35) local max {dover:.0f} m; Channel (50.5,0.5) {chan:.0f} m")
-        if dover <= 0:
-            err("Dover is not land")
-        if chan != 0:
-            err("Channel is not sea")
+        if CHANNEL_CHECKS:
+            dover, chan = s(51.13, 1.35), s(50.5, 0.5)
+            print(f"  Dover cliffs (51.13,1.35) local max {dover:.0f} m; Channel (50.5,0.5) {chan:.0f} m")
+            if dover <= 0:
+                err("Dover is not land")
+            if chan != 0:
+                err("Channel is not sea")
     except ImportError:
         warns.append("numpy/pillow missing: skipped heightmap pixel checks")
 
 
 def check_osm(L):
     print("== osm")
-    src = load(os.path.join(D, "osm", "_source.json")) or {}
+    src = load(os.path.join(OSMD, "_source.json")) or {}
     for layer, key in (("roads", "lines"), ("rails", "lines"), ("rivers", "lines"), ("coast", "lines"),
                        ("woods", "polys"), ("towns", "towns")):
-        p = os.path.join(D, "osm", f"{layer}.json")
+        p = os.path.join(OSMD, f"{layer}.json")
         if not os.path.exists(p):
             err(f"missing {p}")
             continue
@@ -168,7 +177,7 @@ def check_osm(L):
             err(f"{layer}.json too large ({kb:.0f} KB > {MAX_JSON_KB} KB)")
         print(f"  {layer:7s} {len(arr):6d} {key:5s} {npts:8d} pts {kb:8.0f} KB  source={src.get(layer, '?')}")
     # rivers detail: line count, total length and true provenance (Phase 0 acceptance line)
-    rp = os.path.join(D, "osm", "rivers.json")
+    rp = os.path.join(OSMD, "rivers.json")
     if os.path.exists(rp):
         rj = load(rp) or {}
         rlines = rj.get("lines", [])
@@ -495,28 +504,50 @@ def check_p16_p19():
 
 
 def main():
-    L = check_locations()
-    check_heightmap()
-    check_osm(L)
-    check_curated()
-    check_landscape_1940()
-    check_new_1940()
-    check_p10_p12()
-    check_p13_p15()
-    check_p16_p19()
-    print("== world coordinates (latlon_to_world, y=0)")
-    if L:
-        want = {"dover": "city", "calais": "city", "london": "city", "antwerp": "city",
-                "biggin_hill": "airfield"}
-        for sec in ("cities", "airfields"):
-            for r in L[sec]:
-                if r["id"] in want:
-                    x, y, z = latlon_to_world(r["lat"], r["lon"])
-                    print(f"  {r['name']:12s} lat {r['lat']:.4f} lon {r['lon']:.4f} -> ({x:9.1f}, {y:.0f}, {z:9.1f})")
-        x0, _, z0 = latlon_to_world(LAT_MAX, LON_MIN)
-        x1, _, z1 = latlon_to_world(LAT_MIN, LON_MAX)
-        print(f"  playable bounds in world: x {x0:.0f}..{x1:.0f}  z {z0:.0f}..{z1:.0f}  "
-              f"(~{(x1 - x0) / 1000:.1f} x {(z1 - z0) / 1000:.1f} km)")
+    global D, HM, OSMD, LAT_MIN, LAT_MAX, LON_MIN, LON_MAX, CHANNEL_CHECKS
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data-dir", default=None,
+                    help="region data root holding heightmap/ and osm/ (e.g. data/regions/NAME). Bounds come from "
+                         "its heightmap/region_meta.json and only the heightmap and osm checks run. "
+                         "Default: data/ with every check")
+    a = ap.parse_args()
+    if a.data_dir:
+        D = os.path.abspath(a.data_dir)
+        # region roots use heightmap/ + osm/ subfolders; data/desert keeps region_height.png at the root
+        HM = os.path.join(D, "heightmap") if os.path.isdir(os.path.join(D, "heightmap")) else D
+        OSMD = os.path.join(D, "osm")
+        CHANNEL_CHECKS = False
+        meta = load(os.path.join(HM, "region_meta.json")) or {}
+        LAT_MIN = float(meta.get("lat_min", LAT_MIN))
+        LAT_MAX = float(meta.get("lat_max", LAT_MAX))
+        LON_MIN = float(meta.get("lon_min", LON_MIN))
+        LON_MAX = float(meta.get("lon_max", LON_MAX))
+        print(f"== region {D}: lat {LAT_MIN}..{LAT_MAX}, lon {LON_MIN}..{LON_MAX}")
+        check_heightmap()
+        check_osm(None)
+    else:
+        L = check_locations()
+        check_heightmap()
+        check_osm(L)
+        check_curated()
+        check_landscape_1940()
+        check_new_1940()
+        check_p10_p12()
+        check_p13_p15()
+        check_p16_p19()
+        print("== world coordinates (latlon_to_world, y=0)")
+        if L:
+            want = {"dover": "city", "calais": "city", "london": "city", "antwerp": "city",
+                    "biggin_hill": "airfield"}
+            for sec in ("cities", "airfields"):
+                for r in L[sec]:
+                    if r["id"] in want:
+                        x, y, z = latlon_to_world(r["lat"], r["lon"])
+                        print(f"  {r['name']:12s} lat {r['lat']:.4f} lon {r['lon']:.4f} -> ({x:9.1f}, {y:.0f}, {z:9.1f})")
+            x0, _, z0 = latlon_to_world(LAT_MAX, LON_MIN)
+            x1, _, z1 = latlon_to_world(LAT_MIN, LON_MAX)
+            print(f"  playable bounds in world: x {x0:.0f}..{x1:.0f}  z {z0:.0f}..{z1:.0f}  "
+                  f"(~{(x1 - x0) / 1000:.1f} x {(z1 - z0) / 1000:.1f} km)")
     for w in warns:
         print("WARN:", w)
     print("RESULT:", "FAIL" if errors else "PASS", f"({len(errors)} errors)")

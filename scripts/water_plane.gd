@@ -38,7 +38,26 @@ const WAKE_SLOTS: int = 4
 const WAKE_RANGE: float = 9000.0
 
 
+var _land_cut: bool = false
+
+
+## Desert map: hand the terrain's sea-distance texture to the water so it is cut back from the land.
+func _bind_land() -> void:
+	if GameState.current_map != "desert" or TerrainChunkManager._sea_tex == null:
+		return
+	var b: Rect2 = WorldCoords.world_bounds()
+	var mat: ShaderMaterial = material_override as ShaderMaterial
+	if mat == null:
+		return
+	mat.set_shader_parameter("land_tex", TerrainChunkManager._sea_tex)
+	mat.set_shader_parameter("land_rect", Vector4(b.position.x, b.position.y, 1.0 / b.size.x, 1.0 / b.size.y))
+	mat.set_shader_parameter("cut_land", false)   # no cut-back: the 1536-cell sea texture made a stepped shoreline; the land hides the sea by depth
+	_land_cut = true
+
+
 func _process(delta: float) -> void:
+	if not _land_cut:
+		_bind_land()
 	if focus:
 		var p: Vector3 = focus.global_position
 		global_position = Vector3(snappedf(p.x, 100.0), 0.0, snappedf(p.z, 100.0))

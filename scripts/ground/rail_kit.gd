@@ -39,7 +39,7 @@ static func ensure_loaded() -> void:
 
 # ------------------------------------------------------------------ data
 static func _load_rails() -> void:
-	var path: String = "res://data/osm/rails.json"
+	var path: String = (WorldCoords.osm_dir() + "/rails.json")
 	if not FileAccess.file_exists(path):
 		return
 	var f: FileAccess = FileAccess.open(path, FileAccess.READ)

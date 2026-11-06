@@ -2,7 +2,7 @@
 ## Game root: builds the world (terrain, sea, airfields), shows the start menu, then starts a session:
 ## player aircraft + camera + HUD + a ModeBase picked from ModeRegistry. Handles pause / results / restart.
 ##
-## Debug args (after `--`): --skip-menu (go straight in)  --mode=dogfight|bombing|ground|free|<id>
+## Debug args (after `--`): --skip-menu (go straight in)  --map=desert|channel (playable map)  --mode=dogfight|bombing|ground|free|<id>
 ##   --side=Allies|Axis  --aircraft=<id>  --difficulty=easy|normal|hard|0..1  --weather=<name>  --time=<preset>
 ##   --ambient (free flight skirmishes)  --wave=N (dogfight start wave)  --autopilot --ai-debug --quit-after=SECS  --shot=out.png --air --cockpit --noout --frames=N --hawkinge
 ##   --at=lat,lon,alt,hdg --crash --takeoff --throttle --procedural --warp=N (hold a sim time warp: 1/2/4)
@@ -68,6 +68,15 @@ func _airfield_team(id: String) -> String:
 ## static SIDE_AIRFIELDS list alone can point at a field the enemy now owns.
 func _friendly_fields(side: String) -> Array:
 	var out: Array = []
+	if GameState.current_map != "channel":
+		# other maps: their fields are built on demand, so read the side from the map's own locations file
+		var lf := FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
+		var ld: Variant = JSON.parse_string(lf.get_as_text()) if lf != null else null
+		if ld is Dictionary:
+			for a in (ld as Dictionary).get("airfields", []):
+				if a is Dictionary and bool(a.get("in_bounds", true)) and WorldPopulator.airfield_team(a) == side:
+					out.append(str(a["id"]))
+		return out
 	for id in SIDE_AIRFIELDS.get(side, []):
 		var af: Airfield = airfields.get(id)
 		if af != null and is_instance_valid(af) and af.team == side:
@@ -117,6 +126,10 @@ func _ready() -> void:
 	GroundKit.lp("main _ready start")
 	randomize()
 	_args = OS.get_cmdline_user_args()
+	for a in _args:       # debug: --map=desert (or channel) picks the playable map before the world is built
+		if a.begins_with("--map="):
+			GameState.map_debug_override = true
+			GameState.current_map = a.substr(6)
 	for a in _args:       # debug: --seed=N makes every randf()/randi() repeatable (fair A/B perf runs)
 		if a.begins_with("--seed="):
 			seed(int(a.substr(7)))
@@ -129,7 +142,7 @@ func _ready() -> void:
 	GroundKit.lp("terrain node (heightfield, imagery)")
 
 	# Airfields (flatten terrain first, then build).
-	for id in AIRFIELDS.keys():
+	for id in (AIRFIELDS.keys() if GameState.current_map == "channel" else []):   # Channel fields only; other maps take theirs from locations.json
 		var d: Dictionary = AIRFIELDS[id]
 		var wp: Vector3 = WorldCoords.latlon_to_world(d["lat"], d["lon"])
 		var y: float = terrain.add_flat_zone(wp, 1000.0, 500.0)
@@ -354,7 +367,7 @@ func _river_test() -> void:
 func _city_test() -> void:
 	RoadMesh.ensure_loaded()
 	TransportNetwork.ensure_loaded()
-	var f: FileAccess = FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var f: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if f == null:
 		print("[city] data/locations.json missing")
 		get_tree().quit()
@@ -484,7 +497,7 @@ func _landmark_test() -> void:
 		if ld is Dictionary:
 			for e in (ld as Dictionary).get("landmarks", []):
 				ids.append(str((e as Dictionary).get("id", "")))
-	var lc: FileAccess = FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var lc: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if lc != null:
 		var cd: Variant = JSON.parse_string(lc.get_as_text())
 		lc = null
@@ -559,7 +572,7 @@ func _sea_defence_test() -> void:
 ## Debug (--balloon-test): the city balloon barrage (P2). For every city print its barrage size, then the
 ## per-size totals and the London-vs-town check. Uses the pure WorldPopulator.city_balloon_plan().
 func _balloon_test() -> void:
-	var f: FileAccess = FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var f: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if f == null:
 		print("[balloon] data/locations.json missing")
 		get_tree().quit()
@@ -780,7 +793,7 @@ func _rail_test() -> void:
 ## Debug (--airfield-furniture-test): the P8 airfield furniture. Dresses a few of the real airfields from
 ## data/locations.json with AirfieldFurniture and counts the meshes and destructible prop nodes placed.
 func _airfield_furniture_test() -> void:
-	var f: FileAccess = FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var f: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if f == null:
 		print("[airfield-furn] data/locations.json missing")
 		get_tree().quit()
@@ -2272,7 +2285,11 @@ func _spawn_player_inner() -> void:
 		var friendly: Array = _friendly_fields(GameState.player_side)
 		if not friendly.is_empty():
 			GameState.start_airfield = String(friendly[0])
-			af = airfields[GameState.start_airfield]
+			af = airfields.get(GameState.start_airfield)
+			if af == null or not is_instance_valid(af):
+				af = WorldPopulator.ensure(self).get_airfield(GameState.start_airfield)   # built on demand for this map
+				if af != null:
+					airfields[GameState.start_airfield] = af
 		elif af != null:
 			airborne = true     # no friendly field in this theatre on this date: start over it, not on it
 	if af == null:
@@ -2976,6 +2993,7 @@ func _process(delta: float) -> void:
 # ---- debug / automation: godot --path . -- --shot=out.png --air --time=dusk --weather=overcast --cockpit --frames=200 --alt=900 --dz=0
 var _shot_path: String = ""
 var _shot_frames: int = 200
+var _wait_terrain_for_shot: bool = false   # set by --at: the shot waits until the terrain there has streamed in
 var _auto_takeoff: bool = false
 var _log_t: float = 0.0
 
@@ -3044,6 +3062,11 @@ func _parse_debug_args() -> void:
 			var wp: Vector3 = WorldCoords.latlon_to_world(float(f[0]), float(f[1]))
 			wp.y = float(f[2])
 			player.reset_pose(wp, float(f[3]), true)
+			if _args.has("--freeze"):      # AF2 debug: hold the airframe from the placement, not only at the shot (it drifted ~1 km while the scenery loaded)
+				player.process_mode = Node.PROCESS_MODE_DISABLED
+			terrain.set_focus(player)
+			terrain.set_pin(player.global_position, 9000.0)
+			_wait_terrain_for_shot = true     # the terrain there streams in after the move: hold the shot until it settles
 			camera_rig.bind(player)
 		elif a.begins_with("--tour="):
 			_tour_begin(a.substr(7))
@@ -3460,7 +3483,8 @@ func _physics_process(delta: float) -> void:
 		# the upscaler model, or any before/after): the chase camera then does not drift while frames count.
 		if _args.has("--freeze") and player != null and is_instance_valid(player):
 			player.process_mode = Node.PROCESS_MODE_DISABLED
-		_shot_frames -= 1
+		if not (_wait_terrain_for_shot and terrain != null and not terrain.is_settled()):
+			_shot_frames -= 1
 		if _shot_frames == 0:
 			print("FPS ", Engine.get_frames_per_second(), " chunks ", terrain._chunks.size(), " draws ", Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
 			if _args.has("--dump-near"):

@@ -841,7 +841,9 @@ func _build() -> void:
 
 ## Real imagery mosaic (data/heightmap/region_color.png) as the map base.
 func _load_color_map() -> void:
-	var tex := ResourceLoader.load("res://data/heightmap/region_color.png") as Texture2D
+	if not ResourceLoader.exists(WorldCoords.heightmap_dir() + "/region_color.png"):
+		return
+	var tex := ResourceLoader.load((WorldCoords.heightmap_dir() + "/region_color.png")) as Texture2D
 	if tex == null:
 		return
 	_color_img = tex.get_image()
@@ -851,7 +853,7 @@ func _load_color_map() -> void:
 
 ## Airfield runway symbols + town dots from the real location data.
 func _load_spots() -> void:
-	var f := FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var f := FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if f == null:
 		return
 	var d: Variant = JSON.parse_string(f.get_as_text())
@@ -865,7 +867,7 @@ func _load_spots() -> void:
 		var w: Vector3 = WorldCoords.latlon_to_world(float(a.get("lat", 0.0)), float(a.get("lon", 0.0)))
 		_af_spots.append({
 			"pos": Vector3(w.x, 0.0, w.z),
-			"hdg": deg_to_rad(float(a.get("heading_deg", 0.0))),
+			"hdg": deg_to_rad(float(a["heading_deg"]) if a.get("heading_deg") != null else 0.0),
 			"len": 1000.0,
 		})
 	for c in dd.get("cities", []):

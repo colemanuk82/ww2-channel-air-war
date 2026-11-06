@@ -201,9 +201,11 @@ func _build_zone_mask(order: Array, fp: Vector3) -> void:
 
 ## Drape the real imagery mosaic (data/heightmap/region_color.png) if it has been generated.
 func _apply_imagery() -> void:
-	var color_path: String = "res://data/heightmap/region_color.png"
+	var color_path: String = (WorldCoords.heightmap_dir() + "/region_color.png")
 	if not ResourceLoader.exists(color_path):
 		material.set_shader_parameter("use_map", false)
+		if GameState.current_map == "desert":
+			_apply_desert()
 		return
 	var b: Rect2 = WorldCoords.world_bounds()
 	if _imagery_tex == null:
@@ -214,8 +216,8 @@ func _apply_imagery() -> void:
 	material.set_shader_parameter("use_map", true)
 	# towns: paved ground instead of the field patchwork where the real land cover is built-up
 	if _urban_tex == null:
-		if ResourceLoader.exists("res://data/heightmap/region_urban.png"):      # precomputed by tools/make_urban_mask.py
-			_urban_tex = load("res://data/heightmap/region_urban.png") as Texture2D
+		if ResourceLoader.exists((WorldCoords.heightmap_dir() + "/region_urban.png")):      # precomputed by tools/make_urban_mask.py
+			_urban_tex = load((WorldCoords.heightmap_dir() + "/region_urban.png")) as Texture2D
 		else:
 			var um: Image = LandCover.urban_mask()
 			if um != null:
@@ -226,8 +228,8 @@ func _apply_imagery() -> void:
 		material.set_shader_parameter("urban_tex", _urban_tex)
 		material.set_shader_parameter("use_urban", true)
 	# woodland: no fields or hedge lines under real forest cover (tools/make_wood_mask.py)
-	if _wood_tex == null and ResourceLoader.exists("res://data/heightmap/region_wood.png"):
-		_wood_tex = load("res://data/heightmap/region_wood.png") as Texture2D
+	if _wood_tex == null and ResourceLoader.exists((WorldCoords.heightmap_dir() + "/region_wood.png")):
+		_wood_tex = load((WorldCoords.heightmap_dir() + "/region_wood.png")) as Texture2D
 	if _wood_tex != null:
 		material.set_shader_parameter("wood_tex", _wood_tex)
 		material.set_shader_parameter("use_wood", true)
@@ -236,6 +238,20 @@ func _apply_imagery() -> void:
 		material.set_shader_parameter("region_tex", ImageTexture.create_from_image(rimg))
 		material.set_shader_parameter("use_regions", true)
 	apply_season()
+
+
+## The desert map has no imagery mosaic: the shader paints its own sand, limestone, rock and scrub (desert_look),
+## placed by latitude, height, slope and distance to the sea. Also feeds the sea-distance texture (sand on the coast,
+## and the water plane is cut back from the land, see WaterPlane).
+func _apply_desert() -> void:
+	material.set_shader_parameter("desert_look", true)
+	var db: Rect2 = WorldCoords.world_bounds()
+	material.set_shader_parameter("map_rect", Vector4(db.position.x, db.position.y, 1.0 / db.size.x, 1.0 / db.size.y))
+	material.set_shader_parameter("desert_origin_lat", WorldCoords.ORIGIN_LAT)
+	material.set_shader_parameter("desert_origin_lon", WorldCoords.ORIGIN_LON)
+	material.set_shader_parameter("desert_upl_lat", WorldCoords.units_per_deg_lat)
+	material.set_shader_parameter("desert_upl_lon", WorldCoords.units_per_deg_lon)
+	_apply_sea(WorldCoords.world_bounds())
 
 
 ## Sea-distance texture over the imagery rect, so the sand strip can be kept to the coast (see terrain.gdshader).

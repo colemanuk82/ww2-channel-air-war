@@ -23,11 +23,18 @@ static var _cells: Dictionary = {}   # Vector2i -> Array of Vector3i(line index,
 static var _water_pts: Dictionary = {}   # Vector2i -> Array of Vector2: river/stream points (aqueduct crossings)
 
 
+static func reset_cache() -> void:
+	loaded = false
+	canals = []
+	_cells = {}
+	_water_pts = {}
+
+
 static func ensure_loaded() -> void:
 	if loaded:
 		return
 	loaded = true
-	var path: String = "res://data/osm/rivers.json"
+	var path: String = (WorldCoords.osm_dir() + "/rivers.json")
 	if not FileAccess.file_exists(path):
 		return
 	var f: FileAccess = FileAccess.open(path, FileAccess.READ)

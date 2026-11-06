@@ -9,7 +9,8 @@ extends RefCounted
 ##
 ## Thread-safe after load(): the pixel bytes are only read.
 
-const PNG := "res://data/heightmap/region_types.png"
+static func _png() -> String:
+	return WorldCoords.heightmap_dir() + "/region_types.png"
 
 static var _data: PackedByteArray = PackedByteArray()
 static var _w: int = 0
@@ -24,13 +25,17 @@ static func load_map() -> void:
 	_loaded = true
 	# load the imported texture, not the raw PNG: Image.load() on an imported resource warns (and fails in
 	# an exported build, where the source PNG is not packed)
-	var tex: Texture2D = load(PNG) as Texture2D
+	if not (FileAccess.file_exists(_png()) or FileAccess.file_exists(_png() + ".import")):   # maps without a baked region file (desert) skip quietly
+		if GameState.current_map == "channel":
+			push_warning("RegionMap: %s missing (run tools/bake_regions.py) - no regional field patterns" % _png())
+		return
+	var tex: Texture2D = load(_png()) as Texture2D
 	if tex == null:
-		push_warning("RegionMap: %s missing (run tools/bake_regions.py) - no regional field patterns" % PNG)
+		push_warning("RegionMap: %s missing (run tools/bake_regions.py) - no regional field patterns" % _png())
 		return
 	var img: Image = tex.get_image()
 	if img == null:
-		push_warning("RegionMap: %s has no readable image - no regional field patterns" % PNG)
+		push_warning("RegionMap: %s has no readable image - no regional field patterns" % _png())
 		return
 	if img.is_compressed():
 		img.decompress()

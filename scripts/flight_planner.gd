@@ -10,10 +10,6 @@ extends CanvasLayer
 signal confirmed(plan: Dictionary)
 signal cancelled
 
-const LAT_MIN := 48.9
-const LAT_MAX := 53.0
-const LON_MIN := -4.6
-const LON_MAX := 9.0
 const SCENARIOS := [
 	["free", "Free flight (no objectives)"],
 	["bombing", "Bombing run"],
@@ -75,15 +71,15 @@ class MapView extends Control:
 		return Vector2(base * zoom, base * zoom / _aspect())
 
 	func to_screen(lat: float, lon: float) -> Vector2:
-		var u: float = (lon - FlightPlanner.LON_MIN) / (FlightPlanner.LON_MAX - FlightPlanner.LON_MIN)
-		var v: float = (FlightPlanner.LAT_MAX - lat) / (FlightPlanner.LAT_MAX - FlightPlanner.LAT_MIN)
+		var u: float = (lon - WorldCoords.LON_MIN) / (WorldCoords.LON_MAX - WorldCoords.LON_MIN)
+		var v: float = (WorldCoords.LAT_MAX - lat) / (WorldCoords.LAT_MAX - WorldCoords.LAT_MIN)
 		var ms: Vector2 = _map_size()
 		return size * 0.5 + Vector2((u - center.x) * ms.x, (v - center.y) * ms.y)
 
 	func to_latlon(p: Vector2) -> Vector2:
 		var ms: Vector2 = _map_size()
 		var uv: Vector2 = center + (p - size * 0.5) / ms
-		return Vector2(FlightPlanner.LAT_MAX - uv.y * (FlightPlanner.LAT_MAX - FlightPlanner.LAT_MIN), FlightPlanner.LON_MIN + uv.x * (FlightPlanner.LON_MAX - FlightPlanner.LON_MIN))
+		return Vector2(WorldCoords.LAT_MAX - uv.y * (WorldCoords.LAT_MAX - WorldCoords.LAT_MIN), WorldCoords.LON_MIN + uv.x * (WorldCoords.LON_MAX - WorldCoords.LON_MIN))
 
 	func _nearest_airfield(p: Vector2, max_px: float) -> Dictionary:
 		var best: Dictionary = {}
@@ -194,8 +190,8 @@ func _ready() -> void:
 	_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_map.airfields = _airfields
 	_map.cities = _cities
-	if ResourceLoader.exists("res://data/heightmap/region_color.png"):
-		_map.tex = load("res://data/heightmap/region_color.png") as Texture2D
+	if ResourceLoader.exists((WorldCoords.heightmap_dir() + "/region_color.png")):
+		_map.tex = load((WorldCoords.heightmap_dir() + "/region_color.png")) as Texture2D
 	_map.picked.connect(_on_picked)
 	hb.add_child(_map)
 
@@ -266,7 +262,7 @@ func _ready() -> void:
 
 
 func _load_data() -> void:
-	var f: FileAccess = FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var f: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if f == null:
 		return
 	var d: Variant = JSON.parse_string(f.get_as_text())

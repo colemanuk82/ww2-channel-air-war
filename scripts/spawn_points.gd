@@ -21,11 +21,16 @@ static var _locations: Dictionary = {}
 static var _loaded: bool = false
 
 
+static func reset_cache() -> void:
+	_locations = {}
+	_loaded = false
+
+
 static func _load_locations() -> Dictionary:
 	if _loaded:
 		return _locations
 	_loaded = true
-	var f: FileAccess = FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var f: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if f == null:
 		return {}
 	var d: Variant = JSON.parse_string(f.get_as_text())
@@ -61,10 +66,12 @@ static func list_for_side(side: String) -> Array:
 			if id == "":
 				continue
 			out.append({"id": "af:" + id, "name": label_for(str(ad.get("name", id)), af_side), "airfield": id,
-				"lat": float(ad.get("lat", 0.0)), "lon": float(ad.get("lon", 0.0)), "heading": float(ad.get("heading_deg", 0.0))})
+				"lat": float(ad.get("lat", 0.0)), "lon": float(ad.get("lon", 0.0)), "heading": (float(ad["heading_deg"]) if ad.get("heading_deg") != null else 0.0)})
 		out.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return str(x["name"]) < str(y["name"]))
 	for e in LIST:
-		out.append(e)
+		# only the sightseeing spots that lie on the active map (the Channel spots are off the desert map)
+		if WorldCoords.is_in_bounds(WorldCoords.latlon_to_world(float(e["lat"]), float(e["lon"]))):
+			out.append(e)
 	return out
 
 

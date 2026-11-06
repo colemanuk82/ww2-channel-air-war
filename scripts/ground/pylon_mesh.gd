@@ -46,7 +46,7 @@ static func ensure_loaded() -> void:
 	if loaded:
 		return
 	loaded = true
-	if _load("res://data/osm/power.json"):
+	if _load((WorldCoords.osm_dir() + "/power.json")):
 		sourced_osm = true
 	else:
 		_load("res://data/pylons_1940.json")

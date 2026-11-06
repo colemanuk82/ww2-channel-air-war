@@ -2,30 +2,71 @@ extends Node
 ## WORLD COORDINATE CONTRACT (autoload "WorldCoords").
 ## The map is 1:1 horizontally (1 unit = 1 m of real map distance, like a flight simulator), so real distances take their
 ## real flying time. Aircraft speeds and object sizes are in game units (the HUD shows units/s as m/s). Heights stay doubled
-## (world_y = elevation_m * 2.0: relief and altitude tuning are unchanged). Origin = lat 50.30, lon 0.00.
-## +X east, -Z north, +Y up.
+## (world_y = elevation_m * 2.0: relief and altitude tuning are unchanged). +X east, -Z north, +Y up.
+## Origin, bounds, scales and data folders come from the active map (MapDef, chosen by GameState.current_map).
+## Channel (the default) has origin lat 50.30, lon 0.00.
 ## NOTE: world_to_latlon returns Vector2(x = lat, y = lon).
 
-const ORIGIN_LAT: float = 50.30
-const ORIGIN_LON: float = 0.0
-const HORIZ_COMPRESSION: float = 1.0      # real metres per horizontal game unit (1.0 = 1:1; it was 2.0 until v1.9)
-const VERTICAL_SCALE: float = 2.0
 const METERS_PER_DEG_LON_EQ: float = 111320.0
 const METERS_PER_DEG_LAT: float = 110540.0
 
-const LAT_MIN: float = 48.9
-const LAT_MAX: float = 53.0
-const LON_MIN: float = -4.6
-const LON_MAX: float = 9.0
+## The active map. Change it only through set_map().
+var active_map: MapDef
 
-## World units per degree of longitude / latitude (derived, set in _init).
+## Values of the active map, copied by set_map(). Callers read them as WorldCoords.NAME.
+var ORIGIN_LAT: float = 0.0
+var ORIGIN_LON: float = 0.0
+var HORIZ_COMPRESSION: float = 1.0      # real metres per horizontal game unit (1.0 = 1:1; it was 2.0 until v1.9)
+var VERTICAL_SCALE: float = 2.0
+var LAT_MIN: float = 0.0
+var LAT_MAX: float = 0.0
+var LON_MIN: float = 0.0
+var LON_MAX: float = 0.0
+
+## World units per degree of longitude / latitude (derived, set by set_map).
 var units_per_deg_lon: float = 0.0
 var units_per_deg_lat: float = 0.0
 
 
 func _init() -> void:
-	units_per_deg_lon = METERS_PER_DEG_LON_EQ * cos(deg_to_rad(50.3)) / HORIZ_COMPRESSION
+	set_map(MapDef.DEFAULT_ID)
+
+
+func _ready() -> void:
+	# GameState may have loaded a saved map before this autoload was ready (autoload order is not guaranteed).
+	var gs: Node = get_node_or_null("/root/GameState")
+	if gs != null:
+		set_map(str(gs.get("current_map")))
+
+
+## Switch the playable map (unknown ids give Channel). Copies origin, bounds and scales from MapDef.
+func set_map(map_id: String) -> void:
+	active_map = MapDef.by_id(map_id)
+	ORIGIN_LAT = active_map.origin_lat
+	ORIGIN_LON = active_map.origin_lon
+	HORIZ_COMPRESSION = active_map.horiz_compression
+	VERTICAL_SCALE = active_map.vertical_scale
+	LAT_MIN = active_map.lat_min
+	LAT_MAX = active_map.lat_max
+	LON_MIN = active_map.lon_min
+	LON_MAX = active_map.lon_max
+	units_per_deg_lon = METERS_PER_DEG_LON_EQ * cos(deg_to_rad(ORIGIN_LAT)) / HORIZ_COMPRESSION
 	units_per_deg_lat = METERS_PER_DEG_LAT / HORIZ_COMPRESSION
+
+
+## Folder of the active map's heightmap files (res://data/heightmap for Channel).
+func heightmap_dir() -> String:
+	return active_map.heightmap_dir
+
+
+## Folder of the active map's OSM files (res://data/osm for Channel).
+func osm_dir() -> String:
+	return active_map.osm_dir
+
+
+## The active map's locations file (airfields, cities, targets, features). Channel keeps res://data/locations.json.
+func locations_path() -> String:
+	return active_map.locations_file
 
 
 func latlon_to_world(lat: float, lon: float) -> Vector3:

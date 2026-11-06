@@ -70,18 +70,18 @@ class EdMap extends Control:
 		return Vector2(base * zoom, base * zoom / _aspect())
 
 	func to_screen(lat: float, lon: float) -> Vector2:
-		var u: float = (lon - FlightPlanner.LON_MIN) / (FlightPlanner.LON_MAX - FlightPlanner.LON_MIN)
-		var v: float = (FlightPlanner.LAT_MAX - lat) / (FlightPlanner.LAT_MAX - FlightPlanner.LAT_MIN)
+		var u: float = (lon - WorldCoords.LON_MIN) / (WorldCoords.LON_MAX - WorldCoords.LON_MIN)
+		var v: float = (WorldCoords.LAT_MAX - lat) / (WorldCoords.LAT_MAX - WorldCoords.LAT_MIN)
 		var ms: Vector2 = _map_size()
 		return size * 0.5 + Vector2((u - center.x) * ms.x, (v - center.y) * ms.y)
 
 	func to_latlon(p: Vector2) -> Vector2:
 		var ms: Vector2 = _map_size()
 		var uv: Vector2 = center + (p - size * 0.5) / ms
-		return Vector2(FlightPlanner.LAT_MAX - uv.y * (FlightPlanner.LAT_MAX - FlightPlanner.LAT_MIN), FlightPlanner.LON_MIN + uv.x * (FlightPlanner.LON_MAX - FlightPlanner.LON_MIN))
+		return Vector2(WorldCoords.LAT_MAX - uv.y * (WorldCoords.LAT_MAX - WorldCoords.LAT_MIN), WorldCoords.LON_MIN + uv.x * (WorldCoords.LON_MAX - WorldCoords.LON_MIN))
 
 	func look_at_latlon(lat: float, lon: float) -> void:
-		center = Vector2((lon - FlightPlanner.LON_MIN) / (FlightPlanner.LON_MAX - FlightPlanner.LON_MIN), (FlightPlanner.LAT_MAX - lat) / (FlightPlanner.LAT_MAX - FlightPlanner.LAT_MIN))
+		center = Vector2((lon - WorldCoords.LON_MIN) / (WorldCoords.LON_MAX - WorldCoords.LON_MIN), (WorldCoords.LAT_MAX - lat) / (WorldCoords.LAT_MAX - WorldCoords.LAT_MIN))
 		queue_redraw()
 
 	## Pixels per kilometre at the current zoom (north-south, which is what the zones use).
@@ -563,8 +563,8 @@ func _build_editor() -> void:
 	_map.ed = self
 	_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	if ResourceLoader.exists("res://data/heightmap/region_color.png"):
-		_map.tex = load("res://data/heightmap/region_color.png") as Texture2D
+	if ResourceLoader.exists((WorldCoords.heightmap_dir() + "/region_color.png")):
+		_map.tex = load((WorldCoords.heightmap_dir() + "/region_color.png")) as Texture2D
 	hb.add_child(_map)
 	var side := PanelContainer.new()
 	side.add_theme_stylebox_override("panel", UIKit.panel_style())

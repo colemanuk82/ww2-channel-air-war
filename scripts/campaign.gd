@@ -21,9 +21,13 @@ static var state: Dictionary = {}
 static var _loc: Dictionary = {}
 
 
+static func reset_cache() -> void:
+	_loc = {}
+
+
 static func loc() -> Dictionary:
 	if _loc.is_empty():
-		var f: FileAccess = FileAccess.open("res://data/locations.json", FileAccess.READ)
+		var f: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 		if f != null:
 			var d: Variant = JSON.parse_string(f.get_as_text())
 			if d is Dictionary:

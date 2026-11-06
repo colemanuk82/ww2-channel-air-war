@@ -45,6 +45,8 @@ static func rows() -> Array:
 static func refresh() -> void:
 	load_data()
 	_live.clear()
+	if GameState.current_map != "channel":
+		return      # the bomb-damage areas are Channel towns (Blitz, Baedeker, Normandy): none on the desert map
 	for r in _rows:
 		var rd: Dictionary = r
 		var lvl: float = float(rd.get("level", 0.0)) * level_ramp(str(rd.get("from", "")), str(rd.get("full", "")))

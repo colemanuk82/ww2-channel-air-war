@@ -8,10 +8,21 @@ extends RefCounted
 ## exact; the DEM only supplies the elevation. Falls back to the DEM cubic B-spline path if absent.
 ## All coordinates in/out are world units (see WorldCoords). Heights are world Y (elev_m * 2).
 
-const HEIGHTMAP_PATH := "res://data/heightmap/region_height.png"
-const META_PATH := "res://data/heightmap/region_meta.json"
-const COAST_PATH := "res://data/heightmap/region_coast.png"
-const COAST_META_PATH := "res://data/heightmap/region_coast_meta.json"
+## Map data files: the folder is the active map's (WorldCoords.heightmap_dir(); Channel = res://data/heightmap).
+static func _height_path() -> String:
+	return WorldCoords.heightmap_dir() + "/region_height.png"
+
+
+static func _meta_path() -> String:
+	return WorldCoords.heightmap_dir() + "/region_meta.json"
+
+
+static func _coast_path() -> String:
+	return WorldCoords.heightmap_dir() + "/region_coast.png"
+
+
+static func _coast_meta_path() -> String:
+	return WorldCoords.heightmap_dir() + "/region_coast_meta.json"
 const SEA_FLOOR_Y := -4.0
 # Coastal rise tuning (metres of inland distance over which land reaches its DEM height).
 const COAST_RAMP_M := 110.0       # gentle coast / beach
@@ -91,11 +102,11 @@ func setup() -> void:
 
 
 func _try_load_file() -> bool:
-	if not FileAccess.file_exists(HEIGHTMAP_PATH) or not FileAccess.file_exists(META_PATH):
+	if not FileAccess.file_exists(_height_path()) or not FileAccess.file_exists(_meta_path()):
 		# exported builds need the raw PNG packed (export include filter "data/heightmap/*.png")
-		push_error("HeightField: %s not found - using the PROCEDURAL coastline (wrong land/sea)" % HEIGHTMAP_PATH)
+		push_error("HeightField: %s not found - using the PROCEDURAL coastline (wrong land/sea)" % _height_path())
 		return false
-	var mf := FileAccess.open(META_PATH, FileAccess.READ)
+	var mf := FileAccess.open(_meta_path(), FileAccess.READ)
 	if mf == null:
 		return false
 	var meta: Variant = JSON.parse_string(mf.get_as_text())
@@ -103,14 +114,14 @@ func _try_load_file() -> bool:
 		return false
 	var img: Image = null
 	GroundKit.lp("    hf: start")
-	var dims: Vector2i = _load_png16(HEIGHTMAP_PATH)
+	var dims: Vector2i = _load_png16(_height_path())
 	GroundKit.lp("    hf: heightmap png16")
 	if dims.x > 0:
 		_w = dims.x
 		_h = dims.y
 	else:
 		img = Image.new()
-		if img.load(HEIGHTMAP_PATH) != OK:
+		if img.load(_height_path()) != OK:
 			push_warning("HeightField: failed to load heightmap, using procedural terrain")
 			return false
 		_image = img
@@ -134,16 +145,16 @@ func _try_load_file() -> bool:
 ## Loads the exact OSM-derived land/sea mask. Returns silently (use_coast_mask stays false) when
 ## absent so exported builds without the mask keep the old B-spline coastline.
 func _load_coast_mask() -> void:
-	if not FileAccess.file_exists(COAST_PATH) or not FileAccess.file_exists(COAST_META_PATH):
-		push_warning("HeightField: %s not found - coastline falls back to the DEM B-spline path" % COAST_PATH)
+	if not FileAccess.file_exists(_coast_path()) or not FileAccess.file_exists(_coast_meta_path()):
+		push_warning("HeightField: %s not found - coastline falls back to the DEM B-spline path" % _coast_path())
 		return
-	var mf := FileAccess.open(COAST_META_PATH, FileAccess.READ)
+	var mf := FileAccess.open(_coast_meta_path(), FileAccess.READ)
 	if mf == null:
 		return
 	var meta: Variant = JSON.parse_string(mf.get_as_text())
 	if not (meta is Dictionary):
 		return
-	var cf := FileAccess.open(COAST_PATH, FileAccess.READ)
+	var cf := FileAccess.open(_coast_path(), FileAccess.READ)
 	if cf == null:
 		push_warning("HeightField: failed to load coast mask, using the DEM B-spline path")
 		return

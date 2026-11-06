@@ -13,10 +13,14 @@ const TIMES := ["dawn", "noon", "dusk", "night"]
 ## the harvest and the war's stage on the ground all follow it.
 const SEASONS := [["Spring", [3, 4, 5]], ["Summer", [6, 7, 8]], ["Autumn", [9, 10, 11]], ["Winter", [12, 1, 2]]]
 const PAGES := ["SORTIE", "START POINT", "CONDITIONS", "BRIEFING"]
+const MAP_IDS := ["channel", "desert"]               # the Map picker, in the order it lists them (MapDef ids)
+const DESERT_MODES := ["free", "dogfight"]           # modes that run on the desert map for now
+const DESERT_NOTE := "The desert map has free flight and dogfights for now. Historical, campaign and career flying stays on the Channel."
 
 const DONATE_URL := "https://paypal.me/colemanuk82"
 
 var _side: OptionButton
+var _map_pick: OptionButton        # Channel or desert map (saved in settings)
 var _aircraft: OptionButton
 var _mode: OptionButton
 var _mission: OptionButton
@@ -132,6 +136,11 @@ void fragment() {
 	var sortie := _new_page()
 	_page_host.add_child(sortie)
 	sortie.add_child(UIKit.label("SORTIE", 14, UIKit.TEXT_DIM, true))
+	# Map first: the Channel (the original) or the desert theatre. The choice is saved and applied at once.
+	_map_pick = UIKit.option_field(sortie, "Map", ["Channel", "Desert (Libya / Egypt / Tunisia / Malta)"], 420, 18)
+	_map_pick.select(maxi(MAP_IDS.find(GameState.current_map), 0))
+	_map_pick.tooltip_text = "Channel: the original map (Kent to Normandy). Desert: Tunisia, Libya, Egypt and Malta; free flight and dogfights for now."
+	_map_pick.item_selected.connect(_on_map_picked)
 	# Side first, aircraft directly beneath it; the rest packed into compact rows.
 	_side = UIKit.option_field(sortie, "Side", ["Allies", "Axis"], 150, 18)
 	_aircraft = UIKit.option_field(sortie, "Aircraft", [], 320, 18)
@@ -266,7 +275,7 @@ void fragment() {
 	take_row.add_theme_constant_override("separation", 12)
 	# a rolling checkpoint survives a crash / hard close: offer to continue the last sortie
 	var rsave: Dictionary = SortieResume.read()
-	if SortieResume.fresh(rsave):
+	if SortieResume.fresh(rsave) and str((rsave.get("config", {}) as Dictionary).get("map", "channel")) == GameState.current_map:
 		var rcfg: Dictionary = (rsave.get("config", {}) as Dictionary).duplicate(true)
 		rcfg["resume"] = true
 		var rid: String = String(rcfg.get("mode", "free"))
@@ -811,6 +820,8 @@ func _refresh_mode() -> void:
 
 
 func _open_campaign() -> void:
+	if _channel_only_blocked():
+		return
 	var cm := CampaignMenu.new()
 	# the newsreel plays only for the campaign: when it is opened, and between its missions (returning from a sortie)
 	var news: Array = NewsreelCard.headline_from_log()      # the player's own news leads the reel when there is any
@@ -829,6 +840,8 @@ func _newsreel(headline: String, sub: String) -> void:
 
 
 func _open_career() -> void:
+	if _channel_only_blocked():
+		return
 	var pm := CareerMenu.new()
 	pm.closed.connect(func() -> void: pm.queue_free())
 	pm.start_requested.connect(func(cfg: Dictionary) -> void:
@@ -882,6 +895,8 @@ func _open_legal() -> void:
 
 
 func _open_dam_busters() -> void:
+	if _channel_only_blocked():
+		return
 	# Its own layer above the start menu, like the logbook: added straight into the menu it was drawn behind it
 	# and the button seemed to do nothing.
 	var layer := CanvasLayer.new()
@@ -959,8 +974,35 @@ func _show_welcome(root: Control) -> void:
 		dim.queue_free(), 20))
 
 
+## Map picker. Desert has free flight and dogfights for now: historical, campaign and career content is placed on the
+## Channel, so those are held back while the desert map is selected. Switching only happens here, before a sortie starts.
+func _on_map_picked(i: int) -> void:
+	GameState.current_map = MAP_IDS[clampi(i, 0, MAP_IDS.size() - 1)]
+	GameState.save_settings()
+	_plan = {}
+	_plan_label.text = ""
+	_refresh_spawns()
+	if GameState.current_map != "channel" and not _mode_ids.is_empty() and not (_mode_ids[_mode.selected] in DESERT_MODES):
+		_mode.select(maxi(_mode_ids.find("free"), 0))
+		_apply_mission_defaults()
+	_refresh_mode()
+	if GameState.current_map != "channel":
+		_desc.text = DESERT_NOTE
+
+
+## Campaign, career and Dam Busters are Channel content: held back while the desert map is selected.
+func _channel_only_blocked() -> bool:
+	if GameState.current_map == "channel":
+		return false
+	_desc.text = DESERT_NOTE
+	return true
+
+
 func _on_start() -> void:
 	var mode_id: String = _mode_ids[_mode.selected] if not _mode_ids.is_empty() else "free"
+	if GameState.current_map != "channel" and not (mode_id in DESERT_MODES):
+		_desc.text = DESERT_NOTE
+		return
 	if mode_id == "dambuster":
 		var di: int = clampi(maxi(_mission.selected, 0), 0, DamCampaign.count() - 1)
 		if DamCampaign.is_open(di):
@@ -1019,6 +1061,7 @@ func _on_start() -> void:
 		cfg["passing_flights"] = _passing.button_pressed
 		if not _plan.is_empty():
 			cfg.merge(_plan, true)      # map planner overrides spawn, scenario (mode), targets, enemy strength
+	cfg["map"] = GameState.current_map
 	cfg["cockpit_style"] = "interior" if _cockpit != null and _cockpit.selected == 1 and _cockpit_row.visible else "standard"
 	_remember_sortie(cfg)
 	start_requested.emit(cfg)
@@ -1031,6 +1074,7 @@ func _remember_sortie(cfg: Dictionary) -> void:
 	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style", "season"]:
 		if cfg.has(k):
 			rec[k] = cfg[k]
+	rec["map"] = GameState.current_map
 	GameState.last_sortie = rec
 	GameState.save_settings()
 
@@ -1039,7 +1083,7 @@ func _remember_sortie(cfg: Dictionary) -> void:
 ## normal defaults/random so every sortie still gets a different sky.
 func _restore_last_sortie() -> void:
 	var c: Dictionary = GameState.last_sortie
-	if c.is_empty():
+	if c.is_empty() or str(c.get("map", "channel")) != GameState.current_map:
 		return
 	var side: String = str(c.get("side", "Allies"))
 	_side.select(0 if side == "Allies" else 1)

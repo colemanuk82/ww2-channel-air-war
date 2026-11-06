@@ -13,7 +13,10 @@ tools/fetch_imagery.py / tools/make_urban_mask.py. Re-run the engine import afte
 In-engine fallback: RiverMesh.build_tile() drapes the ribbon on GroundKit.ground_y, so the game is fully playable
 without running this tool - the rivers just sit on the un-carved ground instead of in a valley.
 
-Usage: python tools/carve_rivers.py [--feather 1.6]
+Usage: python tools/carve_rivers.py [--feather 1.6] [--out-dir data/heightmap] [--osm-dir data/osm]
+
+--out-dir is a region's heightmap folder (region_height.png + region_meta.json); each folder gets its own
+pristine backup in tools/cache. Channel defaults are used when no option is given.
 """
 import argparse
 import json
@@ -25,11 +28,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEM_PATH = os.path.join(ROOT, "data", "heightmap", "region_height.png")
-META_PATH = os.path.join(ROOT, "data", "heightmap", "region_meta.json")
-RIVERS_PATH = os.path.join(ROOT, "data", "osm", "rivers.json")
+DEFAULT_HM_DIR = os.path.join(ROOT, "data", "heightmap")
+DEFAULT_OSM_DIR = os.path.join(ROOT, "data", "osm")
 CACHE_DIR = os.path.join(ROOT, "tools", "cache")
-BACKUP_PATH = os.path.join(CACHE_DIR, "region_height_pre_rivers.png")
 
 # Depth (metres) the channel is lowered, by waterway class: river deepest, stream shallowest.
 DEPTHS = {"river": 8.0, "canal": 6.0, "stream": 3.0}
@@ -37,8 +38,8 @@ DEFAULT_DEPTH = 6.0
 MIN_ELEV_M = 0.9          # never dig land below this (the ribbon skips raw_y < 0.4 world = 0.2 m)
 
 
-def load_meta():
-    with open(META_PATH, encoding="utf-8") as f:
+def load_meta(path):
+    with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -90,24 +91,39 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--feather", type=float, default=1.6,
                     help="bank feather radius in DEM pixels (~300 m each at 3072x1500)")
+    ap.add_argument("--out-dir", default=DEFAULT_HM_DIR,
+                    help="heightmap folder: its region_height.png and region_meta.json are read and rewritten "
+                         "(default: data/heightmap)")
+    ap.add_argument("--osm-dir", default=DEFAULT_OSM_DIR, help="folder holding rivers.json (default: data/osm)")
     a = ap.parse_args()
 
-    meta = load_meta()
+    dem_path = os.path.join(a.out_dir, "region_height.png")
+    meta_path = os.path.join(a.out_dir, "region_meta.json")
+    rivers_path = os.path.join(a.osm_dir, "rivers.json")
+    hm_abs = os.path.normpath(os.path.abspath(a.out_dir))
+    default = hm_abs == os.path.normpath(DEFAULT_HM_DIR)
+    if default:
+        backup_path = os.path.join(CACHE_DIR, "region_height_pre_rivers.png")
+    else:  # one pristine backup per region folder
+        key = "".join(c if c.isalnum() else "_" for c in hm_abs)
+        backup_path = os.path.join(CACHE_DIR, f"region_height_pre_rivers_{key}.png")
+
+    meta = load_meta(meta_path)
     w, h = int(meta["width"]), int(meta["height"])
     max_elev = float(meta.get("max_elev_m", 1000.0))
 
     # 1) back up the pre-carve PNG FIRST (never clobber the pristine original on a re-run)
     os.makedirs(CACHE_DIR, exist_ok=True)
-    if not os.path.exists(BACKUP_PATH):
-        shutil.copy2(DEM_PATH, BACKUP_PATH)
-        print(f"[backup] pre-carve DEM -> {os.path.relpath(BACKUP_PATH, ROOT)}")
+    if not os.path.exists(backup_path):
+        shutil.copy2(dem_path, backup_path)
+        print(f"[backup] pre-carve DEM -> {backup_path}")
     else:
-        print(f"[backup] kept existing {os.path.relpath(BACKUP_PATH, ROOT)} (pre-carve original)")
+        print(f"[backup] kept existing {backup_path} (pre-carve original)")
 
-    with open(RIVERS_PATH, encoding="utf-8") as f:
+    with open(rivers_path, encoding="utf-8") as f:
         lines = json.load(f).get("lines", [])
 
-    arr = np.asarray(Image.open(DEM_PATH))
+    arr = np.asarray(Image.open(dem_path))
     if arr.dtype != np.uint16:
         print(f"ERROR: expected a 16-bit DEM, got {arr.dtype}", file=sys.stderr)
         return 1
@@ -146,11 +162,11 @@ def main():
 
     # 4) write the DEM back and note the carve in the meta "header"
     out = np.clip(carved / max_elev * 65535.0, 0, 65535).round().astype(np.uint16)
-    Image.fromarray(out).save(DEM_PATH)
+    Image.fromarray(out).save(dem_path)
     meta["rivers_carved"] = True
-    meta["rivers_carved_note"] = ("DEM lowered along data/osm/rivers.json by tools/carve_rivers.py "
-                                  f"({len(lines)} lines / {km:.0f} km); pre-carve backup in tools/cache/region_height_pre_rivers.png")
-    with open(META_PATH, "w", encoding="utf-8") as f:
+    meta["rivers_carved_note"] = ("DEM lowered along " + rivers_path + " by tools/carve_rivers.py "
+                                  f"({len(lines)} lines / {km:.0f} km); pre-carve backup in {backup_path}")
+    with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=1)
 
     # 5) sanity: same land/sea mask, Dover still land, Channel still sea (validate_data invariants)
@@ -159,11 +175,12 @@ def main():
         xi, yi = int(x), int(y)
         return elev[yi, xi], carved[yi, xi]
 
-    for name, lat, lon in (("Thames @ Greenwich", 51.49, 0.15), ("Seine @ Rouen", 49.44, 1.10),
-                           ("Dover cliffs", 51.13, 1.35), ("mid-Channel", 50.5, 0.5)):
-        before, after = sample(lat, lon)
-        print(f"[check] {name:20s} {before:7.1f} m -> {after:7.1f} m")
-    print(f"[out] wrote {os.path.relpath(DEM_PATH, ROOT)} ({os.path.getsize(DEM_PATH) / 1024:.0f} KB)")
+    if default:  # the landmark points below are Channel-only
+        for name, lat, lon in (("Thames @ Greenwich", 51.49, 0.15), ("Seine @ Rouen", 49.44, 1.10),
+                               ("Dover cliffs", 51.13, 1.35), ("mid-Channel", 50.5, 0.5)):
+            before, after = sample(lat, lon)
+            print(f"[check] {name:20s} {before:7.1f} m -> {after:7.1f} m")
+    print(f"[out] wrote {dem_path} ({os.path.getsize(dem_path) / 1024:.0f} KB)")
     return 0
 
 

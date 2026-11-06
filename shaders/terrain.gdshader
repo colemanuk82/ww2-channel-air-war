@@ -60,6 +60,12 @@ uniform sampler2D wood_tex : filter_linear, repeat_disable;   // ESA WorldCover 
 uniform bool use_wood = false;
 uniform sampler2D sea_tex : filter_linear, repeat_disable;   // distance to the sea (R = metres / SEA_MAX_M), same rect as map_tex
 uniform bool use_sea = false;
+// Desert map (no imagery mosaic): the shader paints sand, limestone, rock and scrub itself (desert_ground below).
+uniform bool desert_look = false;
+uniform float desert_origin_lat = 33.75;
+uniform float desert_origin_lon = 19.25;
+uniform float desert_upl_lat = 111000.0;   // metres per degree latitude / longitude (HORIZ_COMPRESSION 1)
+uniform float desert_upl_lon = 90000.0;
 const float SEA_MAX_M = 3000.0;
 uniform vec3 tarmac_col : source_color = vec3(0.26, 0.26, 0.25);
 uniform vec3 paving_col : source_color = vec3(0.37, 0.34, 0.31);
@@ -118,6 +124,64 @@ vec3 arable_stage(vec3 soil, vec3 fallow, vec3 young, vec3 ripe, vec3 stub, floa
 	if (s < 0.70) { return mix(young, ripe * 0.88, smoothstep(0.52, 0.70, s)); }
 	if (s < 0.86) { return mix(ripe * 0.88, ripe, smoothstep(0.70, 0.86, s)); }
 	return mix(ripe, stub, smoothstep(0.86, 1.0, s));
+}
+
+// Desert ground colour (linear albedo, lit by the sun): ochre sand on the coast, reddish-brown inland, brown-grey
+// gravel (hamada) on the broad plateaus, dune streaks in the low sand seas, pale salt pans in the flats, grey rock on
+// the slopes and dark wadi beds along the low flow paths. Several noise scales so the ground reads at 600 m and 3000 m.
+// Green-olive only in the north (Tunisia, Jebel Akhdar, Malta). No hedges, fields or grass blades on this map.
+vec3 desert_ground(float h, float slope, vec2 xz, float sea_m) {
+	float lat = desert_origin_lat - xz.y / desert_upl_lat;
+	vec3 ochre = vec3(0.36, 0.26, 0.15);      // sand and ochre
+	vec3 pale = vec3(0.42, 0.34, 0.24);       // coastal sand and the limestone plateau
+	vec3 reddish = vec3(0.30, 0.17, 0.10);    // inland reddish-brown ground
+	vec3 gravel = vec3(0.19, 0.15, 0.11);     // brown-grey gravel (hamada)
+	vec3 rock = vec3(0.16, 0.14, 0.12);       // grey rock on slopes
+	vec3 salt = vec3(0.40, 0.38, 0.33);       // salt pans in the flats
+	vec3 wadi = vec3(0.09, 0.07, 0.05);       // dark wadi beds
+	vec3 olive = vec3(0.26, 0.27, 0.15);      // dry green-olive in the north
+	float n_reg = t_vnoise2(xz * 0.0009 + 7.0);
+	float n_mid = t_vnoise2(xz * 0.004 + 11.0);
+	float n_fine = t_vnoise2(xz * 0.03 + 23.0);
+	float n_grain = t_vnoise2(xz * 0.4 + 3.0);
+	float coast_k = 1.0 - smoothstep(3000.0, 15000.0, sea_m);
+	float inland = 1.0 - coast_k;
+	vec3 base = mix(ochre, pale, coast_k * 0.6);
+	float red_k = smoothstep(0.42, 0.66, t_vnoise2(xz * 0.0011 + 23.0)) * inland;
+	base = mix(base, reddish, red_k * 0.7);
+	float ham = smoothstep(0.50, 0.70, n_reg) * (1.0 - 0.6 * coast_k);
+	base = mix(base, gravel * (0.9 + 0.2 * n_mid), ham * 0.85);
+	// dune streaks: long ridges running NW-SE, in the low sand seas and where the sand is deep
+	vec2 dd = vec2(0.82, 0.57);
+	vec2 dp = vec2(-0.57, 0.82);
+	float streak = t_vnoise2(vec2(dot(xz, dp) * 0.02, dot(xz, dd) * 0.0018) + 5.0);
+	float erg = (1.0 - smoothstep(40.0, 130.0, h)) * inland * (1.0 - smoothstep(0.05, 0.20, slope));
+	base = mix(base, ochre * (0.82 + 0.36 * streak), erg * 0.7);
+	base *= 1.0 + (streak - 0.5) * 0.55 * smoothstep(0.35, 0.6, n_mid) * (1.0 - smoothstep(0.05, 0.22, slope));
+	// salt pans: pale, flat, low basins
+	float pan = smoothstep(0.66, 0.78, t_vnoise2(xz * 0.0019 + 61.0)) * (1.0 - smoothstep(25.0, 70.0, h)) * (1.0 - smoothstep(0.03, 0.12, slope)) * inland;
+	base = mix(base, salt * (0.92 + 0.10 * n_fine), pan * 0.8);
+	// limestone plateau: paler
+	base = mix(base, pale * (0.95 + 0.08 * n_fine), smoothstep(150.0, 420.0, h) * 0.4);
+	// wadis: dark beds along the low ridged flow paths, with lighter gravel banks either side
+	vec2 ww = xz + 900.0 * (vec2(t_vnoise2(xz * 0.0005 + 2.0), t_vnoise2(xz * 0.0005 + 31.0)) - 0.5);
+	float wn = abs(t_vnoise2(ww * 0.0009 + 200.0) - 0.5);
+	float wbed = 1.0 - smoothstep(0.004, 0.009, wn);
+	float wbank = (1.0 - smoothstep(0.006, 0.012, wn)) * (1.0 - wbed);
+	float wok = (1.0 - smoothstep(60.0, 260.0, h)) * (1.0 - smoothstep(0.04, 0.14, slope));
+	base = mix(base, wadi * (0.85 + 0.3 * n_fine), wbed * wok * 0.85);
+	base = mix(base, gravel * 1.1, wbank * wok * 0.4);
+	// rock on steep ground
+	float rk = smoothstep(0.12, 0.34, slope);
+	base = mix(base, rock * (0.85 + 0.3 * n_fine), rk * 0.85);
+	// fine grain and gravel speckle
+	base *= 0.86 + 0.24 * n_grain;
+	base *= 0.92 + 0.14 * n_fine;
+	float gn = smoothstep(34.9, 35.6, lat) * (1.0 - smoothstep(200.0, 500.0, h))
+	         + smoothstep(32.2, 32.8, lat) * smoothstep(350.0, 650.0, h) * (1.0 - smoothstep(0.2, 0.5, slope));
+	base = mix(base, olive * (0.80 + 0.30 * n_reg), clamp(gn, 0.0, 1.0) * 0.55);
+	// darker, warmer sand (the ground read washed out at 400-3000 m)
+	return base * vec3(1.02, 0.94, 0.82) * 0.90;
 }
 
 void fragment() {
@@ -273,6 +337,17 @@ void fragment() {
 	vec3 col = ground;
 	// Lowland weight (managed farmland fades out on slopes and with height).
 	float lowland = (1.0 - smoothstep(180.0, 520.0, h)) * (1.0 - smoothstep(0.10, 0.34, slope));
+	// Desert map: the desert ground replaces the farmland palette here, so every overlay below (airfield grass,
+	// bomb damage, floods, camps, beaches) paints on top of it, as it does on the Channel map.
+	if (desert_look) {
+		float sea_m = 5000.0;
+		if (use_sea) {
+			vec2 suv0 = clamp(vec2((w_pos.x - map_rect.x) * map_rect.z, (w_pos.z - map_rect.y) * map_rect.w), vec2(0.0), vec2(1.0));
+			sea_m = texture(sea_tex, suv0).r * SEA_MAX_M;
+		}
+		col = desert_ground(h, slope, xz, sea_m);
+		lowland = 0.0;
+	}
 
 	// Town ground: tarmac streets and paving instead of fields (soft, noise-broken edge).
 	float urban = 0.0;
@@ -336,7 +411,7 @@ void fragment() {
 		vec2 rw = xz + 260.0 * (vec2(t_vnoise2(xz * 0.0006 + 2.0), t_vnoise2(xz * 0.0006 + 31.0)) - 0.5);
 		float rn = abs(t_vnoise2(rw * 0.00075 + 200.0) - 0.5);
 		float sn = abs(t_vnoise2(rw * 0.0021 + 400.0) - 0.5);
-		float low_ok = (1.0 - smoothstep(25.0, 90.0, h)) * smoothstep(1.6, 3.0, h) * (1.0 - smoothstep(0.12, 0.30, slope)) * (1.0 - urban);
+		float low_ok = (1.0 - smoothstep(25.0, 90.0, h)) * smoothstep(1.6, 3.0, h) * (1.0 - smoothstep(0.12, 0.30, slope)) * (1.0 - urban) * (desert_look ? 0.0 : 1.0);
 		float rw1 = 0.0035 + 0.0035 * t_vnoise2(xz * 0.0004);
 		float chan = (1.0 - smoothstep(rw1, rw1 * 1.3, rn));
 		float stream = (1.0 - smoothstep(0.0011, 0.0016, sn)) * 0.9;
@@ -350,7 +425,7 @@ void fragment() {
 	// Lakes and ponds: blobby still water in hollows of the lowlands, ringed with reed and mud
 	{
 		float ln = t_vnoise2(xz * 0.00085 + 300.0) * 0.62 + t_vnoise2(xz * 0.0032 + 9.0) * 0.38;
-		float lok = (1.0 - smoothstep(35.0, 110.0, h)) * smoothstep(2.0, 4.0, h) * (1.0 - smoothstep(0.08, 0.2, slope)) * (1.0 - urban);
+		float lok = (1.0 - smoothstep(35.0, 110.0, h)) * smoothstep(2.0, 4.0, h) * (1.0 - smoothstep(0.08, 0.2, slope)) * (1.0 - urban) * (desert_look ? 0.0 : 1.0);
 		// rarer and darker than before: at dusk the old pale teal ponds glowed like snow patches across the land
 		float lake = smoothstep(0.800, 0.815, ln);
 		float shore = smoothstep(0.780, 0.800, ln) * (1.0 - lake);
@@ -512,6 +587,10 @@ void fragment() {
 		// v2.2: darker, the shade of the deeper pasture fields around it (pasture pulled toward hedgerow green),
 		// so from the air the field blends into the patchwork instead of showing as a pale disc
 		vec3 airfield_grass = mix(mix(grass_a, hedge_col, 0.38), soil_col, 0.08) * 0.9;
+		if (desert_look) {
+			// desert fields: packed sand and gravel, no grass
+			airfield_grass = mix(vec3(0.50, 0.42, 0.30), vec3(0.40, 0.32, 0.22), t_vnoise2(xz * 0.05 + 31.0));
+		}
 		float mow = 0.97 + 0.04 * step(0.5, fract(dot(xz, vec2(0.7, 0.7)) / 44.0));
 		// a slow mottle keeps the interior from reading as one flat decal: the field LATTICE is suppressed,
 		// but real aerodrome grass still varies patch to patch
@@ -520,7 +599,7 @@ void fragment() {
 		col = mix(col, airfield_grass, afw * 0.85);
 	}
 	// steep faces -> rock (roughness-broken so faces are not a flat fill), then chalk / limestone by zone
-	float rockness = smoothstep(rock_slope - 0.14, rock_slope + 0.14, slope);
+	float rockness = desert_look ? 0.0 : smoothstep(rock_slope - 0.14, rock_slope + 0.14, slope);   // desert: its own rock above
 	vec3 rockc = rock_col * (0.85 + 0.30 * t_vnoise2(xz * 0.5 + 4.0));
 	rockc = mix(rockc, soil_col, smoothstep(0.30, 0.50, t_vnoise2(xz * 0.09 + 21.0)) * 0.35);   // gullies / earth
 	col = mix(col, rockc, rockness);
@@ -542,7 +621,7 @@ void fragment() {
 		float top = 4.5 + bn * 6.0;
 		float flat_k = 1.0 - smoothstep(0.30, 0.55, slope);
 		float sea_k = 1.0;
-		if (use_sea && use_map) {
+		if (use_sea && (use_map || desert_look)) {
 			vec2 suv = vec2((w_pos.x - map_rect.x) * map_rect.z, (w_pos.z - map_rect.y) * map_rect.w);
 			sea_k = 1.0 - smoothstep(900.0, 1700.0, texture(sea_tex, clamp(suv, vec2(0.0), vec2(1.0))).r * SEA_MAX_M);
 		}

@@ -1,0 +1,13 @@
+{
+ "width": 7000,
+ "height": 2770,
+ "lat_min": 30.0,
+ "lat_max": 37.5,
+ "lon_min": 8.0,
+ "lon_max": 30.5,
+ "source": "FALLBACK: Natural Earth 10m land (ne_10m_land.geojson, public domain); OSM land-polygons not reachable from this machine",
+ "fallback": "Natural Earth 10m land",
+ "land_fraction": 0.3689,
+ "metres_per_px_x": 297.5,
+ "metres_per_px_y": 299.3
+}

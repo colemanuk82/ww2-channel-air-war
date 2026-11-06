@@ -10,7 +10,8 @@ Sources (--source):
   osm   OpenStreetMap carto                     tile.openstreetmap.org  {z}/{x}/{y}.png
 
 Run from the project root:
-  python tools/fetch_imagery.py [--source eox] [--zoom 10] [--width 4096] [--height 2048]
+  python tools/fetch_imagery.py [--source eox] [--zoom 10] [--width 4096] [--height 2048] [--out-dir DIR]
+  Bounds come from <out-dir>/region_meta.json; --lat-min/--lat-max/--lon-min/--lon-max only confirm them.
 Tiles cache in tools/cache/imagery/<source>/<z>/. Delete that folder to refetch.
 """
 import argparse
@@ -25,8 +26,7 @@ import requests
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-META = os.path.join(ROOT, "data", "heightmap", "region_meta.json")
-OUT = os.path.join(ROOT, "data", "heightmap", "region_color.png")
+OUT_DIR = os.path.join(ROOT, "data", "heightmap")
 CACHE = os.path.join(ROOT, "tools", "cache", "imagery")
 
 SOURCES = {
@@ -75,11 +75,23 @@ def main():
     ap.add_argument("--zoom", type=int, default=10)
     ap.add_argument("--width", type=int, default=6144)
     ap.add_argument("--height", type=int, default=3000)
+    ap.add_argument("--lat-min", type=float, default=None, help="must match region_meta.json (default: read from it)")
+    ap.add_argument("--lat-max", type=float, default=None, help="must match region_meta.json")
+    ap.add_argument("--lon-min", type=float, default=None, help="must match region_meta.json")
+    ap.add_argument("--lon-max", type=float, default=None, help="must match region_meta.json")
+    ap.add_argument("--out-dir", default=OUT_DIR,
+                    help="folder holding region_meta.json; region_color.png is written here (default: data/heightmap)")
     args = ap.parse_args()
 
+    META = os.path.join(args.out_dir, "region_meta.json")
+    OUT = os.path.join(args.out_dir, "region_color.png")
     meta = json.load(open(META, "r"))
     lon_min, lon_max = float(meta["lon_min"]), float(meta["lon_max"])
     lat_min, lat_max = float(meta["lat_min"]), float(meta["lat_max"])
+    for flag, val, want in (("--lat-min", args.lat_min, lat_min), ("--lat-max", args.lat_max, lat_max),
+                            ("--lon-min", args.lon_min, lon_min), ("--lon-max", args.lon_max, lon_max)):
+        if val is not None and abs(val - want) > 1e-9:
+            ap.error(f"{flag} {val} differs from {META} ({want}); run make_heightmap.py with these bounds first")
     z = args.zoom
 
     x0f, y0f = deg2tile_px(lat_max, lon_min, z)   # north-west corner

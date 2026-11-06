@@ -363,6 +363,8 @@ func _tick_raid(delta: float, night: float) -> void:
 		alert_t = maxf(alert_t, 900.0)   # raid under way: the lights stay up for a while after it
 		var own: bool = GroundKit.side_at(city["pos"]) == _side
 		var who: String = "Sector Control" if _side == "Allies" else "Jafü 2"
+		if GameState.current_map == "desert":
+			who = "Western Desert Control" if _side == "Allies" else "Afrika Control"
 		var msg: String = ("Heavy raid developing on %s. Fires are being reported." if own else "Our bombers are over %s now.") % str(city["name"])
 		var tc2: int = Time.get_ticks_usec()
 		Radio.say(who, msg, Radio.Kind.CONTROL, 0.5)

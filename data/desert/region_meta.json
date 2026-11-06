@@ -1,0 +1,13 @@
+{
+ "width": 7000,
+ "height": 2770,
+ "lat_min": 30.0,
+ "lat_max": 37.5,
+ "lon_min": 8.0,
+ "lon_max": 30.5,
+ "max_elev_m": 3000,
+ "sea_level_value": 0,
+ "source": "AWS terrain tiles (terrarium) z9",
+ "rivers_carved": true,
+ "rivers_carved_note": "DEM lowered along data/desert/osm/rivers.json by tools/carve_rivers.py (3 lines / 67 km); pre-carve backup in /sessions/rcw-01h7jmasemlg65d41xgbwnep/mnt/ww2_dlss/tools/cache/region_height_pre_rivers__sessions_rcw_01h7jmasemlg65d41xgbwnep_mnt_ww2_dlss_data_desert.png"
+}

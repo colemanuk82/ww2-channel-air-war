@@ -12,6 +12,9 @@ Formats (all lat/lon, [lat, lon] pairs):
   towns                    : {"towns":[{"name":..,"lat":..,"lon":..,"kind":"city|town|village"}]}
 
 Usage: python tools/fetch_osm.py [--layers roads,rails,...] [--force-fallback]
+       [--lat-min 48.9] [--lat-max 53.0] [--lon-min -4.6] [--lon-max 9.0]
+       [--out-dir data/osm] [--heightmap-dir data/heightmap]
+Bounds default to the Channel box. A non-default box caches its tiles under tools/cache/osm/region_*.
 """
 import argparse
 import json
@@ -24,6 +27,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "data", "osm")
 CACHE = os.path.join(ROOT, "tools", "cache", "osm")
+HEIGHTMAP = os.path.join(ROOT, "data", "heightmap")  # region_height.png for the offline land test
 LAT_MIN, LAT_MAX, LON_MIN, LON_MAX = 48.9, 53.0, -4.6, 9.0
 ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
@@ -282,7 +286,7 @@ def land_sampler():
     try:
         import numpy as np
         from PIL import Image
-        a = np.asarray(Image.open(os.path.join(ROOT, "data", "heightmap", "region_height.png")))
+        a = np.asarray(Image.open(os.path.join(HEIGHTMAP, "region_height.png")))
         H, W = a.shape
 
         def f(lat, lon):
@@ -516,12 +520,27 @@ FALLBACKS = {
 
 
 def main():
+    global TILE_SIZE, LAT_MIN, LAT_MAX, LON_MIN, LON_MAX, OUT, CACHE, HEIGHTMAP
     ap = argparse.ArgumentParser()
     ap.add_argument("--layers", default=",".join(LAYERS))
     ap.add_argument("--force-fallback", action="store_true")
     ap.add_argument("--tile", default="", help="tile size 'dlat,dlon' in degrees (smaller = fewer timeouts)")
+    ap.add_argument("--lat-min", type=float, default=LAT_MIN)
+    ap.add_argument("--lat-max", type=float, default=LAT_MAX)
+    ap.add_argument("--lon-min", type=float, default=LON_MIN)
+    ap.add_argument("--lon-max", type=float, default=LON_MAX)
+    ap.add_argument("--out-dir", default=OUT, help="folder for the layer JSONs and _source.json (default: data/osm)")
+    ap.add_argument("--heightmap-dir", default=HEIGHTMAP,
+                    help="folder with region_height.png for the offline land test (default: data/heightmap)")
     a = ap.parse_args()
-    global TILE_SIZE
+    if not (a.lat_min < a.lat_max and a.lon_min < a.lon_max):
+        ap.error("--lat-min must be < --lat-max and --lon-min must be < --lon-max")
+    LAT_MIN, LAT_MAX, LON_MIN, LON_MAX = a.lat_min, a.lat_max, a.lon_min, a.lon_max
+    OUT, HEIGHTMAP = a.out_dir, a.heightmap_dir
+    if (LAT_MIN, LAT_MAX, LON_MIN, LON_MAX) != (48.9, 53.0, -4.6, 9.0):
+        # keep another region's Overpass tiles apart from the Channel cache
+        key = "_".join(f"{v:g}".replace("-", "m").replace(".", "p") for v in (LAT_MIN, LAT_MAX, LON_MIN, LON_MAX))
+        CACHE = os.path.join(CACHE, "region_" + key)
     if a.tile:
         TILE_SIZE = tuple(float(v) for v in a.tile.split(","))
     os.makedirs(OUT, exist_ok=True)

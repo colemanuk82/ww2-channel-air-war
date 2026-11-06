@@ -204,7 +204,7 @@ static func _src_len(src: String) -> int:
 
 
 static func _load_roads() -> void:
-	var path: String = "res://data/osm/roads.json"
+	var path: String = (WorldCoords.osm_dir() + "/roads.json")
 	if not FileAccess.file_exists(path):
 		return
 	var cache: String = _roads_cache_path(path)

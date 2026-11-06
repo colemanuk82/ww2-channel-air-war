@@ -305,6 +305,11 @@ func _apply() -> void:
 	var moon_e: float = s[5] * clampf(moon_dir.y * 4.0, 0.0, 1.0) * (0.6 + 0.4 * light_mul) * lerpf(0.3, 1.0, moon_illum)
 	var amb: Color = _grey(s[6], desat * 0.5, 0.0)
 	var amb_e: float = s[7] * (0.55 + 0.45 * light_mul)
+	# desert only: less white on the sand. Dry ground reads sun-bleached, so the sun and fill light are trimmed a
+	# little (the sky colours are not touched).
+	if GameState.current_map == "desert":
+		sun_e *= 0.9
+		amb_e *= 0.75
 
 	sun.light_color = lc
 	sun.light_energy = sun_e
@@ -318,6 +323,8 @@ func _apply() -> void:
 	environment.ambient_light_color = amb
 	environment.ambient_light_energy = amb_e
 	environment.fog_light_color = fogc.lerp(Color(0.52, 0.47, 0.40), 0.3 * haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0))
+	if GameState.current_map == "desert":
+		environment.fog_light_color *= Color(0.90, 0.80, 0.66)      # desert haze: darker, warmer, dustier air (was white-ish)
 	# light shafts: thicken the (high-preset) volumetric haze while the sun is low, so a dawn or dusk sun throws
 	# visible rays through the gaps between clouds; thin again by day so the noon air stays clear
 	if environment.volumetric_fog_enabled:
@@ -327,6 +334,8 @@ func _apply() -> void:
 		environment.volumetric_fog_anisotropy = 0.65 + 0.2 * low
 		sun.light_volumetric_fog_energy = 1.0 + 0.8 * low
 	environment.fog_density = float(s[9]) * fog_mul * (1.0 + 0.4 * haze_k) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
+	if GameState.current_map == "desert":
+		environment.fog_density *= 0.35     # dry desert air: the distance stays ochre and sharp rather than washed white
 	sun_color = lc
 	horizon_color = hor
 	light_level = clampf(sun_e / 1.3 + moon_e * 0.3 + 0.12, 0.0, 1.0)

@@ -81,7 +81,9 @@ func _ready() -> void:
 	add_to_group("bombsight")
 	process_mode = Node.PROCESS_MODE_INHERIT
 	_bounds = WorldCoords.world_bounds()
-	_color_tex = ResourceLoader.load("res://data/heightmap/region_color.png") as Texture2D
+	_color_tex = null
+	if ResourceLoader.exists(WorldCoords.heightmap_dir() + "/region_color.png"):
+		_color_tex = ResourceLoader.load((WorldCoords.heightmap_dir() + "/region_color.png")) as Texture2D
 	_load_spots()
 	if OS.get_cmdline_user_args().has("--chart-open"):      # debug/vis: open the chart a few seconds in
 		get_tree().create_timer(5.0).timeout.connect(func() -> void: if is_instance_valid(aircraft): set_map(true))
@@ -116,7 +118,7 @@ func _on_rig_view_changed(_cockpit: bool) -> void:
 
 
 func _load_spots() -> void:
-	var f := FileAccess.open("res://data/locations.json", FileAccess.READ)
+	var f := FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
 	if f == null:
 		return
 	var d: Variant = JSON.parse_string(f.get_as_text())

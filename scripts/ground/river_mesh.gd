@@ -137,7 +137,7 @@ static func total_km() -> float:
 
 
 static func _load_rivers() -> void:
-	var path: String = "res://data/osm/rivers.json"
+	var path: String = (WorldCoords.osm_dir() + "/rivers.json")
 	if not FileAccess.file_exists(path):
 		return
 	var f: FileAccess = FileAccess.open(path, FileAccess.READ)
