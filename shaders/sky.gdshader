@@ -17,6 +17,7 @@ uniform vec3 ground_color : source_color = vec3(0.35, 0.4, 0.45);    // below th
 uniform vec3 sun_dir = vec3(0.0, 1.0, 0.0);                          // towards the sun
 uniform vec3 moon_dir = vec3(0.0, -1.0, 0.0);                        // towards the moon
 uniform vec3 sun_color : source_color = vec3(1.0, 0.95, 0.8);        // sun-light colour (warm when low)
+uniform float desert_sky : hint_range(0.0, 1.0) = 0.0;               // desert: cut the broad warm halo (it turned noon blue lilac)
 uniform float star_amount = 0.0;                                     // 0 day .. 1 night
 
 // 0 = full day, 1 = full night. Registered in project.godot [shader_globals] and set by TimeOfDay.
@@ -48,12 +49,13 @@ void sky() {
 	if (h >= 0.0) {
 		// Rayleigh-like vertical profile: compress toward the horizon so the hazy band is thin and
 		// open into the zenith. Continuous everywhere - no steps.
-		float zenith_t = smoothstep(0.0, 1.0, pow(upward, 0.55));
+		float zexp = mix(0.55, 0.18, desert_sky);     // desert: blue arrives fast; the low sky is not peach+lilac
+		float zenith_t = smoothstep(0.0, 1.0, pow(upward, zexp));
 		col = mix(horizon_color, top_color, zenith_t);
 		// aerial perspective: a slightly whiter wash in the lowest ~10 degrees, so the horizon is
 		// hazier than the zenith and agrees with the fog colour the world uses.
 		float haze = exp(-h * 9.0);
-		col = mix(col, mix(horizon_color, vec3(1.0), 0.18), haze * 0.35 * (0.4 + 0.6 * day));
+		col = mix(col, mix(horizon_color, vec3(1.0), 0.18), haze * 0.35 * (0.4 + 0.6 * day) * mix(1.0, 0.55, desert_sky));
 	} else {
 		// below the horizon the sky fades from the horizon colour into the ground colour
 		col = mix(horizon_color, ground_color, smoothstep(0.0, -0.30, h));
@@ -72,10 +74,10 @@ void sky() {
 	// --- forward-scatter glow: wide and soft at low sun, tight near noon ---
 	float sd = dot(d, sdir);
 	float core = pow(max(sd, 0.0), mix(5.0, 40.0, smoothstep(-0.05, 0.45, elev)));  // low exponent = wide bloom
-	float halo = pow(max(sd, 0.0), 1.7) * 0.10;                                     // very broad, subtle
+	float halo = pow(max(sd, 0.0), 1.7) * 0.10 * mix(1.0, 0.4, desert_sky);          // very broad, subtle
 	col += warm_col * (core + halo) * day * (0.35 + 0.9 * warm);
 	// a horizon-hugging bloom toward the sun, strongest when the sun sits low
-	col += warm_col * exp(-max(h, 0.0) * 6.0) * sunw * day * (0.25 + 0.9 * warm);
+	col += warm_col * exp(-max(h, 0.0) * 6.0) * sunw * day * (0.25 + 0.9 * warm) * mix(1.0, 0.55, desert_sky);
 
 	// --- sun disc: small, smooth-edged, driven above 1.0 so the bloom pass catches it ---
 	float disc = smoothstep(0.99955, 0.99985, sd) * smoothstep(-0.03, 0.03, elev);

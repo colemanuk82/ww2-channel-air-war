@@ -312,9 +312,11 @@ func _apply() -> void:
 		# desert sky: a paler, slightly greyer blue overhead running down to a milky sand-brown dust band at the
 		# horizon (strongest by day; dawn / dusk keep their own warm band, night is untouched)
 		var dw: float = smoothstep(0.05, 0.4, sun_dir.y)
-		top = top.lerp(Color(0.20, 0.44, 0.80), 0.35 * dw)
-		hor = hor.lerp(Color(0.80, 0.64, 0.46), 0.85 * dw + 0.2 * (1.0 - dw) * dayk)
-		fogc = fogc.lerp(Color(0.78, 0.63, 0.45), 0.7 * dw)
+		top = top.lerp(Color(0.22, 0.52, 0.95), 1.0 * dw)
+		hor = hor.lerp(Color(0.78, 0.68, 0.52), 0.95 * dw + 0.15 * (1.0 - dw) * dayk)
+		fogc = fogc.lerp(Color(0.80, 0.67, 0.48), 0.9 * dw)
+		# keep the ambient neutral-warm by day: the Channel base ambient carried a violet cast into noon
+		amb = amb.lerp(Color(0.56, 0.55, 0.53), 0.55 * dw)
 		# low sun: warmer, more golden-orange light so the long shadows read
 		var lowk: float = smoothstep(0.45, 0.05, sun_dir.y) * dayk
 		lc = lc.lerp(Color(1.0, 0.64, 0.34), 0.3 * lowk)
@@ -389,6 +391,7 @@ func _apply() -> void:
 	RenderingServer.global_shader_parameter_set("sky_horizon", Vector3(hor.r, hor.g, hor.b))
 	sky_material.set_shader_parameter("top_color", top)
 	sky_material.set_shader_parameter("horizon_color", hor)
+	sky_material.set_shader_parameter("desert_sky", 1.0 if GameState.current_map == "desert" else 0.0)
 	sky_material.set_shader_parameter("ground_color", hor.darkened(0.35))
 	sky_material.set_shader_parameter("sun_dir", sun_dir)
 	sky_material.set_shader_parameter("moon_dir", moon_dir)

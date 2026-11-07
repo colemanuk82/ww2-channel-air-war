@@ -59,6 +59,70 @@ static func bell_tent() -> ArrayMesh:
 	return _put("dk_bell_tent", parts)
 
 
+## Stacked crates, drums and tarpaulins at an airfield: an ammo / supply dump (about 10 x 5 m).
+static func supply_dump() -> ArrayMesh:
+	if _cached("dk_supply_dump") != null:
+		return _cached("dk_supply_dump")
+	var crate := Color(0.56, 0.49, 0.34)
+	var tarp := Color(0.42, 0.38, 0.27)
+	var drums := Color(0.44, 0.39, 0.29)
+	var parts: Array = []
+	for r in 3:
+		for i in 4:
+			var x: float = (float(i) - 1.5) * 2.5
+			var z: float = (float(r) - 1.0) * 1.7
+			parts.append(GroundKit.box_part(Vector3(2.2, 1.05, 1.3), Vector3(x, 0.55, z), crate, Vector3.ZERO, false))
+			if (i + r) % 3 == 0:
+				parts.append(GroundKit.box_part(Vector3(2.0, 0.95, 1.2), Vector3(x, 1.55, z), crate.darkened(0.08), Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(7.2, 0.14, 4.1), Vector3(-1.0, 2.15, 0.2), tarp, Vector3(0.04, 0.0, 0.0), false))
+	for i in 5:
+		parts.append(GroundKit.cyl_part(0.34, 0.34, 0.92, Vector3(6.2, 0.46, -1.6 + float(i) * 0.95), drums, Vector3.ZERO, 8, false))
+	return _put("dk_supply_dump", parts)
+
+
+## Tall radio / wireless mast with crossarms, guy wires and a small equipment hut at its foot.
+static func radio_mast() -> ArrayMesh:
+	if _cached("dk_radio_mast") != null:
+		return _cached("dk_radio_mast")
+	var steel := Color(0.44, 0.44, 0.41)
+	var parts: Array = []
+	parts.append(GroundKit.cyl_part(0.34, 0.62, 28.0, Vector3(0, 14.0, 0), steel, Vector3.ZERO, 6, false))
+	parts.append(GroundKit.box_part(Vector3(5.4, 0.20, 0.20), Vector3(0, 26.0, 0), steel, Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(4.0, 0.18, 0.18), Vector3(0, 19.0, 0), steel, Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(2.8, 0.18, 0.18), Vector3(0, 12.0, 0), steel, Vector3.ZERO, false))
+	# three guy wires
+	for i in 3:
+		var ya: float = TAU * float(i) / 3.0
+		var off := Vector3(cos(ya) * 5.0, 10.0, sin(ya) * 5.0)
+		parts.append(GroundKit.box_part(Vector3(0.07, 21.0, 0.07), off, Color(0.30, 0.30, 0.28), Vector3(sin(ya) * 0.48, 0.0, -cos(ya) * 0.48), false))
+	parts.append(GroundKit.box_part(Vector3(3.0, 2.2, 2.6), Vector3(3.4, 1.1, 0), Color(0.62, 0.57, 0.46), Vector3.ZERO, false))
+	return _put("dk_radio_mast", parts)
+
+
+## Large white ridge tent (the standard army camp tent): vertical walls and a pitched canvas roof,
+## long axis along X, about 7.4 x 4.6 m and 3 m high.
+static func ridge_tent() -> ArrayMesh:
+	if _cached("dk_ridge_tent") != null:
+		return _cached("dk_ridge_tent")
+	var white := Color(0.91, 0.90, 0.85)
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(7.4, 1.3, 4.6), Vector3(0, 0.65, 0), white, Vector3.ZERO, false))
+	parts.append([GroundKit.prism_mesh(5.0, 7.6, 1.9), Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0, 1.3, 0)), GroundKit.mat(Color(0.94, 0.93, 0.88), false)])
+	parts.append(GroundKit.box_part(Vector3(0.12, 1.7, 1.6), Vector3(3.72, 0.85, 0), Color(0.55, 0.52, 0.45), Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(7.6, 0.08, 0.08), Vector3(0, 2.95, 0), Color(0.72, 0.70, 0.64), Vector3.ZERO, false))
+	return _put("dk_ridge_tent", parts)
+
+
+## Packed-earth parade square / well apron at a camp centre: a flat disc, a foot above the sand.
+static func parade_ring() -> ArrayMesh:
+	if _cached("dk_parade_ring") != null:
+		return _cached("dk_parade_ring")
+	var parts: Array = []
+	parts.append(GroundKit.cyl_part(13.0, 13.0, 0.06, Vector3(0, 0.03, 0), Color(0.52, 0.44, 0.32), Vector3.ZERO, 20, false))
+	parts.append(GroundKit.cyl_part(9.5, 9.5, 0.07, Vector3(0, 0.04, 0), Color(0.58, 0.49, 0.36), Vector3.ZERO, 20, false))
+	return _put("dk_parade_ring", parts)
+
+
 ## Large marquee (mess, stores, ops tent): long axis along X, about 14 x 7 m.
 static func marquee() -> ArrayMesh:
 	if _cached("dk_marquee") != null:

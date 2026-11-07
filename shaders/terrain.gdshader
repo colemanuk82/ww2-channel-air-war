@@ -198,6 +198,10 @@ vec3 desert_ground(float h, float slope, vec2 xz, float sea_m, float cdist, floa
 	vec3 base = mix(ochre, pale, coast_k * 0.6);
 	float red_k = smoothstep(0.42, 0.66, t_vnoise2(xz * 0.0011 + 23.0)) * inland;
 	base = mix(base, reddish, red_k * 0.7);
+	// Regional iron-rich sand: broad patches of deep terracotta / rust like the wartime photos,
+	// strongest inland and away from the coast.
+	float red_field = smoothstep(0.43, 0.66, t_vnoise2(xz * 0.00055 + 87.0));
+	base = mix(base, vec3(0.47, 0.22, 0.10), red_field * (0.30 + 0.35 * inland));
 	float ham = smoothstep(0.50, 0.70, n_reg) * (1.0 - 0.6 * coast_k);
 	base = mix(base, gravel * (0.9 + 0.2 * n_mid), ham * 0.85);
 	// dune streaks: long ridges running NW-SE, in the low sand seas and where the sand is deep
@@ -289,7 +293,9 @@ vec3 desert_ground(float h, float slope, vec2 xz, float sea_m, float cdist, floa
 		// beach / sand sea: ripples handled below; a touch of wet darkness near the surf is added by the shore code
 		lcol *= 1.0 + w_sand * (n_fine - 0.5) * 0.10;
 		lcw = lcs.a;
-		base = mix(base, lcol, lcw * 0.92);
+		// A little less weight on the 300 m class colour: the procedural ground shows through the
+		// cells, so class boundaries read as tonal change rather than stacked squares.
+		base = mix(base, lcol, lcw * 0.78);
 	}
 	// salt pans: pale, flat, low basins
 	float pan = smoothstep(0.66, 0.78, t_vnoise2(xz * 0.0019 + 61.0)) * (1.0 - smoothstep(25.0, 70.0, h)) * (1.0 - smoothstep(0.03, 0.12, slope)) * inland;
@@ -659,6 +665,7 @@ void fragment() {
 	// camp (bare sandy compound). Only the nearest 24 zones are uploaded (terrain_chunk_manager.gd).
 	float afw = 0.0;
 	float afcore = 0.0;  // 1 at the cleared centre of an aerodrome, 0 at its feathered edge
+	vec2 afdir = vec2(0.0, 1.0);   // aerodrome long axis (for wheel ruts)
 	float cw = 0.0;
 	float pw = 0.0;
 	float dmg = 0.0;     // kind 4: bomb damage (rubble, scorch, craters); strength in the fractional part
@@ -695,7 +702,7 @@ void fragment() {
 		}
 		float w = 1.0 - smoothstep(0.0, b.z, sd);
 		float kind = floor(b.w + 0.001);
-		if (kind < 1.5) { afw = max(afw, w); afcore = max(afcore, 1.0 - smoothstep(0.0, b.z * 0.55, sd)); }
+		if (kind < 1.5) { afw = max(afw, w); afcore = max(afcore, 1.0 - smoothstep(0.0, b.z * 0.55, sd)); afdir = a.zw; }
 		else if (kind < 2.5) { cw = max(cw, w); }
 		else if (kind < 3.5) { pw = max(pw, w); }
 		else if (kind < 4.5) { dmg = max(dmg, w * fract(b.w)); }
@@ -783,6 +790,11 @@ void fragment() {
 			core *= 1.0 - 0.16 * smoothstep(0.55, 0.85, t_vnoise2(xz * 0.035 + 7.0));   // oil / trample
 			core *= 1.0 - 0.10 * smoothstep(0.62, 0.85, t_vnoise2(xz * 0.3 + 3.0));
 			core *= 0.94 + 0.10 * t_vnoise2(xz * 0.004 + 23.0);                          // large patchiness
+			// Wheel ruts along the field's axis: pairs of darker worn lines where aircraft have run.
+			vec2 afperp = vec2(-afdir.y, afdir.x);
+			float off = dot(xz, afperp);
+			float rut = exp(-pow((abs(off) - 4.5) / 1.8, 2.0)) + exp(-pow((abs(off) + 4.5) / 1.8, 2.0));
+			core = mix(core, core * vec3(0.80, 0.78, 0.74), clamp(rut, 0.0, 1.0) * afcore * 0.55);
 			airfield_grass = core;
 		}
 		float mow = 0.97 + 0.04 * step(0.5, fract(dot(xz, vec2(0.7, 0.7)) / 44.0));
@@ -828,6 +840,13 @@ void fragment() {
 		dry *= 1.0 - 0.07 * ripple * (1.0 - smoothstep(1.0, 3.0, h));
 		float wet_k = 1.0 - smoothstep(0.45, 1.5, h + (t_vnoise2(xz * 0.18) - 0.5) * 0.7);
 		vec3 sc = mix(dry, sand_col * 0.60, wet_k);
+		// Desert: a wet-sand band on the LAND side of the waterline, where the swell has just run back.
+		if (desert_look && use_sea) {
+			vec2 suv2 = clamp(vec2((w_pos.x - map_rect.x) * map_rect.z, (w_pos.z - map_rect.y) * map_rect.w), vec2(0.0), vec2(1.0));
+			float sd_m = texture(sea_tex, suv2).r * SEA_MAX_M;
+			float wetband = (1.0 - smoothstep(40.0, 280.0, sd_m)) * flat_k;
+			sc = mix(sc, sand_col * 0.56, wetband * 0.75);
+		}
 		float wrack_y = 1.7 + (bn - 0.5) * 0.9 + (t_vnoise2(xz * 0.7) - 0.5) * 0.35;
 		sc = mix(sc, vec3(0.20, 0.17, 0.12), (1.0 - smoothstep(0.0, 0.22, abs(h - wrack_y))) * 0.45 * step(0.5, t_vnoise2(xz * 0.35 + 2.0)));
 		// dune fringe: marram grass creeping onto the back of the beach

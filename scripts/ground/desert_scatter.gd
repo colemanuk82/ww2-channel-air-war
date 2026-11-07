@@ -460,7 +460,7 @@ static func mesh(kind: String) -> ArrayMesh:
 			# unit box scaled by the placement: flat-roofed whitewash / sand / ochre / grey-pink
 			var hb := BoxMesh.new()
 			hb.size = Vector3(1, 1, 1)
-			var hcols: Array = [Color(0.88, 0.85, 0.76), Color(0.74, 0.64, 0.47), Color(0.67, 0.55, 0.39), Color(0.72, 0.62, 0.53)]
+			var hcols: Array = [Color(0.91, 0.89, 0.83), Color(0.87, 0.83, 0.73), Color(0.80, 0.74, 0.63), Color(0.89, 0.82, 0.72)]
 			parts.append(_part(hb, Vector3.ZERO, hcols[int(kind.substr(7))], false))
 		"d_roofbox":
 			var rb := BoxMesh.new()

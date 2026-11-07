@@ -289,7 +289,7 @@ const DESERT_CLASS_COLORS := {
 	112: Color(0.45, 0.34, 0.23),     # hamada: pale ochre limestone gravel
 	113: Color(0.19, 0.145, 0.105),   # reg: dark gravel
 	114: Color(0.30, 0.24, 0.18),     # rock: grey-brown, strata in the shader
-	115: Color(0.47, 0.27, 0.13),     # erg: orange-red dune sand
+	115: Color(0.55, 0.27, 0.11),     # erg: orange-red dune sand
 	116: Color(0.66, 0.64, 0.58),     # salt pan: bright crust
 	117: Color(0.27, 0.20, 0.13),     # wadi bed
 	118: Color(0.58, 0.50, 0.35),     # limestone: honey stone (Malta)

@@ -1204,6 +1204,8 @@ static func city_balloon_count(id: String, size: int) -> int:
 
 ## P2: lay the barrage around a city: the planned balloons on their cables plus a ground winch site each.
 func _balloon_barrage(parent: Node3D, center: Vector3, id: String, size: int, radius: float, team: String) -> int:
+	if GameState.current_map == "desert":
+		return 0                                       # no city balloon barrages in North Africa (and their cables clutter the air)
 	if team != "Allies" and size < 4:
 		return 0                                       # the Luftwaffe flew only a thin local barrage in the Reich
 	var plan: Array = city_balloon_plan(center, id, size, radius)
@@ -2828,10 +2830,11 @@ func _defences(parent: Node3D, center: Vector3, team: String, n88: int, nbofors:
 		var sl: Searchlight = Searchlight.create(team)
 		_place(sl, p)
 		parent.add_child(sl)
-	for p in _land_ring(center, nballoons, spread * 0.7, spread * 1.6, rng):
-		var bb: BarrageBalloon = BarrageBalloon.create("Allies", rng.randf_range(240.0, 380.0))
-		bb.position = Vector3(p.x, _y(p) + bb.altitude, p.z)
-		parent.add_child(bb)
+	if GameState.current_map != "desert":
+		for p in _land_ring(center, nballoons, spread * 0.7, spread * 1.6, rng):
+			var bb: BarrageBalloon = BarrageBalloon.create("Allies", rng.randf_range(240.0, 380.0))
+			bb.position = Vector3(p.x, _y(p) + bb.altitude, p.z)
+			parent.add_child(bb)
 
 
 func _parked_mesh(team: String) -> ArrayMesh:
@@ -3446,14 +3449,24 @@ func _dress_desert_ground(container: Node3D, af: Airfield, axf: Transform3D, y: 
 	container.add_child(Scatter.multi(DesertKit.flag_marker(), flags, 6000.0))
 	# --- bell tents in rows and big marquees on the western edge
 	var tents: Array = []
-	for row in 3:
-		for i in 7:
+	for row in 4:
+		for i in 8:
 			tents.append(_lw(axf, Vector3(-215.0 - float(row) * 20.0 + rng.randf_range(-2.0, 2.0), 0.0, -150.0 + float(i) * 24.0 + rng.randf_range(-2.0, 2.0)), rng.randf() * TAU))
 	_props(container, "tent", DesertKit.bell_tent(), tents, team, 8)
 	var mq: Array = []
-	for i in 3:
+	for i in 4:
 		mq.append(_lw(axf, Vector3(-275.0, 0.0, -60.0 + float(i) * 55.0), 0.0))
 	_props(container, "tent", DesertKit.marquee(), mq, team, 3)
+	# --- ammunition / supply dumps: stacked crates, drums and tarpaulins along the western edge
+	var sup: Array = []
+	for i in 5:
+		sup.append(_lw(axf, Vector3(-150.0 + float(i % 3) * 15.0, 0.0, 35.0 + float(i / 3) * 20.0), rng.randf() * TAU))
+	_props(container, "ammo", DesertKit.supply_dump(), sup, team, 5)
+	# --- radio / wireless mast (two at a main base, one at a forward strip)
+	var masts: Array = [_lw(axf, Vector3(110.0, 0.0, -150.0), 0.0)]
+	if main:
+		masts.append(_lw(axf, Vector3(140.0, 0.0, -175.0), 0.0))
+	_props(container, "hut", DesertKit.radio_mast(), masts, team, 1)
 	# --- lorries, bowsers, camouflage nets
 	var lor: Array = []
 	for i in 6:

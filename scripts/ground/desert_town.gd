@@ -5,7 +5,10 @@ extends RefCounted
 ## wall stubs, and a mosque with a dome and a minaret here and there. No pitched roofs, no chimneys.
 ## Pure data like DesertScatter.tile_data (transform arrays, safe on a worker thread). Nothing here runs on the Channel map.
 
-const STEP: float = 28.0
+const STEP: float = 16.0
+const BLOCK: float = 58.0        # block length (long axis)
+const STREET: float = 13.0       # clear street between blocks
+const UNIT: float = 10.5         # one attached row-house unit
 const MOSQUE_CELL: float = 300.0
 const HOUSE_KINDS: Array = ["d_house0", "d_house1", "d_house2", "d_house3"]
 
@@ -86,8 +89,8 @@ static func add_settlements(b: Dictionary, origin: Vector2, cell: float, seed_v:
 			var mk: Vector2 = cp + Vector2(-52.0, 38.0).rotated(-yaw0)
 			if inside.call(mk) and DesertScatter._okc(mk, exclude, 1.5) and not RoadMesh.near_road(mk, 10.0):
 				DesertScatter._put(b, "d_market", mk, yaw0, Vector3(0.8, 0.8, 0.8), 0.05)
-		# houses
-		var nh: int = 0 if oasis else 3 + sz * 5
+		# houses (an oasis keeps a few, a hamlet a denser cluster)
+		var nh: int = (2 + sz * 2) if oasis else (5 + sz * 6)
 		for i in nh:
 			var a: float = rng.randf() * TAU
 			var rr: float = 22.0 + sqrt(rng.randf()) * rad
@@ -148,7 +151,9 @@ static func cities() -> Array:
 
 static func _mosque_pos(ci: int, cj: int) -> Vector2:
 	var r0: float = DesertScatter._h(ci * 7 + 3, cj * 13 + 5)
-	if r0 > 0.38:
+	# Only a small share of 300 m cells get a neighbourhood mosque; the town-centre great mosque is added
+	# separately, so towns no longer bristle with minarets.
+	if r0 > 0.08:
 		return Vector2(1.0e12, 1.0e12)
 	return Vector2((float(ci) + 0.2 + 0.6 * DesertScatter._h(ci + 91, cj + 17)) * MOSQUE_CELL, (float(cj) + 0.2 + 0.6 * DesertScatter._h(ci + 33, cj + 71)) * MOSQUE_CELL)
 
@@ -194,66 +199,68 @@ static func add_houses(b: Dictionary, origin: Vector2, cell: float, seed_v: int,
 		if mk.x >= origin.x and mk.x < origin.x + cell and mk.y >= origin.y and mk.y < origin.y + cell \
 				and DesertScatter._okc(mk, exclude, 3.0) and not RoadMesh.near_road(mk, 18.0):
 			DesertScatter._put(b, "d_market", mk, cd, Vector3.ONE, 0.05)
-	var n: int = int(ceil(cell / STEP))
-	for j in n:
-		for i in n:
-			var p := Vector2(origin.x + (float(i) + 0.5) * STEP + rng.randf_range(-4.5, 4.5), origin.y + (float(j) + 0.5) * STEP + rng.randf_range(-4.5, 4.5))
+	# Dense city blocks: a rectilinear grid (in each district's own orientation) of long rectangular
+	# blocks packed with contiguous row houses, with clear streets between them - the look of a real
+	# North African city from the air, not scattered plots.
+	var pitch: float = BLOCK + STREET
+	var nb: int = int(ceil(cell / pitch)) + 2
+	for bj in range(-1, nb):
+		for bi in range(-1, nb):
+			var bc := Vector2(origin.x + (float(bi) + 0.5) * pitch, origin.y + (float(bj) + 0.5) * pitch)
+			if bc.x < origin.x - 1.0 or bc.x > origin.x + cell + 1.0 or bc.y < origin.y - 1.0 or bc.y > origin.y + cell + 1.0:
+				continue
 			# ragged class edge: wobble the lookup like the shader's noise-warped blend does
-			var cls: int = LandCover.class_at(p.x + (DesertScatter._vn(p.x, p.y, 61.0) - 0.5) * 120.0, p.y + (DesertScatter._vn(p.y + 37.0, p.x, 61.0) - 0.5) * 120.0)
+			var cls: int = LandCover.class_at(bc.x + (DesertScatter._vn(bc.x, bc.y, 61.0) - 0.5) * 100.0, bc.y + (DesertScatter._vn(bc.y + 37.0, bc.x, 61.0) - 0.5) * 100.0)
 			if cls != 50:
 				continue
-			var frac: float = Scatter._built_frac(p, 34.0)
-			# Density falls away with how built-up the plot is, AND with a slow 600 m noise field, so a
-			# town forms dense districts with open ground, yards and hamlet clusters instead of an even
-			# sea of little boxes. (The old rule rose with `frac` but still kept the whole fringe.)
-			var dens: float = DesertScatter._vn(p.x + 311.0, p.y + 97.0, 620.0)
-			var keep: float = (0.10 + 0.90 * frac) * smoothstep(0.28, 0.60, dens)
+			var frac: float = Scatter._built_frac(bc, 46.0)
+			var dens: float = DesertScatter._vn(bc.x + 311.0, bc.y + 97.0, 620.0)
+			var keep: float = (0.22 + 0.78 * frac) * smoothstep(0.12, 0.48, dens)
 			if rng.randf() > keep:
 				continue
-			if rng.randf() < 0.12:
-				continue                                    # an empty plot, a yard
-			# lanes: in each district's own frame every 4th row and every 5th column of plots is left open (streets between blocks)
-			var dgx: int = floori(p.x / 260.0)
-			var dgz: int = floori(p.y / 260.0)
-			var da: float = floorf(DesertScatter._h(dgx + 11, dgz + 29) * 8.0) / 8.0 * PI * 0.5
-			var du: float = p.x * cos(da) - p.y * sin(da)
-			var dv: float = p.x * sin(da) + p.y * cos(da)
-			if posmod(floori(du / STEP), 5) == 0 or posmod(floori(dv / STEP), 4) == 0:
-				continue
-			var w: float = rng.randf_range(8.0, 13.5)
-			var l: float = rng.randf_range(7.5, 12.0)
-			var two: bool = rng.randf() < 0.12 + 0.35 * frac * frac
-			var h: float = rng.randf_range(6.2, 7.4) if two else rng.randf_range(3.2, 4.0)
-			var near_m: bool = false
-			for mp2 in mosques:
-				if (mp2 as Vector2).distance_squared_to(p) < 22.0 * 22.0:
-					near_m = true
-					break
-			if near_m:
-				continue
-			var dist_x: float = floorf(p.x / 260.0)
-			var dist_z: float = floorf(p.y / 260.0)
-			var yaw: float = floorf(DesertScatter._h(int(dist_x) + 11, int(dist_z) + 29) * 8.0) / 8.0 * PI * 0.5 + rng.randf_range(-0.05, 0.05)
-			if not DesertScatter._okc(p, exclude, 1.5) or RoadMesh.near_road(p, maxf(w, l) * 0.6):
-				continue
-			var y0: float = GroundKit.ground_y(p.x, p.y)
-			if absf(GroundKit.ground_y(p.x + 7.0, p.y) - y0) > 3.0 or absf(GroundKit.ground_y(p.x, p.y + 7.0) - y0) > 3.0:
-				continue                                    # not on a steep bank
-			var kind: String = HOUSE_KINDS[mini(int(DesertScatter._vn(p.x, p.y, 90.0) * 2.4 + rng.randf() * 1.6), 3)]
-			if not b.has(kind):
-				b[kind] = []
-			(b[kind] as Array).append(Scatter._xf(Vector3(p.x, y0 + h * 0.5 - 0.4, p.y), yaw, Vector3(w, h, l)))
-			# rooftop stair-house or water tank
-			if rng.randf() < 0.45:
-				var rs: float = rng.randf_range(2.2, 3.4)
-				var off := Vector2(rng.randf_range(-0.25, 0.25) * w, rng.randf_range(-0.25, 0.25) * l).rotated(-yaw)
-				if not b.has("d_roofbox"):
-					b["d_roofbox"] = []
-				(b["d_roofbox"] as Array).append(Scatter._xf(Vector3(p.x + off.x, y0 + h - 0.4 + rs * 0.5, p.y + off.y), yaw, Vector3(rs, rs * 0.85, rs)))
-			# courtyard wall stub along one side
-			if rng.randf() < 0.22:
-				var wl: float = w + rng.randf_range(2.0, 6.0)
-				var wd := Vector2(0.0, l * 0.5 + 2.2).rotated(-yaw)
-				if not b.has("d_wall"):
-					b["d_wall"] = []
-				(b["d_wall"] as Array).append(Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(wl, 1.7, 0.55)), Vector3(p.x + wd.x, y0 + 0.45, p.y + wd.y)))
+			if rng.randf() < 0.07:
+				continue                                    # square, park, empty lot
+			var dgx: int = floori(bc.x / 260.0)
+			var dgz: int = floori(bc.y / 260.0)
+			var yaw: float = floorf(DesertScatter._h(dgx + 11, dgz + 29) * 8.0) / 8.0 * PI * 0.5
+			var bl: float = BLOCK * rng.randf_range(0.78, 1.0)
+			var bw: float = BLOCK * rng.randf_range(0.55, 0.85)
+			var rows: int = 2 if bw > 28.0 else 1
+			var depth: float = bw / float(rows)
+			var units: int = maxi(2, int(bl / UNIT))
+			var ux: float = bl / float(units)
+			var c: float = cos(yaw)
+			var s: float = sin(yaw)
+			for r in rows:
+				for u in units:
+					var lx: float = (float(u) + 0.5) * ux - bl * 0.5
+					var lz: float = (float(r) + 0.5) * depth - bw * 0.5
+					var p := bc + Vector2(lx * c - lz * s, lx * s + lz * c)
+					if p.x < origin.x or p.x >= origin.x + cell or p.y < origin.y or p.y >= origin.y + cell:
+						continue
+					if not DesertScatter._okc(p, exclude, 1.5) or RoadMesh.near_road(p, 4.0):
+						continue
+					var y0: float = GroundKit.ground_y(p.x, p.y)
+					if absf(GroundKit.ground_y(p.x + 6.0, p.y) - y0) > 2.6 or absf(GroundKit.ground_y(p.x, p.y + 6.0) - y0) > 2.6:
+						continue
+					# contiguous row house: nearly the full slot, so the walls touch
+					var w: float = ux * 0.98
+					var l: float = depth * 0.94
+					var two: bool = rng.randf() < 0.18 + 0.45 * frac
+					var h: float = rng.randf_range(6.4, 9.6) if two else rng.randf_range(3.6, 5.2)
+					var kind: String = HOUSE_KINDS[rng.randi() % HOUSE_KINDS.size()]
+					if not b.has(kind):
+						b[kind] = []
+					(b[kind] as Array).append(Scatter._xf(Vector3(p.x, y0 + h * 0.5 - 0.4, p.y), yaw, Vector3(w, h, l)))
+					if rng.randf() < 0.5:
+						var rs: float = rng.randf_range(2.0, 3.2)
+						var off := Vector2(rng.randf_range(-0.3, 0.3) * w, rng.randf_range(-0.3, 0.3) * l).rotated(-yaw)
+						if not b.has("d_roofbox"):
+							b["d_roofbox"] = []
+						(b["d_roofbox"] as Array).append(Scatter._xf(Vector3(p.x + off.x, y0 + h - 0.4 + rs * 0.5, p.y + off.y), yaw, Vector3(rs, rs * 0.85, rs)))
+					if r < rows - 1 and rng.randf() < 0.18:
+						var wl: float = ux * 0.9
+						var wd := Vector2(0.0, depth * 0.5 + 1.4).rotated(-yaw)
+						if not b.has("d_wall"):
+							b["d_wall"] = []
+						(b["d_wall"] as Array).append(Transform3D(Basis(Vector3.UP, yaw) * Basis.from_scale(Vector3(wl, 1.7, 0.55)), Vector3(p.x + wd.x, y0 + 0.45, p.y + wd.y)))
