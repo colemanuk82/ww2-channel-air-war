@@ -14,6 +14,7 @@ extends Node3D
 ## Sites are streamed by distance (SITE_BUDGET builds per SITE_TICK); countryside tiles (farms/hedges/cattle/trees) by grid cell.
 
 const TILE: float = 1800.0
+const DesertKit = preload("res://scripts/ground/desert_airfield_kit.gd")
 const TILE_RADIUS: float = 12800.0
 const SITE_TICK: float = 0.15
 const SITE_BUDGET: int = 4
@@ -136,6 +137,7 @@ func _ready() -> void:
 	_register_pow_camps()
 	_register_mulberries()
 	_register_war_ground()
+	DesertWar.register(self)       # desert map only (gated inside): wire, boxes, wrecks, hulls, airfield damage
 	_register_buildup()
 	_register_kammhuber()
 	add_child(BargeTraffic.new())
@@ -2334,6 +2336,7 @@ func _push_era_zones() -> void:
 	if terrain != null and terrain.has_method("set_zone_group"):
 		terrain.call("set_zone_group", "damage", WarDamage.zones())
 		terrain.call("set_zone_group", "warground", WarGround.zones())
+		terrain.call("set_zone_group", "desertwar", DesertWar.zones())
 
 
 func free_all() -> void:
@@ -2419,7 +2422,7 @@ func _stream_tiles() -> void:
 			built += 1
 			finished += 1
 	_advance_finishing()
-	if boost and LandCover.ready():
+	if boost and LandCover.ready() and GameState.current_map != "desert":   # beach defences are Channel-only
 		# loading screen: compute the next tiles' beach defences on all cores at once
 		var pre: Array = []
 		for e0 in cand:
@@ -2964,8 +2967,9 @@ func _build_airfield(s: Dictionary) -> Node3D:
 		af = Airfield.create(str(d["name"]), pos, float(d["heading_deg"]), float(s["y"]))
 		af.style = Airfield.style_for(id)
 		if GameState.current_map == "desert":
-			# desert fields: a packed-steel strip with tented dispersals; the length comes from the data (1200 m default)
-			af.style = "forward"
+			# desert fields: main bases (Luqa, Benina, El Aouina ...) get a paved layout with hangars, every other field is a
+			# forward landing ground (scuffed earth, drum markers, tents); the length comes from the data (1200 m default)
+			af.style = "forward" if OS.get_cmdline_user_args().has("--desert-v1") else Airfield.desert_style_for(id)
 			af.runway_length = float(d["runway_len_m"]) if d.get("runway_len_m") != null else 1200.0
 		container.add_child(af)
 		af.build_layout()      # the layout must exist now: the field is dressed below, before it enters the tree
@@ -2989,8 +2993,12 @@ func _build_airfield(s: Dictionary) -> Node3D:
 		_dress_grass_station(container, af, axf, y, team, rng)
 	elif af.style == "grass":
 		_dress_grass_airfield(container, dress, af, axf, y, team, rng)
+	elif GameState.current_map == "desert" and af.style == "forward" and not OS.get_cmdline_user_args().has("--desert-v1"):
+		_dress_desert_ground(container, af, axf, y, team, rng, false)
 	elif af.style in ["cross", "parallel", "forward"]:
 		_dress_other_airfield(container, af, axf, y, team, rng)
+		if GameState.current_map == "desert" and not OS.get_cmdline_user_args().has("--desert-v1"):
+			_dress_desert_ground(container, af, axf, y, team, rng, true)
 	else:
 		# Layout (airfield local frame; -Z along the main runway, triangle corner at +X, technical site west of the track).
 		var xf: Array = []
@@ -3052,7 +3060,7 @@ func _build_airfield(s: Dictionary) -> Node3D:
 	# P8 airfield furniture (all layouts): blast pens/revetments, Nissen camp, T2/T1 hangars, watch office,
 	# fuel + bomb dumps, flare path with Chance lights, dummy aircraft - inside the footprint, clear of the runway.
 	await _slice(s)
-	if not grass_station:          # grass stations carry their own period dressing (pens / nets, hangar arc)
+	if not grass_station and not (GameState.current_map == "desert" and af.style == "forward" and not OS.get_cmdline_user_args().has("--desert-v1")):   # grass stations carry their own period dressing; desert landing grounds have theirs
 		AirfieldFurniture.dress(container, af, axf, y, team, rng)
 	await _slice(s)
 	# defences
@@ -3339,13 +3347,122 @@ func _dress_other_airfield(container: Node3D, af: Airfield, axf: Transform3D, y:
 	for i in 12:
 		var tg: Vector3 = axf * Vector3(rng.randf_range(hx + 40.0, hx + 160.0), 0, rng.randf_range(-260.0, 260.0))
 		trucks.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU), Vector3(tg.x, y + 0.2, tg.z)))
-	_props(container, "truck", _truck_mesh(team), trucks, team, 3)
+	_props(container, "truck", DesertKit.lorry() if GameState.current_map == "desert" else _truck_mesh(team), trucks, team, 3)
 	var banks: Array = []
 	for row in 3:
 		for i in 5:
 			var bp: Vector3 = axf * Vector3(260.0 + float(row) * 34.0, 0, 380.0 + float(i) * 36.0)
 			banks.append(Transform3D(Basis(Vector3.UP, af.rotation.y + PI * 0.5), Vector3(bp.x, y, bp.z)))
 	_props(container, "ammo", _bunker_bank_mesh(), banks, team, 5)
+
+
+func _lw(axf: Transform3D, lp: Vector3, yaw: float) -> Transform3D:
+	return axf * Transform3D(Basis(Vector3.UP, yaw), lp)
+
+
+## Desert airfield dressing, local frame -Z along the runway, west = -X. A forward landing ground (main == false):
+## drum and flag markers instead of paint, taxi scars, aircraft nose-in to sandbag bays, bell tents and marquees,
+## sand lorries and bowsers under camouflage nets, a sandbagged control hut and a drum fuel dump. A main base
+## (main == true, already dressed with hangars and tower by _dress_other_airfield) gets a fuel dump and, on Malta,
+## honey-limestone field walls. Everything is merged: a MultiMesh per prop type.
+func _dress_desert_ground(container: Node3D, af: Airfield, axf: Transform3D, y: float, team: String, rng: RandomNumberGenerator, main: bool) -> void:
+	var L: float = af.runway_length
+	var hw: float = af.runway_width * 0.45
+	var id: String = af.airfield_name.to_lower()
+	if main:
+		container.add_child(Scatter.multi(DesertKit.fuel_dump(), [_lw(axf, Vector3(-430.0, 0.0, 330.0), 0.0)], 6000.0))
+		if "luqa" in id or "hal far" in id or "ta kali" in id or "ta'" in id:
+			var walls: Array = []
+			for i in 46:
+				var wp := Vector3(rng.randf_range(-900.0, 900.0), 0.0, rng.randf_range(-L * 0.9, L * 0.9))
+				if absf(wp.x) < 140.0 or (absf(wp.x) < 480.0 and absf(wp.z) < L * 0.55):
+					continue
+				var ln: float = rng.randf_range(30.0, 80.0)
+				var horiz: bool = rng.randf() < 0.5
+				walls.append([wp, wp + (Vector3(ln, 0, 0) if horiz else Vector3(0, 0, ln))])
+			var wm: ArrayMesh = DesertKit.stone_walls(walls)
+			if wm != null:
+				var wi := MeshInstance3D.new()
+				wi.mesh = wm
+				wi.transform = axf
+				wi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				container.add_child(wi)
+		return
+	# --- aircraft nose-in to sandbag bays
+	var ac: Array = []
+	var bays: Array = []
+	for pad in af.dispersal_world_points():
+		var p: Vector3 = pad
+		var dir: Vector3 = af.position - p
+		dir.y = 0.0
+		if dir.length() < 1.0:
+			continue
+		dir = dir.normalized()
+		bays.append(Transform3D(Basis(Vector3.UP, atan2(dir.x, dir.z)), Vector3(p.x, y, p.z)))
+		if rng.randf() < 0.25:
+			continue
+		ac.append(Transform3D(Basis(Vector3.UP, atan2(-dir.x, -dir.z) + rng.randf_range(-0.12, 0.12)), Vector3(p.x, y + 0.4, p.z)))
+	ParkedAircraft.place(container, ac, team, af)
+	container.add_child(Scatter.multi(DesertKit.bay(), bays, 5000.0))
+	# --- strip markers: drums down both sides, flags at the ends and every fifth drum
+	var drums: Array = []
+	var flags: Array = []
+	var n: int = int(L / 48.0)
+	for i in n + 1:
+		var z: float = -L * 0.5 + float(i) * L / float(n)
+		for sx in [-1.0, 1.0]:
+			var xf: Transform3D = _lw(axf, Vector3(float(sx) * (hw + 5.0), 0.0, z), rng.randf() * TAU)
+			xf.basis = xf.basis.scaled(Vector3.ONE * 1.8)
+			drums.append(xf)
+		if i % 5 == 0 or i == 0 or i == n:
+			for sx2 in [-1.0, 1.0]:
+				var fx: Transform3D = _lw(axf, Vector3(float(sx2) * (hw + 10.0), 0.0, z), 0.0)
+				fx.basis = fx.basis.scaled(Vector3.ONE * 1.6)
+				flags.append(fx)
+	container.add_child(Scatter.multi(DesertKit.drum_marker(), drums, 4500.0))
+	container.add_child(Scatter.multi(DesertKit.flag_marker(), flags, 6000.0))
+	# --- bell tents in rows and big marquees on the western edge
+	var tents: Array = []
+	for row in 3:
+		for i in 7:
+			tents.append(_lw(axf, Vector3(-215.0 - float(row) * 20.0 + rng.randf_range(-2.0, 2.0), 0.0, -150.0 + float(i) * 24.0 + rng.randf_range(-2.0, 2.0)), rng.randf() * TAU))
+	_props(container, "tent", DesertKit.bell_tent(), tents, team, 8)
+	var mq: Array = []
+	for i in 3:
+		mq.append(_lw(axf, Vector3(-275.0, 0.0, -60.0 + float(i) * 55.0), 0.0))
+	_props(container, "tent", DesertKit.marquee(), mq, team, 3)
+	# --- lorries, bowsers, camouflage nets
+	var lor: Array = []
+	for i in 6:
+		lor.append(_lw(axf, Vector3(-185.0, 0.0, -230.0 + float(i) * 30.0), PI * 0.5 + rng.randf_range(-0.2, 0.2)))
+	lor.append(_lw(axf, Vector3(-195.0, 0.0, 190.0), 0.1))
+	lor.append(_lw(axf, Vector3(-195.0, 0.0, 215.0), -0.1))
+	_props(container, "truck", DesertKit.lorry(), lor, team, 4)
+	var bow: Array = [_lw(axf, Vector3(-165.0, 0.0, 150.0), 0.2), _lw(axf, Vector3(-165.0, 0.0, 175.0), -0.15)]
+	_props(container, "truck", DesertKit.bowser(), bow, team, 3)
+	_props(container, "truck", DesertKit.water_bowser(), [_lw(axf, Vector3(-165.0, 0.0, 125.0), 0.0)], team, 2)
+	container.add_child(Scatter.multi(DesertKit.camo_net(), [_lw(axf, Vector3(-195.0, 0.0, 190.0), 0.1), _lw(axf, Vector3(-195.0, 0.0, 215.0), -0.1)], 5000.0))
+	# --- control hut by the strip and the fuel dump
+	_props(container, "hut", DesertKit.control_hut(), [_lw(axf, Vector3(-46.0, 0.0, 80.0), PI * 0.5)], team, 1)
+	container.add_child(Scatter.multi(DesertKit.fuel_dump(), [_lw(axf, Vector3(-340.0, 0.0, 280.0), 0.0)], 6000.0))
+	# --- taxi and wheel scars: from the dispersals to the strip and to the tents, plus turn-arounds at both ends
+	var paths: Array = []
+	for i in 12:
+		var z0: float = -L * 0.4 + float(i) * L * 0.07
+		var wz: float = z0 + rng.randf_range(-15.0, 15.0)
+		paths.append(PackedVector3Array([Vector3(-30.0, 0, z0), Vector3(-55.0, 0, z0 + rng.randf_range(-12.0, 12.0)), Vector3(-90.0, 0, wz), Vector3(-130.0, 0, wz + rng.randf_range(-8.0, 8.0))]))
+	paths.append(PackedVector3Array([Vector3(-70.0, 0, -L * 0.45), Vector3(-72.0, 0, 0.0), Vector3(-70.0, 0, L * 0.45)]))
+	for e in [-1.0, 1.0]:
+		paths.append(PackedVector3Array([Vector3(-hw, 0, float(e) * (L * 0.5 - 20.0)), Vector3(-hw - 22.0, 0, float(e) * (L * 0.5 + 10.0)), Vector3(hw + 24.0, 0, float(e) * (L * 0.5 + 16.0)), Vector3(hw, 0, float(e) * (L * 0.5 - 20.0))]))
+	paths.append(PackedVector3Array([Vector3(-70.0, 0, 80.0), Vector3(-120.0, 0, 100.0), Vector3(-185.0, 0, 120.0), Vector3(-230.0, 0, 90.0)]))
+	paths.append(PackedVector3Array([Vector3(-70.0, 0, 180.0), Vector3(-130.0, 0, 200.0), Vector3(-195.0, 0, 200.0)]))
+	var sm: ArrayMesh = DesertKit.scars(paths)
+	if sm != null:
+		var si := MeshInstance3D.new()
+		si.mesh = sm
+		si.transform = axf
+		si.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		container.add_child(si)
 
 
 func _build_city(s: Dictionary) -> Node3D:

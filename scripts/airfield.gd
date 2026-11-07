@@ -35,6 +35,15 @@ const FORWARD_IDS := ["brussels_evere", "antwerp_deurne", "le_culot", "diest", "
 	"rotterdam_waalhaven", "bicester", "silverstone", "gaydon", "lympne", "cap_gris_nez"]
 
 
+## Desert main bases (hangars, tower, paved runways); every other desert field is a "forward" landing ground.
+const DESERT_MAIN := {"luqa": "parallel", "hal_far": "cross", "ta_kali": "cross", "benina": "cross", "el_aouina": "parallel",
+	"castel_benito": "parallel", "catania_fontanarossa": "parallel", "comiso": "cross"}
+
+
+static func desert_style_for(id: String) -> String:
+	return String(DESERT_MAIN.get(id, "forward"))
+
+
 ## Which layout an airfield gets: real fields use a layout that suits them, others a mix by id hash.
 static func style_for(id: String) -> String:
 	if id in RAF_GRASS_IDS:
@@ -133,11 +142,18 @@ func build_layout() -> void:
 	(pole.mesh as CylinderMesh).top_radius = 0.2
 	(pole.mesh as CylinderMesh).bottom_radius = 0.25
 	(pole.mesh as CylinderMesh).height = 9.0
-	pole.position = Vector3(-runway_width * 0.5 - 40.0, 4.5, -160.0)
+	var desert: bool = GameState.current_map == "desert"
+	if desert:
+		(pole.mesh as CylinderMesh).height = 17.0       # oversized so the field is findable from the air
+		(pole.mesh as CylinderMesh).top_radius = 0.35
+		(pole.mesh as CylinderMesh).bottom_radius = 0.45
+	pole.position = Vector3(-runway_width * 0.5 - 40.0, 8.5 if desert else 4.5, -160.0)
 	add_child(pole)
 	# the sock itself swings with the real wind (scripts/ground/wind_sock.gd)
 	var sock := WindSock.new()
-	sock.position = Vector3(-runway_width * 0.5 - 40.0, 8.8, -160.0)
+	sock.position = Vector3(-runway_width * 0.5 - 40.0, 17.0 if desert else 8.8, -160.0)
+	if desert:
+		sock.scale = Vector3.ONE * 2.3
 	add_child(sock)
 	_build_night_lights()
 	_build_puddles()
@@ -669,10 +685,16 @@ func _build_forward(earth: Material) -> void:
 	var L: float = runway_length
 	var psp: Material = ToonUtil.make_toon(Color(0.45, 0.47, 0.42), {"outline": false, "rim": 0.0, "detail": 3})
 	var track: Material = ToonUtil.make_toon(Color(0.50, 0.46, 0.34), {"outline": false, "rim": 0.0, "detail": 4})
-	_box(Vector3(runway_width * 0.9, 0.5, L), Vector3.ZERO, psp)
-	_box(Vector3(1.4, 0.55, L * 0.92), Vector3(0, 0.0, 0), _white)
-	for end in [-1.0, 1.0]:
-		_box(Vector3(runway_width * 0.7, 0.55, 3.0), Vector3(0, 0.0, end * (L * 0.5 - 6.0)), _white)
+	if GameState.current_map == "desert":
+		# a landing ground: pale scuffed earth, no paint (drum and flag markers are added by the populator)
+		psp = ToonUtil.make_toon(Color(0.60, 0.53, 0.39), {"outline": false, "rim": 0.0, "detail": 4})
+		track = ToonUtil.make_toon(Color(0.55, 0.47, 0.34), {"outline": false, "rim": 0.0, "detail": 4})
+		_box(Vector3(runway_width * 0.9, 0.5, L), Vector3.ZERO, psp)
+	else:
+		_box(Vector3(runway_width * 0.9, 0.5, L), Vector3.ZERO, psp)
+		_box(Vector3(1.4, 0.55, L * 0.92), Vector3(0, 0.0, 0), _white)
+		for end in [-1.0, 1.0]:
+			_box(Vector3(runway_width * 0.7, 0.55, 3.0), Vector3(0, 0.0, end * (L * 0.5 - 6.0)), _white)
 	_link(Vector3(-70.0, 0, -L * 0.45), Vector3(-70.0, 0, L * 0.45), 10.0, track)
 	for i in 8:
 		var z: float = -L * 0.4 + float(i) * L * 0.115

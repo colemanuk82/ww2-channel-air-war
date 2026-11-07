@@ -34,6 +34,7 @@ var sun_color: Color = Color.WHITE
 var ssr_allowed: bool = false            # set by apply_post: screen-space reflections only on the high preset
 var light_level: float = 1.0             # 0..1 overall brightness (for clouds, cockpit dimming)
 var horizon_color: Color = Color.WHITE
+var dust: float = 0.0                    # 0..1 airborne sand (Khamsin sandstorm, desert only); set by WeatherManager
 
 
 func _ready() -> void:
@@ -304,12 +305,35 @@ func _apply() -> void:
 	var sun_e: float = s[4] * light_mul * clampf(sun_dir.y * 6.0, 0.0, 1.0)
 	var moon_e: float = s[5] * clampf(moon_dir.y * 4.0, 0.0, 1.0) * (0.6 + 0.4 * light_mul) * lerpf(0.3, 1.0, moon_illum)
 	var amb: Color = _grey(s[6], desat * 0.5, 0.0)
+	var is_desert: bool = GameState.current_map == "desert"
+	var dust_k: float = dust if is_desert else 0.0
+	var dayk: float = smoothstep(-0.05, 0.35, sun_dir.y)
+	if is_desert:
+		# desert sky: a paler, slightly greyer blue overhead running down to a milky sand-brown dust band at the
+		# horizon (strongest by day; dawn / dusk keep their own warm band, night is untouched)
+		var dw: float = smoothstep(0.05, 0.4, sun_dir.y)
+		top = top.lerp(Color(0.20, 0.44, 0.80), 0.35 * dw)
+		hor = hor.lerp(Color(0.80, 0.64, 0.46), 0.85 * dw + 0.2 * (1.0 - dw) * dayk)
+		fogc = fogc.lerp(Color(0.78, 0.63, 0.45), 0.7 * dw)
+		# low sun: warmer, more golden-orange light so the long shadows read
+		var lowk: float = smoothstep(0.45, 0.05, sun_dir.y) * dayk
+		lc = lc.lerp(Color(1.0, 0.64, 0.34), 0.3 * lowk)
+		sun_e *= 1.0 + 0.12 * lowk
+	if dust_k > 0.0:
+		# Khamsin: the whole sky and the air go ochre-brown, dimmer as the sun drops
+		var dcol: Color = Color(0.70, 0.50, 0.30) * (0.05 + 0.95 * dayk)
+		top = top.lerp(dcol * 0.8, dust_k * 0.85)
+		hor = hor.lerp(dcol, dust_k * 0.92)
+		fogc = fogc.lerp(dcol * 0.95, dust_k * 0.95)
+		lc = lc.lerp(Color(1.0, 0.55, 0.28), dust_k * 0.6)
+		amb = amb.lerp(Color(0.52, 0.38, 0.24) * (0.3 + 0.7 * dayk), dust_k * 0.6)
 	var amb_e: float = s[7] * (0.55 + 0.45 * light_mul)
 	# desert only: less white on the sand. Dry ground reads sun-bleached, so the sun and fill light are trimmed a
 	# little (the sky colours are not touched).
 	if GameState.current_map == "desert":
 		sun_e *= 0.9
 		amb_e *= 0.75
+		sun_e *= 1.0 - 0.35 * dust_k      # Khamsin: the sun is a dull orange disc behind the dust
 
 	sun.light_color = lc
 	sun.light_energy = sun_e
@@ -335,7 +359,17 @@ func _apply() -> void:
 		sun.light_volumetric_fog_energy = 1.0 + 0.8 * low
 	environment.fog_density = float(s[9]) * fog_mul * (1.0 + 0.4 * haze_k) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
 	if GameState.current_map == "desert":
-		environment.fog_density *= 0.35     # dry desert air: the distance stays ochre and sharp rather than washed white
+		# dry desert air: the distance stays ochre and sharp rather than washed white; a faint heat haze by day
+		environment.fog_density *= 0.35 + 0.12 * dayk
+		environment.fog_sky_affect = 0.30 + 0.5 * dust_k
+		# Khamsin: thick airborne sand, visibility down to about a kilometre, heavier near the ground
+		environment.fog_density += 0.0006 * dust_k
+		environment.fog_height = 260.0 if dust_k > 0.0 else 0.0
+		environment.fog_height_density = 0.0005 * dust_k
+	elif environment.fog_sky_affect != 0.18:
+		environment.fog_sky_affect = 0.18
+		environment.fog_height = 0.0
+		environment.fog_height_density = 0.0
 	sun_color = lc
 	horizon_color = hor
 	light_level = clampf(sun_e / 1.3 + moon_e * 0.3 + 0.12, 0.0, 1.0)
@@ -358,5 +392,5 @@ func _apply() -> void:
 	sky_material.set_shader_parameter("ground_color", hor.darkened(0.35))
 	sky_material.set_shader_parameter("sun_dir", sun_dir)
 	sky_material.set_shader_parameter("moon_dir", moon_dir)
-	sky_material.set_shader_parameter("sun_color", lc.lightened(0.3))
+	sky_material.set_shader_parameter("sun_color", lc.lightened(0.3).lerp(hor, dust_k * 0.75))
 	sky_material.set_shader_parameter("star_amount", float(s[8]) * (1.0 - sky_dim))

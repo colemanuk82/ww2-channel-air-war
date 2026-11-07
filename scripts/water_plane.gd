@@ -51,6 +51,13 @@ func _bind_land() -> void:
 		return
 	mat.set_shader_parameter("land_tex", TerrainChunkManager._sea_tex)
 	mat.set_shader_parameter("land_rect", Vector4(b.position.x, b.position.y, 1.0 / b.size.x, 1.0 / b.size.y))
+	# Mediterranean look: colour by distance from the shore (tools/make_harbours.py builds the texture)
+	var sd: Texture2D = load("res://data/desert/region_seadist.png") as Texture2D
+	if sd != null:
+		mat.set_shader_parameter("sd_tex", sd)
+		mat.set_shader_parameter("sd_rect", Vector4(b.position.x, b.position.y, 1.0 / b.size.x, 1.0 / b.size.y))
+		mat.set_shader_parameter("sea_calm", 0.55)
+		mat.set_shader_parameter("desert_sea", true)
 	mat.set_shader_parameter("cut_land", false)   # no cut-back: the 1536-cell sea texture made a stepped shoreline; the land hides the sea by depth
 	_land_cut = true
 

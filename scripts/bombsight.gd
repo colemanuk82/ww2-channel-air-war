@@ -82,8 +82,8 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_INHERIT
 	_bounds = WorldCoords.world_bounds()
 	_color_tex = null
-	if ResourceLoader.exists(WorldCoords.heightmap_dir() + "/region_color.png"):
-		_color_tex = ResourceLoader.load((WorldCoords.heightmap_dir() + "/region_color.png")) as Texture2D
+	if WorldCoords.map_picture_path() != "":
+		_color_tex = ResourceLoader.load(WorldCoords.map_picture_path()) as Texture2D
 	_load_spots()
 	if OS.get_cmdline_user_args().has("--chart-open"):      # debug/vis: open the chart a few seconds in
 		get_tree().create_timer(5.0).timeout.connect(func() -> void: if is_instance_valid(aircraft): set_map(true))

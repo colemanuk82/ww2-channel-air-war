@@ -841,9 +841,10 @@ func _build() -> void:
 
 ## Real imagery mosaic (data/heightmap/region_color.png) as the map base.
 func _load_color_map() -> void:
-	if not ResourceLoader.exists(WorldCoords.heightmap_dir() + "/region_color.png"):
+	var mp: String = WorldCoords.map_picture_path()
+	if mp == "":
 		return
-	var tex := ResourceLoader.load((WorldCoords.heightmap_dir() + "/region_color.png")) as Texture2D
+	var tex := ResourceLoader.load(mp) as Texture2D
 	if tex == null:
 		return
 	_color_img = tex.get_image()

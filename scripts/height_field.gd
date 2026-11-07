@@ -61,6 +61,16 @@ var _mask_lon_max: float = 0.0
 var _noise_h: FastNoiseLite
 var _noise_big: FastNoiseLite
 var _noise_coast: FastNoiseLite
+# Desert map: procedural sand dunes (seif ridges in the low sand seas), see _dune_offset.
+var _dunes_on: bool = false
+var _dune_region: FastNoiseLite
+var _dune_amp: FastNoiseLite
+var _dune_len: FastNoiseLite
+var _dune_crest: FastNoiseLite
+const DUNE_DIR := Vector2(0.82, 0.57)      # crest direction (NW-SE)
+const DUNE_ACROSS := Vector2(-0.57, 0.82)  # across the crests
+const DUNE_ROAD_CELL := 200.0
+var _dune_road_cells: Dictionary = {}      # Vector2i -> Array of PackedFloat32Array [ax, az, bx, bz]: road segments keeping the dunes off
 var _england: Poly
 var _france: Poly
 var _m_lon: float = 71110.0
@@ -97,6 +107,13 @@ func setup() -> void:
 	_noise_coast = FastNoiseLite.new()
 	_noise_coast.seed = 6
 	_noise_coast.frequency = 1.0
+	_dunes_on = GameState.current_map == "desert"
+	_dune_region = _make_dune_noise(71, 1.0 / 2600.0, 2)
+	_dune_amp = _make_dune_noise(72, 1.0 / 1500.0, 2)
+	_dune_len = _make_dune_noise(73, 1.0 / 2000.0, 2)
+	_dune_crest = _make_dune_noise(74, 1.0 / 900.0, 2)
+	if _dunes_on:
+		_load_dune_roads()
 	if force_procedural or not _try_load_file():
 		_build_procedural()
 
@@ -369,6 +386,15 @@ func add_flat_zone(x: float, z: float, flat_radius: float, blend: float, min_hei
 	return h
 
 
+static func _make_dune_noise(seed_v: int, freq: float, octaves: int) -> FastNoiseLite:
+	var n := FastNoiseLite.new()
+	n.seed = seed_v
+	n.frequency = freq
+	n.fractal_type = FastNoiseLite.FRACTAL_FBM
+	n.fractal_octaves = octaves
+	return n
+
+
 ## Terrain surface height in world Y (negative = sea floor).
 func height_y(wx: float, wz: float) -> float:
 	var ll: Vector2 = WorldCoords.world_to_latlon(Vector3(wx, 0.0, wz))
@@ -378,6 +404,8 @@ func height_y(wx: float, wz: float) -> float:
 		y = e * WorldCoords.VERTICAL_SCALE
 	else:
 		y = minf(e * WorldCoords.VERTICAL_SCALE, SEA_FLOOR_Y)
+	if _dunes_on and e > 0.0:
+		y += _dune_offset(wx, wz, e)
 	var cell := Vector2i(floori(wx / ZONE_CELL), floori(wz / ZONE_CELL))
 	if not _zone_grid.has(cell):
 		return y
@@ -388,6 +416,109 @@ func height_y(wx: float, wz: float) -> float:
 		if w > 0.0:
 			y = lerpf(y, _zone_h[i], w)
 	return y
+
+
+## Desert sand seas: seif (linear) dunes with crests running NW-SE, 3-14 m high and 150-600 m apart, on the low sandy
+## land inside sand patches. A pure function of the world position, so the terrain mesh, collision, scatter and the
+## aircraft ground height all see the same dunes. Returns the world-Y offset.
+func dune_region_mask(wx: float, wz: float, e: float) -> float:
+	var patch: float = smoothstep(0.42, 0.60, _dune_region.get_noise_2d(wx, wz) * 0.5 + 0.5)
+	var low: float = (1.0 - smoothstep(30.0, 190.0, e)) * smoothstep(4.0, 12.0, e)
+	# sand seas only in the southern desert: no dunes on the Sicilian, Maltese, Tunisian-north or Tripoli coastal plains
+	var lat: float = WorldCoords.ORIGIN_LAT - wz / WorldCoords.units_per_deg_lat
+	var south: float = smoothstep(33.0, 32.2, lat)
+	return patch * low * south
+
+
+func _dune_offset(wx: float, wz: float, e: float) -> float:
+	var m: float = dune_region_mask(wx, wz, e)
+	if m <= 0.0:
+		return 0.0
+	m *= smoothstep(30.0, 150.0, _road_dist(wx, wz))   # roads and tracks stay flat (their ribbons are cut at one height)
+	if m <= 0.0:
+		return 0.0
+	var amp_m: float = lerpf(8.0, 26.0, _dune_amp.get_noise_2d(wx, wz) * 0.5 + 0.5)
+	# wavelength varies by warping the PHASE with a slow noise (a position-dependent wavelength multiplied by the huge
+	# `across` coordinate would give a mesh-scale phase gradient: pockmarks instead of ridges)
+	var lam: float = 460.0
+	var across: float = wx * DUNE_ACROSS.x + wz * DUNE_ACROSS.y
+	var along: float = wx * DUNE_DIR.x + wz * DUNE_DIR.y
+	# the crests break into arcs along their length (barchan-like gaps)
+	var brk: float = 0.35 + 0.65 * smoothstep(0.25, 0.7, _dune_crest.get_noise_2d(along, across * 0.2) * 0.5 + 0.5)
+	var th: float = TAU * (across / lam + 1.3 * _dune_len.get_noise_2d(wx, wz))
+	# asymmetric profile: a long gentle windward slope and a steeper lee (slip) face
+	var s: float = sin(th + 0.8 * sin(th))
+	var prof: float = pow(0.5 + 0.5 * s, 1.6) - 0.3
+	return amp_m * m * brk * prof * WorldCoords.VERTICAL_SCALE
+
+
+## Distance (world units) to the nearest road or track segment within ~400 units, or 1.0e6 when none is near.
+func _road_dist(wx: float, wz: float) -> float:
+	if _dune_road_cells.is_empty():
+		return 1.0e6
+	var cx: int = floori(wx / DUNE_ROAD_CELL)
+	var cz: int = floori(wz / DUNE_ROAD_CELL)
+	var best: float = 1.0e12
+	var p := Vector2(wx, wz)
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			var arr: Variant = _dune_road_cells.get(Vector2i(cx + dx, cz + dz))
+			if arr == null:
+				continue
+			for sg in (arr as Array):
+				var s4: PackedFloat32Array = sg
+				var a := Vector2(s4[0], s4[1])
+				var ab := Vector2(s4[2] - s4[0], s4[3] - s4[1])
+				var t: float = clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
+				best = minf(best, (a + ab * t).distance_squared_to(p))
+	return sqrt(best) if best < 1.0e11 else 1.0e6
+
+
+## Index the road / track polylines (lat/lon two-point segments) into small cells so the dunes can keep clear of them.
+func _load_dune_roads() -> void:
+	for path in [WorldCoords.osm_dir() + "/roads.json", WorldCoords.heightmap_dir() + "/tracks.json"]:
+		if not FileAccess.file_exists(path):
+			continue
+		var f: FileAccess = FileAccess.open(path, FileAccess.READ)
+		if f == null:
+			continue
+		var d: Variant = JSON.parse_string(f.get_as_text())
+		f = null
+		if not (d is Dictionary):
+			continue
+		var lines: Variant = (d as Dictionary).get("lines", [])
+		if not (lines is Array):
+			continue
+		for l in (lines as Array):
+			if not (l is Dictionary):
+				continue
+			var raw: Variant = (l as Dictionary).get("pts", [])
+			if not (raw is Array) or (raw as Array).size() < 2:
+				continue
+			var prev := Vector2.ZERO
+			var have: bool = false
+			for p in (raw as Array):
+				if not (p is Array) or (p as Array).size() < 2:
+					continue
+				var w: Vector3 = WorldCoords.latlon_to_world(float(p[0]), float(p[1]))
+				var cur := Vector2(w.x, w.z)
+				if have:
+					var seg := PackedFloat32Array([prev.x, prev.y, cur.x, cur.y])
+					var steps: int = maxi(int(prev.distance_to(cur) / (DUNE_ROAD_CELL * 0.5)), 1)
+					var seen: Dictionary = {}
+					for st in steps + 1:
+						var q: Vector2 = prev.lerp(cur, float(st) / float(steps))
+						var kx: int = floori(q.x / DUNE_ROAD_CELL)
+						var kz: int = floori(q.y / DUNE_ROAD_CELL)
+						var key := Vector2i(kx, kz)
+						if seen.has(key):
+							continue
+						seen[key] = true
+						if not _dune_road_cells.has(key):
+							_dune_road_cells[key] = []
+						(_dune_road_cells[key] as Array).append(seg)
+				prev = cur
+				have = true
 
 
 ## Elevation in metres (<= 0 is sea; negative values are depth below sea level in procedural mode).

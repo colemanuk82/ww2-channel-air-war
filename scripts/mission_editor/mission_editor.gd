@@ -563,8 +563,8 @@ func _build_editor() -> void:
 	_map.ed = self
 	_map.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	if ResourceLoader.exists((WorldCoords.heightmap_dir() + "/region_color.png")):
-		_map.tex = load((WorldCoords.heightmap_dir() + "/region_color.png")) as Texture2D
+	if WorldCoords.map_picture_path() != "":
+		_map.tex = load(WorldCoords.map_picture_path()) as Texture2D
 	hb.add_child(_map)
 	var side := PanelContainer.new()
 	side.add_theme_stylebox_override("panel", UIKit.panel_style())

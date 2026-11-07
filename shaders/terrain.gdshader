@@ -66,6 +66,17 @@ uniform float desert_origin_lat = 33.75;
 uniform float desert_origin_lon = 19.25;
 uniform float desert_upl_lat = 111000.0;   // metres per degree latitude / longitude (HORIZ_COMPRESSION 1)
 uniform float desert_upl_lon = 90000.0;
+uniform sampler2D dune_tex : filter_linear, repeat_disable;   // dune-region mask (R), same rect as map_rect; baked by build/dune_mask_gen.gd
+uniform bool use_dune = false;
+uniform bool desert_v2 = true;                                  // false (--desert-v1): the pre-v2 look, for perf A/B
+uniform vec3 desert_sun_dir = vec3(0.3, 0.85, 0.3);           // direction TOWARDS the sun (TimeOfDay.sun_dir)
+// Desert land-cover classes (data/desert/region_landcover.bin: one byte per ~300 m cell, same rect as map_rect) and the
+// class id -> albedo table (128 x 1, built in TerrainChunkManager._apply_desert). Sampled with a noise-warped, dithered
+// bilinear blend of the four nearest cells, so class borders are soft and ragged rather than 300 m squares.
+uniform sampler2D lc_tex : filter_nearest, repeat_disable;
+uniform sampler2D lc_lut : filter_nearest, repeat_disable;
+uniform bool use_lc = false;
+uniform vec2 lc_size = vec2(7000.0, 2770.0);
 const float SEA_MAX_M = 3000.0;
 uniform vec3 tarmac_col : source_color = vec3(0.26, 0.26, 0.25);
 uniform vec3 paving_col : source_color = vec3(0.37, 0.34, 0.31);
@@ -126,11 +137,49 @@ vec3 arable_stage(vec3 soil, vec3 fallow, vec3 young, vec3 ripe, vec3 stub, floa
 	return mix(ripe, stub, smoothstep(0.86, 1.0, s));
 }
 
+float lc_wsum(ivec4 ids, vec4 ws, int id) {
+	return float(ids.x == id) * ws.x + float(ids.y == id) * ws.y + float(ids.z == id) * ws.z + float(ids.w == id) * ws.w;
+}
+
+// Class lookup for the desert ground: returns the land-weighted blend of the four nearest cells' table colours in rgb
+// and the land share (class 0 = sea is excluded) in a. ids / ws let the caller ask for the share of one class.
+vec4 lc_sample(vec2 xz, float cdist, out ivec4 ids, out vec4 ws) {
+	float wa = 1.0 - smoothstep(7000.0, 22000.0, cdist);
+	vec2 n1 = vec2(t_vnoise2(xz * 0.006 + 3.1), t_vnoise2(xz * 0.006 + 41.7)) - 0.5;
+	vec2 n2 = vec2(t_vnoise2(xz * 0.03 + 9.3), t_vnoise2(xz * 0.03 + 77.1)) - 0.5;
+	vec2 wxz = xz + (n1 * 300.0 + n2 * 80.0) * wa;
+	vec2 uv = (wxz - map_rect.xy) * map_rect.zw;
+	float st = exp2(floor(log2(max(cdist / 14000.0, 1.0))));       // far away: a coarser grid, no per-cell shimmer
+	vec2 g = uv * lc_size / st - 0.5;
+	vec2 i0 = floor(g);
+	vec2 f = g - i0;
+	vec2 dn = vec2(t_vnoise2(xz * 0.09 + 5.0), t_vnoise2(xz * 0.09 + 19.0)) - 0.5;
+	f = clamp(f + dn * 0.6 * wa, 0.0, 1.0);
+	f = f * f * (3.0 - 2.0 * f);
+	vec2 mx = floor(lc_size / st) - 1.0;
+	vec2 a0 = clamp(i0, vec2(0.0), mx);
+	vec2 a1 = clamp(i0 + 1.0, vec2(0.0), mx);
+	ivec2 p00 = ivec2(floor(vec2(a0.x, a0.y) * st + 0.5 * st));
+	ivec2 p10 = ivec2(floor(vec2(a1.x, a0.y) * st + 0.5 * st));
+	ivec2 p01 = ivec2(floor(vec2(a0.x, a1.y) * st + 0.5 * st));
+	ivec2 p11 = ivec2(floor(vec2(a1.x, a1.y) * st + 0.5 * st));
+	ids = ivec4(int(texelFetch(lc_tex, p00, 0).r * 255.0 + 0.5), int(texelFetch(lc_tex, p10, 0).r * 255.0 + 0.5),
+		int(texelFetch(lc_tex, p01, 0).r * 255.0 + 0.5), int(texelFetch(lc_tex, p11, 0).r * 255.0 + 0.5));
+	ws = vec4((1.0 - f.x) * (1.0 - f.y), f.x * (1.0 - f.y), (1.0 - f.x) * f.y, f.x * f.y);
+	vec4 land = vec4(ids.x > 0 ? 1.0 : 0.0, ids.y > 0 ? 1.0 : 0.0, ids.z > 0 ? 1.0 : 0.0, ids.w > 0 ? 1.0 : 0.0) * ws;
+	float lw = land.x + land.y + land.z + land.w;
+	vec3 c = texelFetch(lc_lut, ivec2(clamp(ids.x, 0, 127), 0), 0).rgb * land.x
+		+ texelFetch(lc_lut, ivec2(clamp(ids.y, 0, 127), 0), 0).rgb * land.y
+		+ texelFetch(lc_lut, ivec2(clamp(ids.z, 0, 127), 0), 0).rgb * land.z
+		+ texelFetch(lc_lut, ivec2(clamp(ids.w, 0, 127), 0), 0).rgb * land.w;
+	return vec4(c / max(lw, 0.001), lw);
+}
+
 // Desert ground colour (linear albedo, lit by the sun): ochre sand on the coast, reddish-brown inland, brown-grey
 // gravel (hamada) on the broad plateaus, dune streaks in the low sand seas, pale salt pans in the flats, grey rock on
 // the slopes and dark wadi beds along the low flow paths. Several noise scales so the ground reads at 600 m and 3000 m.
 // Green-olive only in the north (Tunisia, Jebel Akhdar, Malta). No hedges, fields or grass blades on this map.
-vec3 desert_ground(float h, float slope, vec2 xz, float sea_m) {
+vec3 desert_ground(float h, float slope, vec2 xz, float sea_m, float cdist, float dm) {
 	float lat = desert_origin_lat - xz.y / desert_upl_lat;
 	vec3 ochre = vec3(0.36, 0.26, 0.15);      // sand and ochre
 	vec3 pale = vec3(0.42, 0.34, 0.24);       // coastal sand and the limestone plateau
@@ -158,30 +207,148 @@ vec3 desert_ground(float h, float slope, vec2 xz, float sea_m) {
 	float erg = (1.0 - smoothstep(40.0, 130.0, h)) * inland * (1.0 - smoothstep(0.05, 0.20, slope));
 	base = mix(base, ochre * (0.82 + 0.36 * streak), erg * 0.7);
 	base *= 1.0 + (streak - 0.5) * 0.55 * smoothstep(0.35, 0.6, n_mid) * (1.0 - smoothstep(0.05, 0.22, slope));
+	// land-cover classes: the table colour of the (dithered, blended) class replaces the latitude-only guess; the class
+	// then adds its own surface texture (crust, strata, scrub speckle, field patchwork, terrace walls)
+	float lcw = 0.0;
+	if (use_lc) {
+		ivec4 lid;
+		vec4 lws;
+		vec4 lcs = lc_sample(xz, cdist, lid, lws);
+		vec3 lcol = lcs.rgb;
+		float w_salt = lc_wsum(lid, lws, 116);
+		float w_sab = lc_wsum(lid, lws, 111);
+		float w_rock = lc_wsum(lid, lws, 114);
+		float w_wadi = lc_wsum(lid, lws, 117);
+		float w_ham = lc_wsum(lid, lws, 112) + lc_wsum(lid, lws, 60) * 0.5;
+		float w_reg = lc_wsum(lid, lws, 113);
+		float w_veg = lc_wsum(lid, lws, 20) + lc_wsum(lid, lws, 30) + lc_wsum(lid, lws, 10) + lc_wsum(lid, lws, 90);
+		float w_crop = lc_wsum(lid, lws, 40) + lc_wsum(lid, lws, 120) + lc_wsum(lid, lws, 121);
+		float w_lime = lc_wsum(lid, lws, 118);
+		float w_bas = lc_wsum(lid, lws, 119);
+		float w_sand = lc_wsum(lid, lws, 110) + lc_wsum(lid, lws, 115);
+		float nm2 = t_vnoise2(xz * 0.0035 + 71.0);
+		float near_d = 1.0 - smoothstep(1200.0, 6000.0, cdist);
+		lcol *= 0.90 + 0.22 * n_mid + 0.10 * (n_reg - 0.5);
+		// regional hue drift at 1-30 km: warm orange-red ground in places, cooler grey-buff in others (not on green land)
+		float greenk = clamp(lc_wsum(lid, lws, 20) + lc_wsum(lid, lws, 30) + lc_wsum(lid, lws, 10) + lc_wsum(lid, lws, 40) + lc_wsum(lid, lws, 120) + lc_wsum(lid, lws, 121) + lc_wsum(lid, lws, 90), 0.0, 1.0);
+		float redn = smoothstep(0.42, 0.68, t_vnoise2(xz * 0.0011 + 23.0)) * (1.0 - coast_k * 0.6);
+		lcol *= mix(vec3(1.0), vec3(1.20, 0.94, 0.76), redn * 0.65 * (1.0 - greenk));
+		lcol *= mix(vec3(1.05, 1.0, 0.93), vec3(0.96, 0.97, 1.0), smoothstep(0.35, 0.75, t_vnoise2(xz * 0.00035 + 5.0)) * (1.0 - greenk * 0.7));
+		// salt crust: bright, broken by darker damp mud patches and fine cracks
+		float crack = 1.0 - smoothstep(0.02, 0.07, abs(t_vnoise2(xz * 0.07 + 13.0) - 0.5));
+		lcol = mix(lcol, lcol * vec3(0.80, 0.76, 0.68), w_salt * smoothstep(0.50, 0.78, nm2) * 0.8);
+		lcol *= 1.0 - w_salt * crack * 0.10 * near_d;
+		// sabkha: grey-tan crust over damp, darker flats
+		lcol = mix(lcol, vec3(0.26, 0.22, 0.17), w_sab * smoothstep(0.52, 0.72, nm2) * 0.65);
+		lcol = mix(lcol, vec3(0.58, 0.54, 0.45), w_sab * smoothstep(0.70, 0.84, n_mid) * 0.5);
+		// rock: strata bands on the slopes, darker crevices
+		float band = sin(h * 0.85 + n_mid * 5.0) * 0.5 + sin(h * 2.3 + 1.7) * 0.25;
+		lcol *= 1.0 + band * 0.20 * w_rock * smoothstep(0.08, 0.35, slope);
+		lcol = mix(lcol, lcol * vec3(0.78, 0.74, 0.72), w_rock * smoothstep(0.55, 0.80, n_fine) * 0.5);
+		// wadi bed: damp darker gravel with grey-green scrub speckle
+		float spk = smoothstep(0.60, 0.74, t_vnoise2(xz * 0.30 + 3.0)) * near_d;
+		lcol = mix(lcol, vec3(0.15, 0.17, 0.09), w_wadi * spk * 0.7);
+		lcol *= 1.0 - 0.18 * w_wadi * smoothstep(0.35, 0.70, nm2);
+		// hamada: pale plateau with dark pebble speckle; reg: dark gravel with lighter wash patches
+		lcol *= 1.0 - w_ham * 0.20 * smoothstep(0.56, 0.78, t_vnoise2(xz * 0.9 + 17.0)) * near_d;
+		lcol = mix(lcol, lcol * vec3(1.45, 1.40, 1.30), w_reg * smoothstep(0.62, 0.80, n_mid) * 0.5);
+		// scrub / grass / wetland: dark clumps and bare gaps
+		lcol *= 1.0 - w_veg * 0.20 * smoothstep(0.45, 0.75, t_vnoise2(xz * 0.22 + 29.0)) * (0.4 + 0.6 * near_d);
+		lcol = mix(lcol, vec3(0.38, 0.30, 0.20), w_veg * smoothstep(0.62, 0.82, nm2) * 0.28);
+		// irrigated land, oases, orchards: a patchwork of small fields (green crop, stubble, ploughed earth)
+		{
+			vec2 fq = vec2(dot(xz, vec2(0.94, 0.34)), dot(xz, vec2(-0.34, 0.94))) / 85.0;
+			vec2 fc = floor(fq);
+			float fh = t_hash12(fc + 3.7);
+			vec3 fcol = mix(vec3(0.24, 0.28, 0.12), vec3(0.30, 0.32, 0.15), fract(fh * 7.3));
+			fcol = mix(fcol, vec3(0.44, 0.37, 0.20), smoothstep(0.62, 0.80, fh));
+			fcol = mix(fcol, vec3(0.30, 0.21, 0.13), smoothstep(0.82, 0.94, fh));
+			vec2 fe = abs(fract(fq) - 0.5);
+			float ditch = smoothstep(0.46, 0.495, max(fe.x, fe.y)) * near_d;
+			fcol = mix(fcol, fcol * 0.6, ditch);
+			float cat = lc_wsum(lid, lws, 120) + lc_wsum(lid, lws, 121);
+			fcol = mix(fcol, lcol * 0.95, smoothstep(1200.0, 4500.0, cdist) * 0.85);      // the patchwork melts into one tone with range (no 85 m squares at 3 km)
+			lcol = mix(lcol, mix(fcol, lcol * 0.9, cat * 0.5), w_crop * 0.75);
+		}
+		// limestone (Malta, the Hyblaean plateau): honey stone cut into small walled terraces
+		{
+			vec2 tq = vec2(dot(xz, vec2(0.80, 0.60)), dot(xz, vec2(-0.60, 0.80))) / 36.0;
+			vec2 te = abs(fract(tq) - 0.5);
+			float wall = smoothstep(0.455, 0.49, max(te.x, te.y)) * (1.0 - smoothstep(900.0, 3200.0, cdist));
+			float th = t_hash12(floor(tq) + 11.3);
+			lcol *= 1.0 + (th - 0.5) * 0.16 * w_lime;
+			lcol = mix(lcol, lcol * 1.22 + vec3(0.04), wall * w_lime * 0.55);
+		}
+		// basalt: near-black with pale dust in the lows
+		lcol = mix(lcol, vec3(0.14, 0.125, 0.11), w_bas * smoothstep(0.55, 0.80, t_vnoise2(xz * 0.015 + 8.0)) * 0.6);
+		// beach / sand sea: ripples handled below; a touch of wet darkness near the surf is added by the shore code
+		lcol *= 1.0 + w_sand * (n_fine - 0.5) * 0.10;
+		lcw = lcs.a;
+		base = mix(base, lcol, lcw * 0.92);
+	}
 	// salt pans: pale, flat, low basins
 	float pan = smoothstep(0.66, 0.78, t_vnoise2(xz * 0.0019 + 61.0)) * (1.0 - smoothstep(25.0, 70.0, h)) * (1.0 - smoothstep(0.03, 0.12, slope)) * inland;
-	base = mix(base, salt * (0.92 + 0.10 * n_fine), pan * 0.8);
+	base = mix(base, salt * (0.92 + 0.10 * n_fine), pan * 0.8 * (1.0 - lcw));
 	// limestone plateau: paler
-	base = mix(base, pale * (0.95 + 0.08 * n_fine), smoothstep(150.0, 420.0, h) * 0.4);
+	base = mix(base, pale * (0.95 + 0.08 * n_fine), smoothstep(150.0, 420.0, h) * 0.4 * (1.0 - lcw));
 	// wadis: dark beds along the low ridged flow paths, with lighter gravel banks either side
 	vec2 ww = xz + 900.0 * (vec2(t_vnoise2(xz * 0.0005 + 2.0), t_vnoise2(xz * 0.0005 + 31.0)) - 0.5);
 	float wn = abs(t_vnoise2(ww * 0.0009 + 200.0) - 0.5);
-	float wbed = 1.0 - smoothstep(0.004, 0.009, wn);
-	float wbank = (1.0 - smoothstep(0.006, 0.012, wn)) * (1.0 - wbed);
-	float wok = (1.0 - smoothstep(60.0, 260.0, h)) * (1.0 - smoothstep(0.04, 0.14, slope));
-	base = mix(base, wadi * (0.85 + 0.3 * n_fine), wbed * wok * 0.85);
-	base = mix(base, gravel * 1.1, wbank * wok * 0.4);
+	float wbed = 1.0 - smoothstep(0.002, 0.011, wn);
+	float wbank = (1.0 - smoothstep(0.004, 0.016, wn)) * (1.0 - wbed);
+	// the dark contour-like lines are only real at close range: fade them out with camera distance, and keep them
+	// out of the sand seas (dunes bury the drainage)
+	float wfade = (1.0 - smoothstep(500.0, 2200.0, cdist)) * (1.0 - smoothstep(0.03, 0.25, dm));
+	float wok = smoothstep(45.0, 110.0, h) * (1.0 - smoothstep(260.0, 420.0, h)) * (1.0 - smoothstep(0.04, 0.14, slope)) * wfade;   // dry washes on the plateau, not in the low sand flats
+	base = mix(base, wadi * (1.5 + 0.4 * n_fine), wbed * wok * 0.32);
+	base = mix(base, gravel * 1.25, wbank * wok * 0.18);
 	// rock on steep ground
 	float rk = smoothstep(0.12, 0.34, slope);
 	base = mix(base, rock * (0.85 + 0.3 * n_fine), rk * 0.85);
 	// fine grain and gravel speckle
 	base *= 0.86 + 0.24 * n_grain;
 	base *= 0.92 + 0.14 * n_fine;
+	// wind ripples on the dune sand: fine crests across the dune direction, strongest in the sand seas
+	float rip = sin(dot(xz, vec2(-0.57, 0.82)) * 0.9 + 6.0 * t_vnoise2(xz * 0.01));
+	base *= 1.0 + 0.05 * rip * erg;
 	float gn = smoothstep(34.9, 35.6, lat) * (1.0 - smoothstep(200.0, 500.0, h))
 	         + smoothstep(32.2, 32.8, lat) * smoothstep(350.0, 650.0, h) * (1.0 - smoothstep(0.2, 0.5, slope));
-	base = mix(base, olive * (0.80 + 0.30 * n_reg), clamp(gn, 0.0, 1.0) * 0.55);
+	base = mix(base, olive * (0.80 + 0.30 * n_reg), clamp(gn, 0.0, 1.0) * 0.55 * (1.0 - lcw));
 	// darker, warmer sand (the ground read washed out at 400-3000 m)
 	return base * vec3(1.02, 0.94, 0.82) * 0.90;
+}
+
+// Sand-sea dune shading. Near: the real mesh normal against the sun (lit windward faces, shadowed slip faces, crest
+// highlights, ripples). Far (the coarse LODs cannot hold the dunes): the same seif ridges, painted as stripes.
+vec3 desert_dune_shade(vec3 col, float dm, vec3 n, vec2 xz, float cdist, float h) {
+	float dk = dm * (1.0 - smoothstep(150.0, 230.0, h));
+	if (dk < 0.02) { return col; }
+	vec3 sun = normalize(desert_sun_dir);
+	vec2 across = vec2(-0.57, 0.82);
+	float near_k = 1.0 - smoothstep(4500.0, 8000.0, cdist);
+	float tilt = length(n.xz);
+	float sf = dot(n, sun) - sun.y;                       // > 0 faces the sun, < 0 leeward
+	float lit = clamp(1.0 + sf * 3.6, 0.40, 1.55);
+	vec3 shaded = col * lit;
+	float slip = smoothstep(0.10, 0.26, tilt) * (1.0 - smoothstep(-0.10, 0.0, sf));
+	shaded = mix(shaded, shaded * vec3(0.76, 0.63, 0.56), slip * 0.5);               // cool, deep slip-face shadow
+	shaded += vec3(0.07, 0.05, 0.02) * smoothstep(0.03, 0.14, sf) * smoothstep(0.04, 0.12, tilt) * col.r * 2.0;   // lit crest edge
+	float rip = sin(dot(xz, across) * 1.1 + 6.0 * t_vnoise2(xz * 0.012)) * 0.5 + 0.5;
+	shaded *= 1.0 - 0.10 * rip * (1.0 - smoothstep(600.0, 2200.0, cdist)) * (0.4 + 0.6 * smoothstep(0.0, 0.1, tilt));
+	vec3 outc = shaded;
+	// far range: analytic stripes
+	float ph = dot(xz, across) / 480.0 + (t_vnoise2(xz * 0.0007 + 3.0) - 0.5) * 1.4;
+	float th = 6.2832 * ph;
+	float s = sin(th + 0.8 * sin(th));
+	float ds = cos(th + 0.8 * sin(th)) * (1.0 + 0.8 * cos(th));
+	float sunf = dot(sun.xz, across);
+	float aa = 1.0 - smoothstep(0.12, 0.45, fwidth(ph));
+	vec3 far_c = col * clamp(1.0 + 0.20 * s + 0.9 * ds * sunf, 0.45, 1.5);
+	far_c = mix(far_c, far_c * vec3(0.78, 0.62, 0.55), smoothstep(0.55, 0.95, -ds * sunf * 2.0) * 0.55);
+	outc = mix(far_c, shaded, near_k);
+	outc = mix(col, outc, mix(aa, 1.0, near_k));
+	outc *= mix(vec3(1.0), vec3(1.10, 0.94, 0.78), dk * 0.5);   // warmer, redder dune sand
+	return mix(col, outc, dk);
 }
 
 void fragment() {
@@ -345,13 +512,20 @@ void fragment() {
 			vec2 suv0 = clamp(vec2((w_pos.x - map_rect.x) * map_rect.z, (w_pos.z - map_rect.y) * map_rect.w), vec2(0.0), vec2(1.0));
 			sea_m = texture(sea_tex, suv0).r * SEA_MAX_M;
 		}
-		col = desert_ground(h, slope, xz, sea_m);
+		float cdist = length(w_pos - CAMERA_POSITION_WORLD);
+		float dmask = 0.0;
+		if (use_dune) {
+			vec2 duv = clamp(vec2((w_pos.x - map_rect.x) * map_rect.z, (w_pos.z - map_rect.y) * map_rect.w), vec2(0.0), vec2(1.0));
+			dmask = texture(dune_tex, duv).r;
+		}
+		col = desert_ground(h, slope, xz, sea_m, cdist, dmask);
+		if (desert_v2) { col = desert_dune_shade(col, dmask, normalize(w_normal), xz, cdist, h); }
 		lowland = 0.0;
 	}
 
 	// Town ground: tarmac streets and paving instead of fields (soft, noise-broken edge).
 	float urban = 0.0;
-	if (use_urban && use_map) {
+	if (use_urban && (use_map || desert_look)) {
 		vec2 uuv = vec2((w_pos.x - map_rect.x) * map_rect.z, (w_pos.z - map_rect.y) * map_rect.w);
 		if (uuv.x >= 0.0 && uuv.x <= 1.0 && uuv.y >= 0.0 && uuv.y <= 1.0) {
 			float um = texture(urban_tex, uuv).r + (t_vnoise2(xz * 0.004) - 0.5) * 0.55 + (t_vnoise2(xz * 0.02 + 13.0) - 0.5) * 0.25;
@@ -438,9 +612,15 @@ void fragment() {
 		float g = t_vnoise2(xz * 0.9) * 0.5 + t_vnoise2(xz * 0.07) * 0.5;
 		vec3 town = mix(tarmac_col, paving_col, smoothstep(0.35, 0.75, g));
 		town *= 0.9 + 0.2 * t_vnoise2(xz * 0.02 + 3.0);
+		if (desert_look) {
+			// packed street earth and dusty courtyards instead of tarmac and paving: pale sand-earth with darker worn lanes
+			float lane = smoothstep(0.55, 0.9, t_vnoise2(xz * 0.9 + 4.0)) * 0.5 + smoothstep(0.6, 0.85, t_vnoise2(xz * 0.07 + 8.0)) * 0.5;
+			town = mix(vec3(0.38, 0.31, 0.22), vec3(0.30, 0.24, 0.17), lane);
+			town *= 0.92 + 0.16 * t_vnoise2(xz * 0.02 + 3.0);
+		}
 		col = mix(col, town, urban * 0.92);
 		// Public parks inside towns (mirrored by Scatter.in_park)
-		float pk = smoothstep(0.76, 0.80, t_vnoise2(xz * 0.0042 + 31.0));
+		float pk = desert_look ? 0.0 : smoothstep(0.76, 0.80, t_vnoise2(xz * 0.0042 + 31.0));
 		if (pk > 0.0) {
 			vec3 mown = mix(grass_a, grass_b, 0.5) * (0.95 + 0.14 * t_vnoise2(xz * 0.15));
 			mown = mix(mown, grass_a * 0.8, smoothstep(0.55, 0.8, t_vnoise2(xz * 0.9)) * 0.35);
@@ -589,7 +769,10 @@ void fragment() {
 		vec3 airfield_grass = mix(mix(grass_a, hedge_col, 0.38), soil_col, 0.08) * 0.9;
 		if (desert_look) {
 			// desert fields: packed sand and gravel, no grass
-			airfield_grass = mix(vec3(0.50, 0.42, 0.30), vec3(0.40, 0.32, 0.22), t_vnoise2(xz * 0.05 + 31.0));
+			// pale scuffed earth with darker trampled and oil-stained patches
+			airfield_grass = mix(vec3(0.55, 0.47, 0.34), vec3(0.46, 0.38, 0.27), t_vnoise2(xz * 0.05 + 31.0));
+			airfield_grass *= 1.0 - 0.14 * smoothstep(0.55, 0.80, t_vnoise2(xz * 0.035 + 7.0));
+			airfield_grass *= 1.0 - 0.10 * smoothstep(0.62, 0.85, t_vnoise2(xz * 0.3 + 3.0));
 		}
 		float mow = 0.97 + 0.04 * step(0.5, fract(dot(xz, vec2(0.7, 0.7)) / 44.0));
 		// a slow mottle keeps the interior from reading as one flat decal: the field LATTICE is suppressed,

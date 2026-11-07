@@ -137,7 +137,7 @@ void fragment() {
 	_page_host.add_child(sortie)
 	sortie.add_child(UIKit.label("SORTIE", 14, UIKit.TEXT_DIM, true))
 	# Map first: the Channel (the original) or the desert theatre. The choice is saved and applied at once.
-	_map_pick = UIKit.option_field(sortie, "Map", ["Channel", "Desert (Libya / Egypt / Tunisia / Malta)"], 420, 18)
+	_map_pick = UIKit.option_field(sortie, "Map", ["Channel", "Desert [WIP] (Libya / Egypt / Tunisia / Malta)"], 420, 18)
 	_map_pick.select(maxi(MAP_IDS.find(GameState.current_map), 0))
 	_map_pick.tooltip_text = "Channel: the original map (Kent to Normandy). Desert: Tunisia, Libya, Egypt and Malta; free flight and dogfights for now."
 	_map_pick.item_selected.connect(_on_map_picked)
@@ -294,9 +294,13 @@ void fragment() {
 	_mo_button(grid, "Campaign", _open_campaign)
 	_mo_button(grid, "Pilot's Life", _open_career)
 	_mo_button(grid, "Logbook", _open_logbook)
-	_mo_button(grid, "Mission Editor", func() -> void: _open_mission_editor())
+	_mo_button(grid, "Mission Editor", func() -> void:
+		if not _channel_only_blocked():
+			_open_mission_editor())
 	_mo_button(grid, "Dam Busters [WIP]", _open_dam_busters)
-	_mo_button(grid, "Training Film", func() -> void: open_film())
+	_mo_button(grid, "Training Film", func() -> void:
+		if not _channel_only_blocked():
+			open_film())
 	_mo_button(grid, "Options", func() -> void: add_child(SettingsMenu.new()))
 	_mo_button(grid, "Credits", _open_legal)
 	# manual update check (a request is made only when this is pressed)
@@ -976,11 +980,23 @@ func _show_welcome(root: Control) -> void:
 
 ## Map picker. Desert has free flight and dogfights for now: historical, campaign and career content is placed on the
 ## Channel, so those are held back while the desert map is selected. Switching only happens here, before a sortie starts.
+## The weather list depends on the map (the Khamsin sandstorm is desert only): rebuild it, keeping the choice if it still exists.
+func _refresh_weather_options() -> void:
+	var prev: String = _weather_names[_weather.selected] if _weather.selected < _weather_names.size() else ""
+	_weather_names = WeatherManager.get_weather_names()
+	_weather.clear()
+	for w in _weather_names:
+		_weather.add_item(String(w).capitalize())
+	_weather.add_item("Random")
+	_weather.select(_weather_names.find(prev) if prev != "" and _weather_names.has(prev) else _weather_names.size())
+
+
 func _on_map_picked(i: int) -> void:
 	GameState.current_map = MAP_IDS[clampi(i, 0, MAP_IDS.size() - 1)]
 	GameState.save_settings()
 	_plan = {}
 	_plan_label.text = ""
+	_refresh_weather_options()
 	_refresh_spawns()
 	if GameState.current_map != "channel" and not _mode_ids.is_empty() and not (_mode_ids[_mode.selected] in DESERT_MODES):
 		_mode.select(maxi(_mode_ids.find("free"), 0))

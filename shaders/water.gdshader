@@ -28,6 +28,17 @@ uniform float bands = 4.0;
 uniform float wave_scale = 0.013;
 uniform float scroll_speed = 0.05;
 uniform float reflect_strength = 1.0;
+// Desert map (Mediterranean): colour from distance to shore (turquoise shallows -> deep blue), calmer swell, cleaner surf.
+// sd_tex = data/desert/region_seadist.png (R8: 0 = land, 1 + metres/8000*254 at sea), same rect convention as land_rect.
+// Everything below is gated on desert_sea (off on the Channel and on lakes), so other maps render as before.
+uniform bool desert_sea = false;
+uniform sampler2D sd_tex : filter_linear, repeat_disable;
+uniform vec4 sd_rect = vec4(0.0);
+uniform vec3 med_sand : source_color = vec3(0.80, 0.70, 0.52);       // wet sand seen through a few cm of water
+uniform vec3 med_turq : source_color = vec3(0.24, 0.64, 0.58);       // sunlit sand shelf
+uniform vec3 med_mid : source_color = vec3(0.07, 0.34, 0.50);
+uniform vec3 med_deep : source_color = vec3(0.03, 0.14, 0.33);       // deep Mediterranean blue
+uniform float sea_calm = 1.0;        // multiplies the wave slope (0.55 on the Desert: calm swell)
 uniform float lake_mode = 0.0;       // 1 = inland reservoir (DamKit): calm water, no depth bands / shore foam / caps
 
 global uniform vec3 sky_top;
@@ -117,6 +128,25 @@ void fragment() {
 	col = mix(col, deep_color, smoothstep(0.4, 1.0, banded));
 
 	vec2 wp = w_pos.xz;
+	float sm_w = 1.0e5;       // desert: metres from the shore (noise-warped)
+	if (desert_sea) {
+		vec2 suv = clamp((wp - sd_rect.xy) * sd_rect.zw, vec2(0.0), vec2(1.0));
+		float sraw = texture(sd_tex, suv).r * 255.0;
+		float sm = max(sraw - 1.0, 0.0) / 254.0 * 8000.0;
+		// the 600 m texels would show as soft blobs: warp the distance with two noise octaves so the colour bands
+		// meander like real shelf contours and never trace the texture
+		float nw = t_vnoise2(wp * 0.0016 + 3.0) * 0.65 + t_vnoise2(wp * 0.0052 + 11.0) * 0.35;
+		sm_w = max(sm * (0.78 + 0.44 * nw) + (nw - 0.5) * 120.0, 0.0);
+		float kA = smoothstep(120.0, 1500.0, sm_w);
+		float kB = smoothstep(1200.0, 6500.0, sm_w);
+		vec3 tq = med_turq;
+		// darker seagrass / reef patches on the shelf, brighter sand ribbons
+		float pat = t_vnoise2(wp * 0.0035 + 40.0) * 0.6 + t_vnoise2(wp * 0.012 + 8.0) * 0.4;
+		tq *= 1.0 - 0.38 * smoothstep(0.52, 0.80, pat) * (1.0 - smoothstep(600.0, 2600.0, sm_w));
+		col = mix(tq, med_mid, kA);
+		col = mix(col, med_deep, kB);
+		col = mix(med_sand, col, smoothstep(0.0, 260.0, sm_w));
+	}
 	if (cut_land) {
 		vec2 luv = clamp((wp - land_rect.xy) * land_rect.zw, vec2(0.0), vec2(1.0));
 		if (texture(land_tex, luv).r > 0.0001) {
@@ -131,13 +161,13 @@ void fragment() {
 	float h0 = wave_h(wp, tw);
 	float hx = wave_h(wp + vec2(e, 0.0), tw);
 	float hz = wave_h(wp + vec2(0.0, e), tw);
-	vec2 g = vec2(hx - h0, hz - h0) / e * 1.5 * wfade * (1.0 - 0.75 * lake_mode);
+	vec2 g = vec2(hx - h0, hz - h0) / e * 1.5 * wfade * (1.0 - 0.75 * lake_mode) * sea_calm;
 	// mid-scale chop: irregular facets so the swell never reads as a regular sine lattice
 	float mfade = 1.0 - smoothstep(300.0, 2600.0, dist);
 	if (mfade > 0.0) {
 		// chop strength varies smoothly across the sea so it never reads as a uniform texture
 		float cenv = 0.6 + 0.8 * t_vnoise2(wp * 0.004 + 17.0);
-		g += chop_grad(wp, TIME, 1.0) * 0.55 * mfade * cenv;
+		g += chop_grad(wp, TIME, 1.0) * 0.55 * mfade * cenv * sea_calm;
 	}
 	if (rfade > 0.0) {
 		g += chop_grad(wp.yx * 1.3 + 50.0, TIME * 1.6, 3.2) * 0.12 * rfade;
@@ -182,6 +212,15 @@ void fragment() {
 	float surf = surf_line * surf_zone + lace;
 	float wake = max(max(wake_one(wp, wake_0), wake_one(wp, wake_1)), max(wake_one(wp, wake_2), wake_one(wp, wake_3)));
 	float foam = clamp(shore + edge + crest * 0.9 + streak * 0.4 + surf * 0.9 + wake * 0.9, 0.0, 1.0) * (1.0 - lake_mode);
+	if (desert_sea) {
+		// calm Mediterranean: a thin, clean swash line at the water's edge, one broken surf line a little way out,
+		// almost no whitecaps; ship wakes stay
+		float swash = (1.0 - smoothstep(foam_depth * 0.12, foam_depth * 0.55, diff)) * mix(0.55, 1.0, lacy);
+		float line2 = smoothstep(0.80, 0.97, sin(diff * 0.55 - TIME * 0.45 + n1 * 2.0) * 0.5 + 0.5)
+			* surf_zone * smoothstep(0.30, 0.62, t_vnoise2(wp * 0.03 + TIME * 0.04)) * 0.7;
+		float far_k = smoothstep(2500.0, 6000.0, sm_w);
+		foam = clamp(swash + line2 + lace * 0.5 + (crest * 0.3 + streak * 0.12) * far_k + wake * 0.9, 0.0, 1.0);
+	}
 	float foam_m = smoothstep(0.30, 0.62, foam);
 
 	// --- sky reflection (Fresnel) ---

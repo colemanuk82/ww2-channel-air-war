@@ -59,6 +59,15 @@ func heightmap_dir() -> String:
 	return active_map.heightmap_dir
 
 
+## Map picture for the HUD map / bombsight / planner: region_mapview.png (painted, desert) else region_color.png.
+## Returns "" when neither exists.
+func map_picture_path() -> String:
+	for n in ["/region_mapview.png", "/region_color.png"]:
+		if ResourceLoader.exists(active_map.heightmap_dir + n):
+			return active_map.heightmap_dir + n
+	return ""
+
+
 ## Folder of the active map's OSM files (res://data/osm for Channel).
 func osm_dir() -> String:
 	return active_map.osm_dir

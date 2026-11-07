@@ -22,7 +22,19 @@ void fragment() {
 	float aa = abs(UV.x);
 	float along = UV.y;
 	float dist = length(VERTEX);
-	if (COLOR.g > 0.5) {
+	if (COLOR.b > 0.5) {
+		// Desert piste: pale compacted earth with two darker tyre scars and a dust shoulder that melts into the ground.
+		float gn2 = t_vnoise2(vec2(along * 0.6, UV.x * 5.0));
+		float ptc = t_vnoise2(vec2(along * 0.03, UV.x * 1.1));
+		float scar = (1.0 - smoothstep(0.0, 0.09, abs(abs(UV.x) - 0.26))) * (1.0 - smoothstep(300.0, 1500.0, dist));
+		vec3 tc = vec3(0.55, 0.46, 0.34) * (0.90 + 0.18 * gn2) * (0.94 + 0.10 * ptc);
+		tc *= 1.0 - 0.18 * scar;
+		float broken = 0.8 + 0.4 * t_vnoise2(vec2(along * 0.25, UV.x * 3.0));
+		float core = 1.0 - smoothstep(0.30, 0.95, aa * broken);
+		ALBEDO = mix(tc, tc * 1.06, 1.0 - core);
+		ROUGHNESS = 1.0;
+		ALPHA = core * mix(0.72, 0.34, smoothstep(1500.0, 7000.0, dist));
+	} else if (COLOR.g > 0.5) {
 		// Railway, kept subtle: a stone verge (gravel shoulder) that blends into the fields on either side, a darker
 		// ballast bed in the middle with faint sleepers, and two muted steel rails. Rails widen and the whole thing
 		// fades toward the field colour with distance so it never reads as a graphic strip.

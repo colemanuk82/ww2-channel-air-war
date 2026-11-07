@@ -1,0 +1,1112 @@
+{
+ "source_note": "Dated war scenery for the desert map (Libya, Egypt, Tunisia, Malta). Same row conventions as data/war_damage.json (areas: from, full, level, radius_m) and data/buildup_1944.json (from, to; empty 'to' = stays). Positions are hand-placed from published geography (+-3..10 km, see 'confidence') and checked against region_coast.png by tools/make_desert_war_scenery.py; dates follow the cited Wikipedia campaign articles. Harbour wrecks: the 10 m Natural Earth coast does not resolve harbour inlets (coord_check 'harbour_in_mask_land'), so a renderer must either carve harbour water or snap them to the shore. Not wired into the game.",
+ "harbour_wrecks": [
+  {
+   "id": "wreck_tobruk_san_giorgio",
+   "name": "Italian armoured cruiser San Giorgio, scuttled and burnt out in Tobruk harbour",
+   "lat": 32.0865,
+   "lon": 23.978,
+   "type": "wreck",
+   "hull": "cruiser",
+   "length_m": 140,
+   "heading": 0,
+   "from": "1941-01-22",
+   "to": "",
+   "source": "Wikipedia: Italian cruiser San Giorgio (scuttled at Tobruk 22 Jan 1941; the hulk stayed in the bay)",
+   "confidence": "medium",
+   "mask_sea_km": 1.1,
+   "coord_check": "harbour_in_mask_land"
+  },
+  {
+   "id": "wreck_tobruk_ladybird",
+   "name": "HMS Ladybird gunboat, sunk by Stukas in Tobruk harbour",
+   "lat": 32.083,
+   "lon": 23.97,
+   "type": "wreck",
+   "hull": "gunboat",
+   "length_m": 56,
+   "heading": 0,
+   "from": "1941-05-12",
+   "to": "",
+   "source": "Wikipedia: HMS Ladybird (T 1941 sunk at Tobruk 12 May 1941)",
+   "confidence": "medium",
+   "mask_sea_km": 1.3,
+   "coord_check": "harbour_in_mask_land"
+  },
+  {
+   "id": "wreck_tobruk_liguria",
+   "name": "Hulk of the liner Liguria, Tobruk harbour",
+   "lat": 32.09,
+   "lon": 23.983,
+   "type": "wreck",
+   "hull": "liner",
+   "length_m": 130,
+   "heading": 0,
+   "from": "1941-01-22",
+   "to": "",
+   "source": "Wikipedia: Siege of Tobruk / Capture of Tobruk (Jan 1941) - Italian shipping scuttled or bombed in the harbour; exact berth unverified",
+   "confidence": "low",
+   "mask_sea_km": 0.8,
+   "coord_check": "harbour_in_mask_land"
+  },
+  {
+   "id": "wreck_malta_maori",
+   "name": "HMS Maori (destroyer), bombed and sunk in Grand Harbour",
+   "lat": 35.8905,
+   "lon": 14.523,
+   "type": "wreck",
+   "hull": "destroyer",
+   "length_m": 115,
+   "heading": 0,
+   "from": "1942-02-12",
+   "to": "1945-09-01",
+   "source": "Wikipedia: HMS Maori (F24) (bombed at Malta 12 Feb 1942, wreck raised and scuttled 1945)",
+   "confidence": "medium",
+   "mask_sea_km": 0.9,
+   "coord_check": "harbour_in_mask_land"
+  },
+  {
+   "id": "wreck_malta_breconshire",
+   "name": "SS Breconshire (supply ship), capsized in Marsaxlokk Bay",
+   "lat": 35.8385,
+   "lon": 14.556,
+   "type": "wreck",
+   "hull": "cargo",
+   "length_m": 140,
+   "heading": 0,
+   "from": "1942-03-27",
+   "to": "1950-12-31",
+   "source": "Wikipedia: SS Breconshire (bombed in Marsaxlokk 27 Mar 1942, capsized; wreck left)",
+   "confidence": "medium",
+   "mask_sea_km": 0.8,
+   "coord_check": "harbour_in_mask_land"
+  },
+  {
+   "id": "wreck_malta_ohio",
+   "name": "SS Ohio, broken-backed tanker moored in Grand Harbour after Operation Pedestal",
+   "lat": 35.889,
+   "lon": 14.53,
+   "type": "wreck",
+   "hull": "tanker",
+   "length_m": 150,
+   "heading": 80,
+   "from": "1942-08-15",
+   "to": "1946-09-19",
+   "source": "Wikipedia: SS Ohio (arrived 15 Aug 1942; scuttled off Malta 19 Sep 1946)",
+   "confidence": "medium",
+   "mask_sea_km": 0.8,
+   "coord_check": "harbour_in_mask_land"
+  }
+ ],
+ "defence_lines": [
+  {
+   "id": "line_gazala",
+   "name": "Gazala Line: wire, mines and boxes from Ain el Gazala to Bir Hakeim",
+   "type": "defence_line",
+   "pts": [
+    [
+     32.6385,
+     23.0509
+    ],
+    [
+     32.1,
+     23.12
+    ],
+    [
+     32.02,
+     23.2
+    ],
+    [
+     31.93,
+     23.27
+    ],
+    [
+     31.82,
+     23.33
+    ],
+    [
+     31.7,
+     23.4
+    ],
+    [
+     31.594,
+     23.48
+    ]
+   ],
+   "wire": true,
+   "mines": true,
+   "trench": true,
+   "belt_depth_m": 2500,
+   "from": "1942-02-04",
+   "to": "1942-06-14",
+   "source": "Wikipedia: Battle of Gazala (the Gazala Line was built Feb-May 1942; broken 26 May - 14 Jun 1942)",
+   "confidence": "medium"
+  },
+  {
+   "id": "line_alamein_axis",
+   "name": "El Alamein: Axis wire and Devil's Gardens, coast to Qaret el Himeimat",
+   "type": "defence_line",
+   "pts": [
+    [
+     30.8921,
+     28.8591
+    ],
+    [
+     30.82,
+     28.84
+    ],
+    [
+     30.75,
+     28.82
+    ],
+    [
+     30.68,
+     28.82
+    ],
+    [
+     30.6,
+     28.85
+    ],
+    [
+     30.55,
+     28.88
+    ]
+   ],
+   "wire": true,
+   "mines": true,
+   "trench": true,
+   "belt_depth_m": 5000,
+   "from": "1942-07-04",
+   "to": "1943-06-30",
+   "source": "Wikipedia: Second Battle of El Alamein (Axis mine belts ~5 km apart; Devil's Gardens); First Alamein 1-27 Jul 1942",
+   "confidence": "medium"
+  },
+  {
+   "id": "line_alamein_allied",
+   "name": "El Alamein: British wire and minefields east of the Axis belts",
+   "type": "defence_line",
+   "pts": [
+    [
+     30.8597,
+     28.9298
+    ],
+    [
+     30.79,
+     28.91
+    ],
+    [
+     30.72,
+     28.9
+    ],
+    [
+     30.66,
+     28.9
+    ],
+    [
+     30.6,
+     28.92
+    ]
+   ],
+   "wire": true,
+   "mines": true,
+   "trench": true,
+   "belt_depth_m": 3000,
+   "from": "1942-07-04",
+   "to": "1942-11-04",
+   "source": "Wikipedia: First Battle of El Alamein / Second Battle (British defensive box line July - Oct 1942)",
+   "confidence": "low"
+  },
+  {
+   "id": "line_mareth",
+   "name": "Mareth Line: French fortifications along Wadi Zigzaou, refurbished by the Axis",
+   "type": "defence_line",
+   "pts": [
+    [
+     33.6593,
+     10.3995
+    ],
+    [
+     33.62,
+     10.29
+    ],
+    [
+     33.55,
+     10.17
+    ],
+    [
+     33.49,
+     10.06
+    ],
+    [
+     33.44,
+     9.98
+    ]
+   ],
+   "wire": true,
+   "mines": true,
+   "trench": true,
+   "belt_depth_m": 1200,
+   "from": "1943-01-15",
+   "to": "1943-03-31",
+   "source": "Wikipedia: Mareth Line (~50 km from the Gulf of Gabes to Cheguimi / Djebel Matmata; Axis refurbished 1942-43; battle 16-31 Mar 1943)",
+   "confidence": "medium"
+  },
+  {
+   "id": "line_tobruk_perimeter",
+   "name": "Tobruk fortress perimeter (Red Line): wire, anti-tank ditch and minefield ring",
+   "type": "defence_line",
+   "pts": [
+    [
+     32.1458,
+     23.7998
+    ],
+    [
+     32.05,
+     23.66
+    ],
+    [
+     31.93,
+     23.72
+    ],
+    [
+     31.86,
+     23.9
+    ],
+    [
+     31.9,
+     24.15
+    ],
+    [
+     32.0,
+     24.28
+    ],
+    [
+     31.9914,
+     24.2209
+    ]
+   ],
+   "wire": true,
+   "mines": true,
+   "trench": true,
+   "belt_depth_m": 1500,
+   "from": "1941-04-10",
+   "to": "1941-12-10",
+   "source": "Wikipedia: Siege of Tobruk (perimeter ~50 km long, held 10 Apr - 10 Dec 1941)",
+   "confidence": "medium"
+  },
+  {
+   "id": "line_halfaya_wire",
+   "name": "Halfaya Pass: Axis wire and dug-in 88 mm positions on the escarpment",
+   "type": "defence_line",
+   "pts": [
+    [
+     31.54,
+     25.16
+    ],
+    [
+     31.515,
+     25.195
+    ],
+    [
+     31.49,
+     25.225
+    ]
+   ],
+   "wire": true,
+   "mines": true,
+   "trench": true,
+   "belt_depth_m": 800,
+   "from": "1941-05-27",
+   "to": "1942-01-17",
+   "source": "Wikipedia: Halfaya Pass (taken by Germans 27 May 1941; Battleaxe 15 Jun 1941; garrison surrendered 17 Jan 1942)",
+   "confidence": "medium"
+  },
+  {
+   "id": "line_wadi_akarit",
+   "name": "Wadi Akarit - Gabes gap: Axis wire and ditch between Chott el Fejaj and the sea",
+   "type": "defence_line",
+   "pts": [
+    [
+     33.8976,
+     10.1005
+    ],
+    [
+     33.99,
+     10.02
+    ],
+    [
+     33.96,
+     9.93
+    ]
+   ],
+   "wire": true,
+   "mines": true,
+   "trench": true,
+   "belt_depth_m": 900,
+   "from": "1943-03-30",
+   "to": "1943-04-07",
+   "source": "Wikipedia: Battle of Wadi Akarit (6-7 Apr 1943); position approximate",
+   "confidence": "low"
+  }
+ ],
+ "fortified_boxes": [
+  {
+   "id": "box_bir_hakeim",
+   "name": "Bir Hakeim (Free French brigade box)",
+   "lat": 31.594,
+   "lon": 23.48,
+   "type": "fortified_box",
+   "radius_m": 2200,
+   "wire": true,
+   "mines": true,
+   "garrison": "Free French",
+   "from": "1942-02-14",
+   "to": "1942-06-11",
+   "source": "Wikipedia: Battle of Bir Hakeim (31 35N 23 28E; Free French garrison until the breakout 10-11 Jun 1942)",
+   "confidence": "high",
+   "elev_m": 172
+  },
+  {
+   "id": "box_gazala",
+   "name": "Gazala box (1st South African Division)",
+   "lat": 32.17,
+   "lon": 23.05,
+   "type": "fortified_box",
+   "radius_m": 2500,
+   "wire": true,
+   "mines": true,
+   "garrison": "1st South African Division",
+   "from": "1942-02-04",
+   "to": "1942-06-14",
+   "source": "Wikipedia: Battle of Gazala (Gazala Line western box); position approximate",
+   "confidence": "low",
+   "elev_m": 99
+  },
+  {
+   "id": "box_got_el_ualeb",
+   "name": "Got el Ualeb / Sidi Muftah (150th Brigade box)",
+   "lat": 32.02,
+   "lon": 23.19,
+   "type": "fortified_box",
+   "radius_m": 2000,
+   "wire": true,
+   "mines": true,
+   "garrison": "150th Brigade",
+   "from": "1942-02-20",
+   "to": "1942-06-01",
+   "source": "Wikipedia: Battle of Gazala (150th Brigade box overrun 1 Jun 1942); position approximate",
+   "confidence": "low",
+   "elev_m": 207
+  },
+  {
+   "id": "box_knightsbridge",
+   "name": "Knightsbridge box (201st Guards Brigade)",
+   "lat": 31.99,
+   "lon": 23.62,
+   "type": "fortified_box",
+   "radius_m": 2200,
+   "wire": true,
+   "mines": true,
+   "garrison": "201st Guards Brigade",
+   "from": "1942-05-20",
+   "to": "1942-06-13",
+   "source": "Wikipedia: Battle of Gazala (Knightsbridge box evacuated 13 Jun 1942); position approximate",
+   "confidence": "low",
+   "elev_m": 186
+  },
+  {
+   "id": "box_el_adem",
+   "name": "El Adem box",
+   "lat": 31.85,
+   "lon": 23.93,
+   "type": "fortified_box",
+   "radius_m": 2200,
+   "wire": true,
+   "mines": true,
+   "garrison": "29th Indian Brigade",
+   "from": "1942-05-20",
+   "to": "1942-06-17",
+   "source": "Wikipedia: Battle of Gazala (El Adem box evacuated 17 Jun 1942)",
+   "confidence": "medium",
+   "elev_m": 147
+  },
+  {
+   "id": "box_sidi_rezegh",
+   "name": "Sidi Rezegh escarpment positions (Crusader battlefield)",
+   "lat": 31.9,
+   "lon": 24.39,
+   "type": "fortified_box",
+   "radius_m": 3500,
+   "wire": false,
+   "mines": false,
+   "garrison": "mixed",
+   "from": "1941-11-19",
+   "to": "1941-12-01",
+   "source": "Wikipedia: Operation Crusader (Sidi Rezegh 19-23 Nov 1941); position approximate",
+   "confidence": "low",
+   "elev_m": 97
+  },
+  {
+   "id": "box_bardia",
+   "name": "Bardia Italian fortified perimeter (fortress)",
+   "lat": 31.76,
+   "lon": 25.09,
+   "type": "fortified_box",
+   "radius_m": 6000,
+   "wire": true,
+   "mines": true,
+   "garrison": "Italian 23rd Corps",
+   "from": "1940-06-11",
+   "to": "1941-01-05",
+   "source": "Wikipedia: Battle of Bardia (Italian wire and anti-tank ditch; fell 5 Jan 1941)",
+   "confidence": "medium",
+   "elev_m": 61
+  },
+  {
+   "id": "box_el_alamein_station",
+   "name": "El Alamein railway station box (Alamein box)",
+   "lat": 30.833,
+   "lon": 28.951,
+   "type": "fortified_box",
+   "radius_m": 2500,
+   "wire": true,
+   "mines": true,
+   "garrison": "1st South African Division",
+   "from": "1942-07-01",
+   "to": "1942-11-04",
+   "source": "Wikipedia: First Battle of El Alamein (El Alamein 30 50N 28 56E; 1st South African Division box)",
+   "confidence": "high",
+   "elev_m": 6
+  },
+  {
+   "id": "box_alam_halfa_ridge",
+   "name": "Alam el Halfa ridge defences",
+   "lat": 30.78,
+   "lon": 29.02,
+   "type": "fortified_box",
+   "radius_m": 3500,
+   "wire": false,
+   "mines": true,
+   "garrison": "44th Division / 10th Armoured",
+   "from": "1942-08-25",
+   "to": "1942-09-06",
+   "source": "Wikipedia: Battle of Alam el Halfa (30 Aug - 5 Sep 1942); position approximate",
+   "confidence": "low",
+   "elev_m": 12
+  },
+  {
+   "id": "box_medenine",
+   "name": "Medenine anti-tank screen",
+   "lat": 33.355,
+   "lon": 10.505,
+   "type": "fortified_box",
+   "radius_m": 3500,
+   "wire": false,
+   "mines": true,
+   "garrison": "2nd NZ Division",
+   "from": "1943-03-04",
+   "to": "1943-03-07",
+   "source": "Wikipedia: Battle of Medenine (6 Mar 1943)",
+   "confidence": "medium",
+   "elev_m": 87
+  },
+  {
+   "id": "box_kasserine_pass",
+   "name": "Kasserine Pass defences",
+   "lat": 35.18,
+   "lon": 8.68,
+   "type": "fortified_box",
+   "radius_m": 3000,
+   "wire": false,
+   "mines": true,
+   "garrison": "US 26th / 19th Engineers",
+   "from": "1943-02-14",
+   "to": "1943-02-22",
+   "source": "Wikipedia: Battle of the Kasserine Pass (19-24 Feb 1943)",
+   "confidence": "medium",
+   "elev_m": 1017
+  }
+ ],
+ "pass_features": [
+  {
+   "id": "pass_halfaya",
+   "name": "Halfaya Pass (Hellfire Pass): 88 mm guns, wire and wrecked tanks",
+   "lat": 31.505,
+   "lon": 25.205,
+   "type": "pass_feature",
+   "radius_m": 2500,
+   "wrecks": 14,
+   "from": "1941-06-15",
+   "to": "1942-01-17",
+   "source": "Wikipedia: Halfaya Pass (Battleaxe 15 Jun 1941 - 88 mm guns destroyed the first British tank wave; garrison surrendered 17 Jan 1942); 7.5 km S of the Sollum pass",
+   "confidence": "medium"
+  },
+  {
+   "id": "pass_sollum",
+   "name": "Sollum Pass (coast road climb)",
+   "lat": 31.5677,
+   "lon": 25.1482,
+   "type": "pass_feature",
+   "radius_m": 1800,
+   "wrecks": 6,
+   "from": "1941-04-14",
+   "to": "1942-11-12",
+   "source": "Wikipedia: Halfaya Pass (the more major pass 7.5 km north); steepest scarp cell on the heightmap",
+   "confidence": "medium"
+  },
+  {
+   "id": "pass_kasserine",
+   "name": "Kasserine Pass: knocked-out US armour and halftracks",
+   "lat": 35.18,
+   "lon": 8.68,
+   "type": "pass_feature",
+   "radius_m": 3000,
+   "wrecks": 22,
+   "from": "1943-02-19",
+   "to": "1943-04-30",
+   "source": "Wikipedia: Battle of the Kasserine Pass (19-24 Feb 1943)",
+   "confidence": "medium"
+  }
+ ],
+ "battle_wrecks": [
+  {
+   "id": "wrecks_sidi_barrani",
+   "name": "Sidi Barrani: abandoned Italian vehicles and guns",
+   "lat": 31.61,
+   "lon": 25.92,
+   "type": "battle_wrecks",
+   "radius_m": 5000,
+   "tanks": 8,
+   "trucks": 60,
+   "from": "1940-12-10",
+   "to": "1941-03-31",
+   "source": "Wikipedia: Operation Compass (Sidi Barrani 9-11 Dec 1940)",
+   "confidence": "medium"
+  },
+  {
+   "id": "wrecks_bardia",
+   "name": "Bardia: Italian guns and trucks",
+   "lat": 31.76,
+   "lon": 25.09,
+   "type": "battle_wrecks",
+   "radius_m": 4000,
+   "tanks": 6,
+   "trucks": 50,
+   "from": "1941-01-05",
+   "to": "1941-04-10",
+   "source": "Wikipedia: Battle of Bardia",
+   "confidence": "medium"
+  },
+  {
+   "id": "wrecks_sidi_rezegh",
+   "name": "Sidi Rezegh: burnt tanks on the escarpment",
+   "lat": 31.9,
+   "lon": 24.39,
+   "type": "battle_wrecks",
+   "radius_m": 5000,
+   "tanks": 40,
+   "trucks": 30,
+   "from": "1941-11-23",
+   "to": "1942-05-30",
+   "source": "Wikipedia: Operation Crusader (Totensonntag 23 Nov 1941)",
+   "confidence": "low"
+  },
+  {
+   "id": "wrecks_cauldron",
+   "name": "The Cauldron: tank graveyard south of Knightsbridge",
+   "lat": 31.93,
+   "lon": 23.55,
+   "type": "battle_wrecks",
+   "radius_m": 6000,
+   "tanks": 60,
+   "trucks": 40,
+   "from": "1942-06-05",
+   "to": "1942-12-31",
+   "source": "Wikipedia: Battle of Gazala (The Cauldron 30 May - 5 Jun 1942)",
+   "confidence": "low"
+  },
+  {
+   "id": "wrecks_alam_halfa",
+   "name": "Alam el Halfa: Panzer wrecks",
+   "lat": 30.76,
+   "lon": 28.93,
+   "type": "battle_wrecks",
+   "radius_m": 4500,
+   "tanks": 25,
+   "trucks": 20,
+   "from": "1942-09-01",
+   "to": "1943-03-31",
+   "source": "Wikipedia: Battle of Alam el Halfa",
+   "confidence": "low"
+  },
+  {
+   "id": "wrecks_kidney_ridge",
+   "name": "Kidney Ridge (Snipe): burnt tanks and guns",
+   "lat": 30.8,
+   "lon": 28.87,
+   "type": "battle_wrecks",
+   "radius_m": 4000,
+   "tanks": 45,
+   "trucks": 30,
+   "from": "1942-10-27",
+   "to": "1943-04-30",
+   "source": "Wikipedia: Second Battle of El Alamein (Operation Supercharge; Snipe 27 Oct 1942)",
+   "confidence": "low"
+  },
+  {
+   "id": "wrecks_tel_el_eisa",
+   "name": "Tel el Eisa: wrecks along the coast road",
+   "lat": 30.86,
+   "lon": 28.9,
+   "type": "battle_wrecks",
+   "radius_m": 3000,
+   "tanks": 12,
+   "trucks": 40,
+   "from": "1942-07-10",
+   "to": "1942-12-31",
+   "source": "Wikipedia: First Battle of El Alamein (Tel el Eisa 10-11 Jul 1942)",
+   "confidence": "low"
+  },
+  {
+   "id": "wrecks_via_balbia_el_daba",
+   "name": "Coast road retreat: burnt-out Axis transport, El Daba to Fuka",
+   "lat": 30.97,
+   "lon": 28.55,
+   "type": "battle_wrecks",
+   "radius_m": 8000,
+   "tanks": 10,
+   "trucks": 120,
+   "from": "1942-11-05",
+   "to": "1943-06-30",
+   "source": "Wikipedia: Second Battle of El Alamein (pursuit, Nov 1942)",
+   "confidence": "low"
+  },
+  {
+   "id": "wrecks_sidi_bou_zid",
+   "name": "Sidi Bou Zid: destroyed US tanks",
+   "lat": 35.04,
+   "lon": 9.49,
+   "type": "battle_wrecks",
+   "radius_m": 6000,
+   "tanks": 50,
+   "trucks": 40,
+   "from": "1943-02-14",
+   "to": "1943-04-30",
+   "source": "Wikipedia: Battle of Sidi Bou Zid (14-17 Feb 1943)",
+   "confidence": "medium"
+  },
+  {
+   "id": "wrecks_mareth",
+   "name": "Mareth / Wadi Zigzaou: abandoned tanks and guns",
+   "lat": 33.58,
+   "lon": 10.22,
+   "type": "battle_wrecks",
+   "radius_m": 5000,
+   "tanks": 20,
+   "trucks": 40,
+   "from": "1943-03-27",
+   "to": "1943-06-30",
+   "source": "Wikipedia: Battle of the Mareth Line (Operation Pugilist 19-23 Mar 1943)",
+   "confidence": "low"
+  },
+  {
+   "id": "wrecks_medenine",
+   "name": "Medenine: knocked-out Panzers",
+   "lat": 33.37,
+   "lon": 10.46,
+   "type": "battle_wrecks",
+   "radius_m": 4000,
+   "tanks": 32,
+   "trucks": 6,
+   "from": "1943-03-06",
+   "to": "1943-06-30",
+   "source": "Wikipedia: Battle of Medenine (6 Mar 1943, 52 tanks lost)",
+   "confidence": "medium"
+  },
+  {
+   "id": "wrecks_tunis_bizerte",
+   "name": "Tunis and Bizerte: scuttled equipment and abandoned vehicles",
+   "lat": 36.88,
+   "lon": 10.05,
+   "type": "battle_wrecks",
+   "radius_m": 9000,
+   "tanks": 30,
+   "trucks": 200,
+   "from": "1943-05-08",
+   "to": "1943-12-31",
+   "source": "Wikipedia: Tunisian campaign (Axis surrender 13 May 1943)",
+   "confidence": "low"
+  }
+ ],
+ "airfield_damage": [
+  {
+   "id": "dmg_luqa",
+   "name": "Luqa: craters, burnt hangars and wrecked aircraft",
+   "lat": 35.8575,
+   "lon": 14.4775,
+   "type": "airfield_damage",
+   "airfield": "luqa",
+   "radius_m": 1900,
+   "level": 0.75,
+   "craters": 140,
+   "from": "1940-06-11",
+   "peak": "1942-04-20",
+   "full": "1942-05-10",
+   "source": "Wikipedia: Siege of Malta (1940-42) (Luqa the main Axis target, heaviest Mar-Apr 1942)",
+   "confidence": "medium"
+  },
+  {
+   "id": "dmg_hal_far",
+   "name": "Hal Far: craters, burnt hangars and wrecked aircraft",
+   "lat": 35.82,
+   "lon": 14.5,
+   "type": "airfield_damage",
+   "airfield": "hal_far",
+   "radius_m": 1700,
+   "level": 0.8,
+   "craters": 120,
+   "from": "1940-06-11",
+   "peak": "1942-04-20",
+   "full": "1942-05-10",
+   "source": "Wikipedia: Siege of Malta (1940-42) (Hal Far / Kalafrana raided from Jan 1941)",
+   "confidence": "medium"
+  },
+  {
+   "id": "dmg_ta_kali",
+   "name": "Ta Kali (Ta' Qali): craters, burnt hangars and wrecked aircraft",
+   "lat": 35.9283,
+   "lon": 14.3767,
+   "type": "airfield_damage",
+   "airfield": "ta_kali",
+   "radius_m": 1800,
+   "level": 0.8,
+   "craters": 130,
+   "from": "1940-06-11",
+   "peak": "1942-04-15",
+   "full": "1942-05-10",
+   "source": "Wikipedia: Siege of Malta (1940-42) (Ta Kali (Takali) hammered Mar-Apr 1942)",
+   "confidence": "medium"
+  },
+  {
+   "id": "dmg_benina",
+   "name": "Benina (Berka), Benghazi: craters, burnt hangars and wrecked aircraft",
+   "lat": 32.0968,
+   "lon": 20.2703,
+   "type": "airfield_damage",
+   "airfield": "benina",
+   "radius_m": 2000,
+   "level": 0.45,
+   "craters": 60,
+   "from": "1941-04-10",
+   "peak": "1942-12-01",
+   "full": "1943-01-23",
+   "source": "Wikipedia: Benina Airport / North African campaign air raids (RAF raids Benghazi area 1941-43)",
+   "confidence": "low"
+  },
+  {
+   "id": "dmg_castel_benito",
+   "name": "Castel Benito (Tripoli): craters, burnt hangars and wrecked aircraft",
+   "lat": 32.6635,
+   "lon": 13.0759,
+   "type": "airfield_damage",
+   "airfield": "castel_benito",
+   "radius_m": 2200,
+   "level": 0.5,
+   "craters": 80,
+   "from": "1941-01-15",
+   "peak": "1943-01-10",
+   "full": "1943-01-23",
+   "source": "Wikipedia: Tripoli / Western Desert air war (RAF raids until the fall of Tripoli 23 Jan 1943)",
+   "confidence": "low"
+  },
+  {
+   "id": "dmg_el_adem",
+   "name": "El Adem: craters, burnt hangars and wrecked aircraft",
+   "lat": 31.85,
+   "lon": 23.93,
+   "type": "airfield_damage",
+   "airfield": "el_adem",
+   "radius_m": 2000,
+   "level": 0.55,
+   "craters": 70,
+   "from": "1941-04-10",
+   "peak": "1942-06-17",
+   "full": "1942-06-20",
+   "source": "Wikipedia: RAF Station El Adem (bombed during the Siege of Tobruk and Gazala)",
+   "confidence": "low"
+  },
+  {
+   "id": "dmg_gambut",
+   "name": "Gambut: craters, burnt hangars and wrecked aircraft",
+   "lat": 32.3,
+   "lon": 21.8,
+   "type": "airfield_damage",
+   "airfield": "gambut",
+   "radius_m": 1800,
+   "level": 0.4,
+   "craters": 40,
+   "from": "1941-11-20",
+   "peak": "1942-06-17",
+   "full": "1942-06-20",
+   "source": "Wikipedia: Battle of Gazala (LGs Gambut overrun 17 Jun 1942)",
+   "confidence": "low"
+  },
+  {
+   "id": "dmg_martuba",
+   "name": "Martuba: craters, burnt hangars and wrecked aircraft",
+   "lat": 32.8,
+   "lon": 22.4,
+   "type": "airfield_damage",
+   "airfield": "martuba",
+   "radius_m": 1800,
+   "level": 0.4,
+   "craters": 40,
+   "from": "1941-12-20",
+   "peak": "1942-11-15",
+   "full": "1942-11-20",
+   "source": "Wikipedia: Western Desert air war (Martuba airfields raided 1941-42)",
+   "confidence": "low"
+  },
+  {
+   "id": "dmg_catania_fontanarossa",
+   "name": "Catania Fontanarossa: craters, burnt hangars and wrecked aircraft",
+   "lat": 37.4668,
+   "lon": 15.0664,
+   "type": "airfield_damage",
+   "airfield": "catania_fontanarossa",
+   "radius_m": 2400,
+   "level": 0.6,
+   "craters": 90,
+   "from": "1943-05-05",
+   "peak": "1943-07-18",
+   "full": "1943-08-05",
+   "source": "Wikipedia: Allied invasion of Sicily (airfields around Catania bombed May-Aug 1943)",
+   "confidence": "low"
+  },
+  {
+   "id": "dmg_comiso",
+   "name": "Comiso: craters, burnt hangars and wrecked aircraft",
+   "lat": 36.9946,
+   "lon": 14.6072,
+   "type": "airfield_damage",
+   "airfield": "comiso",
+   "radius_m": 2200,
+   "level": 0.55,
+   "craters": 70,
+   "from": "1943-05-10",
+   "peak": "1943-07-09",
+   "full": "1943-07-12",
+   "source": "Wikipedia: Allied invasion of Sicily (Comiso bombed before the landings, taken 11 Jul 1943)",
+   "confidence": "low"
+  },
+  {
+   "id": "dmg_el_aouina",
+   "name": "Tunis El Aouina: craters, burnt hangars and wrecked aircraft",
+   "lat": 36.8483,
+   "lon": 10.227,
+   "type": "airfield_damage",
+   "airfield": "el_aouina",
+   "radius_m": 2200,
+   "level": 0.55,
+   "craters": 80,
+   "from": "1943-02-01",
+   "peak": "1943-04-20",
+   "full": "1943-05-10",
+   "source": "Wikipedia: Tunisian campaign (Allied air raids on the Tunis airfields Feb-May 1943)",
+   "confidence": "low"
+  },
+  {
+   "id": "dmg_sfax_el_maou",
+   "name": "Sfax El Maou (Thyna): craters, burnt hangars and wrecked aircraft",
+   "lat": 34.7178,
+   "lon": 10.6906,
+   "type": "airfield_damage",
+   "airfield": "sfax_el_maou",
+   "radius_m": 1900,
+   "level": 0.4,
+   "craters": 40,
+   "from": "1943-02-20",
+   "peak": "1943-03-30",
+   "full": "1943-04-10",
+   "source": "Wikipedia: Tunisian campaign (Sfax airfields raided before the 10 Apr 1943 fall)",
+   "confidence": "low"
+  },
+  {
+   "id": "dmg_bizerte_sidi_ahmed",
+   "name": "Bizerte Sidi Ahmed: craters, burnt hangars and wrecked aircraft",
+   "lat": 37.17,
+   "lon": 9.79,
+   "type": "airfield_damage",
+   "airfield": "bizerte_sidi_ahmed",
+   "radius_m": 2000,
+   "level": 0.5,
+   "craters": 60,
+   "from": "1943-04-01",
+   "peak": "1943-05-01",
+   "full": "1943-05-10",
+   "source": "Wikipedia: Tunisian campaign (Bizerte raided before 7 May 1943)",
+   "confidence": "low"
+  },
+  {
+   "id": "dmg_thelepte",
+   "name": "Thelepte: craters, burnt hangars and wrecked aircraft",
+   "lat": 35.1,
+   "lon": 8.6,
+   "type": "airfield_damage",
+   "airfield": "thelepte",
+   "radius_m": 1700,
+   "level": 0.5,
+   "craters": 40,
+   "from": "1943-02-14",
+   "peak": "1943-02-17",
+   "full": "1943-03-01",
+   "source": "Wikipedia: Battle of the Kasserine Pass (Thelepte evacuated and wrecked 17 Feb 1943)",
+   "confidence": "low"
+  }
+ ],
+ "damage_areas": [
+  {
+   "id": "dmg_valletta",
+   "name": "Valletta and Floriana",
+   "lat": 35.8975,
+   "lon": 14.509,
+   "radius_m": 1100,
+   "level": 0.4,
+   "from": "1940-06-11",
+   "full": "1942-05-10",
+   "source": "Wikipedia: Siege of Malta (1940-42)"
+  },
+  {
+   "id": "dmg_three_cities",
+   "name": "Senglea, Vittoriosa and Cospicua (dockyard)",
+   "lat": 35.887,
+   "lon": 14.522,
+   "radius_m": 1200,
+   "level": 0.65,
+   "from": "1941-01-10",
+   "full": "1942-05-10",
+   "source": "Wikipedia: Siege of Malta (1940-42) (dockyard area worst hit)"
+  },
+  {
+   "id": "dmg_kalafrana_marsaxlokk",
+   "name": "Kalafrana and Birzebbuga",
+   "lat": 35.821,
+   "lon": 14.523,
+   "radius_m": 900,
+   "level": 0.45,
+   "from": "1941-01-20",
+   "full": "1942-05-10",
+   "source": "Wikipedia: Siege of Malta (1940-42)"
+  },
+  {
+   "id": "dmg_tobruk",
+   "name": "Tobruk town and harbour",
+   "lat": 32.0836,
+   "lon": 23.9764,
+   "radius_m": 1500,
+   "level": 0.7,
+   "from": "1941-04-10",
+   "full": "1942-06-21",
+   "source": "Wikipedia: Siege of Tobruk (nightly air raids 1941; fell 21 Jun 1942)"
+  },
+  {
+   "id": "dmg_benghazi",
+   "name": "Benghazi port and old town",
+   "lat": 32.1167,
+   "lon": 20.0667,
+   "radius_m": 1700,
+   "level": 0.4,
+   "from": "1941-04-01",
+   "full": "1943-01-01",
+   "source": "Wikipedia: Benghazi (heavily bombed; changed hands five times 1941-42)"
+  },
+  {
+   "id": "dmg_tripoli_port",
+   "name": "Tripoli port and harbour",
+   "lat": 32.902,
+   "lon": 13.185,
+   "radius_m": 1500,
+   "level": 0.35,
+   "from": "1941-01-15",
+   "full": "1943-01-21",
+   "source": "Wikipedia: Tripoli (RAF and Navy bombardment 1941-43)"
+  },
+  {
+   "id": "dmg_bardia",
+   "name": "Bardia town",
+   "lat": 31.7592,
+   "lon": 25.0853,
+   "radius_m": 700,
+   "level": 0.55,
+   "from": "1941-01-02",
+   "full": "1941-01-05",
+   "source": "Wikipedia: Battle of Bardia (3-5 Jan 1941)"
+  },
+  {
+   "id": "dmg_sollum",
+   "name": "Sollum harbour village",
+   "lat": 31.5528,
+   "lon": 25.15,
+   "radius_m": 600,
+   "level": 0.4,
+   "from": "1941-06-15",
+   "full": "1941-12-31",
+   "source": "Wikipedia: Battle of Sollum / Halfaya Pass"
+  },
+  {
+   "id": "dmg_mersa_matruh",
+   "name": "Mersa Matruh",
+   "lat": 31.3525,
+   "lon": 27.2453,
+   "radius_m": 900,
+   "level": 0.3,
+   "from": "1940-09-10",
+   "full": "1942-07-01",
+   "source": "Wikipedia: Mersa Matruh (raids 1940-42)"
+  },
+  {
+   "id": "dmg_bizerte",
+   "name": "Bizerte port",
+   "lat": 37.2766,
+   "lon": 9.8627,
+   "radius_m": 1400,
+   "level": 0.5,
+   "from": "1943-04-01",
+   "full": "1943-05-07",
+   "source": "Wikipedia: Tunisian campaign (Bizerte bombing, fell 7 May 1943)"
+  },
+  {
+   "id": "dmg_tunis_goulette",
+   "name": "La Goulette and Tunis port",
+   "lat": 36.8245,
+   "lon": 10.2998,
+   "radius_m": 1300,
+   "level": 0.35,
+   "from": "1942-11-10",
+   "full": "1943-05-08",
+   "source": "Wikipedia: Tunisian campaign (Allied air raids on Tunis docks)"
+  },
+  {
+   "id": "dmg_sfax",
+   "name": "Sfax port",
+   "lat": 34.7406,
+   "lon": 10.7603,
+   "radius_m": 1300,
+   "level": 0.3,
+   "from": "1943-02-20",
+   "full": "1943-04-10",
+   "source": "Wikipedia: Tunisian campaign (Sfax bombed, taken 10 Apr 1943)"
+  },
+  {
+   "id": "dmg_catania",
+   "name": "Catania port and railway",
+   "lat": 37.5,
+   "lon": 15.09,
+   "radius_m": 1500,
+   "level": 0.3,
+   "from": "1943-05-05",
+   "full": "1943-08-05",
+   "source": "Wikipedia: Allied invasion of Sicily"
+  }
+ ]
+}

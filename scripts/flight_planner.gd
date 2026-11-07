@@ -190,8 +190,8 @@ func _ready() -> void:
 	_map.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_map.airfields = _airfields
 	_map.cities = _cities
-	if ResourceLoader.exists((WorldCoords.heightmap_dir() + "/region_color.png")):
-		_map.tex = load((WorldCoords.heightmap_dir() + "/region_color.png")) as Texture2D
+	if WorldCoords.map_picture_path() != "":
+		_map.tex = load(WorldCoords.map_picture_path()) as Texture2D
 	_map.picked.connect(_on_picked)
 	hb.add_child(_map)
 

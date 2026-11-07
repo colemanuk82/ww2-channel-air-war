@@ -8,7 +8,7 @@ extends RefCounted
 
 const CELL: float = 1800.0
 const PIECE: float = 45.0           # ribbon subdivision length (metres/units)
-const WIDTHS := {"rail": 10.0, "motorway": 12.0, "trunk": 10.0, "primary": 8.0, "secondary": 6.5, "tertiary": 5.5}
+const WIDTHS := {"rail": 10.0, "motorway": 12.0, "trunk": 10.0, "primary": 8.0, "secondary": 6.5, "tertiary": 5.5, "track": 3.5}
 
 static var loaded: bool = false
 static var lines: Array = []        # {"k": String, "pts": PackedVector2Array (x,z), "route": RoutePath (lazy), "len": float}
@@ -195,7 +195,7 @@ static func _build_rail_block() -> void:
 ## The parsed roads (world-space polylines) are cached in user:// as packed arrays, keyed on the source file's size,
 ## modified time and the world scale: the 20 MB JSON parse + lat/lon projection took ~3 s on every launch.
 static func _roads_cache_path(src: String) -> String:
-	return "user://roads_world_v3_%d_%d_%d_%d.bin" % [_src_len(src), FileAccess.get_modified_time(src), int(WorldCoords.units_per_deg_lon * 100.0), int(WorldCoords.units_per_deg_lat * 100.0)]
+	return "user://roads_world_v3_%d_%d_%d_%d_%d.bin" % [_src_len(src), FileAccess.get_modified_time(src), int(WorldCoords.units_per_deg_lon * 100.0), int(WorldCoords.units_per_deg_lat * 100.0), absi(src.hash()) % 100000]
 
 
 static func _src_len(src: String) -> int:
@@ -204,7 +204,13 @@ static func _src_len(src: String) -> int:
 
 
 static func _load_roads() -> void:
-	var path: String = (WorldCoords.osm_dir() + "/roads.json")
+	_load_roads_file(WorldCoords.osm_dir() + "/roads.json")
+	if GameState.current_map == "desert" and not DesertScatter.legacy():
+		# the derived pistes (data/desert/tracks.json, kind "track"): narrow pale ribbons, see road.gdshader
+		_load_roads_file(WorldCoords.heightmap_dir() + "/tracks.json")
+
+
+static func _load_roads_file(path: String) -> void:
 	if not FileAccess.file_exists(path):
 		return
 	var cache: String = _roads_cache_path(path)
@@ -432,9 +438,10 @@ static func _add_line(ln: Dictionary, seg0: int, seg1: int, rect: Rect2, verts: 
 	var cum: PackedFloat32Array = ln["cum"]
 	var half: float = float(WIDTHS.get(ln["k"], 8.0)) * 0.5
 	if ln["k"] != "rail":
-		half *= 1.5      # outer third of the ribbon is the grass verge (see road.gdshader)
+		half *= 2.0 if ln["k"] == "track" else 1.5      # outer third of the ribbon is the grass verge (see road.gdshader); a piste is half dust shoulder
 	var rail: float = 1.0 if ln["k"] == "rail" else 0.0
 	var major: float = 1.0 if (ln["k"] == "motorway" or ln["k"] == "trunk" or ln["k"] == "primary") else 0.0
+	var track: float = 1.0 if ln["k"] == "track" else 0.0
 	# per-vertex miter normals of the original polyline
 	var n: int = pts.size()
 	var nrm := PackedVector2Array()
@@ -491,7 +498,7 @@ static func _add_line(ln: Dictionary, seg0: int, seg1: int, rect: Rect2, verts: 
 					norms.append(Vector3.UP)
 					uvs.append(Vector2(1.0, sd))
 					uvs.append(Vector2(-1.0, sd))
-					cols.append(Color(major, rail, 0, 1))
-					cols.append(Color(major, rail, 0, 1))
+					cols.append(Color(major, rail, track, 1))
+					cols.append(Color(major, rail, track, 1))
 				# quad: (0 left0, 1 right0, 2 left1, 3 right1)
 				idx.append_array(PackedInt32Array([base, base + 2, base + 1, base + 1, base + 2, base + 3]))

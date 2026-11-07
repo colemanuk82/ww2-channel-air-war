@@ -13,8 +13,11 @@ const PRESETS := {
 	"rain": {"precip": 0.7, "cover": 1.0, "fog": 3.5, "light": 0.42, "desat": 0.65, "dim": 0.28, "cloud_dark": 0.5, "wind_lo": 10.0, "wind_hi": 17.0},
 	"storm": {"precip": 1.0, "cover": 1.0, "fog": 4.5, "light": 0.3, "desat": 0.7, "dim": 0.42, "cloud_dark": 0.7, "wind_lo": 16.0, "wind_hi": 27.0},
 	"fog": {"precip": 0.0, "cover": 0.6, "fog": 12.0, "light": 0.6, "desat": 0.5, "dim": 0.1, "cloud_dark": 0.2, "wind_lo": 0.0, "wind_hi": 3.0},
+	# Khamsin: the hot desert sandstorm wind (desert map only). dust drives the ochre sky / fog in TimeOfDay.
+	"khamsin": {"precip": 0.0, "cover": 0.05, "fog": 1.0, "light": 0.5, "desat": 0.15, "dim": 0.0, "cloud_dark": 0.1, "wind_lo": 15.0, "wind_hi": 24.0, "dust": 1.0},
 }
 const ORDER := ["clear", "scattered", "overcast", "rain", "storm", "fog"]
+const DESERT_ONLY := ["khamsin"]
 
 var current: String = "clear"
 var cloud_field: CloudField
@@ -89,6 +92,8 @@ func _ready() -> void:
 
 
 func get_weather_names() -> Array:
+	if GameState.current_map == "desert":
+		return ORDER + DESERT_ONLY
 	return ORDER
 
 
@@ -140,9 +145,11 @@ func set_weather(weather_name: String, blend_time: float = 4.0) -> void:
 	if not PRESETS.has(weather_name):
 		push_warning("WeatherManager: unknown weather '%s'" % weather_name)
 		return
+	if weather_name in DESERT_ONLY and GameState.current_map != "desert":
+		weather_name = "clear"      # the Khamsin exists only on the desert map
 	base_weather = weather_name
 	_roll_low_cloud(weather_name)
-	if front_active and weather_name in ["fog", "storm"]:
+	if front_active and weather_name in ["fog", "storm", "khamsin"]:
 		cancel_front()
 	if front_active:
 		_front_zone = ""           # an active front keeps going; the weather here is re-read on the next tick
@@ -153,7 +160,7 @@ func set_weather(weather_name: String, blend_time: float = 4.0) -> void:
 
 ## Some days bring a very low broken cloud deck (a few hundred feet up, not fog) under the weather's own clouds.
 var low_cloud: float = 0.0
-const LOW_CLOUD_CHANCE := {"clear": 0.04, "scattered": 0.18, "overcast": 0.45, "rain": 0.5, "storm": 0.3, "fog": 0.0}
+const LOW_CLOUD_CHANCE := {"clear": 0.04, "scattered": 0.18, "overcast": 0.45, "rain": 0.5, "storm": 0.3, "fog": 0.0, "khamsin": 0.0}
 
 
 func _roll_low_cloud(weather_name: String) -> void:
@@ -162,6 +169,8 @@ func _roll_low_cloud(weather_name: String) -> void:
 		low_cloud = 0.9 if forced == "1" else 0.0
 	else:
 		low_cloud = randf_range(0.5, 1.0) if randf() < float(LOW_CLOUD_CHANCE.get(weather_name, 0.0)) else 0.0
+		if GameState.current_map == "desert":
+			low_cloud = 0.0     # dry desert sky: no low scruffy deck
 	if cloud_field:
 		cloud_field.low_cloud = low_cloud
 
@@ -188,7 +197,7 @@ func _blend_to(weather_name: String, blend_time: float) -> void:
 func advance_front() -> void:
 	var i: int = FRONT_LADDER.find(current)
 	if i < 0:
-		return                       # fog / storm presets are left alone
+		return                       # fog / storm / khamsin presets are left alone
 	if i == FRONT_LADDER.size() - 1:
 		_front_dir = -1
 	elif i == 0:
@@ -202,8 +211,9 @@ func advance_front() -> void:
 ## front), so the key did nothing on about half the free flights: the pilot's choice now ends the front.
 func cycle_weather() -> void:
 	cancel_front()
-	var i: int = ORDER.find(current)
-	set_weather(ORDER[(i + 1) % ORDER.size()])
+	var names: Array = get_weather_names()
+	var i: int = names.find(current)
+	set_weather(names[(i + 1) % names.size()])
 
 
 func _process(delta: float) -> void:
@@ -224,7 +234,7 @@ func _process(delta: float) -> void:
 		_t = minf(_t + delta / _dur, 1.0)
 		var k: float = smoothstep(0.0, 1.0, _t)
 		for key in _to.keys():
-			_cur[key] = lerpf(float(_from[key]), float(_to[key]), k)
+			_cur[key] = lerpf(float(_from.get(key, 0.0)), float(_to[key]), k)
 		_apply()
 	# keep cloud tint in sync while time of day animates
 	elif Engine.get_process_frames() % 30 == 0:
@@ -257,9 +267,12 @@ func _update_rain(delta: float) -> void:
 
 
 func _apply() -> void:
+	var is_desert: bool = GameState.current_map == "desert"
+	TimeOfDay.dust = float(_cur.get("dust", 0.0))
 	TimeOfDay.set_weather_modifiers(float(_cur["fog"]) * (1.0 + rain * 1.1), _cur["light"], _cur["desat"] + rain * 0.1, _cur["dim"])
 	if cloud_field:
-		cloud_field.cover = _cur["cover"]
+		# desert: far fewer clouds, a sparse high sky (the Channel keeps its full cover)
+		cloud_field.cover = float(_cur["cover"]) * (0.4 if is_desert else 1.0)
 		if absf(cloud_field.low_cloud - low_cloud) > 0.001:
 			cloud_field.low_cloud = low_cloud
 		var ll: float = TimeOfDay.light_level

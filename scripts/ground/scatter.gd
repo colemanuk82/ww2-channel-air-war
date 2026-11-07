@@ -1268,7 +1268,7 @@ static func make_forest(center: Vector3, radius: float, count: int, seed_v: int,
 ## Farms, barns, windmills, hedgerows, cattle and tree clumps for one grid cell. exclude: [[Vector3, radius], ...]
 static func make_tile(origin: Vector2, cell: float, seed_v: int, exclude: Array) -> Node3D:
 	if GameState.current_map == "desert":
-		return _desert_tile(origin, cell, seed_v, exclude)      # no WorldCover grid there: sparse scrub only
+		return _desert_tile(origin, cell, seed_v, exclude)      # class-driven desert scatter (DesertScatter)
 	if LandCover.ready():
 		return _make_tile_landcover(origin, cell, seed_v, exclude)
 	var rng := RandomNumberGenerator.new()
@@ -1351,52 +1351,7 @@ static func make_tile(origin: Vector2, cell: float, seed_v: int, exclude: Array)
 ## The desert map (Libya / Egypt / Tunisia / Malta): no hedgerows, field boundaries, farmsteads, cattle or ricks.
 ## Only sparse low scrub on land (never on the sea or the beach, via _ok_tree). Palms near towns are not placed yet.
 static func _desert_tile(origin: Vector2, cell: float, seed_v: int, exclude: Array) -> Node3D:
-	var root := Node3D.new()
-	var rng := RandomNumberGenerator.new()
-	rng.seed = seed_v
-	var trees_c: Array = []
-	var trees_r: Array = []
-	var step: float = 60.0
-	var n: int = int(ceil(cell / step))
-	for j in n:
-		for i in n:
-			var p := Vector2(origin.x + (float(i) + rng.randf()) * step, origin.y + (float(j) + rng.randf()) * step)
-			# scrub: sparse on the open desert, thicker on the coast and on the low ground of the wadis and plains
-			var dens: float = 0.05
-			if GroundKit.raw_y(p.x, p.y) < 60.0:
-				dens = 0.09
-			if _near_sea(p, 2500.0):
-				dens = 0.13
-			if rng.randf() > dens:
-				continue
-			if _ok_tree(p, exclude, 1.5):
-				var sc: float = rng.randf_range(0.7, 1.1)
-				var tr: Transform3D = _xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y) - 0.3, p.y), rng.randf() * TAU, Vector3(sc, sc, sc))
-				if rng.randf() < 0.5:
-					trees_c.append(tr)
-				else:
-					trees_r.append(tr)
-	var tsplit: Array = _split_trees(trees_c, trees_r)
-	for tv in tsplit.size():
-		if not (tsplit[tv] as Array).is_empty():
-			root.add_child(multi(tree_variant(tv), tsplit[tv], 5000.0))
-	# palm groves: oases round the coastal towns and on the Nile delta's western edge (see _desert_oases)
-	var palms: Array = []
-	for oc in _desert_oases():
-		var cp: Vector2 = oc[0]
-		if cp.x < origin.x - 2000.0 or cp.x > origin.x + cell + 2000.0 or cp.y < origin.y - 2000.0 or cp.y > origin.y + cell + 2000.0:
-			continue
-		for t in int(oc[1]):
-			var a: float = rng.randf() * TAU
-			var q: Vector2 = cp + Vector2(cos(a), sin(a)) * sqrt(rng.randf()) * float(oc[2])
-			var sc2: float = rng.randf_range(0.9, 1.3)
-			if q.x < origin.x or q.x >= origin.x + cell or q.y < origin.y or q.y >= origin.y + cell:
-				continue
-			if _ok_tree(q, exclude, 1.5):
-				palms.append(_xf(Vector3(q.x, GroundKit.ground_y(q.x, q.y) - 0.3, q.y), rng.randf() * TAU, Vector3(sc2, sc2 * rng.randf_range(1.9, 2.5), sc2)))
-	if not palms.is_empty():
-		root.add_child(multi(tree_variant(0), palms, 4000.0))
-	return root
+	return build_tile_nodes(DesertScatter.tile_data(origin, cell, seed_v, exclude))
 
 
 static var _oases: Array = []
@@ -1444,6 +1399,8 @@ static func _make_tile_landcover(origin: Vector2, cell: float, seed_v: int, excl
 ## transform, packed into ready-to-upload MultiMesh buffers. Pure data (no nodes, no shared caches), so it can
 ## run on a worker thread (see WorldPopulator tile jobs). Call RoadMesh.prepare_block() on the same thread first.
 static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclude: Array) -> Dictionary:
+	if GameState.current_map == "desert":
+		return DesertScatter.tile_data(origin, cell, seed_v, exclude)       # no hedges, farms or terraces on the desert map
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_v
 	var houses: Array = [[], [], [], []]
@@ -1626,6 +1583,9 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 		root.add_child(cs)
 	for m in d.get("multis", []):
 		var kind: String = m[0]
+		if kind.begins_with("d_"):
+			DesertScatter.add_node(root, kind, m[1], float(m[2]))
+			continue
 		var mesh: Mesh
 		match kind:
 			"hedge":

@@ -20,6 +20,7 @@ signal initial_chunks_ready
 var field: HeightField
 var focus: Node3D
 var material: ShaderMaterial
+var _dune_tex: ImageTexture
 
 var _chunks: Dictionary = {}    # Vector2i -> {"node": MeshInstance3D, "lod": int}
 var _pending: Dictionary = {}   # Vector2i -> lod being built
@@ -252,6 +253,81 @@ func _apply_desert() -> void:
 	material.set_shader_parameter("desert_upl_lat", WorldCoords.units_per_deg_lat)
 	material.set_shader_parameter("desert_upl_lon", WorldCoords.units_per_deg_lon)
 	_apply_sea(WorldCoords.world_bounds())
+	# dune-region mask (baked by build/dune_mask_gen.gd from HeightField.dune_region_mask): gates the dune shading
+	var dm_path: String = "res://data/desert/dune_mask.png"
+	if _dune_tex == null and FileAccess.file_exists(dm_path):
+		var dimg: Image = Image.load_from_file(dm_path)
+		if dimg != null and not dimg.is_empty():
+			_dune_tex = ImageTexture.create_from_image(dimg)
+	if OS.get_cmdline_user_args().has("--desert-v1"):
+		material.set_shader_parameter("desert_v2", false)       # perf A/B: the look before the v2 dune shading
+	if _dune_tex != null:
+		material.set_shader_parameter("dune_tex", _dune_tex)
+		material.set_shader_parameter("use_dune", true)
+	_apply_desert_landcover()
+
+
+## Desert land cover (data/desert/region_landcover.bin, derived by tools/make_desert_landcover.py): the class grid as an
+## R8 texture plus a class id -> albedo table. The shader blends the four nearest cells with a noise-warped lookup
+## (desert_ground / lc_sample), so the 300 m cells never show as squares. Also loads the town mask for street earth.
+## Colours are pre-tint albedo in the scale of desert_ground (the shader multiplies by its warm grade afterwards).
+const DESERT_CLASS_COLORS := {
+	0: Color(0.36, 0.28, 0.18),       # sea / no data (unused: the water plane owns it)
+	10: Color(0.15, 0.19, 0.09),      # tree cover
+	20: Color(0.34, 0.28, 0.17),      # shrub: olive-grey
+	30: Color(0.36, 0.31, 0.18),      # grass / steppe
+	40: Color(0.23, 0.29, 0.12),      # crop: patchwork added in the shader
+	50: Color(0.42, 0.35, 0.26),      # built: street earth
+	60: Color(0.42, 0.29, 0.18),      # bare ground
+	80: Color(0.10, 0.15, 0.17),      # inland water
+	90: Color(0.17, 0.20, 0.12),      # wetland
+	110: Color(0.55, 0.45, 0.29),     # coastal sand: pale
+	111: Color(0.44, 0.39, 0.30),     # sabkha: grey-tan
+	112: Color(0.45, 0.34, 0.23),     # hamada: pale ochre limestone gravel
+	113: Color(0.19, 0.145, 0.105),   # reg: dark gravel
+	114: Color(0.30, 0.24, 0.18),     # rock: grey-brown, strata in the shader
+	115: Color(0.47, 0.27, 0.13),     # erg: orange-red dune sand
+	116: Color(0.66, 0.64, 0.58),     # salt pan: bright crust
+	117: Color(0.27, 0.20, 0.13),     # wadi bed
+	118: Color(0.58, 0.50, 0.35),     # limestone: honey stone (Malta)
+	119: Color(0.065, 0.06, 0.055),   # basalt: near black
+	120: Color(0.15, 0.22, 0.09),     # oasis: vivid green
+	121: Color(0.21, 0.24, 0.12),     # orchard: olive, citrus
+}
+static var _lc_tex: Texture2D
+static var _lc_lut: Texture2D
+
+
+func _apply_desert_landcover() -> void:
+	if not DesertScatter.legacy():
+		if _lc_tex == null:
+			var dir: String = WorldCoords.heightmap_dir()
+			var jf: FileAccess = FileAccess.open(dir + "/region_landcover.json", FileAccess.READ)
+			var bf: FileAccess = FileAccess.open(dir + "/region_landcover.bin", FileAccess.READ)
+			if jf != null and bf != null:
+				var jd: Variant = JSON.parse_string(jf.get_as_text())
+				if jd is Dictionary:
+					var w: int = int((jd as Dictionary).get("width", 0))
+					var h: int = int((jd as Dictionary).get("height", 0))
+					var buf: PackedByteArray = bf.get_buffer(bf.get_length())
+					if w > 0 and h > 0 and buf.size() == w * h:
+						_lc_tex = ImageTexture.create_from_image(Image.create_from_data(w, h, false, Image.FORMAT_R8, buf))
+						material.set_shader_parameter("lc_size", Vector2(float(w), float(h)))
+			if _lc_tex != null:
+				var lut := Image.create(128, 1, false, Image.FORMAT_RGB8)
+				for i in 128:
+					lut.set_pixel(i, 0, DESERT_CLASS_COLORS.get(i, Color(0.36, 0.28, 0.18)))
+				_lc_lut = ImageTexture.create_from_image(lut)
+		if _lc_tex != null:
+			material.set_shader_parameter("lc_tex", _lc_tex)
+			material.set_shader_parameter("lc_lut", _lc_lut)
+			material.set_shader_parameter("use_lc", true)
+	# towns: packed street earth where the derived built-up mask says so (the shader blends it, see urban in terrain.gdshader)
+	if _urban_tex == null and ResourceLoader.exists(WorldCoords.heightmap_dir() + "/region_urban.png"):
+		_urban_tex = load(WorldCoords.heightmap_dir() + "/region_urban.png") as Texture2D
+	if _urban_tex != null:
+		material.set_shader_parameter("urban_tex", _urban_tex)
+		material.set_shader_parameter("use_urban", true)
 
 
 ## Sea-distance texture over the imagery rect, so the sand strip can be kept to the coast (see terrain.gdshader).
@@ -374,6 +450,8 @@ func rebuild() -> void:
 
 func _process(delta: float) -> void:
 	_drain_results()
+	if _dune_tex != null:
+		material.set_shader_parameter("desert_sun_dir", TimeOfDay.sun_dir)
 	_timer -= delta
 	if _timer <= 0.0:
 		_timer = 0.1
