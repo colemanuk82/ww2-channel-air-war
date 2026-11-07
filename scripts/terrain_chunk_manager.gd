@@ -20,7 +20,7 @@ signal initial_chunks_ready
 var field: HeightField
 var focus: Node3D
 var material: ShaderMaterial
-var _dune_tex: ImageTexture
+var _dune_tex: Texture2D
 
 var _chunks: Dictionary = {}    # Vector2i -> {"node": MeshInstance3D, "lod": int}
 var _pending: Dictionary = {}   # Vector2i -> lod being built
@@ -253,18 +253,21 @@ func _apply_desert() -> void:
 	material.set_shader_parameter("desert_upl_lat", WorldCoords.units_per_deg_lat)
 	material.set_shader_parameter("desert_upl_lon", WorldCoords.units_per_deg_lon)
 	_apply_sea(WorldCoords.world_bounds())
+	GroundKit.lp("  desert sea distance")
 	# dune-region mask (baked by build/dune_mask_gen.gd from HeightField.dune_region_mask): gates the dune shading
 	var dm_path: String = "res://data/desert/dune_mask.png"
-	if _dune_tex == null and FileAccess.file_exists(dm_path):
-		var dimg: Image = Image.load_from_file(dm_path)
-		if dimg != null and not dimg.is_empty():
-			_dune_tex = ImageTexture.create_from_image(dimg)
+	if _dune_tex == null and ResourceLoader.exists(dm_path):
+		var dtex: Texture2D = ResourceLoader.load(dm_path) as Texture2D
+		if dtex != null:
+			_dune_tex = dtex
+	GroundKit.lp("  desert dune mask")
 	if OS.get_cmdline_user_args().has("--desert-v1"):
 		material.set_shader_parameter("desert_v2", false)       # perf A/B: the look before the v2 dune shading
 	if _dune_tex != null:
 		material.set_shader_parameter("dune_tex", _dune_tex)
 		material.set_shader_parameter("use_dune", true)
 	_apply_desert_landcover()
+	GroundKit.lp("  desert landcover")
 
 
 ## Desert land cover (data/desert/region_landcover.bin, derived by tools/make_desert_landcover.py): the class grid as an
@@ -301,18 +304,28 @@ static var _lc_lut: Texture2D
 func _apply_desert_landcover() -> void:
 	if not DesertScatter.legacy():
 		if _lc_tex == null:
-			var dir: String = WorldCoords.heightmap_dir()
-			var jf: FileAccess = FileAccess.open(dir + "/region_landcover.json", FileAccess.READ)
-			var bf: FileAccess = FileAccess.open(dir + "/region_landcover.bin", FileAccess.READ)
-			if jf != null and bf != null:
-				var jd: Variant = JSON.parse_string(jf.get_as_text())
-				if jd is Dictionary:
-					var w: int = int((jd as Dictionary).get("width", 0))
-					var h: int = int((jd as Dictionary).get("height", 0))
-					var buf: PackedByteArray = bf.get_buffer(bf.get_length())
-					if w > 0 and h > 0 and buf.size() == w * h:
-						_lc_tex = ImageTexture.create_from_image(Image.create_from_data(w, h, false, Image.FORMAT_R8, buf))
-						material.set_shader_parameter("lc_size", Vector2(float(w), float(h)))
+			# Reuse LandCover's single copy of the 19.4 MB class grid (it is already loaded for scatter and
+			# towns). Reading region_landcover.bin a second time here cost another full buffer + image copy.
+			var w: int = 0
+			var h: int = 0
+			var buf := PackedByteArray()
+			if LandCover.ready():
+				w = LandCover.width()
+				h = LandCover.height()
+				buf = LandCover.data()
+			if w <= 0 or h <= 0 or buf.size() != w * h:
+				var dir: String = WorldCoords.heightmap_dir()
+				var jf: FileAccess = FileAccess.open(dir + "/region_landcover.json", FileAccess.READ)
+				var bf: FileAccess = FileAccess.open(dir + "/region_landcover.bin", FileAccess.READ)
+				if jf != null and bf != null:
+					var jd: Variant = JSON.parse_string(jf.get_as_text())
+					if jd is Dictionary:
+						w = int((jd as Dictionary).get("width", 0))
+						h = int((jd as Dictionary).get("height", 0))
+						buf = bf.get_buffer(bf.get_length())
+			if w > 0 and h > 0 and buf.size() == w * h:
+				_lc_tex = ImageTexture.create_from_image(Image.create_from_data(w, h, false, Image.FORMAT_R8, buf))
+				material.set_shader_parameter("lc_size", Vector2(float(w), float(h)))
 			if _lc_tex != null:
 				var lut := Image.create(128, 1, false, Image.FORMAT_RGB8)
 				for i in 128:
@@ -345,16 +358,32 @@ func _apply_sea(b: Rect2) -> void:
 func _sea_distance_image(b: Rect2) -> Image:
 	var w: int = 1536
 	var h: int = 768
+	# Pure function of the coast mask: cache the texture so a restart does not pay the 1.18 M-cell
+	# chamfer again (about 1.4 s of every launch). Keyed on the mask file itself.
+	var mask_len: int = FileAccess.open(WorldCoords.heightmap_dir() + "/region_coast.png", FileAccess.READ).get_length() if FileAccess.file_exists(WorldCoords.heightmap_dir() + "/region_coast.png") else 0
+	var cache_key: String = "user://seadist_%d_%dx%d.bin" % [mask_len, w, h]
+	if FileAccess.file_exists(cache_key):
+		var cf := FileAccess.open(cache_key, FileAccess.READ)
+		if cf != null and cf.get_length() == w * h:
+			var cached: PackedByteArray = cf.get_buffer(cf.get_length())
+			cf = null
+			return Image.create_from_data(w, h, false, Image.FORMAT_R8, cached)
 	var sx: float = b.size.x / float(w)
 	var sz: float = b.size.y / float(h)
 	var big: float = 1.0e9
 	var d := PackedFloat32Array()
 	d.resize(w * h)
+	# Inline world -> lat/lon and the mask lookup: coast_land_w() allocated two objects per cell.
+	var upl_lat: float = WorldCoords.units_per_deg_lat
+	var upl_lon: float = WorldCoords.units_per_deg_lon
+	var olat: float = WorldCoords.ORIGIN_LAT
+	var olon: float = WorldCoords.ORIGIN_LON
 	for j in h:
-		var wz: float = b.position.y + (float(j) + 0.5) * sz
+		var lat: float = olat - (b.position.y + (float(j) + 0.5) * sz) / upl_lat
+		var row: int = j * w
 		for i in w:
-			var wx: float = b.position.x + (float(i) + 0.5) * sx
-			d[j * w + i] = 0.0 if field.coast_land_w(wx, wz) < 0.5 else big
+			var lon: float = olon + (b.position.x + (float(i) + 0.5) * sx) / upl_lon
+			d[row + i] = 0.0 if field.mask_at_latlon(lat, lon) < 0.5 else big
 	var dg: float = sqrt(sx * sx + sz * sz)
 	for j in h:
 		for i in w:
@@ -382,11 +411,17 @@ func _sea_distance_image(b: Rect2) -> Image:
 				if i > 0:
 					v2 = minf(v2, d[idx2 + w - 1] + dg)
 			d[idx2] = v2
-	var img := Image.create_empty(w, h, false, Image.FORMAT_R8)
-	for j in h:
-		for i in w:
-			img.set_pixel(i, j, Color(clampf(d[j * w + i] / 3000.0, 0.0, 1.0), 0.0, 0.0))
-	return img
+	# One bulk write. Image.set_pixel per cell on 1.18 M cells was a large, purely avoidable load-time
+	# cost (the pixels are identical: value = metres / 3000, clamped).
+	var px := PackedByteArray()
+	px.resize(w * h)
+	for k in w * h:
+		px[k] = int(clampf(d[k] / 3000.0, 0.0, 1.0) * 255.0 + 0.5)
+	var wf := FileAccess.open(cache_key, FileAccess.WRITE)
+	if wf != null:
+		wf.store_buffer(px)
+		wf = null
+	return Image.create_from_data(w, h, false, Image.FORMAT_R8, px)
 
 
 func _exit_tree() -> void:
@@ -435,7 +470,9 @@ func get_height_at(pos: Vector3) -> float:
 
 
 func is_water_at(pos: Vector3) -> bool:
-	return field.height_y(pos.x, pos.z) < 0.6
+	# Genuine water, not "ground near the waterline": on the desert the DEM is clipped at 0 m and the
+	# coastal flats sit at world Y 0.4-2, so a y < 0.6 test turned dry sabkha and delta land into sea.
+	return field.height_y(pos.x, pos.z) < -0.25
 
 
 ## Drop all chunks and regenerate (e.g. after adding flat zones).

@@ -406,6 +406,7 @@ func _build_wreck(root: Node3D) -> void:
 # ------------------------------------------------------------------ behaviour
 var _lod_skip: int = 1        # update every Nth frame by distance from the camera (far vehicles need no 60 Hz)
 var _lod_acc: float = 0.0
+var _dust_t: float = 0.6
 
 
 func _process(delta: float) -> void:
@@ -433,6 +434,14 @@ func _process(delta: float) -> void:
 			_update_troops(_troop_t)
 		elif vtype == "crew" and _frame % 3 == 0 and not _crew_figs.is_empty():
 			_update_crew(_troop_t, delta * 3.0)
+	# Desert: a moving column drags a dust plume, which is what makes it findable from the air.
+	if mode == "move" and GameState.current_map == "desert" and vtype != "troops" and vtype != "crew":
+		_dust_t -= delta
+		if _dust_t <= 0.0:
+			_dust_t = 0.45
+			var cam2: Camera3D = get_viewport().get_camera_3d()
+			if cam2 != null and cam2.global_position.distance_to(global_position) < 3500.0:
+				GroundKit.fx_call("dust", [global_position + Vector3(0, 0.3, 0), 1.7])
 	if mode == "fire" and _tip != null:
 		_fire_t -= delta
 		if _fire_t <= 0.0:

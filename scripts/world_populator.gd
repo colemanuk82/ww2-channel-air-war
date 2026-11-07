@@ -226,6 +226,13 @@ func _refresh_airfield_teams() -> void:
 		var d: Dictionary = a
 		if not bool(d.get("in_bounds", true)):
 			continue
+		# Generated landing grounds are dated; hand-authored fields keep their old behaviour.
+		if bool(d.get("generated", false)):
+			var aera: String = str(d.get("era", ""))
+			if aera != "":
+				var apr: PackedStringArray = aera.split(" to ")
+				if not EraClock.is_between(apr[0], apr[1] if apr.size() > 1 else ""):
+					continue
 		var ex: Airfield = _existing_for(str(d["id"]), _ll(d))
 		if ex != null:
 			ex.team = airfield_team(d)
@@ -239,6 +246,13 @@ func _register_airfields() -> void:
 			d["heading_deg"] = 0.0
 		if not bool(d.get("in_bounds", true)):
 			continue
+		# Generated landing grounds are dated; hand-authored fields keep their old behaviour.
+		if bool(d.get("generated", false)):
+			var aera: String = str(d.get("era", ""))
+			if aera != "":
+				var apr: PackedStringArray = aera.split(" to ")
+				if not EraClock.is_between(apr[0], apr[1] if apr.size() > 1 else ""):
+					continue
 		var id: String = d["id"]
 		var pos: Vector3 = _ll(d)
 		var y: float
@@ -258,7 +272,7 @@ func _register_airfields() -> void:
 		PylonMesh.add_exclusion_disc(Vector2(pos.x, pos.z), 1200.0)
 		# a large army camp beside some fields: reserve its ground now so trees and buildings keep clear of it
 		var camp: Vector3 = Vector3.INF
-		if ArmyCampKit.wants_camp(id):
+		if GameState.current_map != "desert" and ArmyCampKit.wants_camp(id):
 			camp = ArmyCampKit.site_for(id, pos, float(d["heading_deg"]))
 			if camp != Vector3.INF:
 				_exclude.append([camp, ArmyCampKit.CAMP_RADIUS])
@@ -540,6 +554,15 @@ func _build_industry_legacy(s: Dictionary) -> Node3D:
 func _register_targets() -> void:
 	for t in loc.get("targets", []):
 		var d: Dictionary = t
+		if not bool(d.get("in_bounds", true)):
+			continue
+		# Generated rows are dated: do not put a 1942 Tunisian camp in a 1940 Libya sortie.
+		if bool(d.get("generated", false)):
+			var era_s: String = str(d.get("era", ""))
+			if era_s != "":
+				var pr: PackedStringArray = era_s.split(" to ")
+				if not EraClock.is_between(pr[0], pr[1] if pr.size() > 1 else ""):
+					continue
 		var id: String = d["id"]
 		var pos: Vector3 = _ll(d)
 		var team: String = str(d.get("side_owner", "Axis"))
@@ -3807,6 +3830,8 @@ func _target_team_defences(type: String) -> Array:
 			return [1, 2, 0, 0, 170.0]
 		"radar":
 			return [0, 1, 0, 0, 120.0]
+		"camp":
+			return [1, 2, 1, 0, 220.0]
 	return [0, 1, 0, 0, 120.0]
 
 
@@ -3822,6 +3847,16 @@ func _build_target(s: Dictionary) -> Node3D:
 	match type:
 		"convoy_route":
 			main = _build_convoy_target(container, id, d, team)
+		"camp":
+			var camp: ArmyCamp = ArmyCamp.create(team, id, str(d.get("name", id)), pos, float(d.get("radius_m", 220.0)))
+			camp.start_wrecked = wrecked
+			camp.destroyed.connect(func(_n: Node, _k: Node) -> void: _destroyed[id] = true)
+			container.add_child(camp)
+			main = camp
+			var cdf: Array = _target_team_defences("camp")
+			_ruins(container, pos, 4 if wrecked else 2, 70.0, 240.0, hash(id) + 7)
+			if not wrecked:
+				_defences(container, pos, team, int(cdf[0]), int(cdf[1]), int(cdf[2]), 0, float(cdf[4]), hash(id))
 		_:
 			var skind: String = "bunker"
 			var heading: float = -1.0
@@ -3917,8 +3952,8 @@ func _build_convoy_target(container: Node3D, id: String, d: Dictionary, team: St
 			"convoy_antwerp_ostend":
 				comp = "coastal"
 	else:
-		comp = "supply" if id == "convoy_lille_calais" else ("tanks" if id in ["convoy_21panzer", "convoy_dunkirk_perimeter"] else "mixed")
-	var cv: Convoy = Convoy.create(team, route, naval, comp, 120.0, -1.0)
+		comp = str(d.get("comp", "supply" if id == "convoy_lille_calais" else ("tanks" if id in ["convoy_21panzer", "convoy_dunkirk_perimeter"] else "mixed")))
+	var cv: Convoy = Convoy.create(team, route, naval, comp, float(d.get("start_s", 120.0)), -1.0)
 	cv.target_id = id
 	cv.display_name = str(d.get("name", id))
 	cv.is_mission_target = true

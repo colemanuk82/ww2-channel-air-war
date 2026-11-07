@@ -11,12 +11,15 @@ extends RefCounted
 ## WorldPopulator (register()), so only the ones near the player exist; each chunk is a handful of MultiMeshes.
 
 const JSON_PATH := "res://data/desert/war_scenery.json"
+const LIFE_PATH := "res://data/desert/life.json"
 const CHUNK_M: float = 1500.0          # wire / marker chunk length (one site each)
 const VIS_WIRE: float = 2600.0
 const VIS_PROP: float = 3600.0
 
 static var _data: Dictionary = {}
 static var _loaded: bool = false
+static var _life: Dictionary = {}
+static var _life_loaded: bool = false
 
 
 static func data() -> Dictionary:
@@ -30,6 +33,20 @@ static func data() -> Dictionary:
 			if d is Dictionary:
 				_data = d
 	return _data
+
+
+## Desert life data (data/desert/life.json): camel caravans and moving battle groups.
+static func life() -> Dictionary:
+	if GameState.current_map != "desert" or DesertScatter.legacy():
+		return {}
+	if not _life_loaded:
+		_life_loaded = true
+		var f: FileAccess = FileAccess.open(LIFE_PATH, FileAccess.READ)
+		if f != null:
+			var d: Variant = JSON.parse_string(f.get_as_text())
+			if d is Dictionary:
+				_life = d
+	return _life
 
 
 static func _pos(r: Dictionary) -> Vector3:
@@ -172,6 +189,26 @@ static func register(pop: Node) -> void:
 		var ad: Dictionary = r
 		pop._add_site("dw_%s" % str(ad["id"]), _pos(ad), 3600.0, DesertWar._build_af_damage,
 			{"row": ad, "from": str(ad.get("from", "")), "to": "", "id": str(ad["id"])})
+	# life: camel caravans and moving battle groups (data/desert/life.json)
+	var lf: Dictionary = life()
+	for r in lf.get("caravans", []):
+		var cd: Dictionary = r
+		if not _live(cd):
+			continue
+		var rp: RoutePath = RoutePath.from_latlon(cd.get("pts", []))
+		if rp.length < 300.0:
+			continue
+		pop._add_site("dw_%s" % str(cd["id"]), rp.sample(rp.length * 0.5), 4200.0, DesertWar._build_caravan,
+			{"row": cd, "route": rp, "ambient": true, "from": str(cd.get("from", "")), "to": str(cd.get("to", "")), "id": str(cd["id"])})
+	for r in lf.get("battle_groups", []):
+		var gd: Dictionary = r
+		if not _live(gd):
+			continue
+		var gp: RoutePath = RoutePath.from_latlon(gd.get("pts", []))
+		if gp.length < 500.0:
+			continue
+		pop._add_site("dw_%s" % str(gd["id"]), gp.sample(gp.length * 0.5), 6500.0, DesertWar._build_battle_group,
+			{"row": gd, "route": gp, "ambient": true, "from": str(gd.get("from", "")), "to": str(gd.get("to", "")), "id": str(gd["id"])})
 
 
 # ------------------------------------------------------------------ builders (main thread, via the site streamer)
@@ -364,6 +401,51 @@ static func _build_hull(s: Dictionary) -> Node3D:
 	var t := Transform3D(Basis(Vector3.UP, yaw) * tilt * Basis.from_scale(Vector3(sc, sc, sc)), Vector3(best.x, -1.0 * sc, best.y))
 	print("[desert_war] hull %s at %.0f,%.0f (row %.0f,%.0f, %.0f m snap)" % [str(r["id"]), best.x, best.y, c.x, c.z, Vector2(c.x, c.z).distance_to(best)])
 	root.add_child(Scatter.multi(mesh("hull_%s%s" % [hull, "_b" if burnt else ""]), [t], 7000.0, false))
+	return root
+
+
+# ------------------------------------------------------------------ life builders
+
+## A camel caravan walking its piste. Moves only while the site is streamed (near the player).
+static func _build_caravan(s: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	if not _gated(s):
+		return root
+	var rp: RoutePath = s["route"]
+	var row: Dictionary = s["row"]
+	var ct: CamelTrain = CamelTrain.create(rp, rp.length * 0.5, int(row.get("count", 10)), float(row.get("speed", 1.25)))
+	root.add_child(ct)
+	s["main"] = ct
+	return root
+
+
+## A moving battle group (tanks / mixed column) with a few burnt wrecks beside the road.
+static func _build_battle_group(s: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	if not _gated(s):
+		return root
+	var rp: RoutePath = s["route"]
+	var row: Dictionary = s["row"]
+	var cv: Convoy = Convoy.create(str(row.get("team", "Axis")), rp, false, str(row.get("comp", "tanks")),
+		rp.length * 0.5, float(row.get("speed", 9.0)))
+	cv.spacing = 24.0
+	cv.display_name = str(row.get("name", "Battle group"))
+	root.add_child(cv)
+	var n: int = clampi(int(row.get("wrecks", 0)), 0, 8)
+	if n > 0:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(str(row.get("id", "")))
+		var xs: Array = []
+		for i in n:
+			var q: Vector3 = rp.sample(fposmod(rp.length * 0.5 + float(i) * 85.0 + rng.randf_range(-40.0, 40.0), rp.length))
+			var p2 := Vector3(q.x + rng.randf_range(-55.0, 55.0), 0.0, q.z + rng.randf_range(-55.0, 55.0))
+			if not _ok_pt(p2.x, p2.z):
+				continue
+			p2.y = GroundKit.ground_y(p2.x, p2.z) - 0.1
+			xs.append(Scatter._xf(p2, rng.randf() * TAU, Vector3.ONE))
+		if not xs.is_empty():
+			root.add_child(Scatter.multi(mesh("w_tank"), xs, 5000.0, false))
+	s["main"] = cv
 	return root
 
 

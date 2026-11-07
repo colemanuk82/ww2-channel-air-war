@@ -34,8 +34,8 @@ extends Node
 signal tasking_started(info: Dictionary)
 signal tasking_finished(info: Dictionary, success: bool)
 
-const KINDS := ["strike", "airfield", "convoy", "train", "shipping", "eboats", "intercept", "cover", "sweep", "rescue", "recce", "escort", "intruder", "tanks"]
-const GROUND_KINDS := ["convoy", "train", "shipping", "eboats", "tanks"]
+const KINDS := ["strike", "airfield", "convoy", "train", "shipping", "eboats", "intercept", "cover", "sweep", "rescue", "recce", "escort", "intruder", "tanks", "camp"]
+const GROUND_KINDS := ["convoy", "train", "shipping", "eboats", "tanks", "camp"]
 const AIR_KINDS := ["intercept", "cover", "sweep", "escort"]
 const MIN_RANGE: float = 6000.0        # world units (= metres horizontally)
 const MAX_RANGE: float = 50000.0       # preferred band (jobs close to hand); beyond it the nearest candidate (up to FAR_LIMIT) is used
@@ -295,6 +295,18 @@ func _is_night() -> bool:
 
 func _weights() -> Dictionary:
 	var w: Dictionary
+	if GameState.current_map == "desert":
+		# The desert is a ground war: convoys, camps and armour are the bread and butter. There is no
+		# rail/shipping/E-boat data on this map, so those jobs are left out rather than rolling and failing.
+		match _role():
+			"bomber":
+				w = {"strike": 4, "convoy": 4, "camp": 3, "airfield": 2, "tanks": 2, "recce": 1}
+			"fighter_bomber":
+				w = {"convoy": 5, "camp": 4, "tanks": 4, "strike": 2, "airfield": 2, "intercept": 1, "sweep": 1, "cover": 1, "rescue": 1, "recce": 1}
+			_:
+				w = {"convoy": 3, "camp": 2, "tanks": 1, "intercept": 2, "sweep": 2, "cover": 1, "airfield": 1, "rescue": 1, "recce": 1}
+		w = _apply_common_weights(w)
+		return w
 	match _role():
 		"bomber":
 			w = {"strike": 5, "shipping": 3, "airfield": 2, "train": 1, "recce": 1}
@@ -306,6 +318,19 @@ func _weights() -> Dictionary:
 		w.erase("tanks")              # German armour on the continent: an Allied pilot's job
 	if _is_night():
 		# by night: no photographs, no dinghy searches, intruders over their airfields instead
+		w.erase("recce")
+		w.erase("rescue")
+		w.erase("escort")
+		if _role() != "bomber":
+			w["intruder"] = 4
+	return w
+
+
+## Weight rules shared by every map (armour only when facing the Axis, night filters).
+func _apply_common_weights(w: Dictionary) -> Dictionary:
+	if enemy != "Axis":
+		w.erase("tanks")
+	if _is_night():
 		w.erase("recce")
 		w.erase("rescue")
 		w.erase("escort")
@@ -367,6 +392,7 @@ func _issue_inner(scramble: bool, followup: bool) -> void:
 			"escort": info = _make_escort()
 			"intruder": info = _make_intruder()
 			"convoy": info = _make_convoy()
+			"camp": info = _make_camp()
 			"tanks": info = _make_tanks()
 			"train": info = _make_train()
 			"shipping": info = _make_shipping()
@@ -627,6 +653,17 @@ func _enemy_town() -> Variant:
 
 
 func _make_convoy() -> Dictionary:
+	# Desert: use a mapped convoy route (a moving column on the coast road or a piste) when one is in
+	# range, so the desert gets long, real convoys instead of a synthetic loop beside a town.
+	if GameState.current_map == "desert" and _pop != null:
+		var rids: Array = _pop.targets_for_side(enemy, ["convoy_route"])
+		var rpick: Variant = _choose(rids, func(id: String) -> Vector3: return _pop.get_target_info(id)["pos"])
+		if rpick != null:
+			var ri: Dictionary = _pop.get_target_info(rpick)
+			var rn: Node = _pop.spawn_target(rpick)
+			if rn != null:
+				return {"title": "Convoy: %s" % str(ri["name"]), "what": "road convoy", "pos": ri["pos"],
+					"place": _place_name(ri["pos"]), "track": rn, "goal": "destroy", "nodes": [rn], "points": 1000}
 	var town: Variant = _enemy_town()
 	if town == null:
 		return {}
@@ -648,6 +685,24 @@ func _make_convoy() -> Dictionary:
 	var what: String = {"supply": "supply lorries", "tanks": "armoured column", "troops": "troop convoy", "mixed": "motor convoy"}[comp]
 	return {"title": "Convoy: %s" % what, "what": what, "pos": cv.get_center(), "place": _place_name(cv.get_center()),
 		"track": cv, "goal": "destroy", "nodes": [cv], "root": root, "points": 900}
+
+
+## Attack an enemy army camp: tents, lorries, armour and stores, defended by light flak.
+func _make_camp() -> Dictionary:
+	if _pop == null:
+		return {}
+	var ids: Array = _pop.targets_for_side(enemy, ["camp"])
+	if ids.is_empty():
+		return {}
+	var pick: Variant = _choose(ids, func(id: String) -> Vector3: return _pop.get_target_info(id)["pos"])
+	if pick == null:
+		return {}
+	var info: Dictionary = _pop.get_target_info(pick)
+	var n: Node = _pop.spawn_target(pick)
+	if n == null:
+		return {}
+	return {"title": "Camp: %s" % str(info["name"]), "what": str(info["name"]), "type": "camp", "pos": info["pos"],
+		"place": _place_name(info["pos"]), "track": n, "goal": "destroy", "nodes": [n], "points": 1200}
 
 
 ## Tanks: a German armoured column on the move behind the coast of France, Belgium or Germany, with flak riding
@@ -1421,7 +1476,7 @@ func _twist() -> void:
 				_say("Change of plan - the raid has turned. They're heading for %s now." % str(best["name"]), 0.0, "twist_raid_turn_1")
 			else:
 				_say("The convoy's taking a real pasting down there. Hurry!", 0.0, "twist_convoy_hurry_2")
-		"convoy", "train", "tanks":
+		"convoy", "train", "tanks", "camp":
 			_say("It's getting close to cover - once it's in there we've lost it. Get a move on!", 0.0, "twist_deadline_2")
 		"shipping", "eboats":
 			_say("They're making for the shore batteries. Catch them before they're under the guns.", 0.0, "twist_shore_2")
@@ -1852,6 +1907,7 @@ const HEADLINES := {
 	"strike": ["Priority target for you. Bombs on it, please.", "Intelligence wants a target put out of action. Go and stop it.", "We've a target that needs knocking out. Expect flak.", "Bombing job. Get in, put them on the target, and get out.", "Group want that target flattened. Off you go.", "Target for tonight's photographs. Make it a good one.", "We've a target that wants hitting. Make every bomb count.", "Intelligence have found something juicy. Go and hit it.", "Target for you. Get in under the flak and let them have it.", "Bombs on the target, please. Then straight home.", "Something needs flattening. That's your job."],
 	"airfield": ["Their fighters are on the ground refuelling. Go and catch them there.", "An enemy airfield is full of aircraft. Shoot it up.", "We want an airfield put out of business. Anything you can hit.", "Catch them on the ground. Strafe the dispersals.", "Their airfield's busy. Go and make a mess of it.", "Fighters refuelling on that field. Hit them now.", "Their aircraft are lined up on the field. Shoot them up.", "An airfield needs a visit. Strafe anything you see.", "Catch their fighters before they get off the ground.", "Shoot up their airfield. Aircraft first, then anything else.", "Their field's full. Go and empty it."],
 	"convoy": ["A road convoy has been seen on the move. Find it and stop it.", "The Resistance reports a convoy heading for the front. Hit it.", "There's a column on the road. Strafe the lot.", "Lorries on the move. Shoot them up.", "Transport column on the road. Stop it.", "Vehicles moving to the coast. Catch them in the open.", "A column of lorries is heading for the front. Stop it.", "Road traffic reported. Shoot up the lot.", "Convoy on the move. Go for the leading vehicle first.", "Vehicles on the road. Make a mess of them.", "Hit that column before it reaches cover."],
+	"camp": ["An enemy camp has been spotted. Go and put it out of action.", "Tents, lorries and stores out in the desert. Strafe the lot.", "An army camp is forming up behind their lines. Hit the vehicles and the dumps.", "There's a camp with transport parked in the open. Go and make a mess of it.", "Enemy troops and supply trucks in a desert camp. Flatten it.", "A staging camp is full of lorries and armour. Go and break it up.", "Camp reported in the open. Hit the vehicles first, then the stores.", "An enemy camp is a sitting target. Go and work it over."],
 	"train": ["A train is leaving the yards. Stop that train.", "Railway watchers report a train running. Go for the locomotive first.", "Big train on the line. It must not get through.", "A goods train is running. Knock out the engine.", "There's a train on the line. Stop it dead.", "Train on the move. Stop the engine and you stop the lot.", "Supplies going by rail. Shoot up that train.", "A train's been seen leaving the sidings. Get after it.", "Locomotive first, then the wagons.", "There's a train that mustn't arrive. See to it."],
 	"shipping": ["A convoy is steaming along their coast. Sink what you can.", "Coastal Command has shipping for you. Escorts with it, watch the flak.", "Shipping strike. Go low and go fast.", "Ships off the coast. Go and sink them.", "Coasters with escorts. Low and fast.", "Enemy ships hugging the coast. Go in low.", "There's shipping for you. Watch the escorts.", "A small convoy off their coast. Sink what you can.", "Ships for you. Go in under their guns.", "Sink what you can and get out quick."],
 	"eboats": ["Fast boats putting out to sea. Catch them before they reach our convoys.", "Radar has motor boats leaving harbour. Sink them.", "Boats heading out. They're quick, so get in close.", "E-boats on the prowl. Find them and sink them.", "Fast boats heading for our convoy. Stop them.", "Fast boats out hunting. Get them before they find our ships.", "Motor boats leaving harbour. They're quick, so get in close.", "E-boats reported. Sink them.", "Fast boats making a run. Catch them.", "Boats at sea. Strafe them before they get home."],
@@ -1869,6 +1925,7 @@ const DETAILS := {
 	"strike": "Target: the {what}, {place}.",
 	"airfield": "Target: {what}, {place}.",
 	"convoy": "A {what} {place}.",
+	"camp": "An enemy army camp {place}.",
 	"train": "An {what} {place}.",
 	"shipping": "A {what} {place}.",
 	"eboats": "{what} {place}.",
@@ -2004,6 +2061,8 @@ static func short_title(m: Dictionary) -> String:
 			return "Train attack"
 		"Convoy":
 			return "Convoy attack"
+		"Camp":
+			return "Army camp attack"
 		"Intercept":
 			return "Intercept raid"
 		"Strike":

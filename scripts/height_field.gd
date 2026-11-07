@@ -114,6 +114,7 @@ func setup() -> void:
 	_dune_crest = _make_dune_noise(74, 1.0 / 900.0, 2)
 	if _dunes_on:
 		_load_dune_roads()
+		GroundKit.lp("    hf: dune roads")
 	if force_procedural or not _try_load_file():
 		_build_procedural()
 
@@ -316,6 +317,16 @@ func _build_coast_distance() -> void:
 	# In mask mode the land set comes from the exact OSM mask, not the DEM.
 	_cd_w = mini(_w, 700)
 	_cd_h = mini(_h, 340)
+	# The result is a pure function of the coast mask: cache it so a restart does not pay the 238k-cell
+	# chamfer again (byte-identical values).
+	var cache_key: String = "user://coastdist_%d_%dx%d.bin" % [_mask_raw.size(), _cd_w, _cd_h]
+	if FileAccess.file_exists(cache_key):
+		var cf := FileAccess.open(cache_key, FileAccess.READ)
+		if cf != null and cf.get_length() == _cd_w * _cd_h * 4:
+			_cd = cf.get_buffer(cf.get_length()).to_float32_array()
+			cf = null
+			if _cd.size() == _cd_w * _cd_h:
+				return
 	_cd = PackedFloat32Array()
 	_cd.resize(_cd_w * _cd_h)
 	var big: float = 1.0e9
@@ -362,6 +373,11 @@ func _build_coast_distance() -> void:
 				if i > 0:
 					v3 = minf(v3, _cd[idx2 + _cd_w - 1] + cd)
 			_cd[idx2] = v3
+	# cache the finished grid (about 950 KB) for the next launch
+	var wf := FileAccess.open(cache_key, FileAccess.WRITE)
+	if wf != null:
+		wf.store_buffer(_cd.to_byte_array())
+		wf = null
 
 
 # ---------------------------------------------------------------- public
@@ -412,6 +428,9 @@ func height_y(wx: float, wz: float) -> float:
 	for i in (_zone_grid[cell] as PackedInt32Array):
 		var z: Vector4 = _zones[i]
 		var d: float = Vector2(wx - z.x, wz - z.y).length()
+		# Desert: wander the flatten edge so airfields do not sit in a perfect circular plateau.
+		if _dunes_on and z.w > 0.0:
+			d = maxf(0.0, d + (_dune_crest.get_noise_2d(wx, wz) - 0.5) * z.w * 0.9)
 		var w: float = 1.0 - smoothstep(z.z, z.z + z.w, d)
 		if w > 0.0:
 			y = lerpf(y, _zone_h[i], w)
@@ -422,34 +441,56 @@ func height_y(wx: float, wz: float) -> float:
 ## land inside sand patches. A pure function of the world position, so the terrain mesh, collision, scatter and the
 ## aircraft ground height all see the same dunes. Returns the world-Y offset.
 func dune_region_mask(wx: float, wz: float, e: float) -> float:
-	var patch: float = smoothstep(0.42, 0.60, _dune_region.get_noise_2d(wx, wz) * 0.5 + 0.5)
+	# Wider ramp than before: the outer quarter of the field is amplitude-feathered so a sand sea
+	# frays into the surrounding desert instead of ending on a contour.
+	var patch: float = smoothstep(0.40, 0.62, _dune_region.get_noise_2d(wx, wz) * 0.5 + 0.5)
 	var low: float = (1.0 - smoothstep(30.0, 190.0, e)) * smoothstep(4.0, 12.0, e)
 	# sand seas only in the southern desert: no dunes on the Sicilian, Maltese, Tunisian-north or Tripoli coastal plains
 	var lat: float = WorldCoords.ORIGIN_LAT - wz / WorldCoords.units_per_deg_lat
-	var south: float = smoothstep(33.0, 32.2, lat)
-	return patch * low * south
+	var south: float = smoothstep(33.4, 31.8, lat)
+	var m: float = patch * low * south
+	return m * smoothstep(0.0, 0.30, m)      # feather the patch edge to exactly zero
 
 
 func _dune_offset(wx: float, wz: float, e: float) -> float:
+	# Seif (linear) dunes after the dune-generator approach (WildTangent4/dune-generator): one primary
+	# sine whose phase is shifted by a noise field (so crests meander instead of running straight),
+	# two secondary sines of smaller amplitude/higher frequency at other angles, and a noise term to
+	# kill any visible repetition. A pure function of world XZ: mesh, collision, scatter and aircraft
+	# ground height all agree.
 	var m: float = dune_region_mask(wx, wz, e)
 	if m <= 0.0:
 		return 0.0
 	m *= smoothstep(30.0, 150.0, _road_dist(wx, wz))   # roads and tracks stay flat (their ribbons are cut at one height)
 	if m <= 0.0:
 		return 0.0
-	var amp_m: float = lerpf(8.0, 26.0, _dune_amp.get_noise_2d(wx, wz) * 0.5 + 0.5)
-	# wavelength varies by warping the PHASE with a slow noise (a position-dependent wavelength multiplied by the huge
-	# `across` coordinate would give a mesh-scale phase gradient: pockmarks instead of ridges)
-	var lam: float = 460.0
-	var across: float = wx * DUNE_ACROSS.x + wz * DUNE_ACROSS.y
-	var along: float = wx * DUNE_DIR.x + wz * DUNE_DIR.y
-	# the crests break into arcs along their length (barchan-like gaps)
-	var brk: float = 0.35 + 0.65 * smoothstep(0.25, 0.7, _dune_crest.get_noise_2d(along, across * 0.2) * 0.5 + 0.5)
-	var th: float = TAU * (across / lam + 1.3 * _dune_len.get_noise_2d(wx, wz))
-	# asymmetric profile: a long gentle windward slope and a steeper lee (slip) face
+	# Normalise the field weight: the raw mask peaks around 0.3, so using it directly made the dunes
+	# almost invisible. smoothstep keeps the outer feather (no hard edge) and gives full amplitude inside.
+	var field: float = smoothstep(0.02, 0.28, m)
+	if field <= 0.0:
+		return 0.0
+	var amp_m: float = lerpf(11.0, 34.0, _dune_amp.get_noise_2d(wx, wz) * 0.5 + 0.5)
+	var p := Vector2(wx, wz)
+	var across: float = p.dot(DUNE_ACROSS)
+	var along: float = p.dot(DUNE_DIR)
+	# shifting angle: tanh(noise) * wavelength-scale offset bends every crest
+	var bend: float = tanh((_dune_len.get_noise_2d(wx, wz) * 2.0 - 1.0) * 1.6) * 0.55
+	var lam: float = lerpf(380.0, 620.0, _dune_crest.get_noise_2d(wx * 0.4 + 11.0, wz * 0.4) * 0.5 + 0.5)
+	var th: float = TAU * (across / lam + bend)
+	# asymmetric profile: long windward slope, steep lee (slip) face
 	var s: float = sin(th + 0.8 * sin(th))
-	var prof: float = pow(0.5 + 0.5 * s, 1.6) - 0.3
-	return amp_m * m * brk * prof * WorldCoords.VERTICAL_SCALE
+	var prof: float = pow(0.5 + 0.5 * s, 1.6) - 0.25
+	# stacked sines: smaller and finer, at different angles, so a field has secondary ridges
+	var s1: float = sin(p.dot(Vector2(0.99, 0.14)) / 118.0 + 2.1) * 0.14
+	var s2: float = sin(p.dot(Vector2(0.36, 0.93)) / 46.0 + 1.3) * 0.065
+	# wind ripples on the sand, fading with distance so they never alias at range
+	var rip: float = sin(across / 9.0 + 4.0 * _dune_len.get_noise_2d(wx * 2.0, wz * 2.0)) * 0.028
+	# the crests break into arcs along their length (barchan-like gaps)
+	var brk: float = 0.35 + 0.65 * smoothstep(0.22, 0.72, _dune_crest.get_noise_2d(along * 0.5, across * 0.12) * 0.5 + 0.5)
+	var off: float = amp_m * field * brk * (prof + s1 + s2 + rip) * WorldCoords.VERTICAL_SCALE
+	# Bedrock floor: a trough must never be dug below the water plane (the old dunes could dip low
+	# ground under the sea and the water plane then painted it).
+	return maxf(off, -e * WorldCoords.VERTICAL_SCALE * 0.8)
 
 
 ## Distance (world units) to the nearest road or track segment within ~400 units, or 1.0e6 when none is near.
@@ -476,7 +517,22 @@ func _road_dist(wx: float, wz: float) -> float:
 
 ## Index the road / track polylines (lat/lon two-point segments) into small cells so the dunes can keep clear of them.
 func _load_dune_roads() -> void:
-	for path in [WorldCoords.osm_dir() + "/roads.json", WorldCoords.heightmap_dir() + "/tracks.json"]:
+	var road_path: String = WorldCoords.osm_dir() + "/roads.json"
+	var track_path: String = WorldCoords.heightmap_dir() + "/tracks.json"
+	# Parsing both multi-MB JSON files and indexing every segment is a launch cost that only depends on
+	# the files themselves: cache the finished cell index (the dune keep-out grid).
+	var cache_key: String = "user://duneroads_%s_%d_%d.bin" % [GameState.current_map,
+		FileAccess.open(road_path, FileAccess.READ).get_length() if FileAccess.file_exists(road_path) else 0,
+		FileAccess.open(track_path, FileAccess.READ).get_length() if FileAccess.file_exists(track_path) else 0]
+	if FileAccess.file_exists(cache_key):
+		var cf := FileAccess.open(cache_key, FileAccess.READ)
+		if cf != null:
+			var cached: Variant = cf.get_var()
+			cf = null
+			if cached is Dictionary:
+				_dune_road_cells = cached
+				return
+	for path in [road_path, track_path]:
 		if not FileAccess.file_exists(path):
 			continue
 		var f: FileAccess = FileAccess.open(path, FileAccess.READ)
@@ -519,6 +575,10 @@ func _load_dune_roads() -> void:
 						(_dune_road_cells[key] as Array).append(seg)
 				prev = cur
 				have = true
+	var wf := FileAccess.open(cache_key, FileAccess.WRITE)
+	if wf != null:
+		wf.store_var(_dune_road_cells)
+		wf = null
 
 
 ## Elevation in metres (<= 0 is sea; negative values are depth below sea level in procedural mode).
@@ -536,7 +596,14 @@ func get_cliff_world_zones() -> Array:
 	return out
 
 
-## Mask land fraction 0..1 at a world XZ position (1.0 when no coast mask is loaded).
+## Anti-aliased land fraction 0..1 at lat/lon from the exact OSM mask (0 = sea, 1 = land, 0.5 = coast).
+func mask_at_latlon(lat: float, lon: float) -> float:
+	if not use_coast_mask:
+		return 1.0
+	return _mask_at(lat, lon)
+
+
+## Anti-aliased land fraction 0..1 at a world XZ position (1.0 when no coast mask is loaded).
 ## Used by CliffSkirt to trace the coastline; thread-safe (reads only).
 func coast_land_w(wx: float, wz: float) -> float:
 	if not use_coast_mask:

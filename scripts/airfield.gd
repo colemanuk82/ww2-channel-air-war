@@ -617,6 +617,12 @@ func _build_lw_field(earth: Material) -> void:
 
 
 func _pad(at: Vector3, r: float, mat: Material) -> void:
+	# The pavement footprint always counts (props and earth banks keep off it), but on the Desert map
+	# the circular disc mesh is NOT drawn: a 12-gon disc was the "circle dropped on the map" seen from
+	# the air. The shader paints the airfield ground as a soft, noise-warped mask instead.
+	_paved.append([at, at, r])
+	if GameState.current_map == "desert":
+		return
 	var pad := MeshInstance3D.new()
 	var cm := CylinderMesh.new()
 	cm.top_radius = r
@@ -628,7 +634,6 @@ func _pad(at: Vector3, r: float, mat: Material) -> void:
 	pad.material_override = mat
 	pad.position = at
 	add_child(pad)
-	_paved.append([at, at, r])
 
 
 ## Octagon of track corners (local), half sizes hx/hz, corners cut by ch, centred on x = cx.
@@ -731,18 +736,19 @@ func _clover(hub: Vector3, ang: float, mat: Material, earth: Material) -> void:
 	for j in 3:
 		var a: float = ang + TAU * float(j) / 3.0 + 0.5
 		var lp: Vector3 = hub + Vector3(sin(a), 0, cos(a)) * 22.0
-		var pad := MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = 12.0
-		cm.bottom_radius = 12.0
-		cm.height = 0.5
-		cm.radial_segments = 10
-		cm.rings = 1
-		pad.mesh = cm
-		pad.material_override = mat
-		pad.position = lp
-		add_child(pad)
 		_paved.append([lp, lp, 12.0])
+		if GameState.current_map != "desert":
+			var pad := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = 12.0
+			cm.bottom_radius = 12.0
+			cm.height = 0.5
+			cm.radial_segments = 10
+			cm.rings = 1
+			pad.mesh = cm
+			pad.material_override = mat
+			pad.position = lp
+			add_child(pad)
 		_link(hub, lp, 7.0, mat)
 		_dispersal_local.append(Vector3(lp.x, 0.0, lp.z))
 		_add_box(self, Vector3(3.5, 3.2, 8.0), hub + Vector3(sin(a + 1.05), 0, cos(a + 1.05)) * 26.0, earth, a + 1.05)
@@ -801,18 +807,19 @@ func _dispersal(pos: Vector3, ang: float, mat: Material, earth: Material) -> voi
 	pivot.position = pos
 	pivot.rotation.y = ang
 	add_child(pivot)
-	var pad := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = 22.0
-	cm.bottom_radius = 22.0
-	cm.height = 0.5
-	cm.radial_segments = 12
-	cm.rings = 1
-	pad.mesh = cm
-	pad.material_override = mat
-	pad.position = Vector3(0, 0.0, 0)
-	pivot.add_child(pad)
 	_paved.append([pos, pos, 22.0])
+	if GameState.current_map != "desert":
+		var pad := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 22.0
+		cm.bottom_radius = 22.0
+		cm.height = 0.5
+		cm.radial_segments = 12
+		cm.rings = 1
+		pad.mesh = cm
+		pad.material_override = mat
+		pad.position = Vector3(0, 0.0, 0)
+		pivot.add_child(pad)
 	var r := 29.0
 	for i in 7:
 		var a: float = PI * (0.5 + float(i) / 6.0)          # outboard arc

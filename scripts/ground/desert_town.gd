@@ -5,7 +5,7 @@ extends RefCounted
 ## wall stubs, and a mosque with a dome and a minaret here and there. No pitched roofs, no chimneys.
 ## Pure data like DesertScatter.tile_data (transform arrays, safe on a worker thread). Nothing here runs on the Channel map.
 
-const STEP: float = 24.0
+const STEP: float = 28.0
 const MOSQUE_CELL: float = 300.0
 const HOUSE_KINDS: Array = ["d_house0", "d_house1", "d_house2", "d_house3"]
 
@@ -21,6 +21,129 @@ static func _has_built(origin: Vector2, cell: float) -> bool:
 			if LandCover.class_at(origin.x - 150.0 + float(i) * 150.0, origin.y - 150.0 + float(j) * 150.0) == 50:
 				return true
 	return false
+
+
+## Built-up land within ~r of p. The 300 m class grid is coarse, so a landmark placed on a building
+## block often sits on a cell that reads as bare ground: look around before rejecting it.
+static func _built_near(p: Vector2, r: float) -> bool:
+	for j in 3:
+		for i in 3:
+			if LandCover.class_at(p.x + (float(i) - 1.0) * r, p.y + (float(j) - 1.0) * r) == 50:
+				return true
+	return false
+
+
+static var _places_loaded: bool = false
+static var _place_rows: Array = []
+
+
+## Extra desert places (hamlets and oases) from data/desert/life.json, loaded once.
+static func places() -> Array:
+	if _places_loaded:
+		return _place_rows
+	_places_loaded = true
+	var f: FileAccess = FileAccess.open("res://data/desert/life.json", FileAccess.READ)
+	if f == null:
+		return _place_rows
+	var d: Variant = JSON.parse_string(f.get_as_text())
+	f = null
+	if not (d is Dictionary):
+		return _place_rows
+	for p in (d as Dictionary).get("settlements", []):
+		if not (p is Dictionary):
+			continue
+		var w: Vector3 = WorldCoords.latlon_to_world(float(p.get("lat", 0.0)), float(p.get("lon", 0.0)))
+		_place_rows.append({"pos": Vector2(w.x, w.z), "size": int(p.get("size", 1)),
+			"kind": String(p.get("kind", "hamlet")), "id": String(p.get("id", "place")), "name": String(p.get("name", ""))})
+	return _place_rows
+
+
+## Hamlets and oases from data/desert/life.json: a well, a mosque, flat-roofed houses and palms (an oasis
+## is mostly palms). Placed independently of the 300 m built-up class, so they exist even in empty desert.
+static func add_settlements(b: Dictionary, origin: Vector2, cell: float, seed_v: int, exclude: Array) -> void:
+	for p in places():
+		var cp: Vector2 = p["pos"]
+		if cp.x < origin.x - 900.0 or cp.x > origin.x + cell + 900.0 or cp.y < origin.y - 900.0 or cp.y > origin.y + cell + 900.0:
+			continue
+		if not DesertScatter._okc(cp, exclude, 2.0) or GroundKit.raw_y(cp.x, cp.y) < 1.0:
+			continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(str(p["id"]))
+		var sz: int = int(p["size"])
+		var oasis: bool = str(p["kind"]) == "oasis"
+		var rad: float = 120.0 + 55.0 * float(sz)
+		var inside := func(q: Vector2) -> bool:
+			return q.x >= origin.x and q.x < origin.x + cell and q.y >= origin.y and q.y < origin.y + cell
+		# the well (and, for a hamlet, a mosque and a market)
+		if inside.call(cp):
+			DesertScatter._put(b, "d_well", cp, rng.randf() * TAU, Vector3.ONE, 0.1)
+		var yaw0: float = rng.randf() * TAU
+		if sz >= 2:
+			var mq: Vector2 = cp + Vector2(34.0, -26.0).rotated(-yaw0)
+			if inside.call(mq) and DesertScatter._okc(mq, exclude, 1.5) and not RoadMesh.near_road(mq, 12.0):
+				DesertScatter._put(b, "d_mosque", mq, yaw0, Vector3(0.85, 0.85, 0.85), 0.4)
+		if sz >= 3 and not oasis:
+			var mk: Vector2 = cp + Vector2(-52.0, 38.0).rotated(-yaw0)
+			if inside.call(mk) and DesertScatter._okc(mk, exclude, 1.5) and not RoadMesh.near_road(mk, 10.0):
+				DesertScatter._put(b, "d_market", mk, yaw0, Vector3(0.8, 0.8, 0.8), 0.05)
+		# houses
+		var nh: int = 0 if oasis else 3 + sz * 5
+		for i in nh:
+			var a: float = rng.randf() * TAU
+			var rr: float = 22.0 + sqrt(rng.randf()) * rad
+			var q: Vector2 = cp + Vector2(cos(a), sin(a)) * rr
+			if not inside.call(q):
+				continue
+			if not DesertScatter._okc(q, exclude, 1.5) or RoadMesh.near_road(q, 8.0):
+				continue
+			var w: float = rng.randf_range(8.0, 13.0)
+			var l: float = rng.randf_range(7.5, 11.5)
+			var h: float = rng.randf_range(3.2, 4.0) if rng.randf() > 0.15 else rng.randf_range(6.2, 7.2)
+			var y0: float = GroundKit.ground_y(q.x, q.y)
+			if absf(GroundKit.ground_y(q.x + 7.0, q.y) - y0) > 3.0:
+				continue
+			var kind: String = HOUSE_KINDS[rng.randi() % HOUSE_KINDS.size()]
+			if not b.has(kind):
+				b[kind] = []
+			(b[kind] as Array).append(Scatter._xf(Vector3(q.x, y0 + h * 0.5 - 0.4, q.y), rng.randf() * TAU, Vector3(w, h, l)))
+		# palms (oases are mostly palms)
+		var np: int = 5 + sz * 4 + (14 if oasis else 0)
+		for i in np:
+			var a2: float = rng.randf() * TAU
+			var r2: float = 18.0 + sqrt(rng.randf()) * (rad * (1.35 if oasis else 0.9))
+			var q2: Vector2 = cp + Vector2(cos(a2), sin(a2)) * r2
+			if not inside.call(q2) or not DesertScatter._okc(q2, exclude, 2.0):
+				continue
+			if GroundKit.raw_y(q2.x, q2.y) < 1.0:
+				continue
+			var s1: float = rng.randf_range(0.9, 1.3)
+			DesertScatter._put(b, "d_palm", q2, rng.randf() * TAU, Vector3(s1, s1 * rng.randf_range(0.9, 1.2), s1))
+
+
+
+static var _cities_loaded: bool = false
+static var _city_rows: Array = []
+
+
+## Towns from the map's locations file (world XZ + size), loaded once. Used for the great mosque and
+## the market square in each town centre.
+static func cities() -> Array:
+	if _cities_loaded:
+		return _city_rows
+	_cities_loaded = true
+	var f: FileAccess = FileAccess.open(WorldCoords.locations_path(), FileAccess.READ)
+	if f == null:
+		return _city_rows
+	var d: Variant = JSON.parse_string(f.get_as_text())
+	f = null
+	if not (d is Dictionary):
+		return _city_rows
+	for c in (d as Dictionary).get("cities", []):
+		if not (c is Dictionary) or not bool((c as Dictionary).get("in_bounds", true)):
+			continue
+		var w: Vector3 = WorldCoords.latlon_to_world(float(c.get("lat", 0.0)), float(c.get("lon", 0.0)))
+		_city_rows.append({"pos": Vector2(w.x, w.z), "size": int(c.get("size", 1)), "name": String(c.get("name", ""))})
+	return _city_rows
 
 
 static func _mosque_pos(ci: int, cj: int) -> Vector2:
@@ -43,7 +166,7 @@ static func add_houses(b: Dictionary, origin: Vector2, cell: float, seed_v: int,
 			var mp: Vector2 = _mosque_pos(ci, cj)
 			if mp.x > 1.0e11:
 				continue
-			if LandCover.class_at(mp.x, mp.y) != 50:
+			if not _built_near(mp, 220.0):
 				continue
 			mosques.append(mp)
 			if mp.x < origin.x or mp.x >= origin.x + cell or mp.y < origin.y or mp.y >= origin.y + cell:
@@ -52,6 +175,25 @@ static func add_houses(b: Dictionary, origin: Vector2, cell: float, seed_v: int,
 				continue
 			var yaw_m: float = floorf(DesertScatter._h(ci + 5, cj + 9) * 4.0) * PI * 0.5 + 0.12
 			DesertScatter._put(b, "d_mosque", mp, yaw_m, Vector3.ONE, 0.4)
+	# Town-centre landmarks: one great mosque and a market square per town, on the tile that owns
+	# the centre. Markets make the towns read as places rather than a scatter of boxes.
+	for c in cities():
+		var cp: Vector2 = c["pos"]
+		if cp.x < origin.x - 400.0 or cp.x > origin.x + cell + 400.0 or cp.y < origin.y - 400.0 or cp.y > origin.y + cell + 400.0:
+			continue
+		if not DesertScatter._okc(cp, exclude, 4.0):
+			continue
+		var sz: int = int(c["size"])
+		var cd: float = floorf(DesertScatter._h(floori(cp.x / 260.0) + 11, floori(cp.y / 260.0) + 29) * 8.0) / 8.0 * PI * 0.5
+		if sz >= 2:
+			var mq: Vector2 = cp + Vector2(70.0, -55.0).rotated(-cd)
+			if mq.x >= origin.x and mq.x < origin.x + cell and mq.y >= origin.y and mq.y < origin.y + cell \
+					and _built_near(mq, 260.0) and DesertScatter._okc(mq, exclude, 2.0) and not RoadMesh.near_road(mq, 16.0):
+				DesertScatter._put(b, "d_mosque", mq, cd, Vector3(1.9, 1.55, 1.9), 0.4)
+		var mk: Vector2 = cp + Vector2(-95.0, 65.0).rotated(-cd)
+		if mk.x >= origin.x and mk.x < origin.x + cell and mk.y >= origin.y and mk.y < origin.y + cell \
+				and DesertScatter._okc(mk, exclude, 3.0) and not RoadMesh.near_road(mk, 18.0):
+			DesertScatter._put(b, "d_market", mk, cd, Vector3.ONE, 0.05)
 	var n: int = int(ceil(cell / STEP))
 	for j in n:
 		for i in n:
@@ -61,7 +203,12 @@ static func add_houses(b: Dictionary, origin: Vector2, cell: float, seed_v: int,
 			if cls != 50:
 				continue
 			var frac: float = Scatter._built_frac(p, 34.0)
-			if frac < 0.99 and rng.randf() > 0.25 + frac * 0.9:
+			# Density falls away with how built-up the plot is, AND with a slow 600 m noise field, so a
+			# town forms dense districts with open ground, yards and hamlet clusters instead of an even
+			# sea of little boxes. (The old rule rose with `frac` but still kept the whole fringe.)
+			var dens: float = DesertScatter._vn(p.x + 311.0, p.y + 97.0, 620.0)
+			var keep: float = (0.10 + 0.90 * frac) * smoothstep(0.28, 0.60, dens)
+			if rng.randf() > keep:
 				continue
 			if rng.randf() < 0.12:
 				continue                                    # an empty plot, a yard

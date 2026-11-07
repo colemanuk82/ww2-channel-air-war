@@ -374,9 +374,51 @@ static func front_lon(lat: float, date: String) -> float:
 	return lerpf(float(row[i]), float(row[i + 1]), u - float(i))
 
 
+## Desert theatre: the Axis/Allied front line moves west as the campaign goes on. Longitude west of
+## which the Axis hold the ground (approximately the historical line, good enough for ownership).
+const DESERT_FRONT := [
+	["1940-06-10", 25.0],   # Libya / Egypt border
+	["1940-09-16", 25.6],   # Sidi Barrani
+	["1941-02-07", 23.5],   # Operation Compass pushes the Axis back to El Agheila
+	["1941-04-15", 23.2],   # Axis counter-offensive, siege of Tobruk
+	["1941-12-10", 25.0],   # Crusader
+	["1942-02-01", 23.4],   # Gazala line
+	["1942-06-25", 25.2],
+	["1942-07-01", 29.0],   # First Alamein
+	["1942-11-08", 12.0],   # Torch + Second Alamein: Libya east of 12 E is Allied
+	["1943-05-13", -12.0],  # Tunisia surrenders: the whole map is Allied
+]
+
+
+## Longitude of the desert front on a date (Axis west of it, Allies east).
+static func desert_front_lon(date: String) -> float:
+	var d: String = date if date != "" else "1900-01-01"
+	var line: float = float(DESERT_FRONT[0][1])
+	for r in DESERT_FRONT:
+		if d >= str(r[0]):
+			line = float(r[1])
+	return line
+
+
+## True for the Desert map's playable theatre (Tunisia, Libya, Egypt, Malta, Sicily).
+static func is_desert_latlon(lat: float, lon: float) -> bool:
+	return lat >= 29.5 and lat <= 38.5 and lon >= 7.5 and lon <= 31.0
+
+
+## Desert ownership: Malta is Allied, Sicily is Axis until the invasion, otherwise the date's front line.
+static func desert_side(lat: float, lon: float, date: String) -> String:
+	if lat >= 35.6 and lat <= 36.2 and lon >= 13.9 and lon <= 14.9:
+		return "Allies"                                   # Malta
+	if lat >= 36.55:
+		return "Allies" if date >= "1943-07-10" else "Axis"   # Sicily / Pantelleria
+	return "Axis" if lon < desert_front_lon(date) else "Allies"
+
+
 ## Which side holds this lat/lon: "Axis" on the continent, "Allies" in England. Sea defaults by nearest.
 static func side_at_latlon(lat: float, lon: float) -> String:
 	var date: String = era_date()
+	if is_desert_latlon(lat, lon):
+		return desert_side(lat, lon, date)
 	if date != "" and lon <= front_lon(lat, date):
 		return "Allies"          # liberated ground on the continent (1944-45 front line)
 	if lon >= 1.5 and not (lat > 51.45 and lon < 2.0):     # (East Anglia reaches 1.75 E)

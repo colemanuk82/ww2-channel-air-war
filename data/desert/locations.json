@@ -216,6 +216,202 @@
    "era": "1942-11 to 1943-05",
    "in_bounds": true,
    "confidence": "low"
+  },
+  {
+   "id": "lg_sidi_barrani",
+   "name": "Sidi Barrani",
+   "side": "RAF",
+   "lat": 31.61,
+   "lon": 25.93,
+   "heading_deg": 100.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_gazala",
+   "name": "Gazala",
+   "side": "Luftwaffe/RA",
+   "lat": 32.1,
+   "lon": 23.32,
+   "heading_deg": 170.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_sidi_rezegh",
+   "name": "Sidi Rezegh",
+   "side": "Luftwaffe/RA",
+   "lat": 31.83,
+   "lon": 24.1,
+   "heading_deg": 160.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_bir_el_gubi",
+   "name": "Bir el Gubi",
+   "side": "Luftwaffe/RA",
+   "lat": 31.55,
+   "lon": 24.2,
+   "heading_deg": 170.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_msus",
+   "name": "Msus",
+   "side": "Luftwaffe/RA",
+   "lat": 31.55,
+   "lon": 20.85,
+   "heading_deg": 10.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_antelat",
+   "name": "Antelat",
+   "side": "Luftwaffe/RA",
+   "lat": 31.45,
+   "lon": 20.55,
+   "heading_deg": 130.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_marble_arch",
+   "name": "Marble Arch",
+   "side": "Luftwaffe/RA",
+   "lat": 31.35,
+   "lon": 21.35,
+   "heading_deg": 140.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_kairouan",
+   "name": "Kairouan",
+   "side": "Luftwaffe/RA",
+   "lat": 35.68,
+   "lon": 10.1,
+   "heading_deg": 170.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_mateur",
+   "name": "Mateur",
+   "side": "Luftwaffe/RA",
+   "lat": 37.05,
+   "lon": 9.67,
+   "heading_deg": 120.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_gafsa",
+   "name": "Gafsa",
+   "side": "Luftwaffe/RA",
+   "lat": 34.42,
+   "lon": 8.78,
+   "heading_deg": 60.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_medenine",
+   "name": "Medenine",
+   "side": "Luftwaffe/RA",
+   "lat": 33.35,
+   "lon": 10.5,
+   "heading_deg": 30.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_sidi_bou_zid",
+   "name": "Sidi Bou Zid",
+   "side": "Luftwaffe/RA",
+   "lat": 35.03,
+   "lon": 9.48,
+   "heading_deg": 100.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_cap_bon",
+   "name": "Kelibia",
+   "side": "Luftwaffe/RA",
+   "lat": 36.85,
+   "lon": 11.1,
+   "heading_deg": 40.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
+  },
+  {
+   "id": "lg_bir_hacheim",
+   "name": "Bir Hakeim",
+   "side": "Luftwaffe/RA",
+   "lat": 31.59,
+   "lon": 23.45,
+   "heading_deg": 0.0,
+   "runway_len_m": 1200,
+   "era": "1940-06 to 1943-05",
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "note": "added landing ground to break up the empty desert; heading is provisional"
   }
  ],
  "targets": [
@@ -389,6 +585,654 @@
    "in_bounds": true,
    "confidence": "low",
    "type_draft": "defensive_line"
+  },
+  {
+   "id": "camp_gazala",
+   "name": "Gazala Camp",
+   "type": "camp",
+   "lat": 32.1,
+   "lon": 23.35,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1942-01 to 1942-12"
+  },
+  {
+   "id": "camp_sidi_rezegh",
+   "name": "Sidi Rezegh Camp",
+   "type": "camp",
+   "lat": 31.83,
+   "lon": 24.13,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1941-10 to 1942-12"
+  },
+  {
+   "id": "camp_bir_hakeim",
+   "name": "Bir Hakeim Camp",
+   "type": "camp",
+   "lat": 31.59,
+   "lon": 23.48,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1942-02 to 1942-12"
+  },
+  {
+   "id": "camp_knightsbridge",
+   "name": "Knightsbridge Camp",
+   "type": "camp",
+   "lat": 31.75,
+   "lon": 23.85,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1942-05 to 1942-11"
+  },
+  {
+   "id": "camp_alamein",
+   "name": "Alamein Camp",
+   "type": "camp",
+   "lat": 30.84,
+   "lon": 28.95,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1942-06 to 1942-11"
+  },
+  {
+   "id": "camp_mareth",
+   "name": "Mareth Camp",
+   "type": "camp",
+   "lat": 33.63,
+   "lon": 10.3,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1942-12 to 1943-03"
+  },
+  {
+   "id": "camp_sidi_bou_zid",
+   "name": "Sidi Bou Zid Camp",
+   "type": "camp",
+   "lat": 35.03,
+   "lon": 9.48,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1942-11 to 1943-02"
+  },
+  {
+   "id": "camp_medenine",
+   "name": "Medenine Camp",
+   "type": "camp",
+   "lat": 33.35,
+   "lon": 10.5,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1943-01 to 1943-03"
+  },
+  {
+   "id": "camp_tobruk_south",
+   "name": "Tobruk South Camp",
+   "type": "camp",
+   "lat": 31.95,
+   "lon": 23.95,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1941-04 to 1941-12"
+  },
+  {
+   "id": "camp_bardia",
+   "name": "Bardia Camp",
+   "type": "camp",
+   "lat": 31.76,
+   "lon": 25.06,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1941-04 to 1941-12"
+  },
+  {
+   "id": "camp_sollum",
+   "name": "Sollum Camp",
+   "type": "camp",
+   "lat": 31.55,
+   "lon": 25.16,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1941-04 to 1942-11"
+  },
+  {
+   "id": "camp_tripoli_south",
+   "name": "Tripoli South Camp",
+   "type": "camp",
+   "lat": 32.55,
+   "lon": 13.1,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1940-06 to 1942-11"
+  },
+  {
+   "id": "camp_sfax_west",
+   "name": "Sfax West Camp",
+   "type": "camp",
+   "lat": 34.75,
+   "lon": 10.2,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1942-11 to 1943-04"
+  },
+  {
+   "id": "camp_tripoli_allied",
+   "name": "Tripoli Supply Camp",
+   "type": "camp",
+   "lat": 32.6,
+   "lon": 13.22,
+   "side_owner": "Allies",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1943-01 to 1943-05"
+  },
+  {
+   "id": "camp_benghazi_allied",
+   "name": "Benghazi Supply Camp",
+   "type": "camp",
+   "lat": 32.02,
+   "lon": 20.22,
+   "side_owner": "Allies",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1942-11 to 1943-05"
+  },
+  {
+   "id": "camp_kairouan_allied",
+   "name": "Kairouan Supply Camp",
+   "type": "camp",
+   "lat": 35.62,
+   "lon": 10.05,
+   "side_owner": "Allies",
+   "era": "1940-06 to 1943-05",
+   "radius_m": 220,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "historical_era": "1943-04 to 1943-05"
+  },
+  {
+   "id": "convoy_gen_01",
+   "name": "Road convoy: Tobruk - Darnah",
+   "type": "convoy_route",
+   "lat": 32.0836,
+   "lon": 23.9764,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "comp": "mixed",
+   "start_s": 200.0,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "path": [
+    [
+     32.0836,
+     23.9764
+    ],
+    [
+     32.0458,
+     23.8716
+    ],
+    [
+     31.993,
+     23.7317
+    ],
+    [
+     31.993,
+     23.5676
+    ],
+    [
+     32.0133,
+     23.4229
+    ],
+    [
+     32.0865,
+     23.2782
+    ],
+    [
+     32.2004,
+     23.1624
+    ],
+    [
+     32.7576,
+     22.6366
+    ]
+   ]
+  },
+  {
+   "id": "convoy_gen_02",
+   "name": "Road convoy: Benina (Berka), Benghazi - Agedabia (Ajd",
+   "type": "convoy_route",
+   "lat": 32.0968,
+   "lon": 20.2703,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "comp": "supply",
+   "start_s": 600.0,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "path": [
+    [
+     32.0968,
+     20.2703
+    ],
+    [
+     31.9604,
+     20.2245
+    ],
+    [
+     31.8262,
+     20.2293
+    ],
+    [
+     31.692,
+     20.2245
+    ],
+    [
+     31.5171,
+     20.2293
+    ],
+    [
+     31.3869,
+     20.2052
+    ],
+    [
+     31.2324,
+     20.1859
+    ],
+    [
+     30.7565,
+     20.2245
+    ]
+   ]
+  },
+  {
+   "id": "convoy_gen_03",
+   "name": "Road convoy: Mersa Matruh - Sidi Barrani",
+   "type": "convoy_route",
+   "lat": 31.3585,
+   "lon": 27.2292,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "comp": "supply",
+   "start_s": 1000.0,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "path": [
+    [
+     31.3585,
+     27.2292
+    ],
+    [
+     31.2852,
+     27.1134
+    ],
+    [
+     31.2324,
+     26.9832
+    ],
+    [
+     31.2283,
+     26.8191
+    ],
+    [
+     31.2446,
+     26.6551
+    ],
+    [
+     31.2771,
+     26.4911
+    ],
+    [
+     31.2812,
+     26.2981
+    ],
+    [
+     31.6025,
+     25.917
+    ]
+   ]
+  },
+  {
+   "id": "convoy_gen_04",
+   "name": "Road convoy: Tataouine - Nalut",
+   "type": "convoy_route",
+   "lat": 33.0,
+   "lon": 10.4667,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "comp": "mixed",
+   "start_s": 1400.0,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "path": [
+    [
+     33.0,
+     10.4667
+    ],
+    [
+     32.9203,
+     10.5809
+    ],
+    [
+     32.8308,
+     10.6822
+    ],
+    [
+     32.7047,
+     10.6967
+    ],
+    [
+     32.5583,
+     10.7112
+    ],
+    [
+     32.4403,
+     10.7691
+    ],
+    [
+     32.3183,
+     10.8077
+    ],
+    [
+     31.8791,
+     10.962
+    ]
+   ]
+  },
+  {
+   "id": "convoy_gen_07",
+   "name": "Road convoy: Gabes coastal palm oasis - Kebili palm o",
+   "type": "convoy_route",
+   "lat": 33.89,
+   "lon": 10.07,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "comp": "mixed",
+   "start_s": 600.0,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "path": [
+    [
+     33.89,
+     10.07
+    ],
+    [
+     33.9493,
+     9.9345
+    ],
+    [
+     33.9656,
+     9.7801
+    ],
+    [
+     33.99,
+     9.6354
+    ],
+    [
+     33.99,
+     9.481
+    ],
+    [
+     33.9656,
+     9.3267
+    ],
+    [
+     33.933,
+     9.1723
+    ],
+    [
+     33.7012,
+     8.9745
+    ]
+   ]
+  },
+  {
+   "id": "convoy_gen_08",
+   "name": "Road convoy: Tozeur palm oasis - Kebili palm oasis",
+   "type": "convoy_route",
+   "lat": 33.92,
+   "lon": 8.13,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "comp": "supply",
+   "start_s": 1000.0,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "path": [
+    [
+     33.92,
+     8.13
+    ],
+    [
+     33.9737,
+     8.2557
+    ],
+    [
+     33.994,
+     8.4052
+    ],
+    [
+     33.994,
+     8.5789
+    ],
+    [
+     33.994,
+     8.7574
+    ],
+    [
+     33.9574,
+     8.9021
+    ],
+    [
+     33.8598,
+     9.0565
+    ],
+    [
+     33.7012,
+     8.9745
+    ]
+   ]
+  },
+  {
+   "id": "convoy_gen_09",
+   "name": "Road convoy: Gambut - Al Marj",
+   "type": "convoy_route",
+   "lat": 32.3,
+   "lon": 21.8,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "comp": "supply",
+   "start_s": 1400.0,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "path": [
+    [
+     32.3,
+     21.8
+    ],
+    [
+     32.2004,
+     21.6669
+    ],
+    [
+     32.1882,
+     21.4643
+    ],
+    [
+     32.2126,
+     21.3148
+    ],
+    [
+     32.2899,
+     21.1652
+    ],
+    [
+     32.3997,
+     21.0301
+    ],
+    [
+     32.4485,
+     20.895
+    ],
+    [
+     32.4973,
+     20.8227
+    ]
+   ]
+  },
+  {
+   "id": "convoy_gen_10",
+   "name": "Road convoy: Misrata - Al Khums",
+   "type": "convoy_route",
+   "lat": 32.3754,
+   "lon": 15.0925,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "comp": "mixed",
+   "start_s": 1800.0,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "path": [
+    [
+     32.3754,
+     15.0925
+    ],
+    [
+     32.3834,
+     14.942
+    ],
+    [
+     32.3997,
+     14.8069
+    ],
+    [
+     32.4159,
+     14.6429
+    ],
+    [
+     32.481,
+     14.5175
+    ],
+    [
+     32.603,
+     14.3293
+    ],
+    [
+     32.66,
+     14.2425
+    ]
+   ]
+  },
+  {
+   "id": "convoy_gen_12",
+   "name": "Road convoy: Benghazi - Al Marj",
+   "type": "convoy_route",
+   "lat": 32.1167,
+   "lon": 20.0667,
+   "side_owner": "Axis",
+   "era": "1940-06 to 1943-05",
+   "comp": "supply",
+   "start_s": 600.0,
+   "in_bounds": true,
+   "generated": true,
+   "confidence": "low",
+   "path": [
+    [
+     32.1167,
+     20.0667
+    ],
+    [
+     32.1231,
+     20.2148
+    ],
+    [
+     32.1556,
+     20.3837
+    ],
+    [
+     32.2207,
+     20.5091
+    ],
+    [
+     32.3183,
+     20.6683
+    ],
+    [
+     32.4241,
+     20.7841
+    ],
+    [
+     32.4973,
+     20.8227
+    ]
+   ]
   }
  ],
  "cities": [

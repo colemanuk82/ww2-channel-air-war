@@ -181,6 +181,7 @@ static func tile_data(origin: Vector2, cell: float, seed_v: int, exclude: Array)
 			if _okc(q, exclude, 2.0):
 				_put(b, "d_palm", q, trng.randf() * TAU, Vector3(s1, s2, s1))
 	DesertTown.add_houses(b, origin, cell, seed_v, exclude)       # flat-roofed houses and mosques on class 50
+	DesertTown.add_settlements(b, origin, cell, seed_v, exclude)  # extra hamlets and oases from life.json
 	for tk in FAR_THIN.keys():
 		if not b.has(tk):
 			continue
@@ -192,7 +193,7 @@ static func tile_data(origin: Vector2, cell: float, seed_v: int, exclude: Array)
 			if _h(floori(tf.origin.x * 3.1), floori(tf.origin.z * 3.1)) < 1.0 / float(th):
 				far.append(Transform3D(tf.basis * Basis.from_scale(Vector3(gs, 1.0 + (gs - 1.0) * 0.4, gs)), tf.origin))
 		b[tk + "_far"] = far
-	var order: Array = ["d_scrub0", "d_scrub1", "d_scrub2", "d_boulder_p", "d_boulder_d", "d_palm", "d_olive", "d_cypress", "d_juniper", "d_palm_far", "d_olive_far", "d_cypress_far", "d_juniper_far", "d_wall", "d_house0", "d_house1", "d_house2", "d_house3", "d_roofbox", "d_mosque"]
+	var order: Array = ["d_scrub0", "d_scrub1", "d_scrub2", "d_boulder_p", "d_boulder_d", "d_palm", "d_olive", "d_cypress", "d_juniper", "d_palm_far", "d_olive_far", "d_cypress_far", "d_juniper_far", "d_wall", "d_house0", "d_house1", "d_house2", "d_house3", "d_roofbox", "d_mosque", "d_market", "d_well"]
 	for kind in order:
 		if not b.has(kind) or (b[kind] as Array).is_empty():
 			continue
@@ -203,8 +204,10 @@ static func tile_data(origin: Vector2, cell: float, seed_v: int, exclude: Array)
 			vis = float((TREE_RANGE[kind.trim_suffix("_far")] as Array)[0])
 		elif kind == "d_wall":
 			vis = VIS_WALL
-		elif kind.begins_with("d_house") or kind == "d_roofbox" or kind == "d_mosque":
+		elif kind.begins_with("d_house") or kind == "d_roofbox" or kind == "d_mosque" or kind == "d_market":
 			vis = VIS_HOUSE
+		elif kind == "d_well":
+			vis = VIS_WALL
 		(out["multis"] as Array).append([kind, Scatter.multi_data(b[kind]), vis])
 	return out
 
@@ -472,6 +475,39 @@ static func mesh(kind: String) -> ArrayMesh:
 			parts.append(_part(_cyl(0.9, 1.1, 22.0, 6), Vector3(7.6, 11.0, 7.6), stone, false))
 			parts.append(_part(_cyl(1.5, 1.5, 0.6, 6), Vector3(7.6, 19.0, 7.6), Color(0.80, 0.77, 0.68), false))
 			parts.append(_part(_cyl(0.0, 1.0, 2.6, 6), Vector3(7.6, 23.3, 7.6), Color(0.80, 0.77, 0.68), false))
+		"d_market":
+			# Open-air souk: striped canvas awnings on posts over trestle stalls, crates and a low wall.
+			var canvas := Color(0.74, 0.67, 0.52)
+			var stripe := Color(0.58, 0.34, 0.24)
+			var wood := Color(0.40, 0.30, 0.20)
+			for r in 2:
+				for c in 3:
+					var cx: float = (float(c) - 1.0) * 7.5
+					var cz: float = (float(r) - 0.5) * 8.0
+					var aw := BoxMesh.new()
+					aw.size = Vector3(5.0, 0.18, 4.0)
+					parts.append(_part(aw, Vector3(cx, 2.5, cz), canvas if (r + c) % 2 == 0 else stripe, false))
+					for sx in [-1.0, 1.0]:
+						for sz in [-1.0, 1.0]:
+							parts.append(_part(_cyl(0.09, 0.11, 2.5, 4), Vector3(cx + sx * 2.3, 1.25, cz + sz * 1.8), wood, false))
+					var tb := BoxMesh.new()
+					tb.size = Vector3(4.2, 0.7, 1.2)
+					parts.append(_part(tb, Vector3(cx, 0.35, cz + 0.9), wood, false))
+					var cr := BoxMesh.new()
+					cr.size = Vector3(0.8, 0.7, 0.8)
+					parts.append(_part(cr, Vector3(cx + 1.4, 0.35, cz - 1.2), Color(0.52, 0.42, 0.28), false))
+			var wl := BoxMesh.new()
+			wl.size = Vector3(24.0, 1.2, 0.7)
+			parts.append(_part(wl, Vector3(0.0, 0.6, 8.0), Color(0.62, 0.55, 0.42), false))
+		"d_well":
+			# Stone well: a ring wall, dark water, two posts and a crossbar.
+			var stone := Color(0.64, 0.60, 0.52)
+			var wood := Color(0.38, 0.29, 0.19)
+			parts.append(_part(_cyl(1.8, 1.7, 1.3, 10), Vector3(0, 0.65, 0), stone, false))
+			parts.append(_part(_cyl(1.35, 1.35, 0.1, 10), Vector3(0, 1.28, 0), Color(0.10, 0.16, 0.16), false))
+			parts.append(_part(_cyl(0.09, 0.11, 2.2, 4), Vector3(-1.5, 1.9, 0), wood, false))
+			parts.append(_part(_cyl(0.09, 0.11, 2.2, 4), Vector3(1.5, 1.9, 0), wood, false))
+			parts.append(_part(_cyl(0.07, 0.07, 3.4, 4), Vector3(0, 3.0, 0), wood, false))
 		"d_palm":
 			_palm_parts(parts, false)
 		"d_palm_far":

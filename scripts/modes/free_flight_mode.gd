@@ -23,6 +23,9 @@ func configure(cfg: Dictionary) -> void:
 	difficulty = float(cfg.get("difficulty", 0.4))
 	taskings = bool(cfg.get("taskings", false)) or OS.get_cmdline_user_args().has("--taskings")
 	tasking_interval = float(cfg.get("tasking_interval", 600.0))
+	# The desert is a target-rich ground war: call taskings more often than the Channel's ten minutes.
+	if GameState.current_map == "desert" and tasking_interval > 300.0:
+		tasking_interval = 300.0
 	passing_on = bool(cfg.get("passing_flights", true)) and not OS.get_cmdline_user_args().has("--no-passing")
 	# Free flight had no wingman count of its own, so the base default stayed at zero unless the map
 	# planner supplied one. Give fighter starts the normal pair; bomber crews still fly alone.

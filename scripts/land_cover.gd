@@ -46,15 +46,35 @@ static func ready() -> bool:
 	return _load()
 
 
+## Grid accessors so the desert terrain shader can build lc_tex from the same single copy of the
+## 19.4 MB class grid instead of reading region_landcover.bin a second time.
+static func width() -> int:
+	_load()
+	return _w
+
+
+static func height() -> int:
+	_load()
+	return _h
+
+
+static func data() -> PackedByteArray:
+	_load()
+	return _data
+
+
 ## WorldCover class at a world XZ position, or -1 if the grid is unavailable.
 static func class_at(x: float, z: float) -> int:
 	if not _load():
 		return -1
-	var ll: Vector2 = WorldCoords.world_to_latlon(Vector3(x, 0.0, z))
 	if _lon_max <= _lon_min or _lat_max <= _lat_min:
 		return -1
-	var u: float = (ll.y - _lon_min) / (_lon_max - _lon_min)
-	var v: float = (_lat_max - ll.x) / (_lat_max - _lat_min)
+	# Inlined world -> lat/lon: this is called tens of thousands of times per tile, so no Vector3/Vector2
+	# allocations and no second division round-trip.
+	var lat: float = WorldCoords.ORIGIN_LAT - z / WorldCoords.units_per_deg_lat
+	var lon: float = WorldCoords.ORIGIN_LON + x / WorldCoords.units_per_deg_lon
+	var u: float = (lon - _lon_min) / (_lon_max - _lon_min)
+	var v: float = (_lat_max - lat) / (_lat_max - _lat_min)
 	var col: int = clampi(int(u * float(_w)), 0, _w - 1)
 	var row: int = clampi(int(v * float(_h)), 0, _h - 1)
 	return int(_data[row * _w + col])

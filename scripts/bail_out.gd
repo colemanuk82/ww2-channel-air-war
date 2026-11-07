@@ -177,7 +177,10 @@ func _resolve() -> void:
 	var pos: Vector3 = _chute.global_position if _chute != null and is_instance_valid(_chute) else (_cam.global_position if _cam != null else Vector3.ZERO)
 	var team: String = GameState.player_side
 	var fate: String = "safe"
-	if FX.is_water(pos) or pos.y < 1.5:
+	# Actual water only. The old `pos.y < 1.5` test classified the desert's clipped low ground (Qattara,
+	# the Nile delta, the Sirte sabkha, the chotts) as sea, so a pilot landing inland got a dinghy and a
+	# Channel rescue flight in the middle of the desert.
+	if FX.is_water(pos):
 		fate = "sea"
 	elif GroundKit.side_at(pos) != team:
 		fate = "captured"
@@ -204,13 +207,21 @@ func cancel() -> void:
 
 
 static func fate_text(fate: String, side: String) -> String:
+	var desert: bool = GameState.current_map == "desert"
 	match fate:
 		"safe":
+			if desert:
+				return "Down in the desert - a supply column picks you up and drives you back to the squadron."
 			return "Landed safely in friendly country - picked up and driven back to the squadron." if side == "Allies" \
 				else "Landed safely behind our lines - a Kübelwagen takes you back to the Staffel."
 		"sea":
+			if desert:
+				return "Down in the Mediterranean - the dinghy is out. An air-sea rescue launch is on its way."
 			return "Down in the Channel - the dinghy is out. The rescue flight is on its way."
 		"captured":
+			if desert:
+				return "Landed in enemy-held desert - you are a prisoner of war." if side == "Allies" \
+					else "Landed in Allied-held desert - you are a prisoner of war."
 			return "Landed behind enemy lines - the farmer's dog found you first. You are a prisoner of war." if side == "Allies" \
 				else "Landed in England - the Home Guard were waiting. You are a prisoner of war."
 	return ""

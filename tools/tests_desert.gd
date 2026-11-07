@@ -12,13 +12,20 @@ var _failed: int = 0
 
 
 func _ready() -> void:
+	var date_before: String = str(GameState.era_date)
 	_test_map_def()
 	_test_world_coords()
 	_test_desert_files()
 	_test_desert_locations()
 	_test_landcover_ids()
 	_test_tracks()
+	_test_ground_ownership()
+	_test_life_data()
+	_test_campaign_targets()
+	_test_dune_shape()
+	_test_rescue_text()
 	_test_map_switch()
+	GameState.era_date = date_before
 	GameState.current_map = "channel"   # always leave the game on Channel
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
@@ -158,8 +165,147 @@ func _test_tracks() -> void:
 	_check(ok_lines, "every track line is kind track with at least two points")
 
 
+## Desert ownership moves with the campaign: Alamein, Malta and Sicily on the right dates, Channel unchanged.
+func _test_ground_ownership() -> void:
+	print("-- ground ownership")
+	GameState.current_map = "desert"
+	GameState.era_date = "1942-07-05"
+	_check(GroundKit.side_at_latlon(30.90, 28.95) == "Axis", "Alamein is Axis in July 1942")
+	GameState.era_date = "1942-11-20"
+	_check(GroundKit.side_at_latlon(30.90, 28.95) == "Allies", "Alamein is Allied after Second Alamein")
+	GameState.era_date = "1942-07-05"
+	_check(GroundKit.side_at_latlon(35.90, 14.50) == "Allies", "Malta is Allied")
+	_check(GroundKit.side_at_latlon(37.50, 14.00) == "Axis", "Sicily is Axis before the invasion")
+	GameState.era_date = "1943-08-01"
+	_check(GroundKit.side_at_latlon(37.50, 14.00) == "Allies", "Sicily is Allied after the invasion")
+	GameState.era_date = "1944-06-10"
+	_check(GroundKit.side_at_latlon(50.00, 5.00) == "Axis", "Channel front still says the occupied coast is Axis")
+	_check(GroundKit.side_at_latlon(51.40, 0.50) == "Allies", "Channel front still says Kent is Allied")
+
+
+func _test_life_data() -> void:
+	print("-- desert life data")
+	var life: Dictionary = _read_json(DESERT_DIR + "/life.json")
+	_check(not life.is_empty(), "life.json parses")
+	var d: MapDef = MapDef.by_id("desert")
+	var places: Array = life.get("settlements", [])
+	_check(places.size() >= 10, "life.json has extra places (%d)" % places.size())
+	var places_ok: bool = true
+	for p in places:
+		var pd: Dictionary = p
+		var la: float = float(pd.get("lat", 0.0))
+		var lo: float = float(pd.get("lon", 0.0))
+		if la < d.lat_min or la > d.lat_max or lo < d.lon_min or lo > d.lon_max:
+			places_ok = false
+		if str(pd.get("kind", "")) not in ["hamlet", "oasis"] or int(pd.get("size", 0)) < 1:
+			places_ok = false
+	_check(places_ok, "every extra place is a hamlet/oasis inside the map")
+	var caravans: Array = life.get("caravans", [])
+	_check(caravans.size() >= 3, "life.json has camel caravans (%d)" % caravans.size())
+	var car_ok: bool = true
+	for c in caravans:
+		var cd: Dictionary = c
+		var pts: Array = cd.get("pts", [])
+		if pts.size() < 2 or int(cd.get("count", 0)) < 3 or int(cd.get("count", 0)) > 18:
+			car_ok = false
+		for q in pts:
+			var qa: Array = q
+			if qa.size() < 2 or float(qa[0]) < d.lat_min or float(qa[0]) > d.lat_max or float(qa[1]) < d.lon_min or float(qa[1]) > d.lon_max:
+				car_ok = false
+	_check(car_ok, "every caravan walks a valid route with 3-18 camels")
+	var groups: Array = life.get("battle_groups", [])
+	_check(groups.size() >= 3, "life.json has moving battle groups (%d)" % groups.size())
+	var grp_ok: bool = true
+	for g in groups:
+		var gd: Dictionary = g
+		if str(gd.get("team", "")) not in ["Allies", "Axis"]:
+			grp_ok = false
+		if str(gd.get("comp", "")) not in ["tanks", "mixed", "supply", "troops"]:
+			grp_ok = false
+		if (gd.get("pts", []) as Array).size() < 2:
+			grp_ok = false
+	_check(grp_ok, "every battle group has a team, a composition and a route")
+
+
+func _test_campaign_targets() -> void:
+	print("-- desert campaign targets")
+	var loc: Dictionary = _read_json(DESERT_DIR + "/locations.json")
+	var camps: int = 0
+	var routes: int = 0
+	var bad: bool = false
+	var d: MapDef = MapDef.by_id("desert")
+	for t in loc.get("targets", []):
+		var td: Dictionary = t
+		var typ: String = str(td.get("type", ""))
+		var la: float = float(td.get("lat", 0.0))
+		var lo: float = float(td.get("lon", 0.0))
+		if la < d.lat_min or la > d.lat_max or lo < d.lon_min or lo > d.lon_max:
+			bad = true
+		if typ == "camp":
+			camps += 1
+			if float(td.get("radius_m", 0.0)) <= 0.0:
+				bad = true
+		elif typ == "convoy_route":
+			routes += 1
+			if (td.get("path", []) as Array).size() < 2:
+				bad = true
+	_check(camps >= 10, "desert has plenty of army camps (%d)" % camps)
+	_check(routes >= 5, "desert has mapped convoy routes (%d)" % routes)
+	_check(not bad, "every camp and convoy route is complete and inside the map")
+	var gen_fields: int = 0
+	for a in loc.get("airfields", []):
+		if bool((a as Dictionary).get("generated", false)):
+			gen_fields += 1
+	_check(gen_fields >= 10, "extra sporadic airfields were added (%d)" % gen_fields)
+	_check(load("res://scripts/ground/army_camp.gd") != null, "ArmyCamp script loads")
+	_check(load("res://scripts/ground/camel_train.gd") != null, "CamelTrain script loads")
+
+
+## Dunes: the mask stays in range, the offset is a pure function, it is feathered to zero at the field
+## edge and a trough can never be dug below the water plane.
+func _test_dune_shape() -> void:
+	print("-- dune shape")
+	GameState.current_map = "desert"
+	var hf := HeightField.new()
+	hf.setup()
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var in_range: bool = true
+	var pure: bool = true
+	var floored: bool = true
+	var positives: int = 0
+	for i in 400:
+		var lat: float = rng.randf_range(30.2, 32.9)
+		var lon: float = rng.randf_range(15.0, 25.0)
+		var wx: float = (lon - WorldCoords.ORIGIN_LON) * WorldCoords.units_per_deg_lon
+		var wz: float = -(lat - WorldCoords.ORIGIN_LAT) * WorldCoords.units_per_deg_lat
+		var e: float = hf.elev_m(lat, lon)
+		var m: float = hf.dune_region_mask(wx, wz, e)
+		if m < 0.0 or m > 1.0:
+			in_range = false
+		if m > 0.05:
+			positives += 1
+		var off: float = hf._dune_offset(wx, wz, e)
+		if off != hf._dune_offset(wx, wz, e):
+			pure = false
+		if e > 0.0 and off < -e * WorldCoords.VERTICAL_SCALE * 0.8 - 0.01:
+			floored = false
+	_check(in_range, "dune region mask stays in 0..1")
+	_check(pure, "dune offset is a pure function of position")
+	_check(floored, "dune troughs never dig below the water plane")
+	_check(positives > 0, "there are real dune fields in the southern desert (%d of 400 samples)" % positives)
+
+
+func _test_rescue_text() -> void:
+	print("-- desert rescue text")
+	GameState.current_map = "desert"
+	_check(BailOut.fate_text("safe", "Allies").to_lower().contains("desert"), "a desert landing is a desert fate, not a Channel one")
+	_check(BailOut.fate_text("sea", "Allies").to_lower().contains("mediterranean"), "a desert ditching is a Mediterranean rescue")
+	GameState.current_map = "channel"
+	_check(BailOut.fate_text("sea", "Allies").contains("Channel"), "the Channel sea rescue text is unchanged")
+
+
 func _test_map_switch() -> void:
-	print("-- map switch")
 	var settings_path: String = "user://settings.cfg"
 	var settings_before: PackedByteArray = FileAccess.get_file_as_bytes(settings_path)
 	var debug_before: bool = GameState.map_debug_override

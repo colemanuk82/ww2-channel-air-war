@@ -257,18 +257,23 @@ vec3 desert_ground(float h, float slope, vec2 xz, float sea_m, float cdist, floa
 		lcol = mix(lcol, vec3(0.38, 0.30, 0.20), w_veg * smoothstep(0.62, 0.82, nm2) * 0.28);
 		// irrigated land, oases, orchards: a patchwork of small fields (green crop, stubble, ploughed earth)
 		{
-			vec2 fq = vec2(dot(xz, vec2(0.94, 0.34)), dot(xz, vec2(-0.34, 0.94))) / 85.0;
+			// Warp the field grid so the 85 m blocks never read as squares, and soften the colour across
+			// each boundary (straight-edged checkerboards are the one thing that reads as "test level").
+			vec2 fw = vec2(t_vnoise2(xz * 0.011 + 4.0), t_vnoise2(xz * 0.011 + 18.0)) - 0.5;
+			vec2 fq = (vec2(dot(xz, vec2(0.94, 0.34)), dot(xz, vec2(-0.34, 0.94))) + fw * 46.0) / 85.0;
 			vec2 fc = floor(fq);
 			float fh = t_hash12(fc + 3.7);
 			vec3 fcol = mix(vec3(0.24, 0.28, 0.12), vec3(0.30, 0.32, 0.15), fract(fh * 7.3));
-			fcol = mix(fcol, vec3(0.44, 0.37, 0.20), smoothstep(0.62, 0.80, fh));
+			fcol = mix(fcol, vec3(0.40, 0.35, 0.20), smoothstep(0.62, 0.80, fh));
 			fcol = mix(fcol, vec3(0.30, 0.21, 0.13), smoothstep(0.82, 0.94, fh));
 			vec2 fe = abs(fract(fq) - 0.5);
-			float ditch = smoothstep(0.46, 0.495, max(fe.x, fe.y)) * near_d;
-			fcol = mix(fcol, fcol * 0.6, ditch);
 			float cat = lc_wsum(lid, lws, 120) + lc_wsum(lid, lws, 121);
+			float edge = smoothstep(0.38, 0.50, max(fe.x, fe.y));
+			fcol = mix(fcol, lcol * 0.95, edge * 0.55);      // melt the field edges into the class colour
+			float ditch = smoothstep(0.46, 0.495, max(fe.x, fe.y)) * near_d;
+			fcol = mix(fcol, fcol * 0.72, ditch);
 			fcol = mix(fcol, lcol * 0.95, smoothstep(1200.0, 4500.0, cdist) * 0.85);      // the patchwork melts into one tone with range (no 85 m squares at 3 km)
-			lcol = mix(lcol, mix(fcol, lcol * 0.9, cat * 0.5), w_crop * 0.75);
+			lcol = mix(lcol, mix(fcol, lcol * 0.9, cat * 0.5), w_crop * 0.62);
 		}
 		// limestone (Malta, the Hyblaean plateau): honey stone cut into small walled terraces
 		{
@@ -653,6 +658,7 @@ void fragment() {
 	// af_b.w is the zone kind: 1 = aerodrome grass, 2 = army camp (trampled grass and mud), 3 = POW / labour
 	// camp (bare sandy compound). Only the nearest 24 zones are uploaded (terrain_chunk_manager.gd).
 	float afw = 0.0;
+	float afcore = 0.0;  // 1 at the cleared centre of an aerodrome, 0 at its feathered edge
 	float cw = 0.0;
 	float pw = 0.0;
 	float dmg = 0.0;     // kind 4: bomb damage (rubble, scorch, craters); strength in the fractional part
@@ -681,13 +687,15 @@ void fragment() {
 		vec2 q = abs(vec2(along, across)) - b.xy;
 		float sd = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
 		if (sd > b.z * 1.75) { continue; }
-		if (b.w > 1.5 && sd > -b.z * 0.72) {
-			// camps, damage, floods: a ragged edge, not a ruled rectangle (only the noise where it can matter)
-			sd += (t_vnoise2(xz * 0.018 + a.xy * 0.001) - 0.5) * b.z * 1.4;
+		if (b.w > 1.5 || (desert_look && b.w > 0.5 && sd > -b.z * 0.72)) {
+			// camps, damage, floods, and desert airfields: a ragged edge, not a ruled rectangle.
+			// Airfields use a gentler warp: the full 1.4x fringe looked like a spiky white cloud at range.
+			float wamp = (b.w > 1.5) ? 1.4 : 0.6;
+			sd += (t_vnoise2(xz * 0.018 + a.xy * 0.001) - 0.5) * b.z * wamp;
 		}
 		float w = 1.0 - smoothstep(0.0, b.z, sd);
 		float kind = floor(b.w + 0.001);
-		if (kind < 1.5) { afw = max(afw, w); }
+		if (kind < 1.5) { afw = max(afw, w); afcore = max(afcore, 1.0 - smoothstep(0.0, b.z * 0.55, sd)); }
 		else if (kind < 2.5) { cw = max(cw, w); }
 		else if (kind < 3.5) { pw = max(pw, w); }
 		else if (kind < 4.5) { dmg = max(dmg, w * fract(b.w)); }
@@ -768,18 +776,22 @@ void fragment() {
 		// so from the air the field blends into the patchwork instead of showing as a pale disc
 		vec3 airfield_grass = mix(mix(grass_a, hedge_col, 0.38), soil_col, 0.08) * 0.9;
 		if (desert_look) {
-			// desert fields: packed sand and gravel, no grass
-			// pale scuffed earth with darker trampled and oil-stained patches
-			airfield_grass = mix(vec3(0.55, 0.47, 0.34), vec3(0.46, 0.38, 0.27), t_vnoise2(xz * 0.05 + 31.0));
-			airfield_grass *= 1.0 - 0.14 * smoothstep(0.55, 0.80, t_vnoise2(xz * 0.035 + 7.0));
-			airfield_grass *= 1.0 - 0.10 * smoothstep(0.62, 0.85, t_vnoise2(xz * 0.3 + 3.0));
+			// Desert fields: packed sand and gravel, no grass. The cleared core is bare and scuffed;
+			// the outer feather stays close to the surrounding desert so the field has no decal edge.
+			vec3 scuff = mix(vec3(0.56, 0.48, 0.35), vec3(0.47, 0.39, 0.28), t_vnoise2(xz * 0.05 + 31.0));
+			vec3 core = mix(scuff, vec3(0.56, 0.49, 0.37), afcore * 0.45);
+			core *= 1.0 - 0.16 * smoothstep(0.55, 0.85, t_vnoise2(xz * 0.035 + 7.0));   // oil / trample
+			core *= 1.0 - 0.10 * smoothstep(0.62, 0.85, t_vnoise2(xz * 0.3 + 3.0));
+			core *= 0.94 + 0.10 * t_vnoise2(xz * 0.004 + 23.0);                          // large patchiness
+			airfield_grass = core;
 		}
 		float mow = 0.97 + 0.04 * step(0.5, fract(dot(xz, vec2(0.7, 0.7)) / 44.0));
 		// a slow mottle keeps the interior from reading as one flat decal: the field LATTICE is suppressed,
 		// but real aerodrome grass still varies patch to patch
 		float mottle = 0.94 + 0.12 * t_vnoise2(xz * 0.006 + 17.0);
 		airfield_grass *= mow * mottle;
-		col = mix(col, airfield_grass, afw * 0.85);
+		// Desert: stronger in the cleared core, weaker at the edges, so the field grows out of the ground.
+		col = mix(col, airfield_grass, afw * (desert_look ? (0.55 + 0.35 * afcore) : 0.85));
 	}
 	// steep faces -> rock (roughness-broken so faces are not a flat fill), then chalk / limestone by zone
 	float rockness = desert_look ? 0.0 : smoothstep(rock_slope - 0.14, rock_slope + 0.14, slope);   // desert: its own rock above
