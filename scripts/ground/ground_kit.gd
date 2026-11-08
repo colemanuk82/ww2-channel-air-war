@@ -132,12 +132,14 @@ static func prism_mesh(w: float, l: float, h: float) -> ArrayMesh:
 	var f := Vector3(0, h, l * 0.5)
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	# winding: clockwise = front in Godot
+	# winding: clockwise seen from outside = front in Godot. (Before v4.1 every triangle was wound the other way,
+	# so the slopes were back-face culled and the upward-facing "underside" z-fought with the wall top under it:
+	# the flickering church, house and factory roofs.)
 	var tris: Array = [
-		[a, c, b], [d, e, f],            # gable ends
-		[a, d, f], [a, f, c],            # left slope
-		[b, c, f], [b, f, e],            # right slope
-		[a, b, e], [a, e, d],            # underside
+		[a, b, c], [d, f, e],            # gable ends
+		[a, f, d], [a, c, f],            # left slope
+		[b, f, c], [b, e, f],            # right slope
+		[a, e, b], [a, d, e],            # underside
 	]
 	for t in tris:
 		for v in t:
