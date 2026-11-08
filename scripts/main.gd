@@ -1714,6 +1714,7 @@ func start_game(cfg: Dictionary) -> void:
 	player.stats = AircraftCatalog.load_stats(aid)
 	player.team = side
 	player.player_controlled = true
+	HitLog.reset()
 	# Mission setup loadout (bombs / rockets / rounds). Applied before _ready so the first spawn, rearm and the
 	# HUD all see the chosen limits rather than the type's full load.
 	var loadout_v: Variant = config.get("loadout", null)

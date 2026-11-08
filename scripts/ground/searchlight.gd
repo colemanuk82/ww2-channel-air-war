@@ -296,7 +296,7 @@ func _fire_at(t: Node3D) -> void:
 	if axis.length() < 0.1:
 		axis = Vector3.UP
 	dir = dir.rotated(axis, 0.03 * sqrt(randf()))
-	shells.fire_flak(from, dir * spd, from.distance_to(aim) / spd, 3.4, 19.0, team)
+	shells.fire_flak(from, dir * spd, from.distance_to(aim) / spd, 3.4, 19.0, team, self)
 	if _is_player(t):
 		t.set("_impact_shake", 0.3)     # the flak bursts shake the aircraft a little each time
 

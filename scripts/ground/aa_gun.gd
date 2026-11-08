@@ -371,9 +371,9 @@ func _shoot(aim: Vector3) -> void:
 	var spd: float = cfg["speed"]
 	if gtype == "88mm":
 		var fuse: float = dist / spd
-		shells.fire_flak(from, dir * spd, fuse, float(cfg["dmg"]), float(cfg["radius"]), team)
+		shells.fire_flak(from, dir * spd, fuse, float(cfg["dmg"]), float(cfg["radius"]), team, self)
 	else:
-		shells.fire_tracer(from, dir * spd, float(cfg["dmg"]), team, 2.4)
+		shells.fire_tracer(from, dir * spd, float(cfg["dmg"]), team, 2.4, self)
 	GroundKit.shells_fired += 1
 	_flash.visible = true
 	_flash_t = 0.05

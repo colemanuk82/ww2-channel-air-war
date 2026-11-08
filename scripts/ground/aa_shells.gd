@@ -44,12 +44,12 @@ func _ready() -> void:
 	top_level = true
 
 
-func fire_tracer(from: Vector3, vel: Vector3, dmg: float, team: String, life: float = 2.2) -> void:
-	_shells.append({"k": 0, "p": from, "v": vel, "l": life, "f": 0.0, "d": dmg, "r": 0.0, "t": team})
+func fire_tracer(from: Vector3, vel: Vector3, dmg: float, team: String, life: float = 2.2, src: Node = null) -> void:
+	_shells.append({"k": 0, "p": from, "v": vel, "l": life, "f": 0.0, "d": dmg, "r": 0.0, "t": team, "s": src})
 
 
-func fire_flak(from: Vector3, vel: Vector3, fuse: float, dmg: float, radius: float, team: String) -> void:
-	_shells.append({"k": 1, "p": from, "v": vel, "l": 0.0, "f": fuse, "d": dmg, "r": radius, "t": team})
+func fire_flak(from: Vector3, vel: Vector3, fuse: float, dmg: float, radius: float, team: String, src: Node = null) -> void:
+	_shells.append({"k": 1, "p": from, "v": vel, "l": 0.0, "f": fuse, "d": dmg, "r": radius, "t": team, "s": src})
 
 
 func _refresh_targets() -> void:
@@ -85,6 +85,8 @@ func _physics_process(delta: float) -> void:
 				var rad: float = (float(a.get("hit_radius")) if "hit_radius" in a else 6.0) + 0.8
 				var c: Vector3 = (a as Node3D).global_position
 				if _seg_dist(p0, p1, c) < rad:
+					if a is Aircraft and (a as Aircraft).player_controlled:
+						HitLog.shooter(sh.get("s"), "light flak tracer")
 					a.call("take_damage", float(sh["d"]) * dmul, null)
 					remove = true
 					break
@@ -124,6 +126,7 @@ func _burst(pos: Vector3, sh: Dictionary, dmul: float) -> void:
 			var dmg: float = float(sh["d"]) * dmul * (1.0 - d / r)
 			if a is Aircraft and (a as Aircraft).player_controlled:
 				FX.audio.player_hit("blast", dmg / maxf((a as Aircraft).stats.max_health, 1.0))     # fragments tearing in
+				HitLog.shooter(sh.get("s"), "flak burst %.0f m away" % d)
 			a.call("take_damage", dmg, null)
 
 

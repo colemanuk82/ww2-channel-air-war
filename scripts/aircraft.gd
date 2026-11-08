@@ -711,6 +711,8 @@ func take_damage(amount: float, source: Node = null) -> void:
 	if state != State.ALIVE or invulnerable:
 		return
 	health = maxf(health - amount, 0.0)
+	if player_controlled:
+		HitLog.on_player_hit(self, amount, source)      # debug: who hit the player, friend or foe
 	if source != null:
 		last_attacker = source
 	_regen_cd = 8.0        # pause the player's slow self-repair while under fire
@@ -732,6 +734,8 @@ func take_damage(amount: float, source: Node = null) -> void:
 		# sometimes a kill detonates in the air rather than gliding down (fuel / ammo going up)
 		if randf() < 0.35 and not has_meta("bailed"):     # an abandoned aircraft flies on and crashes, it never airbursts
 			_explode_t = randf_range(0.4, 2.2)
+		if player_controlled:
+			HitLog.on_player_down(self, source if is_instance_valid(source) else last_attacker)
 		destroyed.emit(self, source if is_instance_valid(source) else null)
 		if not player_controlled and WeaponWorld.is_player_source(source):
 			Weapons.player_kill.emit(self)
