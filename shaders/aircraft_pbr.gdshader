@@ -190,4 +190,13 @@ void fragment() {
 	ROUGHNESS = clamp(base_roughness + grime * 0.12 + seam * 0.1 - gloss * 0.25 - 0.4 * wetness, 0.05, 1.0);
 	METALLIC = clamp(metallic + chip * 0.4 * wear, 0.0, 1.0);
 	SPECULAR = 0.42 + gloss * 0.3;
+	// Silhouette specular taming: where the skin turns edge-on to the camera, the grazing sun highlight and sky
+	// Fresnel reach very high HDR values on a sliver of the surface. With MSAA those edge samples are averaged
+	// with the background before tone mapping, which blew the silhouette out into a dashed white fringe round
+	// the whole aircraft. Fade the specular out over the last few degrees of the edge (invisible face-on).
+	float ndv = clamp(dot(normalize(NORMAL), VIEW), 0.0, 1.0);
+	float sil = 1.0 - smoothstep(0.04, 0.32, ndv);
+	ROUGHNESS = mix(ROUGHNESS, 1.0, sil);
+	SPECULAR *= 1.0 - 0.9 * sil;
+	METALLIC *= 1.0 - sil;
 }
