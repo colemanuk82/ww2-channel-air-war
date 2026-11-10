@@ -134,6 +134,7 @@ static func house_mesh(variant: int) -> ArrayMesh:
 	var brick_dk: Color = Color(0.35, 0.23, 0.18)     # soot-darkened brick (industrial, older terraces)
 	var stone: Color = Color(0.52, 0.47, 0.40)        # pale render / stone: villages and cottages
 	var slate: Color = Color(0.29, 0.30, 0.33)
+	var tile_red: Color = Color(0.46, 0.28, 0.19)     # weathered red-clay tile roof (the common southern stock)
 	var chimney: Color = Color(0.34, 0.22, 0.17)
 	if variant == 8:
 		# cinema / picture palace: a rendered front with a lit marquee band over the entrance
@@ -160,13 +161,13 @@ static func house_mesh(variant: int) -> ArrayMesh:
 		0, 1:   # terrace unit: narrow, two storeys, gable roof, bay to the street; a slim stack on the brick variant only
 			var wall: Color = brick if variant == 0 else brick_dk
 			parts.append([_boxm(1.0, 1.0, 1.0), Transform3D.IDENTITY, _dmat(wall, 1, 0.0, false)])
-			parts.append([GroundKit.prism_mesh(1.05, 1.0, 0.40), Transform3D(Basis.IDENTITY, Vector3(0, 0.5, 0)), _dmat(slate, 1, 0.0, false)])
+			parts.append([GroundKit.prism_mesh(1.05, 1.0, 0.40), Transform3D(Basis.IDENTITY, Vector3(0, 0.5, 0)), _dmat(tile_red, 1, 0.0, false)])
 			if variant == 0:
 				parts.append([_boxm(0.12, 0.26, 0.15), Transform3D(Basis.IDENTITY, Vector3(-0.38, 0.80, 0)), _dmat(chimney, 1, 0.0, false)])
 			parts.append([_boxm(0.40, 0.40, 0.10), Transform3D(Basis.IDENTITY, Vector3(0.02, -0.30, -0.54)), _dmat(wall * 0.9, 1, 0.0, false)])
 		2:   # semi-detached pair: wider, one roof over two homes (no stack: chimneys kept to a few house types so streets read less busy)
 			parts.append([_boxm(1.0, 1.0, 1.0), Transform3D.IDENTITY, _dmat(brick, 1, 0.0, false)])
-			parts.append([GroundKit.prism_mesh(1.08, 1.0, 0.34), Transform3D(Basis.IDENTITY, Vector3(0, 0.5, 0)), _dmat(slate, 1, 0.0, false)])
+			parts.append([GroundKit.prism_mesh(1.08, 1.0, 0.34), Transform3D(Basis.IDENTITY, Vector3(0, 0.5, 0)), _dmat(tile_red, 1, 0.0, false)])
 		3:   # cottage: low, deep thatch/tile roof
 			parts.append([_boxm(1.0, 0.78, 1.0), Transform3D(Basis.IDENTITY, Vector3(0, -0.11, 0)), _dmat(stone, 1, 0.0, false)])
 			parts.append([GroundKit.prism_mesh(1.12, 1.06, 0.55), Transform3D(Basis.IDENTITY, Vector3(0, 0.28, 0)), _dmat(Color(0.50, 0.42, 0.26), 1, 0.0, false)])
@@ -1387,8 +1388,11 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 				10:                                   # tree cover
 					if _wood_interior(p):
 						var br: float = rng.randf_range(34.0, 52.0)
-						if i % 3 == 0 and j % 3 == 0 and _ok_tree(p, exclude) and not RoadMesh.near_road(p, br * 0.5):
-							(blobs[rng.randi() % 2] as Array).append(_xf(Vector3(p.x, GroundKit.ground_y(p.x, p.y) - 1.0, p.y), rng.randf() * TAU,
+						if i % 3 == 0 and j % 3 == 0 and rng.randf() < 0.90 and _ok_tree(p, exclude) and not RoadMesh.near_road(p, br * 0.5):
+							# 1 in 10 blob slots left as a clearing, the rest jittered off the 66 m grid
+							var jx: float = rng.randf_range(-14.0, 14.0)
+							var jz: float = rng.randf_range(-14.0, 14.0)
+							(blobs[rng.randi() % 2] as Array).append(_xf(Vector3(p.x + jx, GroundKit.ground_y(p.x + jx, p.y + jz) - 1.0, p.y + jz), rng.randf() * TAU,
 								Vector3(br, rng.randf_range(15.0, 21.0), br * rng.randf_range(0.85, 1.1))))
 						if wtrees_c.size() + wtrees_r.size() < 8000 and rng.randf() < 0.70 and _ok_tree(p, exclude):
 							_add_tree(wtrees_c, wtrees_r, p, rng, 1.25, 1.8)
@@ -1449,6 +1453,8 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 							# the town's rows bend and merge with the next block instead of running dead straight
 							var yaw_j: float = house_yaw + (_vn(p.x * 0.0035 + 71.0, p.y * 0.0035 + 71.0) - 0.5) * 1.1 + rng.randf_range(-0.05, 0.05)
 							_add_terrace(houses, p, rng, yaw_j)
+						elif rng.randf() < 0.10 and _ok_tree(p, exclude):
+							_add_tree(trees_c, trees_r, p, rng, 0.6, 0.9)     # garden and backyard trees between the houses
 	# bomb damage on the war date: gutted shells and cleared plots (same transforms, two shared shell meshes)
 	var dmg_areas: Array = WarDamage.areas_near(origin, cell)
 	var ruins: Array = [[], []]
@@ -1569,12 +1575,13 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 					mesh = wood_blob_mesh(int(kind.substr(5)))
 				else:
 					mesh = house_mesh(int(kind.substr(5)))
+		var colors: PackedColorArray = _foliage_instance_colors(m[1]) if (kind.begins_with("tree_v") or kind.begins_with("wtree_v") or kind.begins_with("wblob")) else PackedColorArray()
 		if kind.begins_with("tree_v") or kind == "hedge":
-			_add_lod_pair(root, mesh, far_mesh(kind), m[1], float(m[2]), TREE_NEAR if kind != "hedge" else HEDGE_NEAR)
+			_add_lod_pair(root, mesh, far_mesh(kind), m[1], float(m[2]), TREE_NEAR if kind != "hedge" else HEDGE_NEAR, colors)
 		elif kind.begins_with("wtree_v"):
-			_add_lod_pair(root, mesh, far_mesh("tree_v" + kind.substr(7)), m[1], float(m[2]), WOOD_TREE_NEAR)
+			_add_lod_pair(root, mesh, far_mesh("tree_v" + kind.substr(7)), m[1], float(m[2]), WOOD_TREE_NEAR, colors)
 		elif kind.begins_with("wblob"):
-			var bi: MultiMeshInstance3D = multi_from_data(mesh, m[1], float(m[2]))
+			var bi: MultiMeshInstance3D = multi_from_data(mesh, m[1], float(m[2]), true, colors)
 			bi.visibility_range_begin = WOOD_BLOB_BEGIN * vis_scale
 			bi.visibility_range_begin_margin = 250.0
 			root.add_child(bi)
@@ -1585,16 +1592,16 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 
 ## Near / far pair over the same instances: the full model up close, a one-piece low-poly stand-in
 ## (no outline pass) further out. The switch is per multimesh (tile), on its AABB centre distance.
-static func _add_lod_pair(root: Node, near_mesh: Mesh, far: Mesh, d: Dictionary, vis_end: float, near_end: float) -> void:
+static func _add_lod_pair(root: Node, near_mesh: Mesh, far: Mesh, d: Dictionary, vis_end: float, near_end: float, colors: PackedColorArray = PackedColorArray()) -> void:
 	var ne: float = near_end * vis_scale
 	if vis_end <= ne:
-		root.add_child(multi_from_data(near_mesh, d, vis_end))
+		root.add_child(multi_from_data(near_mesh, d, vis_end, true, colors))
 		return
-	var a: MultiMeshInstance3D = multi_from_data(near_mesh, d, ne)
+	var a: MultiMeshInstance3D = multi_from_data(near_mesh, d, ne, true, colors)
 	a.visibility_range_end_margin = 150.0
 	a.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	root.add_child(a)
-	var b: MultiMeshInstance3D = multi_from_data(far, d, vis_end, false)     # same instances as `a`: solid once
+	var b: MultiMeshInstance3D = multi_from_data(far, d, vis_end, false, colors)     # same instances as `a`: solid once
 	b.visibility_range_begin = ne
 	b.visibility_range_begin_margin = 150.0
 	root.add_child(b)
@@ -1719,14 +1726,53 @@ static func multi_data(xforms: Array) -> Dictionary:
 	return {"buf": buf, "count": xforms.size(), "c": c, "lo": lo, "hi": hi}
 
 
+## Deterministic per-instance foliage colour: a small brightness and warm/cool spread keyed on the instance's
+## world position, so each crown reads a little different and a wood no longer reads as one flat green mass.
+static func _foliage_instance_colors(d: Dictionary) -> PackedColorArray:
+	var count: int = int(d["count"])
+	var out := PackedColorArray()
+	if count == 0:
+		return out
+	out.resize(count)
+	var buf: PackedFloat32Array = d["buf"]
+	var c: Vector3 = d["c"]
+	for i in count:
+		var ox: float = c.x + buf[i * 12 + 3]
+		var oz: float = c.z + buf[i * 12 + 11]
+		var h: int = absi(hash(Vector2i(floori(ox * 2.0), floori(oz * 2.0))))
+		var v: float = float(h % 1000) / 1000.0
+		var bright: float = 0.86 + 0.26 * v
+		var warm: float = fposmod(v * 4.7, 1.0)
+		out[i] = Color(bright * (1.0 + 0.05 * warm), bright, bright * (1.0 + 0.05 * (1.0 - warm)))
+	return out
+
+
 ## ... and the node (main thread): one buffer upload instead of a set_instance_transform() per instance.
-static func multi_from_data(mesh: Mesh, d: Dictionary, vis_end: float = 0.0, solid: bool = true) -> MultiMeshInstance3D:
+static func multi_from_data(mesh: Mesh, d: Dictionary, vis_end: float = 0.0, solid: bool = true, colors: PackedColorArray = PackedColorArray()) -> MultiMeshInstance3D:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = mesh
+	var with_col: bool = colors.size() == int(d["count"]) and colors.size() > 0
+	mm.use_colors = with_col          # must be set before instance_count; 12 transform + 4 colour floats per instance
 	mm.instance_count = int(d["count"])
 	if mm.instance_count > 0:
-		mm.buffer = d["buf"]
+		if with_col:
+			var src: PackedFloat32Array = d["buf"]
+			var combined := PackedFloat32Array()
+			combined.resize(mm.instance_count * 16)
+			for i in mm.instance_count:
+				var si: int = i * 12
+				var di: int = i * 16
+				for k in 12:
+					combined[di + k] = src[si + k]
+				var col: Color = colors[i]
+				combined[di + 12] = col.r
+				combined[di + 13] = col.g
+				combined[di + 14] = col.b
+				combined[di + 15] = col.a
+			mm.buffer = combined
+		else:
+			mm.buffer = d["buf"]
 	mm.visible_instance_count = mm.instance_count
 	var c: Vector3 = d["c"]
 	var lo: Vector3 = d["lo"]
@@ -1774,6 +1820,9 @@ static func _add_terrace(lists: Array, p: Vector2, rng: RandomNumberGenerator, y
 	var unit_w: float = rng.randf_range(6.2, 7.6)
 	var depth: float = rng.randf_range(6.6, 9.0)
 	var a: float = yaw + rng.randf_range(-0.06, 0.06)
+	var road_dir: Vector2 = RoadMesh.road_dir_at(p, 24.0)     # run the row along the nearest street
+	if road_dir != Vector2.ZERO:
+		a = atan2(-road_dir.y, road_dir.x) + rng.randf_range(-0.05, 0.05)
 	var along := Vector2(cos(a), -sin(a))
 	var start: Vector2 = p - along * unit_w * float(n - 1) * 0.5
 	var base_h: float = rng.randf_range(6.0, 9.5)

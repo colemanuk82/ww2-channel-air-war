@@ -82,6 +82,34 @@ static func near_road(p: Vector2, clear: float = 4.0) -> bool:
 
 
 ## True when this thread already has a road block prepared (a tile job laying out a town inside it).
+## Direction of the nearest road segment to p (either way along the carriageway) within the current
+## thread's prepared block; ZERO when no road is near. Used to run built-up terraces along the streets.
+static func road_dir_at(p: Vector2, clear: float = 24.0) -> Vector2:
+	_blocks_mutex.lock()
+	var blk: Variant = _blocks.get(OS.get_thread_caller_id())
+	_blocks_mutex.unlock()
+	if blk == null:
+		return Vector2.ZERO
+	var segs: Variant = (blk as Dictionary).get(Vector2i(floori(p.x / ROAD_CELL), floori(p.y / ROAD_CELL)))
+	if segs == null:
+		return Vector2.ZERO
+	var best_d: float = 1.0e12
+	var best_dir := Vector2.ZERO
+	for sg in (segs as Array):
+		var a: Vector2 = sg[0]
+		var b: Vector2 = sg[1]
+		var ab: Vector2 = b - a
+		if ab.length_squared() < 1.0:
+			continue
+		var t: float = clampf((p - a).dot(ab) / ab.length_squared(), 0.0, 1.0)
+		var lim: float = float(sg[2]) + clear
+		var d2: float = (a + ab * t).distance_squared_to(p)
+		if d2 < lim * lim and d2 < best_d:
+			best_d = d2
+			best_dir = ab.normalized()
+	return best_dir
+
+
 static func has_block() -> bool:
 	_blocks_mutex.lock()
 	var ok: bool = _blocks.has(OS.get_thread_caller_id())
