@@ -40,6 +40,7 @@ global uniform vec3 raid_black_pos;    // centre of the raided town
 global uniform float raid_black_r;     // radius of the raided town's built-up area
 global uniform float blackout;         // 0 = windows lit as usual, 1 = wartime blackout (towns almost dark)
 global uniform float wetness;          // 0..1 ground wetness (WeatherManager): wet grass/runways darken and sheen
+global uniform float lamp_amount;      // 0..1 night / dusk activity: keeps active airfields and lit sites visible in blackout
 
 varying vec3 obj_n;
 varying vec3 obj_p;

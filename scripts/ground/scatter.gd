@@ -7,7 +7,7 @@ extends RefCounted
 ## content fades in while still invisible instead of popping.
 const VIS_TREE: float = 10500.0
 const VIS_HOUSE: float = 10500.0
-const VIS_HEDGE: float = 3600.0
+const VIS_HEDGE: float = 5200.0
 const VIS_COW: float = 3500.0
 
 ## Scales every instanced-detail draw distance (set from the View distance setting).
@@ -819,19 +819,19 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 		var gq := Vector2(gsp.x + rperp.x * 30.0, gsp.z + rperp.y * 30.0)
 		if GroundKit.raw_y(gq.x, gq.y) >= 1.2 and _land(gq.x, gq.y, 1.5) and gq.distance_to(cen) < radius * 1.25 and not _on_block_lc(gq.x, gq.y, rblk):
 			civic.append({"kind": "gasworks", "pos": Vector3(gq.x, GroundKit.ground_y(gq.x, gq.y), gq.y), "yaw": ryaw, "scale": 1.0})
-	# 2.2c a church tower / spire in the civic core of the larger towns, so the skyline reads from the air.
-	if size >= 3:
+	# 2.2c a church tower / spire in the civic core, so the skyline reads from the air.
+	if size >= 2:
 		var cha: float = rng.randf() * TAU
-		var chr: float = rng.randf_range(0.04, 0.12) * radius
+		var chr: float = rng.randf_range(0.03, 0.14) * radius
 		var chp := Vector2(center.x + cos(cha) * chr, center.z + sin(cha) * chr)
 		if GroundKit.raw_y(chp.x, chp.y) >= 1.2 and _land(chp.x, chp.y, 1.5) and not _on_block_lc(chp.x, chp.y, rblk):
-			civic.append({"kind": "spire", "pos": Vector3(chp.x, GroundKit.ground_y(chp.x, chp.y), chp.y), "yaw": rng.randf() * TAU, "scale": rng.randf_range(1.0, 1.4)})
+			civic.append({"kind": "spire", "pos": Vector3(chp.x, GroundKit.ground_y(chp.x, chp.y), chp.y), "yaw": rng.randf() * TAU, "scale": rng.randf_range(0.9, 1.45)})
 	# 2.3 waterfront: a quay edge along the water side (the nearest rows are thinned/fronted in _lay_side).
 	if wdir != Vector2.ZERO and wedge > 0.0:
 		var wside := Vector2(-wdir.y, wdir.x)
 		var qbase := Vector2(center.x + wdir.x * (wedge - 18.0), center.z + wdir.y * (wedge - 18.0))
-		for qi in range(-1, 2):
-			var qp: Vector2 = qbase + wside * (float(qi) * 46.0)
+		for qi in range(-2, 3):
+			var qp: Vector2 = qbase + wside * (float(qi) * 44.0)
 			if GroundKit.raw_y(qp.x, qp.y) >= 1.0:
 				civic.append({"kind": "quay", "pos": Vector3(qp.x, GroundKit.ground_y(qp.x, qp.y), qp.y), "yaw": atan2(-wside.y, wside.x), "scale": 1.0})
 	# white chimney smoke over a scattering of the town's houses
@@ -1646,7 +1646,7 @@ static func wood_blob_mesh(variant: int) -> ArrayMesh:
 	var m: ArrayMesh = _merge(parts)
 	_meshes[key] = m
 	return m
-const HEDGE_NEAR: float = 1500.0
+const HEDGE_NEAR: float = 2000.0
 # far crowns per species: [cone?, centre, radius, height, colour] (radius a little wider: the near model's bushy lobes)
 const TREE_FAR: Array = [
 	[true, Vector3(0, 7.5, 0), 4.0, 11.5, Color(0.14, 0.3, 0.17)],
@@ -1668,8 +1668,8 @@ static func far_mesh(kind: String) -> ArrayMesh:
 	var parts: Array = []
 	if kind == "hedge":
 		var hb := BoxMesh.new()
-		hb.size = Vector3(1.0, 0.82, 0.62)
-		parts.append([hb, Transform3D.IDENTITY, _dmat(Color(0.23, 0.32, 0.17), 3, 0.0, false)])
+		hb.size = Vector3(1.0, 0.92, 0.72)
+		parts.append([hb, Transform3D.IDENTITY, _dmat(Color(0.20, 0.30, 0.15), 3, 0.0, false)])
 	else:
 		var spec: Array = TREE_FAR[clampi(int(kind.substr(6)), 0, TREE_FAR.size() - 1)]
 		var shape: PrimitiveMesh

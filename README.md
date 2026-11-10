@@ -1,6 +1,6 @@
-<div align="center">
+﻿<div align="center">
 
-# ✈️ WW2 Channel Air War
+# âœˆï¸ WW2 Channel Air War
 
 **A free, WW2 flight game over a real-scale slice of Europe.**<br>
 
@@ -10,11 +10,11 @@ Any suggestions or feedback? Let me know!
 
 [![WW2 Channel Air War trailer](docs/promo/highlights.gif)](docs/promo/highlights.mp4)
 
-**▶ [Watch the trailer](docs/promo/highlights.mp4)** (2 minutes of real gameplay: dawn and daylight dogfights, night attacks on shipping, and moonlit flying over the Channel)
+**â–¶ [Watch the trailer](docs/promo/highlights.mp4)** (2 minutes of real gameplay: dawn and daylight dogfights, night attacks on shipping, and moonlit flying over the Channel)
 
-### [⬇️ Download the installer](../../releases/latest)
+### [â¬‡ï¸ Download the installer](../../releases/latest)
 
-> 🎵 **Recommended: play it with your own music.** The game ships with royalty-free tracks, but it really comes alive with something like the *Battle of Britain* film soundtrack (or any WW2-era score you own) playing over the Channel.
+> ðŸŽµ **Recommended: play it with your own music.** The game ships with royalty-free tracks, but it really comes alive with something like the *Battle of Britain* film soundtrack (or any WW2-era score you own) playing over the Channel.
 > **How:** start the game, open **Options > Music** (or **Music** in the pause menu), pick **MENU MUSIC** (start screen) or **IN-GAME MUSIC** (flying), then **Import...** for chosen files or **Import folder...** to bring in a whole folder of MP3, OGG or WAV tracks in one go. **Pause between tracks** sets how much quiet you want between in-flight tracks. Keep **Shuffle: On** to mix them, or turn it off to play in order. Use **Delete** to remove tracks you no longer want.
 > Your files are copied into the game's own music folder, so the originals stay where they are. The game does not include any commercial soundtrack: bring your own. The repo only ever ships royalty-free tracks, and a licence check in the build and CI refuses to release anything else.
 
@@ -23,33 +23,33 @@ Any suggestions or feedback? Let me know!
 
 ---
 
-## 🔥 Why you'll want to play
+## ðŸ”¥ Why you'll want to play
 
 |  |  |
 |---|---|
-| 🌍 **Real-scale Europe** | England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports.|
-| ✈️ **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
-| ⚔️ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and dynamic missions in free flight.  |
-| 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds, rain squalls, searchlights and flak at night.|
-| 🧑‍✈️ **Bail out and live** |  Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
-| 🌡️ **Realism options** | Engine overheating with its own HEAT gauge, and G-forces that grey out your vision and can knock you out. Enemy pilots suffer too. On by default, switch off any time in Options > Realism. |
-| 🛠️ **Build your own missions** | A built-in Mission Editor: place flights, convoys, ships, flak and real targets on the map, draw their routes, set objectives and script what happens with triggers, then fly it. [More below](#%EF%B8%8F-mission-editor). |
-| 🗓️ **The map follows the war** | Choose your sortie date and the ground changes with it: bomb damage that builds up through the Blitz and the bombing of Germany, the 1944 invasion build-up, Normandy after D-Day, flooded valleys, the Westwall, and bridges that fall on the day they did. Bocage, open fields, polders and the Weald, with the seasons on the farmland. |
-| 🏕️ **A living wartime map** | 116 real airfields in RAF and Luftwaffe styles, with gun pits, blast pens and dispersals. Wired army camps packed with tanks under camouflage nets, tent lines, ammo bays and fuel dumps.|
-| 🎵 **Soundtrack** | 25 royalty-free orchestral and big-band tracks, separate Allied and Axis victory music, or import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
-| 💸 **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
+| ðŸŒ **Real-scale Europe** | England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports.|
+| âœˆï¸ **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
+| âš”ï¸ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and dynamic missions in free flight.  |
+| ðŸŒ¦ï¸ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds, rain squalls, searchlights and flak at night.|
+| ðŸ§‘â€âœˆï¸ **Bail out and live** |  Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
+| ðŸŒ¡ï¸ **Realism options** | Engine overheating with its own HEAT gauge, and G-forces that grey out your vision and can knock you out. Enemy pilots suffer too. On by default, switch off any time in Options > Realism. |
+| ðŸ› ï¸ **Build your own missions** | A built-in Mission Editor: place flights, convoys, ships, flak and real targets on the map, draw their routes, set objectives and script what happens with triggers, then fly it. [More below](#%EF%B8%8F-mission-editor). |
+| ðŸ—“ï¸ **The map follows the war** | Choose your sortie date and the ground changes with it: bomb damage that builds up through the Blitz and the bombing of Germany, the 1944 invasion build-up, Normandy after D-Day, flooded valleys, the Westwall, and bridges that fall on the day they did. Bocage, open fields, polders and the Weald, with the seasons on the farmland. |
+| ðŸ•ï¸ **A living wartime map** | 116 real airfields in RAF and Luftwaffe styles, with gun pits, blast pens and dispersals. Wired army camps packed with tanks under camouflage nets, tent lines, ammo bays and fuel dumps.|
+| ðŸŽµ **Soundtrack** | 25 royalty-free orchestral and big-band tracks, separate Allied and Axis victory music, or import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
+| ðŸ’¸ **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
 
 
-## 🎮 Play it in 3 steps
+## ðŸŽ® Play it in 3 steps
 
-1. Download **`WW2ChannelAirWar_Setup_v4.3.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
+1. Download **`WW2ChannelAirWar_Setup_v4.4.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
 
 2. Run it. It installs just for you, with no admin rights needed.
 
 
 **Upscaling:** the game uses AMD FSR 2 (Options > Render) to render at a lower resolution and sharpen it back up, which works on any modern graphics card. Turn it off for native resolution.
 
-## 🛠️ Mission Editor
+## ðŸ› ï¸ Mission Editor
 
 Make your own sorties from the **Mission Editor** button on the start menu.
 
@@ -61,7 +61,7 @@ Make your own sorties from the **Mission Editor** button on the start menu.
 - **Script it with triggers:** *when* the clock runs, a unit is lost, you enter a zone, climb too high, land, or a coin comes up heads, *then* bring in a raid, make a radio call, show a message, reveal an objective, set a flag, point your compass or end the mission.
 - **Test fly** straight from the editor and come back to it afterwards. Your missions are saved on your PC; three example missions show how it all fits together.
 
-## ✈️ The aircraft
+## âœˆï¸ The aircraft
 
 | | |
 |---|---|
@@ -76,7 +76,7 @@ Make your own sorties from the **Mission Editor** button on the start menu.
 | ![Spitfire close-up: C1 roundel, codes and panel seams](docs/promo/aircraft/spitfire_skin.jpg) | ![Bf 109 close-up: mottled sides and outlined number](docs/promo/aircraft/bf109_skin.jpg) |
 | **Close up: C1 roundel, squadron codes, panel seams** | **Close up: Bf 109 mottled sides and outlined number** |
 
-## 🙏 Credits & attribution
+## ðŸ™ Credits & attribution
 
 Aircraft, terrain, sea, sky, clouds and HUD are generated procedurally in code. The sources below are the third-party tools, data and sound that the game uses. The complete, per-file list (with every dataset source) is in [ATTRIBUTION.md](ATTRIBUTION.md).
 
@@ -85,15 +85,15 @@ Aircraft, terrain, sea, sky, clouds and HUD are generated procedurally in code. 
 - **The source is open and in this repository** so anyone can read it, build it and check for themselves what it does. If you spot something wrong or unsafe, please open an issue.
 
 ### Engine
-- **[Godot Engine](https://godotengine.org)** — the game engine this is built on. © Juan Linietsky, Ariel Manzur and the Godot Engine contributors, [MIT licence](https://godotengine.org/license/).
-- **[Ocean3D Lite](https://store.godotengine.org/asset/ocean3d/ocean3d-lite/)** — Gerstner wave field for the sea, by Justin Schroeder, MIT licence (bundled in `addons/ocean3d_lite/`).
+- **[Godot Engine](https://godotengine.org)** â€” the game engine this is built on. Â© Juan Linietsky, Ariel Manzur and the Godot Engine contributors, [MIT licence](https://godotengine.org/license/).
+- **[Ocean3D Lite](https://store.godotengine.org/asset/ocean3d/ocean3d-lite/)** â€” Gerstner wave field for the sea, by Justin Schroeder, MIT licence (bundled in `addons/ocean3d_lite/`).
 - **Fonts:** [Barlow](https://github.com/jpt/barlow) and Barlow Condensed by Jeremy Tribby, [SIL Open Font License 1.1](https://openfontlicense.org).
 
 ### Map & terrain data
-- **Terrain colour:** [Sentinel-2 cloudless 2020](https://s2maps.eu) by [EOX IT Services GmbH](https://eox.at) — contains modified Copernicus Sentinel data 2020, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-- **Land cover:** [ESA WorldCover 10 m 2021 v200](https://esa-worldcover.org) — © ESA WorldCover project 2021, contains modified Copernicus Sentinel data (2021) processed by ESA, CC BY 4.0.
+- **Terrain colour:** [Sentinel-2 cloudless 2020](https://s2maps.eu) by [EOX IT Services GmbH](https://eox.at) â€” contains modified Copernicus Sentinel data 2020, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Land cover:** [ESA WorldCover 10 m 2021 v200](https://esa-worldcover.org) â€” Â© ESA WorldCover project 2021, contains modified Copernicus Sentinel data (2021) processed by ESA, CC BY 4.0.
 - **Elevation:** [AWS Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Mapzen / AWS Open Data).
-- **Roads, rails, rivers, coast, woods and towns:** © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), [ODbL](https://opendatacommons.org/licenses/odbl/); rivers via the Overpass API, regional extracts from [Geofabrik](https://download.geofabrik.de/).
+- **Roads, rails, rivers, coast, woods and towns:** Â© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), [ODbL](https://opendatacommons.org/licenses/odbl/); rivers via the Overpass API, regional extracts from [Geofabrik](https://download.geofabrik.de/).
 
 ### 1940s datasets
 The 1940s datasets (industry, docks, landmarks, sea defences, dams, decoys, pylons, railway viaducts, oil and fuel, aircraft factories, V-weapon sites, ports, rural Kent, coastal landmarks, civil defence, airship and seaplane stations, forestry, navigation aids and military camps) are hand-authored by the scripts in `tools/`. Every row cites its source for the real position, and no third-party data file was copied. The main references are:
@@ -101,7 +101,7 @@ The 1940s datasets (industry, docks, landmarks, sea defences, dams, decoys, pylo
 - [Airfield Research Group](https://www.airfieldresearchgroup.org.uk)
 - [Suffolk Heritage Explorer](https://heritage.suffolk.gov.uk)
 - [Heritage Gateway](https://www.heritagegateway.org.uk) / Historic England Research Records
-- Ordnance Survey "A guide to coordinate systems in Great Britain" (OSGB36 → WGS84 transform)
+- Ordnance Survey "A guide to coordinate systems in Great Britain" (OSGB36 â†’ WGS84 transform)
 
 Aircraft performance figures are rounded from published specifications: [Wikipedia](https://www.wikipedia.org) and [battleofbritain1940.com](https://battleofbritain1940.com). The De Havilland Dragon Rapide uses dimensions from Wikipedia, The de Havilland Aircraft Museum and the Shuttleworth Collection. D-Day airborne zones follow Wikipedia (Operation Tonga, Deadstick, Mallard and Chicago). The POW escape missions are a what-if; no concentration or extermination camps are depicted.
 
@@ -123,4 +123,4 @@ All tracks are royalty-free from [Pixabay](https://pixabay.com) under the [Pixab
 | [MUPHFI](https://pixabay.com/users/muphfi-36181755/) | "Danger and Resolution" |
 | [Luis_Humanoide](https://pixabay.com/users/luis_humanoide-12661853/) | "Remembering Our Veterans - Heroic Cinematic Music" (menu) |
 | [kaazoom](https://pixabay.com/users/kaazoom-448850/) | "Swing That Jazz - 1940s Big Band Dance Music" (menu) |
-| [DesiFreeMusic](https://pixabay.com/users/desifreemusic-28163210/) | "Epic Military March – Heroic Snare Drum Theme" (Axis victory) |
+| [DesiFreeMusic](https://pixabay.com/users/desifreemusic-28163210/) | "Epic Military March â€“ Heroic Snare Drum Theme" (Axis victory) |

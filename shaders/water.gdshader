@@ -141,8 +141,8 @@ void fragment() {
 	// drifting cloud shadows (same field as terrain.gdshader so they run on across the coast)
 	vec2 cp = wp * 0.0006 + vec2(TIME * 0.005, TIME * 0.003);
 	float cn = t_vnoise2(cp) * 0.65 + t_vnoise2(cp * 2.3 + 5.0) * 0.35;
-	float lo = 0.66 - 0.25 * cloud_shadow;
-	float shade = smoothstep(lo, lo + 0.15, cn) * min(cloud_shadow * 1.7, 1.0) * step(0.01, cloud_shadow);
+	float lo = 0.65 - 0.28 * cloud_shadow;
+	float shade = smoothstep(lo, lo + 0.14, cn) * min(cloud_shadow * 1.85, 1.0) * step(0.01, cloud_shadow);
 	v_shadow = shade;
 
 	// --- foam ---
@@ -161,16 +161,17 @@ void fragment() {
 	float lacy = smoothstep(0.35, 0.75, t_vnoise2(wp * 0.12 + TIME * 0.05) * 0.7 + n1 * 0.3);
 	float shore = near * mix(0.6, 1.0, rings) * mix(0.35, 1.0, lacy);
 	float edge = (1.0 - smoothstep(0.0, foam_depth * 0.45, diff)) * mix(0.5, 1.0, lacy);
-	// surf: wide bands of broken swell rolling in over the shallows, with lacy backwash between them
+	// surf: broken swell rolling in over the shallows, with lacy backwash between the lines
 	// (v2.4: the surf band and the lace hug the shore - the seabed ramp is shallow for kilometres, so the old 6x depth
 	// band spread white lace over whole estuaries and bays when seen from above)
-	float surf_zone = (1.0 - smoothstep(foam_depth * 0.9, foam_depth * 2.4, diff)) * smoothstep(foam_depth * 0.3, foam_depth * 0.8, diff);
-	float surf_ph = diff * 0.38 + TIME * 0.55 + n1 * 3.2 + t_vnoise2(wp * 0.06) * 0.6;
-	float surf_line = smoothstep(0.86, 0.97, sin(surf_ph) * 0.5 + 0.5) * smoothstep(0.25, 0.60, t_vnoise2(wp * 0.035 + TIME * 0.05));
-	float lace = smoothstep(0.62, 0.80, t_vnoise2(wp * 0.22 + TIME * 0.08)) * (1.0 - smoothstep(foam_depth * 0.35, foam_depth * 1.1, diff)) * 0.6;
-	float surf = surf_line * surf_zone + lace;
+	float surf_zone = (1.0 - smoothstep(foam_depth * 0.8, foam_depth * 2.6, diff)) * smoothstep(foam_depth * 0.25, foam_depth * 0.9, diff);
+	float surf_ph = diff * 0.42 + TIME * 0.55 + n1 * 2.8 + t_vnoise2(wp * 0.06) * 0.8;
+	float surf_break = sin(surf_ph) * 0.5 + 0.5;
+	float surf_line = smoothstep(0.82, 0.96, surf_break) * smoothstep(0.20, 0.62, t_vnoise2(wp * 0.032 + TIME * 0.045)) * (0.7 + 0.3 * smoothstep(0.90, 1.0, surf_break));
+	float lace = smoothstep(0.58, 0.78, t_vnoise2(wp * 0.20 + TIME * 0.07) * 0.7 + t_vnoise2(wp * 0.45 - TIME * 0.03) * 0.3) * (1.0 - smoothstep(foam_depth * 0.3, foam_depth * 1.25, diff)) * 0.7;
+	float surf = (surf_line * 0.85 + lace) * surf_zone;
 	float wake = max(max(wake_one(wp, wake_0), wake_one(wp, wake_1)), max(wake_one(wp, wake_2), wake_one(wp, wake_3)));
-	float foam = clamp(shore + edge + crest * 0.9 + streak * 0.4 + surf * 0.9 + wake * 0.9, 0.0, 1.0) * (1.0 - lake_mode);
+	float foam = clamp(shore + edge + crest * 0.9 + streak * 0.4 + surf * 0.85 + wake * 0.9, 0.0, 1.0) * (1.0 - lake_mode);
 	float foam_m = smoothstep(0.30, 0.62, foam);
 
 	// --- sky reflection (Fresnel) ---

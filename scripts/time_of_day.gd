@@ -12,6 +12,11 @@ const PRESET_ORDER := ["dawn", "noon", "dusk", "night"]
 
 # key: hour, top, horizon, fog, light_col, sun_energy, moon_energy, ambient_col, ambient_energy, stars, fog_density
 var _keys: Array = []
+# low haze near the horizon (atmosphere polish): a gentle base lift on distance fog
+const FOG_DENSITY_BASE := 0.000006
+# industrial smog over cities (HAZE_AREAS): stronger in the brownish daylight, faint at night
+const HAZE_FOG_MUL := 0.55
+const HAZE_VOL_MUL := 0.0011
 
 var hour: float = 12.0
 var time_scale: float = 0.0   # game hours per real second (0 = frozen)
@@ -51,11 +56,11 @@ func _build_keys() -> void:
 	_keys = [
 		night,
 		_k(5.0, Color(0.02, 0.03, 0.09), Color(0.07, 0.09, 0.17), Color(0.06, 0.08, 0.14), Color(0.6, 0.7, 1.0), 0.0, 0.4, Color(0.16, 0.20, 0.36), 0.9, 1.0, 0.00005),
-		_k(6.2, Color(0.34, 0.44, 0.68), Color(0.86, 0.66, 0.52), Color(0.76, 0.68, 0.63), Color(1.0, 0.66, 0.45), 1.0, 0.05, Color(0.46, 0.48, 0.62), 1.2, 0.15, 0.000060),
+		_k(6.2, Color(0.34, 0.44, 0.68), Color(0.96, 0.70, 0.50), Color(0.84, 0.72, 0.62), Color(1.0, 0.66, 0.45), 1.0, 0.05, Color(0.46, 0.48, 0.62), 1.2, 0.15, 0.000060),
 		_k(7.6, Color(0.30, 0.55, 0.86), Color(0.80, 0.86, 0.92), Color(0.76, 0.83, 0.89), Color(1.0, 0.92, 0.78), 1.0, 0.0, Color(0.50, 0.58, 0.72), 1.2, 0.0, 0.00005),
 		_k(12.0, Color(0.20, 0.48, 0.88), Color(0.72, 0.84, 0.95), Color(0.72, 0.82, 0.92), Color(1.0, 0.97, 0.90), 1.05, 0.0, Color(0.55, 0.65, 0.80), 1.2, 0.0, 0.00005),
 		_k(16.5, Color(0.26, 0.52, 0.86), Color(0.80, 0.84, 0.90), Color(0.78, 0.82, 0.88), Color(1.0, 0.93, 0.78), 1.2, 0.0, Color(0.52, 0.60, 0.74), 1.2, 0.0, 0.00005),
-		_k(18.4, Color(0.26, 0.34, 0.62), Color(0.95, 0.60, 0.42), Color(0.74, 0.64, 0.58), Color(1.0, 0.58, 0.36), 1.0, 0.05, Color(0.48, 0.48, 0.62), 1.2, 0.2, 0.000060),
+		_k(18.4, Color(0.26, 0.34, 0.62), Color(0.98, 0.64, 0.40), Color(0.82, 0.66, 0.56), Color(1.0, 0.58, 0.36), 1.0, 0.05, Color(0.48, 0.48, 0.62), 1.2, 0.2, 0.000060),
 		_k(20.0, Color(0.05, 0.06, 0.16), Color(0.20, 0.16, 0.26), Color(0.14, 0.12, 0.20), Color(0.6, 0.7, 1.0), 0.0, 0.35, Color(0.20, 0.22, 0.38), 0.9, 0.8, 0.00005),
 		_k(21.5, Color(0.02, 0.03, 0.09), Color(0.07, 0.09, 0.17), Color(0.06, 0.08, 0.14), Color(0.6, 0.7, 1.0), 0.0, 0.4, Color(0.16, 0.20, 0.36), 0.9, 1.0, 0.00005),
 		_k(24.0, Color(0.02, 0.03, 0.09), Color(0.07, 0.09, 0.17), Color(0.06, 0.08, 0.14), Color(0.6, 0.7, 1.0), 0.0, 0.4, Color(0.16, 0.20, 0.36), 0.9, 1.0, 0.00005),
@@ -317,16 +322,18 @@ func _apply() -> void:
 
 	environment.ambient_light_color = amb
 	environment.ambient_light_energy = amb_e
-	environment.fog_light_color = fogc.lerp(Color(0.52, 0.47, 0.40), 0.3 * haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0))
+	environment.fog_light_color = fogc.lerp(Color(0.52, 0.47, 0.40), 0.34 * haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0))
 	# light shafts: thicken the (high-preset) volumetric haze while the sun is low, so a dawn or dusk sun throws
 	# visible rays through the gaps between clouds; thin again by day so the noon air stays clear
 	if environment.volumetric_fog_enabled:
 		var low: float = smoothstep(0.42, 0.06, sun_dir.y) * smoothstep(-0.06, 0.03, sun_dir.y)
-		environment.volumetric_fog_density = (0.0004 + 0.0007 * low) * clampf(fog_mul, 0.6, 2.0)
-		environment.volumetric_fog_albedo = Color(0.92, 0.94, 1.0).lerp(lc, 0.45 * low)
+		var day_k: float = clampf(sun_dir.y * 4.0, 0.0, 1.0)
+		environment.volumetric_fog_density = (0.0004 + 0.0007 * low + haze_k * HAZE_VOL_MUL * day_k) * clampf(fog_mul, 0.6, 2.0)
+		environment.volumetric_fog_albedo = Color(0.92, 0.94, 1.0).lerp(lc, 0.45 * low).lerp(Color(0.62, 0.56, 0.48), 0.35 * haze_k * day_k)
 		environment.volumetric_fog_anisotropy = 0.65 + 0.2 * low
 		sun.light_volumetric_fog_energy = 1.0 + 0.8 * low
-	environment.fog_density = float(s[9]) * fog_mul * (1.0 + 0.4 * haze_k) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
+	var haze_day: float = haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0)
+	environment.fog_density = (float(s[9]) + FOG_DENSITY_BASE) * fog_mul * (1.0 + HAZE_FOG_MUL * haze_day) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
 	sun_color = lc
 	horizon_color = hor
 	light_level = clampf(sun_e / 1.3 + moon_e * 0.3 + 0.12, 0.0, 1.0)
@@ -338,8 +345,8 @@ func _apply() -> void:
 	var low_sun: float = smoothstep(0.14, 0.0, sun_dir.y) * 0.6 * clampf((0.8 - light_level) / 0.3, 0.0, 1.0)
 	RenderingServer.global_shader_parameter_set("lamp_amount", clampf(maxf(na, low_sun), 0.0, 1.0))
 	# Wartime blackout: at night the towns go almost fully dark, leaving only a few dim windows (toon.gdshader
-	# scales the lit-window emission by `blackout`). Zero by day, so nothing changes in daylight.
-	RenderingServer.global_shader_parameter_set("blackout", na)
+	# scales the lit-window emission by `blackout`). Ramps up quickly after dusk; zero by day.
+	RenderingServer.global_shader_parameter_set("blackout", smoothstep(0.12, 0.55, na))
 
 	# the sea reflects the sky (water.gdshader Fresnel term)
 	RenderingServer.global_shader_parameter_set("sky_top", Vector3(top.r, top.g, top.b))

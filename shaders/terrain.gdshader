@@ -212,9 +212,15 @@ void fragment() {
 	field *= 1.0 + (micro - 0.5) * 0.22 * detail_strength;
 
 	// hedgerow / headland shading along the cell boundaries (subtle linear feature, not a hard step)
-	float hedge = 1.0 - smoothstep(0.013, 0.046 + 0.05 * r_boc, edge);   // ~same width in metres as before at the bigger cell size; bocage hedge banks wider
-	vec3 bound_col = mix(hedge_col * (1.0 - 0.25 * r_boc), vec3(0.035, 0.050, 0.060), r_pold);   // polder: water-filled ditches
-	field = mix(field, bound_col, hedge * 0.85 * (1.0 - 0.85 * r_open));
+	float hedge_w = 0.010 + 0.03 * r_boc + 0.012 * r_weald;
+	float hedge = 1.0 - smoothstep(hedge_w, 0.040 + 0.055 * r_boc + 0.02 * r_weald, edge);   // bocage banks and Weald shaw edges read stronger
+	vec3 hedge_tone = mix(hedge_col * (0.78 - 0.18 * r_boc), hedge_col * 1.05, smoothstep(0.55, 0.85, t_vnoise2(xz * 0.02 + 13.0)) * (0.3 + 0.3 * r_boc));
+	vec3 bound_col = mix(hedge_tone, vec3(0.035, 0.050, 0.060), r_pold);   // polder: water-filled ditches
+	float hedge_k = hedge * (0.82 + 0.12 * r_boc + 0.06 * r_weald) * (1.0 - 0.80 * r_open);
+	field = mix(field, bound_col, hedge_k);
+	// headland: the cropped strip along the hedge line reads as a slightly paler/turned margin
+	float head = (1.0 - smoothstep(0.040, 0.090, edge)) * (1.0 - smoothstep(0.0, 0.03, edge)) * (1.0 - hedge);
+	field = mix(field, mix(field, field_brown * 1.08, 0.35), head * is_crop * (1.0 - 0.6 * r_open) * (1.0 - r_pold));
 	// Woodland: under real forest cover there are no fields - no patchwork colours, hedge lines or drill marks,
 	// only a dark mottled canopy ground, with a noise-broken edge so the wood margin is not a ruled curve.
 	float wood = 0.0;
@@ -239,18 +245,21 @@ void fragment() {
 	moor = mix(moor, peat_col, smoothstep(0.62, 0.85, t_vnoise2(xz * 0.0013 + 88.0)) * 0.7);   // bare peat hags
 	moor *= 0.90 + 0.20 * t_vnoise2(xz * 0.25);                                                 // tussocks
 	// chalk downs: thin pale grass over the chalk, so the uplands read lighter than the moor (blend of existing colours)
-	float downs_n = smoothstep(0.45, 0.70, t_vnoise2(xz * 0.004 + 31.0));
-	float downs_amt = downs_n * smoothstep(40.0, 120.0, h) * (1.0 - smoothstep(0.20, 0.40, slope)) * 0.45;
-	moor = mix(moor, mix(grass_b, limestone_col, 0.35) * (0.92 + 0.12 * t_vnoise2(xz * 0.6)), downs_amt);
+	float downs_n = smoothstep(0.42, 0.70, t_vnoise2(xz * 0.004 + 31.0));
+	float downs_amt = downs_n * smoothstep(30.0, 120.0, h) * (1.0 - smoothstep(0.18, 0.42, slope)) * 0.55;
+	moor = mix(moor, mix(grass_b, chalk_col, 0.30) * (0.98 + 0.10 * t_vnoise2(xz * 0.6)), downs_amt);
 	float rough = smoothstep(260.0, 700.0, h);                          // climbs from managed field to moor
 	rough = clamp(rough + smoothstep(0.16, 0.42, slope) * 0.45, 0.0, 1.0);   // steeper ground is rougher grazing
 
 	float heath_n = t_vnoise2(xz * 0.0011 + 77.0) * 0.7 + t_vnoise2(xz * 0.004 + 3.0) * 0.3;
-	float heath = smoothstep(0.61, 0.69, heath_n) * smoothstep(20.0, 300.0, h) * (1.0 - smoothstep(0.22, 0.45, slope));
-	vec3 hc = mix(heath_col, heather_col, smoothstep(0.35, 0.8, t_vnoise2(xz * 0.05 + 5.0)));
-	hc = mix(hc, vec3(0.62, 0.56, 0.16), smoothstep(0.78, 0.90, t_vnoise2(xz * 0.35 + 9.0)) * 0.7);   // gorse
-	hc = mix(hc, forest_col, smoothstep(0.86, 0.96, heath_n) * 0.5);                                    // wooded patches
-	hc *= 0.88 + 0.24 * t_vnoise2(xz * 0.8);
+	float heath = smoothstep(0.60, 0.70, heath_n) * smoothstep(18.0, 280.0, h) * (1.0 - smoothstep(0.22, 0.45, slope));
+	vec3 hc = mix(heath_col, heather_col, smoothstep(0.30, 0.82, t_vnoise2(xz * 0.05 + 5.0)));
+	hc = mix(hc, vec3(0.58, 0.52, 0.16), smoothstep(0.76, 0.90, t_vnoise2(xz * 0.35 + 9.0)) * 0.75);   // gorse (olive, in-palette)
+	hc = mix(hc, forest_col, smoothstep(0.84, 0.96, heath_n) * 0.55);                                    // wooded patches / scrub
+	hc *= 0.86 + 0.26 * t_vnoise2(xz * 0.8);
+	// darker, ragged woodland edge / shaws just inside and around tree cover
+	float wedge = smoothstep(0.18, 0.46, wood) * (1.0 - smoothstep(0.72, 0.95, wood));
+	field = mix(field, mix(field, forest_col, 0.45), wedge * 0.55 * (1.0 - urban));
 
 	// chalk / limestone zones (real cliff zones supplied by the chunk manager)
 	float cz = max(max(max(chalk_w(chalk_a, xz), chalk_w(chalk_b, xz)), max(chalk_w(chalk_c, xz), chalk_w(chalk_d, xz))), chalk_w(chalk_e, xz));
@@ -524,17 +533,19 @@ void fragment() {
 	vec3 rockc = rock_col * (0.85 + 0.30 * t_vnoise2(xz * 0.5 + 4.0));
 	rockc = mix(rockc, soil_col, smoothstep(0.30, 0.50, t_vnoise2(xz * 0.09 + 21.0)) * 0.35);   // gullies / earth
 	col = mix(col, rockc, rockness);
-	float chalk_amt = cz * smoothstep(0.42, 0.62, slope) * smoothstep(8.0, 40.0, h);
-	// chalk face: whiter, with vertical weathering streaks (noise stretched along height) and a little flint speckle
-	float streaks = t_vnoise2(vec2((xz.x + xz.y) * 0.35, h * 0.12)) * 0.6 + t_vnoise2(vec2((xz.x - xz.y) * 0.9, h * 0.35)) * 0.4;
-	vec3 chalk_face = mix(chalk_col, limestone_col, 0.25) * (0.94 + 0.10 * streaks);
-	chalk_face = mix(chalk_face, rock_col * 0.85, smoothstep(0.62, 0.80, t_vnoise2(xz * 1.6 + 17.0)) * 0.18);
+	float chalk_amt = cz * smoothstep(0.38, 0.58, slope) * smoothstep(6.0, 36.0, h);
+	// chalk face: whiter, with strong vertical weathering streaks (noise stretched along height), darker flint bands and a little speckle
+	float streaks = t_vnoise2(vec2((xz.x + xz.y) * 0.32, h * 0.14)) * 0.55 + t_vnoise2(vec2((xz.x - xz.y) * 0.85, h * 0.38)) * 0.45;
+	float flint = smoothstep(0.58, 0.72, t_vnoise2(vec2((xz.x + xz.y) * 0.7, h * 0.06))) * 0.22 + smoothstep(0.66, 0.82, t_vnoise2(xz * 1.8 + 17.0)) * 0.10;
+	vec3 chalk_face = mix(chalk_col, limestone_col, 0.12) * (0.98 + 0.14 * (streaks - 0.5));
+	chalk_face = mix(chalk_face, rock_col * 0.78, flint);
 	col = mix(col, chalk_face, chalk_amt);
 	// grass cap where the cliff top levels off, and a darker rubble / talus fan where the face meets the beach
-	float cap = cz * (1.0 - smoothstep(0.18, 0.34, slope)) * smoothstep(20.0, 45.0, h);
-	col = mix(col, mix(grass_a, grass_b, t_vnoise2(xz * 0.4)), cap * 0.75);
-	float talus = cz * (1.0 - smoothstep(10.0, 22.0, h)) * smoothstep(0.25, 0.42, slope);
-	col = mix(col, rock_col * (0.75 + 0.2 * streaks), talus * 0.6);
+	float cap = cz * (1.0 - smoothstep(0.14, 0.30, slope)) * smoothstep(18.0, 42.0, h);
+	col = mix(col, mix(hedge_col, grass_a, 0.45 + 0.35 * t_vnoise2(xz * 0.4)), cap * 0.85);
+	float talus = cz * (1.0 - smoothstep(6.0, 24.0, h)) * smoothstep(0.18, 0.40, slope);
+	vec3 talus_col = mix(rock_col * 0.70, chalk_col * 0.82, 0.35 + 0.25 * streaks);
+	col = mix(col, talus_col, talus * 0.7);
 	// beaches and shoreline: a wide pale sand strip whose back edge wanders along the coast, wet dark sand at
 	// the waterline, ripples on the lower beach, a ragged tide-wrack line and a grassy dune fringe behind.
 	{
@@ -561,15 +572,23 @@ void fragment() {
 		sc = mix(sc, vec3(0.42, 0.45, 0.25) * (0.8 + 0.4 * grain), dune * 0.55);
 		col = mix(col, sc, sandm * 0.96);
 	}
-	// tidal flats: estuary mud just above the waterline, cut by a few drying channels, with a faint wet sheen
+	// tidal flats: estuary mud just above the waterline, cut by drying channels, with wet sheen and sandier banks
 	{
-		float estuary = smoothstep(0.55, 0.72, t_vnoise2(xz * 0.0025 + 40.0)) * (1.0 - urban);
-		float flat_low = (1.0 - smoothstep(0.6, 3.0, h)) * smoothstep(-0.4, 0.2, h) * (1.0 - smoothstep(0.08, 0.2, slope));
-		float chan = smoothstep(0.62, 0.70, t_vnoise2(xz * 0.05 + 12.0));
-		vec3 mud = mix(mud_col * 0.95, mud_col * 1.12, t_vnoise2(xz * 0.7));
-		mud = mix(mud, seabed_col * 0.9, chan * 0.5);
-		mud = mix(mud, mud * 1.25, smoothstep(0.70, 0.85, t_vnoise2(xz * 0.3 + 7.0)) * 0.3);   // wet sheen patches
-		col = mix(col, mud, estuary * flat_low * 0.85);
+		float estuary_n = t_vnoise2(xz * 0.0018 + 40.0) * 0.7 + t_vnoise2(xz * 0.004 + 7.0) * 0.3;
+		float estuary = smoothstep(0.50, 0.66, estuary_n) * (1.0 - urban);
+		float flat_low = (1.0 - smoothstep(0.4, 3.4, h)) * smoothstep(-0.5, 0.25, h) * (1.0 - smoothstep(0.06, 0.18, slope));
+		// meandering channels and braided cuts through the flats
+		float chan_n = abs(t_vnoise2(xz * 0.045 + 12.0) - 0.5) * 0.65 + abs(t_vnoise2(xz * 0.12 + 3.0) - 0.5) * 0.35;
+		float chan = 1.0 - smoothstep(0.02, 0.09, chan_n);
+		float pool = smoothstep(0.74, 0.86, t_vnoise2(xz * 0.09 + 21.0));
+		vec3 mud = mix(mud_col * 0.92, mud_col * 1.15, t_vnoise2(xz * 0.7));
+		mud = mix(mud, sand_col * 0.78, smoothstep(0.55, 0.72, t_vnoise2(xz * 0.025 + 5.0)) * 0.35);   // sandier banks
+		mud = mix(mud, seabed_col * 0.88, chan * 0.6);
+		mud = mix(mud, mix(mud_col, river_col, 0.45), pool * 0.35);
+		// faint wet sheen on the lower, smoother mud
+		float sheen = smoothstep(0.62, 0.82, t_vnoise2(xz * 0.28 + 7.0)) * (1.0 - smoothstep(1.2, 2.4, h));
+		mud = mix(mud, mud * 1.22 + vec3(0.01, 0.015, 0.02), sheen * 0.35);
+		col = mix(col, mud, estuary * flat_low * 0.9);
 	}
 	// sea floor
 	col = mix(col, seabed_col, 1.0 - smoothstep(-3.0, 0.5, h));
@@ -589,8 +608,8 @@ void fragment() {
 	if (cloud_shadow > 0.01 && h > -2.0) {
 		vec2 cp = xz * 0.0006 + vec2(TIME * 0.005, TIME * 0.003);
 		float cn = t_vnoise2(cp) * 0.65 + t_vnoise2(cp * 2.3 + 5.0) * 0.35;
-		float lo = 0.66 - 0.25 * cloud_shadow;
-		col *= 1.0 - 0.40 * smoothstep(lo, lo + 0.15, cn) * min(cloud_shadow * 1.7, 1.0);
+		float lo = 0.65 - 0.28 * cloud_shadow;
+		col *= 1.0 - 0.46 * smoothstep(lo, lo + 0.14, cn) * min(cloud_shadow * 1.85, 1.0);
 	}
 
 	col = mix(col, col * vec3(0.66, 0.70, 0.72) + vec3(0.0, 0.006, 0.012), wetness * (1.0 - urban * 0.4));
