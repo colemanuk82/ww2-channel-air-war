@@ -101,6 +101,12 @@ static func _merge(parts: Array) -> ArrayMesh:
 static var _mats_d: Dictionary = {}
 
 
+## Trees, hedges and buildings cast sun shadows on the high post-effects preset (the sun's cascades reach 4.5 km);
+## lower presets keep the old shadowless scatter, which is cheaper.
+static func scenery_shadow_mode() -> GeometryInstance3D.ShadowCastingSetting:
+	return GeometryInstance3D.SHADOW_CASTING_SETTING_ON if GameState.post_fx >= 2 else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
 # ------------------------------------------------------------------ shared meshes
 static func _dmat(color: Color, detail: int, thickness: float, outline: bool = true) -> ShaderMaterial:
 	var key: String = "d%d_%s_%.3f_%s" % [detail, color.to_html(false), thickness, str(outline)]
@@ -563,7 +569,7 @@ static func multi(mesh: Mesh, xforms: Array, vis_end: float = 0.0, register_obst
 	mi.position = c
 	var pad := Vector3(60.0, 60.0, 60.0)
 	mi.custom_aabb = AABB(lo - c - pad, (hi - lo) + pad * 2.0)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.cast_shadow = scenery_shadow_mode()
 	if register_obstacle:
 		Obstacles.register(mi)
 	if vis_end > 0.0:
@@ -1782,7 +1788,7 @@ static func multi_from_data(mesh: Mesh, d: Dictionary, vis_end: float = 0.0, sol
 	mi.position = c
 	var pad := Vector3(60.0, 60.0, 60.0)
 	mi.custom_aabb = AABB(lo - c - pad, (hi - lo) + pad * 2.0)
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.cast_shadow = scenery_shadow_mode()
 	if solid:
 		Obstacles.register(mi)
 	if vis_end > 0.0:

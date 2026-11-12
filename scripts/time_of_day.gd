@@ -17,6 +17,13 @@ const FOG_DENSITY_BASE := 0.000006
 # industrial smog over cities (HAZE_AREAS): stronger in the brownish daylight, faint at night
 const HAZE_FOG_MUL := 0.55
 const HAZE_VOL_MUL := 0.0011
+# Next-gen light balance (post_fx >= 1): a stronger sun against a dimmer, sky-coloured fill, so sunlit faces,
+# shadowed faces and cast shadows separate the way they do outdoors. Level 0 keeps the old flat balance.
+const SUN_GAIN := 1.8
+const AMB_GAIN := 0.45
+const AMB_SKY_SHARE := 0.55
+const FOG_GAIN := 0.6           # thinner distance haze: the far hills stay readable instead of fading to white
+var ng_light: bool = true
 
 var hour: float = 12.0
 var time_scale: float = 0.0   # game hours per real second (0 = frozen)
@@ -71,8 +78,14 @@ func _build_nodes() -> void:
 	sun = DirectionalLight3D.new()
 	sun.name = "Sun"
 	sun.shadow_enabled = true
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	sun.directional_shadow_max_distance = 1400.0
+	# four cascades out to 4.5 km: trees, hedges and buildings cast shadows across the fields from altitude
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun.directional_shadow_max_distance = 4500.0
+	sun.directional_shadow_split_1 = 0.04
+	sun.directional_shadow_split_2 = 0.14
+	sun.directional_shadow_split_3 = 0.40
+	sun.directional_shadow_fade_start = 0.85
+	sun.shadow_blur = 1.4
 	sun.directional_shadow_blend_splits = true
 	sun.shadow_bias = 0.03
 	sun.shadow_normal_bias = 2.0
@@ -138,9 +151,14 @@ func apply_post(level: int) -> void:
 	var high: bool = level >= 2
 	# ACES is the photographic reference response: it holds highlight detail in a bright sky and keeps
 	# shadows open, which is what makes rendered daylight read as real rather than as "rendered".
-	environment.tonemap_mode = Environment.TONE_MAPPER_ACES if on else Environment.TONE_MAPPER_LINEAR
-	environment.tonemap_exposure = 1.0
-	environment.tonemap_white = 5.0
+	# AgX: filmic highlight roll-off that keeps saturated sunlit colour (ACES skewed greens to yellow and
+	# crushed the shadows), with exposure lifted to suit the stronger sun / dimmer fill below.
+	environment.tonemap_mode = Environment.TONE_MAPPER_AGX if on else Environment.TONE_MAPPER_LINEAR
+	environment.tonemap_exposure = 1.05 if on else 1.0
+	environment.tonemap_white = 6.0
+	ng_light = on
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY if on else Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_sky_contribution = AMB_SKY_SHARE if on else 0.0
 	# sky reflections on glass, metal and wet surfaces (was disabled, which killed every specular)
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY if on else Environment.REFLECTION_SOURCE_DISABLED
 	environment.glow_enabled = on
@@ -154,8 +172,8 @@ func apply_post(level: int) -> void:
 		environment.set_glow_level(i, 1.0 if i in [2, 3, 4] else 0.0)
 	environment.adjustment_enabled = true
 	# a real camera is not oversaturated: keep the grade subtle, the materials carry the colour now
-	environment.adjustment_contrast = 1.05 if on else 1.0
-	environment.adjustment_saturation = 1.05 if on else 1.0
+	environment.adjustment_contrast = 1.06 if on else 1.0
+	environment.adjustment_saturation = 1.2 if on else 1.0
 	environment.ssao_enabled = high
 	ssr_allowed = high
 	set_wet_reflections(environment.ssr_enabled)
@@ -164,7 +182,7 @@ func apply_post(level: int) -> void:
 	environment.ssao_intensity = 0.62
 	environment.ssao_power = 1.3
 	environment.fog_sun_scatter = 0.26 if high else 0.10
-	environment.fog_aerial_perspective = 0.38 if high else 0.22
+	environment.fog_aerial_perspective = 0.40 if high else 0.30
 	# high only: one bounce of screen-space indirect light, and thin volumetric fog so the sun throws light shafts
 	environment.ssil_enabled = high
 	environment.ssil_intensity = 0.8
@@ -310,6 +328,9 @@ func _apply() -> void:
 	var moon_e: float = s[5] * clampf(moon_dir.y * 4.0, 0.0, 1.0) * (0.6 + 0.4 * light_mul) * lerpf(0.3, 1.0, moon_illum)
 	var amb: Color = _grey(s[6], desat * 0.5, 0.0)
 	var amb_e: float = s[7] * (0.55 + 0.45 * light_mul)
+	if ng_light:
+		sun_e *= SUN_GAIN
+		amb_e *= AMB_GAIN
 
 	sun.light_color = lc
 	sun.light_energy = sun_e
@@ -328,15 +349,15 @@ func _apply() -> void:
 	if environment.volumetric_fog_enabled:
 		var low: float = smoothstep(0.42, 0.06, sun_dir.y) * smoothstep(-0.06, 0.03, sun_dir.y)
 		var day_k: float = clampf(sun_dir.y * 4.0, 0.0, 1.0)
-		environment.volumetric_fog_density = (0.0004 + 0.0007 * low + haze_k * HAZE_VOL_MUL * day_k) * clampf(fog_mul, 0.6, 2.0)
+		environment.volumetric_fog_density = (0.00012 + 0.0009 * low + haze_k * HAZE_VOL_MUL * day_k) * clampf(fog_mul, 0.6, 2.0)
 		environment.volumetric_fog_albedo = Color(0.92, 0.94, 1.0).lerp(lc, 0.45 * low).lerp(Color(0.62, 0.56, 0.48), 0.35 * haze_k * day_k)
 		environment.volumetric_fog_anisotropy = 0.65 + 0.2 * low
 		sun.light_volumetric_fog_energy = 1.0 + 0.8 * low
 	var haze_day: float = haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0)
-	environment.fog_density = (float(s[9]) + FOG_DENSITY_BASE) * fog_mul * (1.0 + HAZE_FOG_MUL * haze_day) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
+	environment.fog_density = (FOG_GAIN if ng_light else 1.0) * (float(s[9]) + FOG_DENSITY_BASE) * fog_mul * (1.0 + HAZE_FOG_MUL * haze_day) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
 	sun_color = lc
 	horizon_color = hor
-	light_level = clampf(sun_e / 1.3 + moon_e * 0.3 + 0.12, 0.0, 1.0)
+	light_level = clampf(sun_e / (1.3 * (SUN_GAIN if ng_light else 1.0)) + moon_e * 0.3 + 0.12, 0.0, 1.0)
 	var na: float = clampf((0.55 - light_level) / 0.4, 0.0, 1.0)
 	RenderingServer.global_shader_parameter_set("night_amount", na)
 	# Airfield lamps: full at night, and still visible through dawn / dusk while the sun is low, so a grass

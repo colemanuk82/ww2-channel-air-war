@@ -336,7 +336,13 @@ void light() {
 	// term so roofs still read a shade brighter than walls. (ATTENUATION carries the shadow term, so
 	// leaving it out is what removes the shadows.) Note: 'light' cannot 'return' early in Godot.
 	if (flat_shade > 0.5) {
-		DIFFUSE_LIGHT += (0.86 + 0.14 * clamp(NORMAL.y * 0.5 + 0.5, 0.0, 1.0)) * LIGHT_COLOR / PI;
+		// Buildings: real sun and shade. Sunlit walls and roofs take the full light, the walls facing away fall
+		// to a soft shade, and cast shadows (ATTENUATION) from trees and neighbouring houses darken them, so a
+		// town reads as solid blocks in the sun instead of flat colour. The floor stays high enough that the
+		// dense terraces never go black.
+		float nl = clamp(dot(NORMAL, LIGHT), 0.0, 1.0);
+		float lit = smoothstep(0.0, 0.75, nl) * mix(1.0, ATTENUATION, 0.85);
+		DIFFUSE_LIGHT += (0.30 + 0.85 * lit + 0.06 * clamp(NORMAL.y, 0.0, 1.0)) * LIGHT_COLOR / PI;
 	} else {
 		float t = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
 		// foliage (and anything else with softness) shades smoothly instead of in hard toon steps

@@ -678,7 +678,7 @@ func apply_graphics() -> void:
 		var sun: DirectionalLight3D = tod.get("sun")
 		if sun:
 			sun.shadow_enabled = shadows_enabled
-			sun.directional_shadow_max_distance = 1400.0 * float(VIEW_SCALES[clampi(view_distance, 0, 2)])
+			sun.directional_shadow_max_distance = (3400.0 if post_fx >= 2 else 1400.0) * float(VIEW_SCALES[clampi(view_distance, 0, 2)])   # high: scenery shadows reach across the fields
 		if tod.has_method("apply_post"):
 			tod.call("apply_post", post_fx)
 	var wm: Node = get_tree().root.get_node_or_null("WeatherManager")
