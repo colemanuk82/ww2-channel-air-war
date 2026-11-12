@@ -50,9 +50,12 @@ float wave_h(vec2 p, float t) {
 	float h = 0.0;
 	// regional amplitude envelope: the swell builds and fades across the sea so the crests never form a lattice
 	float env = 0.55 + 0.9 * t_vnoise2(p * 0.0021 + vec2(t * 0.01, 0.0));
-	h += sin(dot(p, vec2(1.0, 0.35)) * 0.045 + t * 1.10) * 1.00;
-	h += sin(dot(p, vec2(-0.40, 1.0)) * 0.072 + t * 0.75) * 0.50;
-	h += sin(dot(p, vec2(0.75, -0.65)) * 0.115 + t * 1.45) * 0.22;
+	// domain warp: bends the swell crests so the three wave trains never line up into the regular rows of
+	// glints that read as a tiled texture from altitude
+	vec2 q = p + (vec2(t_vnoise2(p * 0.0045 + 3.0), t_vnoise2(p * 0.0045 + 41.0)) - 0.5) * 160.0;
+	h += sin(dot(q, vec2(1.0, 0.35)) * 0.045 + t * 1.10) * 1.00;
+	h += sin(dot(q, vec2(-0.40, 1.0)) * 0.072 + t * 0.75) * 0.50;
+	h += sin(dot(q, vec2(0.75, -0.65)) * 0.115 + t * 1.45) * 0.22;
 	h *= env;
 	h += (t_vnoise2(p * 0.012 + t * 0.06) - 0.5) * 0.75;
 	return h;
@@ -123,13 +126,15 @@ void fragment() {
 	vec2 g = vec2(hx - h0, hz - h0) / e * 1.5 * wfade * (1.0 - 0.75 * lake_mode);
 	// mid-scale chop: irregular facets so the swell never reads as a regular sine lattice
 	float mfade = 1.0 - smoothstep(300.0, 2600.0, dist);
+	// warp the chop trains so their five fixed directions never interfere into a visible chequer lattice
+	vec2 cw = (vec2(t_vnoise2(wp * 0.017 + 5.0), t_vnoise2(wp * 0.017 + 77.0)) - 0.5) * 34.0;
 	if (mfade > 0.0) {
 		// chop strength varies smoothly across the sea so it never reads as a uniform texture
 		float cenv = 0.6 + 0.8 * t_vnoise2(wp * 0.004 + 17.0);
-		g += chop_grad(wp, TIME, 1.0) * 0.55 * mfade * cenv;
+		g += chop_grad(wp + cw, TIME, 1.0) * 0.55 * mfade * cenv;
 	}
 	if (rfade > 0.0) {
-		g += chop_grad(wp.yx * 1.3 + 50.0, TIME * 1.6, 3.2) * 0.12 * rfade;
+		g += chop_grad((wp + cw * 0.5).yx * 1.3 + 50.0, TIME * 1.6, 3.2) * 0.12 * rfade;
 	}
 	// far away the facets average out: a gentle residual slope keeps a soft sheen instead of a mirror line
 	g += (vec2(t_vnoise2(wp * 0.004 + tw * 0.02), t_vnoise2(wp * 0.004 + 9.0 - tw * 0.02)) - 0.5) * 0.10 * (1.0 - wfade);

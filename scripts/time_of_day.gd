@@ -181,7 +181,7 @@ func apply_post(level: int) -> void:
 	environment.ssao_radius = 2.4
 	environment.ssao_intensity = 0.62
 	environment.ssao_power = 1.3
-	environment.fog_sun_scatter = 0.26 if high else 0.10
+	environment.fog_sun_scatter = 0.16 if high else 0.08
 	environment.fog_aerial_perspective = 0.40 if high else 0.30
 	# high only: one bounce of screen-space indirect light, and thin volumetric fog so the sun throws light shafts
 	environment.ssil_enabled = high
@@ -349,7 +349,7 @@ func _apply() -> void:
 	if environment.volumetric_fog_enabled:
 		var low: float = smoothstep(0.42, 0.06, sun_dir.y) * smoothstep(-0.06, 0.03, sun_dir.y)
 		var day_k: float = clampf(sun_dir.y * 4.0, 0.0, 1.0)
-		environment.volumetric_fog_density = (0.00012 + 0.0009 * low + haze_k * HAZE_VOL_MUL * day_k) * clampf(fog_mul, 0.6, 2.0)
+		environment.volumetric_fog_density = (0.00012 + 0.0005 * low + haze_k * HAZE_VOL_MUL * day_k) * clampf(fog_mul, 0.6, 2.0)
 		environment.volumetric_fog_albedo = Color(0.92, 0.94, 1.0).lerp(lc, 0.45 * low).lerp(Color(0.62, 0.56, 0.48), 0.35 * haze_k * day_k)
 		environment.volumetric_fog_anisotropy = 0.65 + 0.2 * low
 		sun.light_volumetric_fog_energy = 1.0 + 0.8 * low

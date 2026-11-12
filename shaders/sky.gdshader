@@ -54,6 +54,10 @@ void sky() {
 		// hazier than the zenith and agrees with the fog colour the world uses.
 		float haze = exp(-h * 9.0);
 		col = mix(col, mix(horizon_color, vec3(1.0), 0.18), haze * 0.35 * (0.4 + 0.6 * day));
+		// a bright, faintly warm glow along the horizon by day (sunlit haze), under a deeper zenith
+		float glow = exp(-h * 14.0);
+		col += vec3(0.16, 0.13, 0.08) * glow * day * (1.0 - 0.5 * exp(-abs(elev) * 4.5));
+		col = mix(col, col * vec3(0.88, 0.94, 1.06), smoothstep(0.25, 0.9, h) * day * 0.6);   // richer zenith blue
 	} else {
 		// below the horizon the sky fades from the horizon colour into the ground colour
 		col = mix(horizon_color, ground_color, smoothstep(0.0, -0.30, h));

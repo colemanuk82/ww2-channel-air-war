@@ -90,6 +90,8 @@ uniform float grass_translucency : hint_range(0.0, 1.0) = 0.35; // grazing-angle
 
 // Cloud cover 0..1 (set by CloudField): drifting soft shadow patches on the ground.
 global uniform float cloud_shadow;
+global uniform vec3 sky_horizon;
+global uniform float night_amount;
 // Ground wetness 0..1 (set by WeatherManager while it rains): darker, richer, slightly glossy-looking ground.
 global uniform float wetness;
 // Real river geometry loaded (set to 1 by RiverMesh.ensure_loaded() when data/osm/rivers.json is present):
@@ -312,7 +314,8 @@ void fragment() {
 	// bright summer postcard. Upland, heath and towns are left alone.
 	{
 		float lg = lowland * (1.0 - urban);
-		vec3 dull = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114))), 0.22) * 0.87;
+		// (next-gen: graded far more gently - the old 22% desaturation x 0.87 left the countryside grey from the air)
+		vec3 dull = mix(col, vec3(dot(col, vec3(0.299, 0.587, 0.114))), 0.08) * 0.96;
 		if (season_center >= 0.0) {
 			// season grade (B6): winter farmland greyer and duller, spring greener, harvest golden, autumn brown
 			float sl = dot(season_tint, vec3(0.3333));
@@ -372,6 +375,16 @@ void fragment() {
 		float g = t_vnoise2(xz * 0.9) * 0.5 + t_vnoise2(xz * 0.07) * 0.5;
 		vec3 town = mix(tarmac_col, paving_col, smoothstep(0.35, 0.75, g));
 		town *= 0.9 + 0.2 * t_vnoise2(xz * 0.02 + 3.0);
+		// Back gardens, yards and allotments between the streets: small plots of lawn, vegetable beds, bare earth
+		// and outhouse roofs in a loose grid, so a town is not a sheet of grey paving from the air.
+		vec2 plot = floor((xz + vec2(t_vnoise2(xz * 0.05), t_vnoise2(xz * 0.05 + 9.0)) * 6.0) / vec2(11.0, 16.0));
+		float ph = t_hash12(plot + 17.0);
+		vec3 lawn = mix(grass_a, grass_b, t_hash12(plot + 3.0)) * (0.85 + 0.2 * t_vnoise2(xz * 0.6));
+		vec3 beds = mix(soil_col * 1.1, crop_young_col, step(0.5, fract(dot(xz, vec2(0.0, 1.0)) * 0.9)) * 0.6);
+		vec3 yard = mix(paving_col * 0.95, mud_col, 0.35) * (0.9 + 0.2 * t_hash12(plot + 8.0));
+		vec3 gardens = ph < 0.55 ? lawn : (ph < 0.75 ? beds : yard);
+		float garden_k = smoothstep(0.30, 0.55, t_vnoise2(xz * 0.035 + 21.0)) * 0.75;   // leafier suburbs, denser centres
+		town = mix(town, gardens, garden_k * (1.0 - smoothstep(0.85, 1.0, urban) * 0.4));
 		col = mix(col, town, urban * 0.92);
 		// Public parks inside towns (mirrored by Scatter.in_park)
 		float pk = smoothstep(0.76, 0.80, t_vnoise2(xz * 0.0042 + 31.0));
@@ -613,6 +626,33 @@ void fragment() {
 	}
 
 	col = mix(col, col * vec3(0.66, 0.70, 0.72) + vec3(0.0, 0.006, 0.012), wetness * (1.0 - urban * 0.4));
+	// Ground relief: the terrain mesh is too coarse to carry the small rolls, banks and hollows of real fields, so
+	// a few metres of procedural height are added in the lighting only (screen-space derivative bump, no extra
+	// geometry). Under the low sun this is what makes the fields read as ground rather than a painted sheet.
+	{
+		float cam_d = length(VERTEX);
+		float rk = (1.0 - smoothstep(1800.0, 9000.0, cam_d)) * (1.0 - water_k) * (1.0 - urban * 0.8);
+		if (rk > 0.001) {
+			float hb = t_vnoise2(xz * 0.016 + 3.0) * 3.2 + t_vnoise2(xz * 0.055 + 11.0) * 1.1
+				+ t_vnoise2(xz * 0.19 + 23.0) * 0.30 * (1.0 - smoothstep(300.0, 1200.0, cam_d));
+			hb *= rk * (1.0 + 0.6 * rough);
+			vec3 dpx = dFdx(VERTEX);
+			vec3 dpy = dFdy(VERTEX);
+			vec3 r1 = cross(dpy, NORMAL);
+			vec3 r2 = cross(NORMAL, dpx);
+			float det = dot(dpx, r1);
+			vec3 sg = sign(det) * (dFdx(hb) * r1 + dFdy(hb) * r2);
+			NORMAL = normalize(abs(det) * NORMAL - sg);
+		}
+	}
+	// Aerial perspective: far ground takes on the blue of the air in front of it (a cool tint, then the horizon
+	// colour), so the distance recedes to blue instead of washed grey-green and meets the sky without a hard line.
+	{
+		float far_d = length(VERTEX);
+		float ap = smoothstep(2500.0, 26000.0, far_d);
+		vec3 air = mix(vec3(0.42, 0.55, 0.74), sky_horizon, smoothstep(9000.0, 40000.0, far_d));
+		col = mix(col, air * 0.62, ap * 0.55 * (1.0 - night_amount * 0.9));
+	}
 	ALBEDO = col;
 	ROUGHNESS = mix(ground_roughness, 0.12, water_k);
 	METALLIC = 0.0;

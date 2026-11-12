@@ -74,8 +74,8 @@ func _draw_glare() -> void:
 	var warm := Color(1.0, 0.86, 0.6)
 	for i in 14:
 		var t: float = float(i) / 13.0
-		var a: float = (1.0 - t) * (1.0 - t) * 0.045 * _amt
-		_ctl.draw_circle(_pos, lerpf(r0 * 0.04, r0 * 0.9, t), Color(warm.r, warm.g, warm.b, a))
+		var a: float = (1.0 - t) * (1.0 - t) * 0.028 * _amt     # (was 0.045 / 0.9: with the filmic bloom it washed out a third of the frame)
+		_ctl.draw_circle(_pos, lerpf(r0 * 0.04, r0 * 0.6, t), Color(warm.r, warm.g, warm.b, a))
 	var axis: Vector2 = c - _pos
 	# [position along the sun-to-centre line, radius as a fraction of half the screen height, colour, filled]
 	var ghosts: Array = [
