@@ -218,9 +218,6 @@ void fragment() {
 	vec3 bound_col = mix(hedge_tone, vec3(0.035, 0.050, 0.060), r_pold);   // polder: water-filled ditches
 	float hedge_k = hedge * (0.82 + 0.12 * r_boc + 0.06 * r_weald) * (1.0 - 0.80 * r_open);
 	field = mix(field, bound_col, hedge_k);
-	// headland: the cropped strip along the hedge line reads as a slightly paler/turned margin
-	float head = (1.0 - smoothstep(0.040, 0.090, edge)) * (1.0 - smoothstep(0.0, 0.03, edge)) * (1.0 - hedge);
-	field = mix(field, mix(field, field_brown * 1.08, 0.35), head * is_crop * (1.0 - 0.6 * r_open) * (1.0 - r_pold));
 	// Woodland: under real forest cover there are no fields - no patchwork colours, hedge lines or drill marks,
 	// only a dark mottled canopy ground, with a noise-broken edge so the wood margin is not a ruled curve.
 	float wood = 0.0;
@@ -239,6 +236,9 @@ void fragment() {
 	}
 
 	float is_crop = clamp(1.0 - pasture_w, 0.0, 1.0) * (1.0 - wood);   // for drill lines / tramlines below
+	// headland: the cropped strip along the hedge line reads as a slightly paler/turned margin
+	float head = (1.0 - smoothstep(0.040, 0.090, edge)) * (1.0 - smoothstep(0.0, 0.03, edge)) * (1.0 - hedge);
+	field = mix(field, mix(field, field_brown * 1.08, 0.35), head * is_crop * (1.0 - 0.6 * r_open) * (1.0 - r_pold));
 
 	// --- upland rough grazing, heath and moor ---
 	vec3 moor = mix(upland_col, moor_col, smoothstep(0.30, 0.90, t_vnoise2(xz * 0.02 + 5.0)));
@@ -259,7 +259,7 @@ void fragment() {
 	hc *= 0.86 + 0.26 * t_vnoise2(xz * 0.8);
 	// darker, ragged woodland edge / shaws just inside and around tree cover
 	float wedge = smoothstep(0.18, 0.46, wood) * (1.0 - smoothstep(0.72, 0.95, wood));
-	field = mix(field, mix(field, forest_col, 0.45), wedge * 0.55 * (1.0 - urban));
+	field = mix(field, mix(field, forest_col, 0.45), wedge * 0.55);   // towns are painted over later
 
 	// chalk / limestone zones (real cliff zones supplied by the chunk manager)
 	float cz = max(max(max(chalk_w(chalk_a, xz), chalk_w(chalk_b, xz)), max(chalk_w(chalk_c, xz), chalk_w(chalk_d, xz))), chalk_w(chalk_e, xz));
