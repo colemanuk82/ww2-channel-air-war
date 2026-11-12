@@ -18,6 +18,7 @@ varying vec4 v_col;
 varying float v_shade;
 varying vec3 v_loc;
 varying float v_id;
+varying float v_size;
 const mat3 ROT_M = mat3(vec3(0.36, 0.80, -0.48), vec3(-0.80, 0.28, 0.53), vec3(0.48, -0.53, -0.70));
 
 float h31(vec3 p) {
@@ -39,6 +40,7 @@ void vertex() {
 	v_shade = INSTANCE_CUSTOM.x;
 	v_loc = VERTEX;
 	v_id = float(INSTANCE_ID);
+	v_size = length(MODEL_MATRIX[0].xyz);      // instance radius in metres
 }
 
 void fragment() {
@@ -53,7 +55,10 @@ void fragment() {
 	// hard-edged opaque low-poly blob - which from the air reads as a red square sitting on the ground
 	// rather than as fire. Only debris (shade = 1 with an opaque colour) keeps its crisp look.
 	float soft_amt = max(1.0 - step(0.5, v_shade), 1.0 - smoothstep(0.85, 0.99, v_col.a));
-	float edge = smoothstep(0.0, 0.6, ndv);
+	// debris chunks are small; anything bigger than a few metres is smoke or a burst, whatever its alpha (big opaque
+	// puffs drew as hard flat polygons across the screen when the aircraft flew close to them)
+	soft_amt = max(soft_amt, smoothstep(3.0, 8.0, v_size));
+	float edge = smoothstep(0.08, 0.85, ndv);      // wide soft rim: a low-poly hull must never show its polygon outline
 	vec3 q = ROT_M * v_loc;
 	float lump = vnoise(q * 3.0 + vec3(v_id * 7.31, v_id * 3.17, v_id * 1.93)) * 0.5
 		+ vnoise(q * 7.0 + vec3(v_id * 2.13)) * 0.3
@@ -70,6 +75,9 @@ void fragment() {
 	float smoke = step(0.5, v_shade);
 	c = mix(c, haze_color, haze * mix(0.35, 1.0, smoke));
 	a *= 1.0 - 0.45 * haze * smoke;        // far smoke thins out rather than reading as solid balls
+	// right next to the camera a puff fills half the screen as one flat translucent polygon: thin it out (not away -
+	// a close flak burst must still be seen)
+	a *= mix(1.0, mix(0.35, 1.0, smoothstep(40.0, 300.0, dist)), soft_amt);
 	ALBEDO = c;
 	ALPHA = clamp(a, 0.0, 1.0);
 }

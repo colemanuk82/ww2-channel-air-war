@@ -67,6 +67,8 @@ func _build_keys() -> void:
 		_k(7.6, Color(0.30, 0.55, 0.86), Color(0.80, 0.86, 0.92), Color(0.76, 0.83, 0.89), Color(1.0, 0.92, 0.78), 1.0, 0.0, Color(0.50, 0.58, 0.72), 1.2, 0.0, 0.00005),
 		_k(12.0, Color(0.20, 0.48, 0.88), Color(0.72, 0.84, 0.95), Color(0.72, 0.82, 0.92), Color(1.0, 0.97, 0.90), 1.05, 0.0, Color(0.55, 0.65, 0.80), 1.2, 0.0, 0.00005),
 		_k(16.5, Color(0.26, 0.52, 0.86), Color(0.80, 0.84, 0.90), Color(0.78, 0.82, 0.88), Color(1.0, 0.93, 0.78), 1.2, 0.0, Color(0.52, 0.60, 0.74), 1.2, 0.0, 0.00005),
+		# golden hour: the light turns warm well before sunset (the old curve stayed near-white until 18h)
+		_k(17.3, Color(0.26, 0.47, 0.82), Color(0.94, 0.78, 0.60), Color(0.84, 0.76, 0.66), Color(1.0, 0.80, 0.56), 1.15, 0.0, Color(0.52, 0.56, 0.70), 1.2, 0.0, 0.000055),
 		_k(18.4, Color(0.26, 0.34, 0.62), Color(0.98, 0.64, 0.40), Color(0.82, 0.66, 0.56), Color(1.0, 0.58, 0.36), 1.0, 0.05, Color(0.48, 0.48, 0.62), 1.2, 0.2, 0.000060),
 		_k(20.0, Color(0.05, 0.06, 0.16), Color(0.20, 0.16, 0.26), Color(0.14, 0.12, 0.20), Color(0.6, 0.7, 1.0), 0.0, 0.35, Color(0.20, 0.22, 0.38), 0.9, 0.8, 0.00005),
 		_k(21.5, Color(0.02, 0.03, 0.09), Color(0.07, 0.09, 0.17), Color(0.06, 0.08, 0.14), Color(0.6, 0.7, 1.0), 0.0, 0.4, Color(0.16, 0.20, 0.36), 0.9, 1.0, 0.00005),
@@ -172,8 +174,8 @@ func apply_post(level: int) -> void:
 		environment.set_glow_level(i, 1.0 if i in [2, 3, 4] else 0.0)
 	environment.adjustment_enabled = true
 	# a real camera is not oversaturated: keep the grade subtle, the materials carry the colour now
-	environment.adjustment_contrast = 1.06 if on else 1.0
-	environment.adjustment_saturation = 1.2 if on else 1.0
+	environment.adjustment_contrast = 1.12 if on else 1.0
+	environment.adjustment_saturation = 1.24 if on else 1.0
 	environment.ssao_enabled = high
 	ssr_allowed = high
 	set_wet_reflections(environment.ssr_enabled)

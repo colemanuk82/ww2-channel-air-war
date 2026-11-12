@@ -61,17 +61,27 @@ vec3 detail_building(vec3 col, inout float emit, float cam_dist) {
 	vec3 n = normalize(w_nrm);
 	col *= 0.9 + 0.2 * t_vnoise2(floor(w_pos.xz / 9.0) * 1.7);
 #ifdef NG_REAL
+	// Normandy and northern France (south of ~50.9 N, world z > -66 km): pale Caen limestone walls and
+	// blue-grey slate roofs, against the red brick and clay tile of southern England.
+	float fr = smoothstep(-70000.0, -62000.0, w_pos.z);
+	// whole streets and quarters differ (older dark centres, newer pale suburbs), not just single houses
+	float quarter = t_vnoise2(w_pos.xz * 0.006 + 7.0);
+	col *= 0.80 + 0.40 * quarter;
 	if (n.y > 0.35) {
 		// Roofscape: every house its own roof - weathered terracotta, dark clay tile, Welsh slate, old brown tile
 		// or lichen-stained - so a street reads as a real roofscape rather than uniform orange blocks.
 		vec2 bid = floor(w_pos.xz / 8.0);
 		float rh = t_hash12(bid + 5.3);
-		vec3 rc = rh < 0.30 ? vec3(0.27, 0.28, 0.31) : (rh < 0.55 ? vec3(0.50, 0.29, 0.21)
-			: (rh < 0.75 ? vec3(0.40, 0.22, 0.17) : (rh < 0.90 ? vec3(0.42, 0.33, 0.26) : vec3(0.38, 0.36, 0.28))));
-		rc *= 0.82 + 0.36 * t_hash12(bid + 11.0);
-		col = mix(col, rc / BUILDING_DARKEN * 0.72, 0.70);
+		float slate_share = mix(0.30, 0.72, fr) + (quarter - 0.5) * 0.4;
+		vec3 rc = rh < slate_share ? mix(vec3(0.20, 0.21, 0.25), vec3(0.34, 0.35, 0.38), t_hash12(bid + 2.0))
+			: (rh < slate_share + 0.22 ? vec3(0.52, 0.28, 0.19) : (rh < slate_share + 0.38 ? vec3(0.36, 0.20, 0.15)
+			: (rh < 0.92 ? vec3(0.44, 0.35, 0.27) : vec3(0.40, 0.38, 0.29))));
+		rc *= 0.70 + 0.60 * t_hash12(bid + 11.0);          // strong per-roof brightness steps, visible from the air
+		col = mix(col, rc / BUILDING_DARKEN * 0.72, 0.85);
 	} else {
 		col = mix(col, vec3(dot(col, vec3(0.333))), 0.18);   // walls: brick and render a little less saturated
+		vec3 stone = vec3(0.50, 0.46, 0.39) * (0.80 + 0.35 * t_hash12(floor(w_pos.xz / 8.0) + 31.0));   // weathered, sooty limestone
+		col = mix(col, stone / BUILDING_DARKEN * 0.72, fr * 0.65);
 	}
 #endif
 	// Distant towns are thousands of roofs only a pixel or two across: as the aircraft moves each pixel flips
@@ -79,6 +89,9 @@ vec3 detail_building(vec3 col, inout float emit, float cam_dist) {
 	// and wall tones are drawn together (to the street's average), so a flip between them barely shows.
 	float far_k = smoothstep(500.0, 2600.0, cam_dist);
 	vec3 town_avg = vec3(0.36, 0.29, 0.26);
+#ifdef NG_REAL
+	far_k *= 0.35;     // keep the per-roof variety further out (temporal AA / DLSS settle the shimmer)
+#endif
 	col = mix(col, mix(col, town_avg * (0.9 + 0.2 * t_vnoise2(floor(w_pos.xz / 9.0) * 1.7)), 0.6), far_k);
 	if (near_k <= 0.001) {
 		return col;

@@ -273,10 +273,10 @@ void fragment() {
 			}
 			float beer = exp(-od);
 			float powder = 1.0 - exp(-od * 2.0 - 0.15);
-			float sun_t = beer * mix(1.0, powder * 2.0, 0.55) + 0.34 * exp(-od * 0.10);   // + multi-scatter floor
+			float sun_t = beer * mix(1.0, powder * 2.0, 0.55) + 0.22 * exp(-od * 0.10);   // + multi-scatter floor (lower: shaded undersides give the sky depth)
 			float height_k = clamp(p.y * 0.5 + 0.55, 0.0, 1.0);
 			vec3 sun_e = cloud_color.rgb * 1.05 * sun_t * phase;
-			vec3 amb = mix(shade_color.rgb * 0.76, shade_color.rgb * 0.64 + cloud_color.rgb * 0.40, height_k) * (0.42 + 0.58 * up_occ);
+			vec3 amb = mix(shade_color.rgb * 0.56, shade_color.rgb * 0.64 + cloud_color.rgb * 0.44, height_k * height_k) * (0.36 + 0.64 * up_occ);
 			vec3 col = sun_e + amb * (thin_hi ? 1.4 : 1.0);
 			if (thin_hi) { col = mix(col, cloud_color.rgb, 0.55); }   // cirrus / cirrocumulus: bright, high, thin
 			if (ty > 8.5) { col *= 0.86; }                          // stratus: flat grey

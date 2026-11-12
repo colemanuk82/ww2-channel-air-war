@@ -360,7 +360,7 @@ static func tree_variant(v: int) -> ArrayMesh:
 			crown.append([cbl, Vector3(2.0, 5.9, 0.9), Color(0.15, 0.26, 0.14)])
 			crown.append([cbl, Vector3(-1.9, 8.0, -0.8), Color(0.21, 0.34, 0.18)])
 		6:   # scots pine: bare trunk, flat blue-green canopy plates
-			trunk_col = Color(0.46, 0.27, 0.16)
+			trunk_col = Color(0.38, 0.24, 0.16)
 			trunk_h = 8.0
 			var pl := SphereMesh.new()
 			pl.radius = 3.4
@@ -2043,7 +2043,7 @@ static func _field_edge_props(p: Vector2, exclude: Array, hedges: Array, trees_c
 	var ang: float = atan2(tg.y, tg.x)
 	var boc: bool = rgw.x > 0.5
 	# bocage: the hedge stands on a bank, taller and thicker, with more trees in it
-	hedges.append(_xf(Vector3(q.x, GroundKit.ground_y(q.x, q.y) + (1.6 if boc else 1.15), q.y), -ang, Vector3(half * 2.0 + 1.0, 3.2 if boc else 2.3, 2.6 if boc else 1.9)))
+	hedges.append(_xf(Vector3(q.x, GroundKit.ground_y(q.x, q.y) + (2.1 if boc else 1.4), q.y), -ang, Vector3(half * 2.0 + 1.0, 4.2 if boc else 2.8, 3.6 if boc else 2.4)))
 	if trees_c.size() + trees_r.size() < 9000 and rng.randf() < (0.8 if boc else (0.6 if rgw.w > 0.5 else 0.45)):
 		var tp: Vector2 = q + tg * rng.randf_range(-half, half) + Vector2(-tg.y, tg.x) * rng.randf_range(-2.5, 2.5)
 		if _ok_tree(tp, exclude):

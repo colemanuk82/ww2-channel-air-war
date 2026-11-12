@@ -42,4 +42,6 @@ void fragment() {
 	c = mix(c, haze_color, haze);
 	ALBEDO = c;
 	ALPHA = clamp(0.93 * edge * erode * (1.0 - 0.4 * haze), 0.0, 1.0);
+	// fly-by: from close up the puff hulls showed as huge flat grey polygons, so a column thins out as the camera nears it
+	ALPHA *= smoothstep(60.0, 420.0, dist);
 }

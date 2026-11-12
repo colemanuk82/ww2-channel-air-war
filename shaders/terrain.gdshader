@@ -216,9 +216,15 @@ void fragment() {
 	// hedgerow / headland shading along the cell boundaries (subtle linear feature, not a hard step)
 	float hedge_w = 0.010 + 0.03 * r_boc + 0.012 * r_weald;
 	float hedge = 1.0 - smoothstep(hedge_w, 0.040 + 0.055 * r_boc + 0.02 * r_weald, edge);   // bocage banks and Weald shaw edges read stronger
+	// hedgerow trees: the line swells into round crowns at irregular intervals (oak and ash standards), so a
+	// hedge reads as a living tree line from the air, not a ruled stroke
+	float hrow_t = smoothstep(0.58, 0.74, t_vnoise2(xz * 0.075 + 41.0)) * (1.0 - 0.85 * r_open);
+	float hedge_tr = 1.0 - smoothstep(hedge_w * 2.4 + 0.012, (0.060 + 0.07 * r_boc) * 1.6, edge);
+	hedge = max(hedge, hedge_tr * hrow_t);
 	vec3 hedge_tone = mix(hedge_col * (0.78 - 0.18 * r_boc), hedge_col * 1.05, smoothstep(0.55, 0.85, t_vnoise2(xz * 0.02 + 13.0)) * (0.3 + 0.3 * r_boc));
+	hedge_tone *= 0.80;     // a hedge is mostly leaf in its own shade: darker than any field
 	vec3 bound_col = mix(hedge_tone, vec3(0.035, 0.050, 0.060), r_pold);   // polder: water-filled ditches
-	float hedge_k = hedge * (0.82 + 0.12 * r_boc + 0.06 * r_weald) * (1.0 - 0.80 * r_open);
+	float hedge_k = hedge * (0.90 + 0.08 * r_boc + 0.02 * r_weald) * (1.0 - 0.80 * r_open);
 	field = mix(field, bound_col, hedge_k);
 	// Woodland: under real forest cover there are no fields - no patchwork colours, hedge lines or drill marks,
 	// only a dark mottled canopy ground, with a noise-broken edge so the wood margin is not a ruled curve.
@@ -330,7 +336,7 @@ void fragment() {
 		vec2 fd = normalize(vec2(t_hash12(cell_id + 3.1) - 0.5, t_hash12(cell_id + 8.7) - 0.5) + vec2(0.001));
 		float drill = abs(fract(dot(xz, fd) / 7.0) - 0.5) * 2.0;
 		float drill_k = 1.0 - smoothstep(700.0, 3000.0, length(VERTEX));   // fine lines alias into moire rings at range
-		float tex = (mott - 0.5) * 0.36 + (drill - 0.5) * 0.11 * is_crop * drill_k;
+		float tex = (mott - 0.5) * 0.36 + (drill - 0.5) * 0.05 * is_crop * drill_k;
 		float far_k = 1.0 - smoothstep(9000.0, 20000.0, length(VERTEX));
 		col *= 1.0 + tex * far_k * lowland * (1.0 - urban);
 		// Tramlines: pairs of tractor-wheel tracks running the length of some crop fields (about a third of them)
@@ -374,7 +380,7 @@ void fragment() {
 	if (urban > 0.0) {
 		float g = t_vnoise2(xz * 0.9) * 0.5 + t_vnoise2(xz * 0.07) * 0.5;
 		vec3 town = mix(tarmac_col, paving_col, smoothstep(0.35, 0.75, g));
-		town *= 0.9 + 0.2 * t_vnoise2(xz * 0.02 + 3.0);
+		town *= (0.9 + 0.2 * t_vnoise2(xz * 0.02 + 3.0)) * 0.84;   // streets and yards a step darker than the fields round them
 		// Back gardens, yards and allotments between the streets: small plots of lawn, vegetable beds, bare earth
 		// and outhouse roofs in a loose grid, so a town is not a sheet of grey paving from the air.
 		vec2 plot = floor((xz + vec2(t_vnoise2(xz * 0.05), t_vnoise2(xz * 0.05 + 9.0)) * 6.0) / vec2(11.0, 16.0));
