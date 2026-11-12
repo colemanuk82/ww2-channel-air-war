@@ -68,6 +68,10 @@ func update(delta: float, puffs: FXParticles) -> bool:
 		if follow != null:
 			p = pos.lerp(last_pos, clampf(_acc / maxf(delta, 0.0001), 0.0, 1.0))
 		_emit(p, puffs, fade)
+		if _acc >= interval * 0.5:
+			puffs.advance_last(_acc)    # this puff was due _acc seconds ago: place it where it would be by now
+	if _acc > interval * 8.0:
+		_acc = interval * 8.0           # a long hitch: drop the backlog rather than bead it out over the next frames
 	return true
 
 

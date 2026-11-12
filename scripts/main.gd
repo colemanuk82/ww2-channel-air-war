@@ -1748,6 +1748,7 @@ func start_game(cfg: Dictionary) -> void:
 	var gvis := GVision.new()
 	gvis.hud = hud
 	add_child(gvis)
+	add_child((load("res://scripts/effects/film_look.gd") as GDScript).new())
 	hud.bind_camera(camera_rig.chase_cam)
 	camera_rig.view_changed.connect(func(_c: bool) -> void: hud.bind_camera(camera_rig.current_camera()))
 	camera_rig.view_distance_changed.connect(func(msg: String, secs: float) -> void: hud.show_message(msg, secs))

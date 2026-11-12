@@ -8,6 +8,7 @@ const STRIDE := 20   # 12 transform + 4 colour + 4 custom
 var cap: int = 768
 var count: int = 0
 var _rr: int = 0
+var last_i: int = -1   # slot of the most recent spawn (FXEmitter.advance_last)
 var _buf: PackedFloat32Array = PackedFloat32Array()
 var _pos := PackedVector3Array()
 var _vel := PackedVector3Array()
@@ -76,8 +77,19 @@ func spawn(pos: Vector3, vel: Vector3, life: float, size0: float, size1: float, 
 	_drag[i] = drag
 	_spin[i] = spin
 	_ang[i] = randf() * TAU
+	last_i = i
 	if spin != 0.0:
 		_axis[i] = Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5).normalized()
+
+
+## Age the most recent spawn by dt seconds (moved along its velocity), for an emitter that fell behind and spawns
+## several puffs in one frame: spread along the stream instead of stacked into one dense bead.
+func advance_last(dt: float) -> void:
+	if last_i < 0 or last_i >= count or dt <= 0.0:
+		return
+	dt = minf(dt, _life[last_i] * 0.5)
+	_pos[last_i] += _vel[last_i] * dt
+	_age[last_i] += dt
 
 
 func _process(delta: float) -> void:

@@ -46,6 +46,15 @@ var sun_color: Color = Color.WHITE
 var ssr_allowed: bool = false            # set by apply_post: screen-space reflections only on the high preset
 var light_level: float = 1.0             # 0..1 overall brightness (for clouds, cockpit dimming)
 var horizon_color: Color = Color.WHITE
+# valley mist (high preset): a low volumetric fog slab that follows the camera and settles into low ground at
+# dawn and late evening. Only drawn inside the volumetric fog range, so it costs nothing elsewhere.
+var _mist: FogVolume
+var _mist_mat: FogMaterial
+const MIST_DEPTH := 80.0       # world units above the lowest nearby ground: hollows and valleys fill, ridges stay clear
+const MIST_DENSITY := 0.0022
+var _mist_base: float = 0.0
+var _mist_acc: float = 1.0
+var _terrain: Node
 
 
 func _ready() -> void:
@@ -124,6 +133,18 @@ func _build_nodes() -> void:
 	world_env = WorldEnvironment.new()
 	world_env.environment = environment
 	add_child(world_env)
+	_mist_mat = FogMaterial.new()
+	_mist_mat.density = 0.0
+	_mist_mat.albedo = Color(0.95, 0.95, 0.97)
+	_mist_mat.height_falloff = 0.025
+	_mist_mat.edge_fade = 0.35
+	_mist = FogVolume.new()
+	_mist.name = "ValleyMist"
+	_mist.shape = RenderingServer.FOG_VOLUME_SHAPE_BOX
+	_mist.size = Vector3(1600.0, MIST_DEPTH + 20.0, 1600.0)
+	_mist.material = _mist_mat
+	_mist.visible = false
+	add_child(_mist)
 	apply_post(GameState.post_fx)
 	var glare := SunGlare.new()
 	glare.name = "SunGlare"
@@ -232,6 +253,16 @@ func _update_haze(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	_update_haze(delta)
+	if _mist != null and _mist.visible:
+		var cam: Camera3D = get_viewport().get_camera_3d()
+		if cam != null:
+			var cp: Vector3 = cam.global_position
+			_mist_acc += delta
+			if _mist_acc >= 0.5:
+				_mist_acc = 0.0
+				var lo: float = _mist_ground_min(cp)
+				_mist_base = lo if absf(lo - _mist_base) > 400.0 else lerpf(_mist_base, lo, 0.25)
+			_mist.global_position = Vector3(cp.x, _mist_base + (MIST_DEPTH - 20.0) * 0.5, cp.z)
 	if time_scale != 0.0:
 		# the sun moves slowly: re-light the sky / fog / HUD clock 5 times a second, not every frame
 		_tick_acc += delta
@@ -245,6 +276,18 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if time_scale != 0.0 and event.is_action_pressed("time_cycle"):
 		cycle_preset()
+
+
+## Lowest ground under and around the camera (5 samples, 700 m out): the mist slab sits on it.
+func _mist_ground_min(cp: Vector3) -> float:
+	if _terrain == null or not is_instance_valid(_terrain):
+		_terrain = get_tree().get_first_node_in_group("terrain")
+	if _terrain == null or not _terrain.has_method("get_height_at"):
+		return 0.0
+	var lo: float = _terrain.call("get_height_at", cp)
+	for o: Vector3 in [Vector3(700, 0, 0), Vector3(-700, 0, 0), Vector3(0, 0, 700), Vector3(0, 0, -700)]:
+		lo = minf(lo, _terrain.call("get_height_at", cp + o))
+	return maxf(lo, 0.0) - 10.0
 
 
 func set_preset(preset_name: String) -> void:
@@ -358,6 +401,13 @@ func _apply() -> void:
 		environment.volumetric_fog_albedo = Color(0.92, 0.94, 1.0).lerp(lc, 0.45 * low).lerp(Color(0.62, 0.56, 0.48), 0.35 * haze_k * day_k)
 		environment.volumetric_fog_anisotropy = 0.65 + 0.2 * low
 		sun.light_volumetric_fog_energy = 1.0 + 0.8 * low
+	if _mist != null:
+		var dawn: float = smoothstep(4.8, 5.8, hour) * (1.0 - smoothstep(7.6, 9.2, hour))
+		var dusk: float = smoothstep(16.6, 17.8, hour) * (1.0 - smoothstep(19.2, 20.5, hour))
+		var mist_k: float = maxf(dawn, dusk * 0.7) * clampf(fog_mul, 0.6, 1.6)
+		_mist_mat.density = MIST_DENSITY * mist_k
+		_mist_mat.albedo = Color(0.95, 0.95, 0.97).lerp(lc, 0.35 * clampf(sun_e, 0.0, 1.0))
+		_mist.visible = environment.volumetric_fog_enabled and mist_k > 0.01
 	var haze_day: float = haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0)
 	environment.fog_density = (FOG_GAIN if ng_light else 1.0) * (float(s[9]) + FOG_DENSITY_BASE) * fog_mul * (1.0 + HAZE_FOG_MUL * haze_day) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
 	sun_color = lc

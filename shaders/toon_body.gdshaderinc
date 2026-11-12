@@ -50,6 +50,33 @@ void vertex() {
 	obj_p = VERTEX;
 	strip_wl = vec2(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[2].xyz));
 	w_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+#ifdef NG_REAL
+	// Wind sway for foliage (trees, hedges): a slow crown lean plus a quick leaf flutter, both growing with
+	// height above the instance origin and phased per instance so a wood never moves in step. Faded out
+	// past 1.5 km where it would only shimmer. The displacement is applied in world space and mapped back.
+	if (detail_mode == 3) {
+		vec3 org = MODEL_MATRIX[3].xyz;
+		float cam_d = length(org - CAMERA_POSITION_WORLD);
+		float fade = 1.0 - smoothstep(900.0, 1500.0, cam_d);
+		if (fade > 0.0) {
+			float h = clamp(w_pos.y - org.y, 0.0, 15.0);
+			float hk = h / 15.0;
+			vec2 cell = mod(floor(org.xz), 997.0);
+			float ph = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453) * 6.2832;
+			vec2 wdir = vec2(0.8, 0.6);
+			float t = TIME;
+			float lean = sin(t * 1.15 + ph) * 0.6 + sin(t * 0.73 + ph * 1.7) * 0.4;
+			lean = (lean * 0.5 + 0.55) * 0.25 * hk * hk;
+			vec3 lp = mod(w_pos, 97.0);
+			float fl = sin(t * 7.3 + dot(lp, vec3(1.7, 2.3, 1.9)) + ph) * 0.04 * hk;
+			vec3 off = vec3(wdir.x * lean, 0.0, wdir.y * lean) + vec3(fl * 0.6, fl * 0.5, -fl * 0.4);
+			off *= fade;
+			w_pos += off;
+			mat3 inv_m = inverse(mat3(MODEL_MATRIX));
+			VERTEX += inv_m * off;
+		}
+	}
+#endif
 	w_nrm = normalize(mat3(MODEL_MATRIX) * NORMAL);
 }
 
