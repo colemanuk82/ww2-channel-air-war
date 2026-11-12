@@ -11,6 +11,7 @@ extends RefCounted
 ## Outlines can be toggled globally with GameState.toggle_outlines().
 
 const TOON_SHADER_PATH := "res://shaders/toon.gdshader"
+const TOON_REAL_SHADER_PATH := "res://shaders/toon_real.gdshader"   # realistic scenery (GameState.realistic_scenery)
 const OUTLINE_SHADER_PATH := "res://shaders/outline.gdshader"
 const GLASS_SHADER_PATH := "res://shaders/canopy_glass.gdshader"
 
@@ -21,7 +22,7 @@ static var _glass_shader: Shader
 
 static func toon_shader() -> Shader:
 	if _toon_shader == null:
-		_toon_shader = load(TOON_SHADER_PATH) as Shader
+		_toon_shader = load(TOON_REAL_SHADER_PATH if GameState.realistic_scenery else TOON_SHADER_PATH) as Shader
 	return _toon_shader
 
 
@@ -90,7 +91,8 @@ static func make_toon(color: Color, opts: Dictionary = {}) -> ShaderMaterial:
 	if opts.has("ramp"):
 		m.set_shader_parameter("ramp_tex", opts["ramp"])
 		m.set_shader_parameter("use_ramp_tex", true)
-	if opts.get("outline", true):
+	# realistic scenery has no ink outlines (and saves the outline draw pass on every tree and house)
+	if opts.get("outline", true) and not GameState.realistic_scenery:
 		m.next_pass = make_outline(opts.get("outline_thickness", 0.03), opts.get("outline_color", Color(0.04, 0.04, 0.06)))
 	return m
 

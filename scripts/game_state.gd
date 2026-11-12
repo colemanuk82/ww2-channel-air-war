@@ -62,6 +62,7 @@ var player_side: String = "Allies"
 var era_date: String = ""          # ISO date of the current mission / campaign day ("" = no date): decides which airfields are liberated
 var quality: int = 1  # 0 low, 1 medium, 2 high
 var shadows_enabled: bool = true
+var realistic_scenery: bool = true   # realistic (default) or classic cartoon scenery: toon_real vs toon shader, no ink outlines; applies on the next launch
 var msaa_level: int = 2      # 0 = off, 2 = 2x, 4 = 4x
 var post_fx: int = 2         # post effects: 0 off, 1 medium (filmic tonemap, bloom, grade), 2 high (adds ambient occlusion, sun scatter)
 var view_distance: int = 1   # 0 near, 1 normal, 2 far
@@ -216,6 +217,7 @@ func _load_settings() -> void:
 		return
 	outlines_enabled = cf.get_value("gfx", "outlines", outlines_enabled)
 	shadows_enabled = cf.get_value("gfx", "shadows", shadows_enabled)
+	realistic_scenery = cf.get_value("gfx", "realistic_scenery", realistic_scenery)
 	msaa_level = int(cf.get_value("gfx", "msaa", msaa_level))
 	post_fx = int(cf.get_value("gfx", "post_fx", post_fx))
 	quality = int(cf.get_value("gfx", "quality", quality))
@@ -319,6 +321,7 @@ func save_settings() -> void:
 	var cf := ConfigFile.new()
 	cf.set_value("gfx", "outlines", outlines_enabled)
 	cf.set_value("gfx", "shadows", shadows_enabled)
+	cf.set_value("gfx", "realistic_scenery", realistic_scenery)
 	cf.set_value("gfx", "msaa", msaa_level)
 	cf.set_value("gfx", "post_fx", post_fx)
 	cf.set_value("gfx", "quality", quality)
@@ -545,6 +548,8 @@ func set_graphic(key: String, value: Variant) -> void:
 			outlines_enabled = bool(value)
 		"shadows":
 			shadows_enabled = bool(value)
+		"realistic_scenery":
+			realistic_scenery = bool(value)
 		"player_heal":
 			player_heal = bool(value)
 		"pitch_ladder":

@@ -288,6 +288,7 @@ func _test_shaders() -> void:
 	print("-- shaders")
 	var want := {
 		"res://shaders/toon.gdshader": ["albedo", "detail_mode", "gloss", "patch_color", "underside_color"],
+		"res://shaders/toon_real.gdshader": ["albedo", "detail_mode", "gloss", "patch_color", "underside_color"],
 		"res://shaders/canopy_glass.gdshader": ["tint", "opacity", "rim_amount", "glint"],
 		"res://shaders/outline.gdshader": ["thickness", "outline_color"],
 		"res://shaders/team_outline.gdshader": ["outline_color", "fade_start"],
@@ -296,8 +297,12 @@ func _test_shaders() -> void:
 		var sh: Shader = load(path) as Shader
 		if not _check(sh != null, "loads %s" % path):
 			continue
+		# the toon shaders keep their body in an #include, so ask the compiled shader for its uniforms
+		var names: Array = []
+		for info in sh.get_shader_uniform_list():
+			names.append(String(info["name"]))
 		for u in want[path]:
-			_check(sh.code.contains(String(u)), "%s declares uniform %s" % [path, u])
+			_check(names.has(String(u)) or sh.code.contains(String(u)), "%s declares uniform %s" % [path, u])
 
 
 # ------------------------------------------------------------------ mesh helpers
