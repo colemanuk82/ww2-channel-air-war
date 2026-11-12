@@ -230,7 +230,7 @@ void fragment() {
 	step_m *= lod_k;
 	// Large on-screen clouds get a higher floor: the old 8-step floor left visible dithering along
 	// their silhouettes at night, while tiny distant clouds can still use the coarse path.
-	int min_steps = angular > 0.02 ? 24 : (angular > 0.008 ? 16 : 8);
+	int min_steps = angular > 0.06 ? 40 : (angular > 0.02 ? 24 : (angular > 0.008 ? 16 : 8));   // big near clouds: enough steps to stay solid, not a grainy see-through ghost
 	int steps = int(clamp(span_m / (step_m * step_k), float(min_steps), float(max_steps)));
 	float dt = (t1 - t0) / float(steps);
 	float jitter = t_hash12(FRAGCOORD.xy);
@@ -243,7 +243,7 @@ void fragment() {
 	float phase = mix(hg(cs * -1.0 * -1.0, -0.25), hg(cs, 0.66), 0.16) * 0.95;
 	float ty = ctype;
 	float tm = ty < 0.5 ? 1.0 : (ty < 1.5 ? 1.3 : (ty < 2.5 ? 0.75 : (ty < 3.5 ? 0.32 : (ty < 4.5 ? 0.55 :
-		(ty < 5.5 ? 0.8 : (ty < 6.5 ? 0.9 : (ty < 7.5 ? 0.35 : (ty < 8.5 ? 1.15 : 0.7))))))));
+		(ty < 5.5 ? 0.8 : (ty < 6.5 ? 0.9 : (ty < 7.5 ? 0.35 : (ty < 8.5 ? 1.6 : 0.7))))))));
 	bool thin_hi = (ty > 2.5 && ty < 3.5) || (ty > 6.5 && ty < 7.5);     // cirrus, cirrocumulus
 	// storm cells: towering clouds that bring the torrential rain are denser and much darker underneath
 	float stormy = (ty > 0.5 && ty < 1.5) ? smoothstep(storm_frac, storm_frac - 0.02, rseed) : 0.0;

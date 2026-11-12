@@ -55,9 +55,9 @@ func update(delta: float, puffs: FXParticles) -> bool:
 		Kind.BLAZE:
 			interval = 0.1
 		Kind.PLUME:
-			interval = 0.2
+			interval = 0.11     # dense enough that the puffs overlap into one column, not a string of beads
 		Kind.PILLAR:
-			interval = 0.2
+			interval = 0.11
 	_acc += delta
 	var loops: int = 0
 	while _acc >= interval and loops < 4:
@@ -111,12 +111,12 @@ func _emit(p: Vector3, puffs: FXParticles, fade: float) -> void:
 		Kind.PLUME:
 			# tall, wide black column that leans with the wind and thins into the haze
 			if smoke_on:
-				puffs.spawn(p + _jit(s * 0.4), drift + Vector3(0.0, 6.0 + 0.9 * s, 0.0) + _jit(0.8), 22.0, s * 1.4, s * 8.5,
+				puffs.spawn(p + _jit(s * 0.4), drift + Vector3(0.0, 6.0 + 0.9 * s, 0.0) + _jit(0.8), 22.0, s * 1.6, s * 10.5,
 					Color(0.06, 0.055, 0.055, 0.9 * fade), Color(0.22, 0.21, 0.21, 0.0), 1.0, 0.0, 0.1)
 		Kind.PILLAR:
 			# a tall, narrow, near-black column that climbs a kilometre or more, leans with the wind and thins out at the top
 			if smoke_on:
-				puffs.spawn(p + _jit(s * 0.12) * Vector3(1, 0.2, 1), drift * 0.35 + Vector3(0.0, 22.0 + s * 0.6, 0.0) + _jit(0.5), 44.0, s * 0.55, s * 2.9,
+				puffs.spawn(p + _jit(s * 0.12) * Vector3(1, 0.2, 1), drift * 0.35 + Vector3(0.0, 22.0 + s * 0.6, 0.0) + _jit(0.5), 44.0, s * 0.75, s * 4.0,
 					Color(0.035, 0.033, 0.036, 0.97 * fade), Color(0.17, 0.17, 0.18, 0.0), 1.0, 0.0, 0.04)
 			if aux != null and _tick % 2 == 0:
 				aux.spawn(p + _jit(s * 0.2) * Vector3(1, 0.3, 1), Vector3(0.0, s * 1.6, 0.0) + _jit(s * 0.25), 0.8, s * 0.55, s * 0.18,

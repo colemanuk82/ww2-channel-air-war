@@ -87,7 +87,7 @@ func _build_nodes() -> void:
 	sun.directional_shadow_split_2 = 0.14
 	sun.directional_shadow_split_3 = 0.40
 	sun.directional_shadow_fade_start = 0.85
-	sun.shadow_blur = 1.4
+	sun.shadow_blur = 0.7
 	sun.directional_shadow_blend_splits = true
 	sun.shadow_bias = 0.03
 	sun.shadow_normal_bias = 2.0
@@ -333,6 +333,9 @@ func _apply() -> void:
 	if ng_light:
 		sun_e *= SUN_GAIN
 		amb_e *= AMB_GAIN
+		# golden hour: a low sun grazes flat fields (N.L ~ 0.2-0.3), which left them a muddy olive. Push the sun
+		# up as it sinks so lit ground glows warm against crisp shadows (the ambient is left alone).
+		sun_e *= 1.0 + 1.5 * smoothstep(0.45, 0.12, sun_dir.y) * smoothstep(0.0, 0.06, sun_dir.y)
 
 	sun.light_color = lc
 	sun.light_energy = sun_e

@@ -203,7 +203,10 @@ void fragment() {
 
 	// How pastoral this enclosure is: low cells and pasture districts stay grass.
 	float pasture_w = clamp((1.0 - smoothstep(0.22, 0.60, cell_h)) * 0.75 + regional_pasture * 0.45 + 0.35 * r_boc + 0.30 * r_pold - 0.35 * r_open + pasture_bias, 0.0, 1.0);
-	vec3 field = mix(arable, pasture, pasture_w);
+	// each enclosure is clearly one thing - pasture, crop, stubble or plough - not a muddy average of them, so the
+	// patchwork reads field by field (a share of arable even in the bocage), with its own brightness
+	pasture_w = smoothstep(0.38, 0.62, pasture_w + (fh2 - 0.5) * 0.55 - 0.10 * r_boc);
+	vec3 field = mix(arable, pasture, pasture_w) * (0.88 + 0.24 * fh3);
 	// occasional whole field of oilseed rape, only where farming is arable
 	float rape = step(0.92, fh3) * (1.0 - regional_pasture) * (1.0 - pasture_w);
 	field = mix(field, rape_col * (0.95 + 0.10 * fh2), rape);
@@ -211,20 +214,16 @@ void fragment() {
 	field = mix(mix(grass_a, grass_b, region), field, field_variation);
 	// within-field texture: finer mottled canopy instead of a flat fill
 	float micro = t_vnoise2(xz * 0.42 + fh2 * 40.0) * 0.5 + t_vnoise2(xz * 0.11 + 9.0) * 0.35 + t_vnoise2(xz * 1.1 + fh3 * 10.0) * 0.15;
-	field *= 1.0 + (micro - 0.5) * 0.22 * detail_strength;
+	field *= 1.0 + (micro - 0.5) * 0.32 * detail_strength;
 
 	// hedgerow / headland shading along the cell boundaries (subtle linear feature, not a hard step)
-	float hedge_w = 0.010 + 0.03 * r_boc + 0.012 * r_weald;
-	float hedge = 1.0 - smoothstep(hedge_w, 0.040 + 0.055 * r_boc + 0.02 * r_weald, edge);   // bocage banks and Weald shaw edges read stronger
-	// hedgerow trees: the line swells into round crowns at irregular intervals (oak and ash standards), so a
-	// hedge reads as a living tree line from the air, not a ruled stroke
-	float hrow_t = smoothstep(0.58, 0.74, t_vnoise2(xz * 0.075 + 41.0)) * (1.0 - 0.85 * r_open);
-	float hedge_tr = 1.0 - smoothstep(hedge_w * 2.4 + 0.012, (0.060 + 0.07 * r_boc) * 1.6, edge);
-	hedge = max(hedge, hedge_tr * hrow_t);
+	// thin and subtle: the 3D hedge rows (Scatter._trace_hedge_row) carry the boundary; the paint is only the bank
+	// and the shaded verge under them, so the farmland never reads as a dark web painted on the ground
+	float hedge_w = 0.005 + 0.010 * r_boc + 0.006 * r_weald;
+	float hedge = 1.0 - smoothstep(hedge_w, 0.020 + 0.022 * r_boc + 0.010 * r_weald, edge);
 	vec3 hedge_tone = mix(hedge_col * (0.78 - 0.18 * r_boc), hedge_col * 1.05, smoothstep(0.55, 0.85, t_vnoise2(xz * 0.02 + 13.0)) * (0.3 + 0.3 * r_boc));
-	hedge_tone *= 0.80;     // a hedge is mostly leaf in its own shade: darker than any field
 	vec3 bound_col = mix(hedge_tone, vec3(0.035, 0.050, 0.060), r_pold);   // polder: water-filled ditches
-	float hedge_k = hedge * (0.90 + 0.08 * r_boc + 0.02 * r_weald) * (1.0 - 0.80 * r_open);
+	float hedge_k = hedge * (0.62 + 0.10 * r_boc + 0.04 * r_weald) * (1.0 - 0.80 * r_open);
 	field = mix(field, bound_col, hedge_k);
 	// Woodland: under real forest cover there are no fields - no patchwork colours, hedge lines or drill marks,
 	// only a dark mottled canopy ground, with a noise-broken edge so the wood margin is not a ruled curve.

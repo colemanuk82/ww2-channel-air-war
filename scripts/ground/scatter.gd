@@ -253,7 +253,7 @@ static func tree_mesh(round_tree: bool) -> ArrayMesh:
 		_bushy(parts, Vector3(0, 6.6, 0), 3.0, 5, Color(0.24, 0.36, 0.15), 11)
 	else:
 		_bushy(parts, Vector3(0, 6.4, 0), 2.8, 5, Color(0.15, 0.31, 0.18), 12)
-	var m: ArrayMesh = _merge(parts)
+	var m: ArrayMesh = _merge(_clusterize(parts, 501 if round_tree else 502))
 	_meshes[key] = m
 	return m
 
@@ -408,7 +408,7 @@ static func tree_variant(v: int) -> ArrayMesh:
 		elif main_mesh is CylinderMesh:
 			rad = (main_mesh as CylinderMesh).bottom_radius * 0.8
 		_bushy(parts, ctr, rad, 5, _calm(crown[0][2]), 31 + v)
-	var m: ArrayMesh = _merge(parts)
+	var m: ArrayMesh = _merge(_clusterize(parts, 600 + v))
 	_meshes[key] = m
 	return m
 
@@ -513,20 +513,100 @@ static func hedge_mesh() -> ArrayMesh:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20260508
 	var base: Color = Color(0.25, 0.34, 0.18)
-	var n: int = 9
+	# two staggered rows of clumps of mixed size, a few pushed up as taller bushes (hawthorn, hazel, holly), so the
+	# top line and the sides are ragged rather than an extruded tube
+	var n: int = 16
 	for i in n:
-		var t: float = (float(i) + 0.5) / float(n)
-		var r: float = rng.randf_range(0.34, 0.50)
+		var t: float = (float(i) + rng.randf_range(0.2, 0.8)) / float(n)
+		var r: float = rng.randf_range(0.26, 0.52)
+		var tall: bool = rng.randf() < 0.25
 		var sm := SphereMesh.new()
 		sm.radius = r
-		sm.height = r * 1.9
-		sm.radial_segments = 6
-		sm.rings = 3
-		var off: Vector3 = Vector3(t - 0.5, rng.randf_range(-0.06, 0.06), rng.randf_range(-0.16, 0.16))
-		parts.append([sm, Transform3D(Basis.IDENTITY, off), _dmat(base * rng.randf_range(0.84, 1.16), 3, 0.0, false)])
+		sm.height = r * (2.4 if tall else 1.7)
+		sm.radial_segments = 7
+		sm.rings = 4
+		var y: float = rng.randf_range(-0.14, 0.04) + (0.12 if tall else 0.0)
+		var off: Vector3 = Vector3(t - 0.5, y, (0.14 if i % 2 == 0 else -0.14) + rng.randf_range(-0.10, 0.10))
+		parts.append([sm, Transform3D(Basis.IDENTITY, off), _dmat(base * rng.randf_range(0.72, 1.22), 3, 0.0, false)])
 	var m: ArrayMesh = _merge(parts)
 	_meshes["hedge"] = m
 	return m
+
+
+## Realistic look: a sphere with a noisy surface (vertices pushed in and out by a smooth 3D pattern), so a leaf
+## clump has an irregular silhouette instead of a clean low-poly ball. Deterministic in position, so the seam
+## vertices of the sphere move together and nothing cracks.
+static func _lumpy_sphere(radius: float, height: float, seg: int, rings: int, seed_v: float) -> ArrayMesh:
+	var key: String = "lumpy_%.2f_%.2f_%d_%d_%.1f" % [radius, height, seg, rings, seed_v]
+	if _meshes.has(key):
+		return _meshes[key]
+	var sm := SphereMesh.new()
+	sm.radius = radius
+	sm.height = height
+	sm.radial_segments = seg
+	sm.rings = rings
+	var arr: Array = sm.get_mesh_arrays()
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	for i in v.size():
+		var q: Vector3 = v[i] / maxf(radius, 0.01)
+		var k: float = 1.0 + 0.20 * sin(q.x * 3.1 + seed_v) * sin(q.y * 2.7 + seed_v * 1.3) * sin(q.z * 3.7 + seed_v * 0.7) \
+			+ 0.10 * sin(q.x * 7.3 + q.z * 5.1 + seed_v * 2.1)
+		v[i] = v[i] * k
+	arr[Mesh.ARRAY_VERTEX] = v
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	_meshes[key] = m
+	return m
+
+
+## Realistic look: replace each smooth foliage ball (and conifer cone) in a tree's parts with a cluster of noisy
+## leaf clumps filling the same volume - bigger in the core, smaller and more scattered at the edge, each a
+## slightly different green - so crowns read as foliage masses with ragged outlines, not lollipops and cones.
+static func _clusterize(parts: Array, seed_v: int) -> Array:
+	if not GameState.realistic_scenery:
+		return parts
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_v
+	var out: Array = []
+	for p in parts:
+		var mesh: Mesh = p[0]
+		var xf: Transform3D = p[1]
+		var mat: Material = p[2]
+		var dm: Variant = (mat as ShaderMaterial).get_shader_parameter("detail_mode") if mat is ShaderMaterial else null
+		var is_leaf: bool = dm != null and int(dm) == 3
+		if not is_leaf:
+			out.append(p)
+			continue
+		var col: Color = (mat as ShaderMaterial).get_shader_parameter("albedo")
+		var rx: float = 0.0
+		var ry: float = 0.0
+		var cone: bool = false
+		if mesh is SphereMesh:
+			rx = (mesh as SphereMesh).radius
+			ry = (mesh as SphereMesh).height * 0.5
+		elif mesh is CylinderMesh and (mesh as CylinderMesh).bottom_radius > 1.0:
+			rx = (mesh as CylinderMesh).bottom_radius
+			ry = (mesh as CylinderMesh).height * 0.5
+			cone = true
+		if rx < 1.2:
+			out.append(p)
+			continue
+		var n: int = clampi(int(rx * 3.2), 6, 15)
+		for i in n:
+			# a point inside the ellipsoid (or cone), biased outward so the surface is covered
+			var u: float = pow(rng.randf(), 0.45)
+			var a: float = rng.randf() * TAU
+			var yy: float = rng.randf_range(-1.0, 1.0)
+			var rr: float = sqrt(maxf(0.0, 1.0 - yy * yy)) * u
+			if cone:
+				rr *= clampf(0.5 - yy * 0.5, 0.15, 1.0)    # narrower toward the tip
+			var off := Vector3(cos(a) * rr * rx * 0.78, yy * ry * 0.78, sin(a) * rr * rx * 0.78)
+			var cr: float = rx * lerpf(0.52, 0.30, u) * rng.randf_range(0.85, 1.15)
+			var lm: ArrayMesh = _lumpy_sphere(snappedf(cr, 0.1), snappedf(cr * rng.randf_range(1.5, 1.9), 0.1), 7, 4, float(rng.randi() % 7))
+			var c2: Color = col * rng.randf_range(0.80, 1.18)
+			c2 = c2.lerp(Color(c2.r * 1.1, c2.g * 1.05, c2.b * 0.8), 0.3 * float(yy > 0.3))    # sunlit top a touch yellower
+			out.append([lm, Transform3D(Basis.IDENTITY, xf.origin + xf.basis * off), _dmat(Color(c2.r, c2.g, c2.b), 3, 0.1)])
+	return out
 
 
 ## Adds a ring of small leafy lobes around a crown mass, so a tree has a ragged bushy silhouette.
@@ -1386,6 +1466,10 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 	var farms_n: int = 0
 	var step: float = 22.0
 	var n: int = int(ceil(cell / step)) + 1
+	# field boundaries already traced into continuous hedge rows in this tile (eid -> true), plus the tile rect so
+	# a row stops at the tile edge (the neighbouring tile traces its own part)
+	var traced: Dictionary = {"_rect": Rect2(origin, Vector2(cell, cell))}
+	var street_rows: Dictionary = {}     # realistic towns: street-grid row slots already built in this tile
 	for j in n:
 		for i in n:
 			var p := Vector2(origin.x + (float(i) + rng.randf()) * step, origin.y + (float(j) + rng.randf()) * step)
@@ -1408,7 +1492,7 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 					if trees_c.size() + trees_r.size() < 6000 and rng.randf() < 0.2 and _ok_tree(p, exclude):
 						_add_tree(trees_c, trees_r, p, rng, 0.85, 1.25)
 				40:                                   # cropland: hedges and trees follow the field boundaries
-					_field_edge_props(p, exclude, hedges, trees_c, trees_r, rng, 0.9)
+					_field_edge_props(p, exclude, hedges, trees_c, trees_r, rng, 0.9, traced)
 					if farms_n < 3 and rng.randf() < 0.0007 and _add_farmstead(p, exclude, houses, trees_c, trees_r, rng):
 						farms_n += 1
 					if trees_c.size() + trees_r.size() < 9000 and rng.randf() < 0.008 and _ok_tree(p, exclude):
@@ -1434,7 +1518,7 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 					if rng.randf() < 0.075 and _built_near(p, 80.0) and _ok(p, exclude, 1.4):
 						_add_house(houses, p, rng, house_yaw + rng.randf_range(-0.9, 0.9))
 				30:                                   # grassland
-					_field_edge_props(p, exclude, hedges, trees_c, trees_r, rng, 0.45)
+					_field_edge_props(p, exclude, hedges, trees_c, trees_r, rng, 0.45, traced)
 					if farms_n < 3 and rng.randf() < 0.0004 and _add_farmstead(p, exclude, houses, trees_c, trees_r, rng):
 						farms_n += 1
 					if trees_c.size() + trees_r.size() < 9000 and rng.randf() < 0.022 and _ok_tree(p, exclude):
@@ -1455,7 +1539,10 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 							_add_tree(trees_c, trees_r, p, rng, 1.0, 1.5)
 					else:
 						var edge_f: float = _built_frac(p)
-						if rng.randf() < 0.88 * (0.45 + 0.55 * edge_f) and _ok(p, exclude, 1.2):
+						if GameState.realistic_scenery:
+							if rng.randf() < 0.95 * (0.5 + 0.5 * edge_f):
+								_add_street_row(houses, p, rng, house_yaw, street_rows, exclude)
+						elif rng.randf() < 0.88 * (0.45 + 0.55 * edge_f) and _ok(p, exclude, 1.2):
 							# the town's rows bend and merge with the next block instead of running dead straight
 							var yaw_j: float = house_yaw + (_vn(p.x * 0.0035 + 71.0, p.y * 0.0035 + 71.0) - 0.5) * 1.1 + rng.randf_range(-0.05, 0.05)
 							_add_terrace(houses, p, rng, yaw_j)
@@ -1842,6 +1929,56 @@ static func _add_terrace(lists: Array, p: Vector2, rng: RandomNumberGenerator, y
 		lst.append(_xf(Vector3(q.x, y, q.y), a, Vector3(unit_w * 1.02, h, depth)))
 
 
+const STREET_BLOCK: float = 34.0     # street (8 m) + front row + back yards + back row, across the street grid
+const STREET_SEG: float = 26.0       # one terrace slot along the street
+const CROSS_EVERY: float = 130.0     # a cross street every ~130 m
+
+
+## Realistic towns: built-up land laid out on a street grid instead of jittered sample points. The grid's angle is
+## constant inside each ~420 m district (so neighbouring rows line up) and changes between districts; each block
+## is a street, a row of terraced houses facing it, back yards, and the next row facing the next street. Cross
+## streets cut the rows every ~130 m, so streets and junctions show from the air. Each slot is built once.
+static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator, base_yaw: float, done: Dictionary, exclude: Array) -> void:
+	var dc := Vector2i(floori(p.x / 420.0), floori(p.y / 420.0))
+	var a: float = _fh(float(dc.x) + 3.0, float(dc.y) + 7.0) * PI     # by district, not by tile, so tiles agree
+	var along := Vector2(cos(a), -sin(a))
+	var across := Vector2(-along.y, along.x)
+	var org := Vector2(dc.x * 420.0, dc.y * 420.0)
+	var u: float = (p - org).dot(along)
+	var v: float = (p - org).dot(across)
+	var bi: float = floorf(v / STREET_BLOCK)
+	var fv: float = v - bi * STREET_BLOCK
+	if fv < 8.0:
+		return                                            # the street itself
+	var row: int = 0 if fv < 21.0 else 1
+	var v_c: float = bi * STREET_BLOCK + (12.5 if row == 0 else 29.5)
+	var si: float = floorf(u / STREET_SEG)
+	var u_c: float = (si + 0.5) * STREET_SEG
+	if fposmod(u_c, CROSS_EVERY) < STREET_SEG:
+		return                                            # a cross street / square
+	var key := Vector4i(dc.x, dc.y, int(bi) * 2 + row, int(si))
+	if done.has(key):
+		return
+	done[key] = true
+	var c: Vector2 = org + along * u_c + across * v_c
+	if not _ok(c, exclude, 1.2):
+		return
+	var unit_w: float = rng.randf_range(5.6, 7.4)
+	var n: int = int(floorf((STREET_SEG - 2.0) / unit_w))
+	var depth: float = rng.randf_range(7.5, 9.5)
+	var base_h: float = rng.randf_range(6.5, 10.0)
+	var lst: Array = lists[rng.randi() % 4]
+	var start: Vector2 = c - along * unit_w * float(n - 1) * 0.5
+	var face: float = a + (0.0 if row == 0 else PI)          # each row faces its own street
+	for i in n:
+		var q: Vector2 = start + along * unit_w * float(i)
+		if not _land(q.x, q.y, 1.2) or RoadMesh.near_road(q, depth * 0.6):
+			continue
+		var h: float = base_h + rng.randf_range(-0.6, 0.6)
+		var y: float = GroundKit.ground_y(q.x, q.y) + h * 0.5 - 0.4
+		lst.append(_xf(Vector3(q.x, y, q.y), face, Vector3(unit_w * 1.02, h, depth)))
+
+
 # ------------------------------------------------------------------ field boundaries (mirrors shaders/terrain.gdshader)
 const FIELD_CELL: float = 190.0      # = terrain.gdshader field_cell (it was 62 vs the shader's 124: the hedges missed the painted boundaries)
 
@@ -1996,7 +2133,7 @@ const HEDGE_OPEN_PCT: int = 40     # share of field boundaries without a hedge r
 const LIVESTOCK: bool = false       # cattle in the fields (removed: read as white blobs from the air)
 
 
-static func _field_edge_props(p: Vector2, exclude: Array, hedges: Array, trees_c: Array, trees_r: Array, rng: RandomNumberGenerator, density: float) -> void:
+static func _field_edge_props(p: Vector2, exclude: Array, hedges: Array, trees_c: Array, trees_r: Array, rng: RandomNumberGenerator, density: float, traced: Dictionary = {}) -> void:
 	if rng.randf() > density:
 		return
 	var e: Dictionary = field_edge(p)
@@ -2020,6 +2157,12 @@ static func _field_edge_props(p: Vector2, exclude: Array, hedges: Array, trees_c
 			if _ok_tree(qq, exclude):
 				_add_tree(trees_c, trees_r, qq, rng, 0.9, 1.25)     # poplar / willow line along a polder ditch
 		return     # an open boundary (post-and-wire, ditch or grubbed out): no hedge row, no hedgerow trees
+	if traced.has("_rect"):
+		var eid_k: int = int(e["eid"])
+		if not traced.has(eid_k):
+			traced[eid_k] = true
+			_trace_hedge_row(e, exclude, hedges, trees_c, trees_r, rng, traced["_rect"])
+		return
 	var q: Vector2 = e["q"]
 	if q.distance_to(p) > 15.0 or not _ok(q, exclude, 1.6) or GroundKit.ground_y(q.x, q.y) > 350.0:
 		return
@@ -2048,6 +2191,48 @@ static func _field_edge_props(p: Vector2, exclude: Array, hedges: Array, trees_c
 		var tp: Vector2 = q + tg * rng.randf_range(-half, half) + Vector2(-tg.y, tg.x) * rng.randf_range(-2.5, 2.5)
 		if _ok_tree(tp, exclude):
 			_add_tree(trees_c, trees_r, tp, rng, 0.9, 1.3)
+
+
+const HEDGE_STEP: float = 12.0     # length of one traced hedge segment (m)
+
+
+## Walks one field boundary (one pair of fields) in both directions from the point found, laying a continuous
+## hedge row of short segments that follow the painted boundary, each a little different in height and width
+## so the row reads lumpy, with hedgerow trees (oak/ash standards) at irregular intervals. Stops where the
+## boundary ends (another pair of fields), wanders off the line, or leaves the tile.
+static func _trace_hedge_row(e: Dictionary, exclude: Array, hedges: Array, trees_c: Array, trees_r: Array, rng: RandomNumberGenerator, rect: Rect2) -> void:
+	var rgw: Vector4 = e.get("region", Vector4.ZERO)
+	var boc: bool = rgw.x > 0.5
+	var eid: int = int(e["eid"])
+	var tree_p: float = 0.30 if boc else (0.22 if rgw.w > 0.5 else 0.14)
+	var start: Vector2 = e["q"]
+	for sgn in [1.0, -1.0]:
+		var prev: Vector2 = start
+		var tg: Vector2 = (e["tan"] as Vector2) * sgn
+		for k in 40:
+			var guess: Vector2 = prev + tg * HEDGE_STEP
+			if not rect.has_point(guess):
+				break
+			var pe: Dictionary = field_edge(guess)
+			if pe.is_empty() or int(pe["eid"]) != eid or float(pe["dist"]) > 3.0:
+				break
+			var cur: Vector2 = pe["q"]
+			var seg: Vector2 = cur - prev
+			var ln: float = seg.length()
+			if ln < 2.0:
+				break
+			tg = seg / ln
+			var mid: Vector2 = (prev + cur) * 0.5
+			prev = cur
+			if not _ok(mid, exclude, 1.6) or GroundKit.ground_y(mid.x, mid.y) > 350.0:
+				continue
+			var hh: float = (4.2 if boc else 2.8) * rng.randf_range(0.78, 1.22)
+			var ww: float = (3.6 if boc else 2.4) * rng.randf_range(0.85, 1.2)
+			hedges.append(_xf(Vector3(mid.x, GroundKit.ground_y(mid.x, mid.y) + hh * 0.5, mid.y), -atan2(tg.y, tg.x), Vector3(ln + 1.5, hh, ww)))
+			if trees_c.size() + trees_r.size() < 9000 and rng.randf() < tree_p:
+				var tp: Vector2 = mid + tg * rng.randf_range(-ln * 0.5, ln * 0.5) + Vector2(-tg.y, tg.x) * rng.randf_range(-1.5, 1.5)
+				if _ok_tree(tp, exclude):
+					_add_tree(trees_c, trees_r, tp, rng, 0.95, 1.45)
 
 
 ## A farmstead on the edge of a field: farmhouse and a big barn round a yard, a shed, and a windbreak of trees on the

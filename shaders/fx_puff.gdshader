@@ -58,7 +58,8 @@ void fragment() {
 	// debris chunks are small; anything bigger than a few metres is smoke or a burst, whatever its alpha (big opaque
 	// puffs drew as hard flat polygons across the screen when the aircraft flew close to them)
 	soft_amt = max(soft_amt, smoothstep(3.0, 8.0, v_size));
-	float edge = smoothstep(0.08, 0.85, ndv);      // wide soft rim: a low-poly hull must never show its polygon outline
+	float edge = smoothstep(0.10, 0.95, ndv);      // wide soft rim: a low-poly hull must never show its polygon outline
+	edge *= edge;                                  // (squared: the fade starts well inside the silhouette)
 	vec3 q = ROT_M * v_loc;
 	float lump = vnoise(q * 3.0 + vec3(v_id * 7.31, v_id * 3.17, v_id * 1.93)) * 0.5
 		+ vnoise(q * 7.0 + vec3(v_id * 2.13)) * 0.3
@@ -78,6 +79,10 @@ void fragment() {
 	// right next to the camera a puff fills half the screen as one flat translucent polygon: thin it out (not away -
 	// a close flak burst must still be seen)
 	a *= mix(1.0, mix(0.35, 1.0, smoothstep(40.0, 300.0, dist)), soft_amt);
+	// and never let one puff cover a big part of the screen: fade by its angular size (and when the camera is
+	// almost inside it), so a near burst is a soft cloud at the edge of view, not a grey sheet over half the frame
+	float ang = v_size / max(dist, 1.0);
+	a *= mix(1.0, (1.0 - smoothstep(0.18, 0.55, ang)) * smoothstep(v_size * 0.6, v_size * 2.0, dist), soft_amt);
 	ALBEDO = c;
 	ALPHA = clamp(a, 0.0, 1.0);
 }

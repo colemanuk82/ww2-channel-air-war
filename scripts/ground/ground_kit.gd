@@ -482,15 +482,18 @@ static func fx_call(method: String, args: Array) -> Array:
 	if fx == null or not fx.has_method(method):
 		return [false, null]
 	var n: int = -1
+	var required: int = 0
 	for m in fx.get_method_list():
 		if m["name"] == method:
 			n = (m["args"] as Array).size()
+			required = n - (m["default_args"] as Array).size()
 			break
-	if n < 0 or n > args.size():
-		if n > args.size():
-			return [false, null]
+	# Optional parameters count too: the old test (all parameters must be given) sent every flak burst and
+	# explosion with fewer arguments than FX declares down the fallback path, which drew them as hard-edged
+	# translucent low-poly spheres (the big grey/black polygons crossing the screen).
+	if n < 0 or required > args.size():
 		return [false, null]
-	return [true, fx.callv(method, args.slice(0, n))]
+	return [true, fx.callv(method, args.slice(0, mini(n, args.size())))]
 
 
 static func _scene_parent() -> Node:
@@ -532,7 +535,7 @@ static func explosion(pos: Vector3, size: float = 1.0) -> void:
 
 
 static func flak_burst(pos: Vector3, size: float = 1.0) -> void:
-	var r: Array = fx_call("flak_burst", [pos])
+	var r: Array = fx_call("flak_burst", [pos, size])
 	if r[0]:
 		return
 	var parent: Node = _scene_parent()

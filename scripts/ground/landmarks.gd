@@ -17,8 +17,9 @@ static func church(s: float = 1.0) -> Node3D:
 	roof.material_override = GroundKit.mat(Color(0.3, 0.28, 0.3), true)
 	roof.position = Vector3(0, 9.0, 0)
 	root.add_child(roof)
-	_b(root, Vector3(6, 22, 6), Vector3(0, 11, 12), stone)
-	var spire := GroundKit.cyl(root, 0.0, 4.4, 14.0, Vector3(0, 29.0, 12), Color(0.34, 0.36, 0.4), Vector3.ZERO, 4)
+	# tower and broach spire tall enough (~48 m) to stand over the roofs and punctuate the skyline from the air
+	_b(root, Vector3(6.5, 26, 6.5), Vector3(0, 13, 12), stone)
+	var spire := GroundKit.cyl(root, 0.0, 4.8, 22.0, Vector3(0, 37.0, 12), Color(0.34, 0.36, 0.4), Vector3.ZERO, 4)
 	spire.rotation.y = PI * 0.25
 	root.scale = Vector3.ONE * s
 	return root

@@ -24,40 +24,56 @@ void vertex() {
 	POSITION = PROJECTION_MATRIX * vv;
 }
 
+global uniform vec3 sky_horizon;
+global uniform float night_amount;
+
 void fragment() {
 	float aa = abs(UV.x);
 	float along = UV.y;
 	float dist = length(VERTEX);
 	float cls = COLOR.r;
 
-	// Banded depth across the channel: deeper in the middle, shelving to the banks.
-	vec3 col = mix(deep_col, mid_col, smoothstep(0.0, 0.45, aa));
-	col = mix(col, shallow_col, smoothstep(0.45, 0.85, aa));
-
-	// Flow: two scrolling noise bands down the arc length. Streams are hazier, rivers greener.
+	// Real river water from the air: dark, peaty green-brown where you look into it, and a mirror of the sky at
+	// a grazing angle (fresnel). No painted sparkle dashes - those read as road markings.
+	vec3 deep = vec3(0.040, 0.055, 0.040);
+	vec3 shallow = vec3(0.085, 0.095, 0.060);
+	vec3 col = mix(deep, shallow, smoothstep(0.35, 0.92, aa));
 	float f1 = t_vnoise2(vec2(UV.x * 3.0, along * 0.035 - TIME * scroll_speed));
-	float f2 = t_vnoise2(vec2(UV.x * 7.0 + 11.0, along * 0.09 - TIME * scroll_speed * 2.1));
-	col *= 0.92 + 0.16 * (f1 * 0.6 + f2 * 0.4);
-	col = mix(col, col * vec3(0.90, 1.02, 0.96), 0.12 * (1.0 - cls));
-	// sunward sparkle on the moving ripples
-	col += vec3(0.10, 0.12, 0.09) * smoothstep(0.80, 0.97, f2);
+	float f2 = t_vnoise2(vec2(UV.x * 9.0 + 11.0, along * 0.05 - TIME * scroll_speed * 2.1));
+	col *= 0.90 + 0.20 * f1;
+	// a little more silt in streams
+	col = mix(col, col * vec3(1.15, 1.08, 0.9), 0.3 * (1.0 - cls));
 
-	// Mud / silt bank tint at the ribbon edges (the terrain shows through if the DEM is un-carved).
-	float bank = smoothstep(bank_edge, 1.0, aa);
-	col = mix(col, silt_col, bank * 0.85);
+	// fresnel sky reflection, broken up by the slow ripple pattern
+	// the ribbon is drawn double-sided and its top is the BACK face (Godot flips NORMAL there), which made every
+	// river a full-strength mirror: use world up instead
+	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+	float ndv = clamp(abs(dot(NORMAL, normalize(VIEW))), 0.0, 1.0);
+	float fres = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
+	fres = clamp(fres, 0.0, 0.8) * (0.85 + 0.30 * (f2 - 0.5));
+	vec3 refl = mix(sky_horizon, sky_horizon * vec3(0.78, 0.88, 1.05), 0.4) * (1.0 - 0.85 * night_amount);
 
-	// Distance fade toward the field colour so far rivers stay faint, not graphic strips.
-	col = mix(col, far_col, smoothstep(2500.0, 9000.0, dist) * 0.7);
+	// dark wet mud along both banks, then the grass verge (the terrain shows through the faded edge)
+	float bank = smoothstep(0.76, 1.0, aa);
+	vec3 mud = silt_col * 0.55;
+	col = mix(col, mud, bank * 0.9);
+	fres *= 1.0 - bank;
 
-	float a_water = (1.0 - smoothstep(0.94, 1.0, aa)) * mix(0.94, 0.6, smoothstep(3000.0, 9000.0, dist));
-	float a_bank = (1.0 - smoothstep(0.70, 1.0, aa)) * 0.35 * (1.0 - smoothstep(2500.0, 6000.0, dist));
+	// far rivers stay a quiet sheen, not graphic strips
+	float far = smoothstep(2500.0, 9000.0, dist);
+	col = mix(col, far_col * 0.6, far * 0.4);
+
+	float a_water = (1.0 - smoothstep(0.94, 1.0, aa)) * mix(0.96, 0.7, smoothstep(3000.0, 9000.0, dist));
+	float a_bank = (1.0 - smoothstep(0.70, 1.0, aa)) * 0.45 * (1.0 - smoothstep(2500.0, 6000.0, dist));
 
 	ALBEDO = col;
+	EMISSION = min(refl, vec3(0.75)) * fres * 0.45;
 	ROUGHNESS = 1.0;
+	SPECULAR = 0.0;
 	ALPHA = max(a_water, a_bank);
 }
 
 void light() {
 	float t = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
-	DIFFUSE_LIGHT += (0.40 + toon_band(t) * 0.60) * LIGHT_COLOR / PI;
+	DIFFUSE_LIGHT += (0.35 + 0.65 * t) * LIGHT_COLOR / PI;
 }
