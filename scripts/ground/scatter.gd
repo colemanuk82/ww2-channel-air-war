@@ -1597,7 +1597,7 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 						var edge_f: float = _built_frac(p)
 						if GameState.realistic_scenery:
 							if rng.randf() < 0.95 * (0.5 + 0.5 * edge_f):
-								_add_street_row(houses, p, rng, house_yaw, street_rows, exclude)
+								_add_street_row(houses, p, rng, house_yaw, street_rows, exclude, trees_r)
 						elif rng.randf() < 0.88 * (0.45 + 0.55 * edge_f) and _ok(p, exclude, 1.2):
 							# the town's rows bend and merge with the next block instead of running dead straight
 							var yaw_j: float = house_yaw + (_vn(p.x * 0.0035 + 71.0, p.y * 0.0035 + 71.0) - 0.5) * 1.1 + rng.randf_range(-0.05, 0.05)
@@ -2026,7 +2026,7 @@ const CROSS_EVERY: float = 130.0     # a cross street every ~130 m
 ## constant inside each ~420 m district (so neighbouring rows line up) and changes between districts; each block
 ## is a street, a row of terraced houses facing it, back yards, and the next row facing the next street. Cross
 ## streets cut the rows every ~130 m, so streets and junctions show from the air. Each slot is built once.
-static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator, base_yaw: float, done: Dictionary, exclude: Array) -> void:
+static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator, base_yaw: float, done: Dictionary, exclude: Array, town_trees: Array = []) -> void:
 	var dc := Vector2i(floori(p.x / 420.0), floori(p.y / 420.0))
 	var a: float = _ih(dc.x, dc.y, 10) * PI     # by district, not by tile, so tiles agree
 	var along := Vector2(cos(a), -sin(a))
@@ -2051,6 +2051,7 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 	var c: Vector2 = org + along * u_c + across * v_c
 	if not _ok(c, exclude, 1.2):
 		return
+	_add_town_trees(town_trees, dc, int(bi), row, int(si), org, along, across, u_c, exclude)
 	var unit_w: float = rng.randf_range(5.6, 7.4)
 	var n: int = int(floorf((STREET_SEG - 2.0) / unit_w))
 	var depth: float = rng.randf_range(7.5, 9.5)
@@ -2081,6 +2082,46 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 				var eh: float = rng.randf_range(3.0, 4.2)
 				var ey: float = GroundKit.ground_y(eq.x, eq.y) + eh * 0.5 - 0.4
 				(lists[3] as Array).append(_xf(Vector3(eq.x, ey, eq.y), face, Vector3(rng.randf_range(2.8, 4.0), eh, rng.randf_range(3.0, 4.0))))
+
+
+## Street and garden trees for one terrace slot (realistic towns). Broadleaf only (limes, planes, fruit trees).
+## - Street trees: about three streets in five are tree-lined, two trees per slot standing at the kerb edge of the
+##   pavement (1.5 m clear of the house fronts, off the carriageway), so no tree blocks a road or a door.
+## - Garden trees: small trees down the middle of the back yards, behind roughly one house in two, beyond the
+##   wash-houses.
+## Placement comes from the integer hash of the slot, not from the tile's rng, so adding trees leaves every house
+## exactly where it was, and neighbouring tiles agree.
+const TOWN_TREE_CAP: int = 3200      # per tile, with whatever the tile already holds
+static func _add_town_trees(trees: Array, dc: Vector2i, bi: int, row: int, si: int, org: Vector2, along: Vector2, across: Vector2, u_c: float, exclude: Array) -> void:
+	if trees.size() >= TOWN_TREE_CAP:
+		return
+	var hx: int = dc.x * 7919 + bi * 131 + row
+	var hy: int = dc.y * 6271 + si
+	# the street this row faces: row 0 its own block's, row 1 the next block's
+	var street_i: int = bi + row
+	var lined: bool = _ih(dc.x * 31 + street_i, dc.y * 17 + street_i * 3, 21) < 0.62
+	if lined:
+		var v_t: float = float(street_i) * STREET_BLOCK + (6.7 if row == 0 else 1.3)
+		for k in 2:
+			if _ih(hx, hy * 2 + k, 22) > 0.85:
+				continue                                   # the odd gap where a tree was lost
+			var u_t: float = u_c + (float(k) - 0.5) * 13.0 + (_ih(hx, hy * 2 + k, 23) - 0.5) * 1.6
+			var tp: Vector2 = org + along * u_t + across * v_t
+			if not _ok_tree(tp, exclude) or RoadMesh.near_road(tp, 2.5):
+				continue
+			var sc: float = lerpf(0.72, 1.0, _ih(hx, hy * 2 + k, 24))
+			trees.append(_xf(Vector3(tp.x, GroundKit.ground_y(tp.x, tp.y) - 0.3, tp.y), _ih(hx, hy * 2 + k, 25) * TAU, Vector3(sc, sc * 1.12, sc)))
+	# back gardens: the yards run fv 17..25 between the two rows; the trees stand down the middle strip, clear of both rows' wash-houses
+	for g in 4:
+		if _ih(hx + 977, hy * 3 + g, 26) > 0.5:
+			continue
+		var u_g: float = u_c + (float(g) - 1.5) * 7.5 + (_ih(hx, hy * 3 + g, 27) - 0.5) * 4.0
+		var v_g: float = float(bi) * STREET_BLOCK + (20.5 if row == 0 else 21.6) + (_ih(hx, hy * 3 + g, 28) - 0.5) * 0.8
+		var gp: Vector2 = org + along * u_g + across * v_g
+		if not _ok_tree(gp, exclude) or RoadMesh.near_road(gp, 3.0):
+			continue
+		var gs: float = lerpf(0.42, 0.72, _ih(hx, hy * 3 + g, 29))
+		trees.append(_xf(Vector3(gp.x, GroundKit.ground_y(gp.x, gp.y) - 0.3, gp.y), _ih(hx, hy * 3 + g, 30) * TAU, Vector3(gs, gs * 1.05, gs)))
 
 
 # ------------------------------------------------------------------ field boundaries (mirrors shaders/terrain.gdshader)

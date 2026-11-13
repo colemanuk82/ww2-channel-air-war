@@ -188,6 +188,11 @@ func _build_bowser(c: Color) -> void:
 
 
 func _build_tug(c: Color) -> void:
+	if TownModels.enabled():
+		var vm := MeshInstance3D.new()
+		vm.mesh = TownModels.vehicle("tug", c)
+		_vis.add_child(vm)
+		return
 	GroundKit.box(_vis, Vector3(1.4, 0.9, 2.2), Vector3(0, 1.0, 0), c.lightened(0.1))
 	GroundKit.box(_vis, Vector3(1.0, 0.8, 0.9), Vector3(0, 1.8, 0.4), c.darkened(0.1))
 	GroundKit.cyl(_vis, 0.08, 0.08, 1.0, Vector3(0, 2.6, -0.7), GroundKit.COL_DARK, Vector3.ZERO, 5, false)
@@ -213,6 +218,11 @@ func _build_firetender() -> void:
 
 
 func _build_bombcart(c: Color) -> void:
+	if TownModels.enabled():
+		var vm := MeshInstance3D.new()
+		vm.mesh = TownModels.vehicle("bombcart", c)
+		_vis.add_child(vm)
+		return
 	_build_tug(c)
 	for k in 2:
 		var z: float = 3.2 + float(k) * 3.4
@@ -309,6 +319,20 @@ func _build_jeep(c: Color) -> void:
 
 
 func _build_gun(c: Color) -> void:
+	if TownModels.enabled():
+		var gm := MeshInstance3D.new()
+		gm.mesh = TownModels.field_gun_carriage(c)
+		_vis.add_child(gm)
+		_turret = Node3D.new()
+		_turret.position = Vector3(0, 1.3, -0.8)
+		_vis.add_child(_turret)
+		var bm := MeshInstance3D.new()
+		bm.mesh = TownModels.field_gun_barrel(c)
+		_turret.add_child(bm)
+		_tip = Node3D.new()
+		_tip.position = Vector3(0, 0.1, -4.2)
+		_turret.add_child(_tip)
+		return
 	var dark: Color = c.darkened(0.45)
 	GroundKit.box(_vis, Vector3(2.0, 1.2, 0.2), Vector3(0, 1.3, -1.2), c)                        # shield
 	_turret = Node3D.new()

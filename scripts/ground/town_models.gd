@@ -1127,6 +1127,47 @@ static func vehicle(kind: String, c: Color) -> ArrayMesh:
 			for z in [-1.3, 1.15]:
 				for sx in [-1.0, 1.0]:
 					_tyre(b, sx * 0.82, z, 0.36, 0.22)
+		"tug", "bombcart":
+			# David Brown style airfield tractor: bonnet with a radiator, open seat and steering column, big rear
+			# wheels under mudguards, small front wheels, a tow hitch; the bomb cart adds two loaded trolleys
+			b.box(-0.45, 0.45, 0.75, 1.45, -1.2, 0.1, c.lightened(0.1), true, c.lightened(0.14))
+			b.box(-0.36, 0.36, 0.85, 1.38, -1.26, -1.2, Color(0.20, 0.20, 0.20), false)
+			b.box(-0.55, 0.55, 0.6, 0.95, 0.1, 1.15, c, true, c.darkened(0.1))
+			b.box(-0.3, 0.3, 0.95, 1.2, 0.45, 0.95, Color(0.16, 0.13, 0.10), true)                   # seat
+			b.box(-0.3, 0.3, 1.2, 1.7, 0.9, 0.98, Color(0.16, 0.13, 0.10), false)
+			b.box(-0.04, 0.04, 1.2, 1.75, 0.02, 0.1, Color(0.10, 0.10, 0.10), false)                # steering column
+			b.box(-0.25, 0.25, 1.72, 1.78, -0.05, 0.2, Color(0.10, 0.10, 0.10), true)
+			b.box(-0.05, 0.05, 1.45, 2.3, -0.8, -0.7, Color(0.12, 0.12, 0.12), false)               # exhaust stack
+			b.box(-0.08, 0.08, 0.5, 0.62, 1.15, 1.55, Color(0.12, 0.12, 0.12), true)                # hitch
+			for sx in [-1.0, 1.0]:
+				_tyre(b, sx * 0.85, 0.6, 0.6, 0.4)
+				_tyre(b, sx * 0.7, -0.9, 0.35, 0.26)
+				b.box(minf(sx * 0.6, sx * 1.1), maxf(sx * 0.6, sx * 1.1), 1.22, 1.3, 0.0, 1.2, c.darkened(0.12), true)
+				b.box(minf(sx * 0.6, sx * 1.1), maxf(sx * 0.6, sx * 1.1), 0.9, 1.3, 1.14, 1.2, c.darkened(0.12), false)
+			if kind == "bombcart":
+				var bomb := Color(0.30, 0.33, 0.20)
+				for k in 2:
+					var z: float = 3.2 + float(k) * 3.4
+					b.box(-0.7, 0.7, 0.55, 0.72, z - 1.4, z + 1.4, c.darkened(0.3), true)
+					b.box(-0.05, 0.05, 0.55, 0.65, z - 1.9, z - 1.4, Color(0.12, 0.12, 0.12), true)      # drawbar
+					for cr in [-0.8, 0.8]:
+						b.box(-0.5, 0.5, 0.72, 0.9, z + cr - 0.08, z + cr + 0.08, c.darkened(0.4), true)  # cradles
+					# the bomb: octagonal body, nose cone and a boxed tail fin
+					var ring: Array = []
+					for s in 8:
+						var a: float = TAU * float(s) / 8.0
+						ring.append(Vector2(cos(a) * 0.32, 1.12 + sin(a) * 0.32))
+					for s in 8:
+						var p0: Vector2 = ring[s]
+						var p1: Vector2 = ring[(s + 1) % 8]
+						var outv := Vector3(p0.x + p1.x, p0.y + p1.y - 2.24, 0.0)
+						b.face([Vector3(p0.x, p0.y, z - 1.0), Vector3(p1.x, p1.y, z - 1.0), Vector3(p1.x, p1.y, z + 0.8), Vector3(p0.x, p0.y, z + 0.8)], bomb, outv)
+						b.face([Vector3(p0.x, p0.y, z - 1.0), Vector3(p1.x, p1.y, z - 1.0), Vector3(0.0, 1.12, z - 1.45)], Color(0.70, 0.60, 0.20), outv + Vector3(0, 0, -0.5))
+						b.face([Vector3(p0.x, p0.y, z + 0.8), Vector3(p1.x, p1.y, z + 0.8), Vector3(0.0, 1.12, z + 1.25)], bomb.darkened(0.1), outv + Vector3(0, 0, 0.5))
+					b.box(-0.3, 0.3, 1.09, 1.15, z + 0.9, z + 1.35, bomb.darkened(0.25), true)
+					b.box(-0.03, 0.03, 0.82, 1.42, z + 0.9, z + 1.35, bomb.darkened(0.25), true)
+					for sx2 in [-1.0, 1.0]:
+						_tyre(b, sx2 * 0.75, z, 0.3, 0.2)
 		"bus":
 			b.box(-1.05, 1.05, 0.6, 2.9, -2.0, 3.6, c, true, c.darkened(0.1))                       # body
 			b.box(-1.07, 1.07, 1.75, 2.45, -1.9, 3.5, Color(0.5, 0.58, 0.62), false)               # window band
@@ -1139,6 +1180,61 @@ static func vehicle(kind: String, c: Color) -> ArrayMesh:
 			for z in [-2.6, 2.3]:
 				for sx in [-1.0, 1.0]:
 					_tyre(b, sx * 1.0, z, 0.5, 0.3)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m
+
+
+## A horizontal bar between two ground-plan points (for splayed gun trails).
+static func _bar_xz(b: MB, p0: Vector3, p1: Vector3, w: float, h: float, col: Color) -> void:
+	var d := Vector3(p1.x - p0.x, 0.0, p1.z - p0.z).normalized()
+	var s := Vector3(-d.z, 0.0, d.x) * w * 0.5
+	var up := Vector3(0.0, h, 0.0)
+	b.face([p0 - s + up, p0 + s + up, p1 + s + up, p1 - s + up], col.lightened(0.05), Vector3.UP)
+	b.face([p0 + s, p1 + s, p1 + s + up, p0 + s + up], col, s)
+	b.face([p0 - s, p1 - s, p1 - s + up, p0 - s + up], col, -s)
+	b.face([p1 - s, p1 + s, p1 + s + up, p1 - s + up], col, d)
+
+
+## Field gun carriage (GroundVehicle "artillery"): spoked wheels, axle, a sloped two-plate shield with a sight port,
+## split trails with spades and an ammunition limber box. The barrel is a separate mesh (it trains and recoils).
+static func field_gun_carriage(c: Color) -> ArrayMesh:
+	var key: String = "fgun_carriage_%s" % c.to_html(false)
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var dk: Color = c.darkened(0.45)
+	b.box(-1.0, 1.0, 0.7, 1.15, -1.3, -1.12, c, true)
+	b.face([Vector3(-1.0, 1.15, -1.3), Vector3(1.0, 1.15, -1.3), Vector3(1.0, 1.95, -1.05), Vector3(-1.0, 1.95, -1.05)], c.lightened(0.04), Vector3(0, 0.3, -1))
+	b.face([Vector3(-1.0, 1.15, -1.3), Vector3(1.0, 1.15, -1.3), Vector3(1.0, 1.95, -1.05), Vector3(-1.0, 1.95, -1.05)], c.darkened(0.15), Vector3(0, -0.3, 1))
+	b.box(-0.2, 0.2, 1.2, 1.5, -1.36, -1.3, Color(0.10, 0.10, 0.10), false)
+	b.box(-1.25, 1.25, 0.62, 0.78, -0.9, -0.7, dk, true)                                          # axle
+	b.box(-0.35, 0.35, 0.78, 1.3, -1.1, -0.3, c.darkened(0.2), true)                              # cradle / saddle
+	for sx in [-1.0, 1.0]:
+		b.wheel(sx * 1.2, 0.7, -0.8, 0.7, 0.16, 12, Color(0.08, 0.08, 0.08))
+		b.wheel(sx * 1.29, 0.7, -0.8, 0.5, 0.03, 10, c.darkened(0.1))
+		b.wheel(sx * 1.31, 0.7, -0.8, 0.14, 0.05, 6, dk)
+		_bar_xz(b, Vector3(sx * 0.3, 0.45, -0.5), Vector3(sx * 0.95, 0.12, 2.9), 0.2, 0.2, dk)
+		b.box(sx * 0.95 - 0.25, sx * 0.95 + 0.25, 0.0, 0.4, 2.85, 2.95, dk.darkened(0.2), true)   # spade
+	b.box(1.6, 2.3, 0.0, 0.5, 0.6, 1.5, Color(0.26, 0.28, 0.20), true, Color(0.32, 0.34, 0.24))
+	b.box(1.75, 2.15, 0.5, 0.62, 0.7, 1.4, Color(0.50, 0.42, 0.20), true)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m
+
+
+## The field gun's barrel, origin at the trunnion, pointing -Z: breech ring, recoil cylinder, stepped tube, muzzle brake.
+static func field_gun_barrel(c: Color) -> ArrayMesh:
+	var key: String = "fgun_barrel_%s" % c.to_html(false)
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var iron := Color(0.13, 0.13, 0.14)
+	b.box(-0.22, 0.22, -0.12, 0.32, -0.2, 0.55, c.darkened(0.3), true)
+	b.box(-0.12, 0.12, -0.22, -0.06, -1.9, 0.3, c.darkened(0.2), true)
+	b.box(-0.13, 0.13, 0.0, 0.26, -2.2, -0.2, iron.lightened(0.03), true)
+	b.box(-0.09, 0.09, 0.04, 0.22, -4.0, -2.2, iron, true)
+	b.box(-0.15, 0.15, -0.02, 0.28, -4.3, -4.0, iron.lightened(0.05), true)
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache[key] = m
 	return m

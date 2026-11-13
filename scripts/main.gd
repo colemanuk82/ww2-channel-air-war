@@ -2929,6 +2929,47 @@ func _debug_hit_tick(delta: float) -> void:
 		Weapons.player_hit.emit(best, 1.0)
 
 
+## Debug (WW2_INST_DEBUG=1): every 10 s of real time, count the mesh instances that reserve a slot in the
+## per-instance shader variable buffer (aircraft skin, team outline, clouds), grouped by their top-level owner.
+var _inst_debug: bool = OS.get_environment("WW2_INST_DEBUG") == "1"
+var _inst_t: float = 0.0
+func _inst_probe(delta: float) -> void:
+	_inst_t -= delta / maxf(Engine.time_scale, 0.1)
+	if _inst_t > 0.0:
+		return
+	_inst_t = 10.0
+	var by: Dictionary = {}
+	var total: int = 0
+	var all: int = 0
+	for n in get_tree().root.find_children("*", "MeshInstance3D", true, false):
+		var mi: MeshInstance3D = n as MeshInstance3D
+		all += 1
+		var hit: bool = false
+		var mats: Array = [mi.material_override, mi.material_overlay]
+		if mi.mesh != null:
+			for si in mi.mesh.get_surface_count():
+				mats.append(mi.get_active_material(si))
+		for m in mats:
+			var mm: Material = m as Material
+			while mm != null and not hit:
+				var sm := mm as ShaderMaterial
+				if sm != null and sm.shader != null and sm.shader.code.find("instance uniform") >= 0:
+					hit = true
+				mm = mm.next_pass
+		if not hit:
+			continue
+		total += 1
+		var o: Node = mi
+		var key: String = ""
+		while o != null and o != get_tree().root:
+			var sc: Script = o.get_script() as Script
+			if sc != null and key == "":
+				key = sc.resource_path.get_file()
+			o = o.get_parent()
+		by[key] = int(by.get(key, 0)) + 1
+	print("[inst] meshes=%d with_instance_uniforms=%d by_top_script=%s" % [all, total, str(by)])
+
+
 func _process(delta: float) -> void:
 	if not in_game:
 		if _menu_anchor:
@@ -2936,6 +2977,8 @@ func _process(delta: float) -> void:
 		return
 	_adaptive_graphics(delta)
 	_update_perf_overlay(delta)
+	if _inst_debug:
+		_inst_probe(delta)
 	if _perf_secs > 0.0:
 		_perf_step(delta)
 	_resume_t -= delta
