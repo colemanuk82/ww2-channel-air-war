@@ -23,6 +23,7 @@ const SUN_GAIN := 1.8
 const AMB_GAIN := 0.45
 const AMB_SKY_SHARE := 0.55
 const FOG_GAIN := 0.6           # thinner distance haze: the far hills stay readable instead of fading to white
+const SUN_LAT_DEG := 51.0       # the Channel's latitude: the season moves the sun's arc, not the clock times
 var ng_light: bool = true
 
 var hour: float = 12.0
@@ -368,15 +369,28 @@ func _grey(c: Color, amount: float, dim: float) -> Color:
 
 func _apply() -> void:
 	var s: Array = _sample()
-	# Sun path: east at 6h, south-ish zenith at 12h, west at 18h.
-	var a: float = (hour - 6.0) / 12.0 * PI
-	sun_dir = Vector3(cos(a), sin(a), 0.38).normalized()
+	# Sun path for the sortie date and hour at the Channel's latitude (51 N): seasonal declination plus the
+	# hour angle, so summer days carry a high sun and long evenings while winter noons stay low. The preset
+	# clock times (golden hour 17.3, dusk 18.4) keep their meaning; the season moves the arc's height.
+	# World frame (WorldCoords): +x east, -z north.
+	var doy: float = float(EraClock.days_since(EraClock.current().substr(0, 4) + "-01-01")) + 1.0
+	var decl: float = deg_to_rad(23.44) * sin(TAU * (doy - 81.0) / 365.0)
+	var h_ang: float = (hour - 12.0) / 12.0 * PI
+	var phi: float = deg_to_rad(SUN_LAT_DEG)
+	var up: float = sin(phi) * sin(decl) + cos(phi) * cos(decl) * cos(h_ang)
+	var east: float = -cos(decl) * sin(h_ang)
+	var north: float = cos(phi) * sin(decl) - sin(phi) * cos(decl) * cos(h_ang)
+	sun_dir = Vector3(east, up, -north).normalized()
 	# the moon rides lower than the sun did (about 30 degrees up at midnight) so it lays a long path on the water
 	var moon_dir: Vector3 = Vector3(-sun_dir.x, -sun_dir.y * 0.4, 0.55).normalized()
 
 	var top: Color = _grey(s[0], desat, sky_dim)
 	var hor: Color = _grey(s[1], desat, sky_dim * 0.6)
 	var fogc: Color = _grey(s[2], desat, sky_dim * 0.6)
+	# Overcast (read off the weather's desaturation + sky dimming, so it blends with the fronts): the deck
+	# owns the light - the sky flattens to its own grey, the sun disc and its scatter fade out, and the fog
+	# cools from the warm haze colour to a neutral one.
+	var overcast: float = clampf(desat * 1.3 + sky_dim, 0.0, 1.0)
 	var lc: Color = s[3]
 	var sun_e: float = s[4] * light_mul * clampf(sun_dir.y * 6.0, 0.0, 1.0)
 	var moon_e: float = s[5] * clampf(moon_dir.y * 4.0, 0.0, 1.0) * (0.6 + 0.4 * light_mul) * lerpf(0.3, 1.0, moon_illum)
@@ -395,6 +409,8 @@ func _apply() -> void:
 	sun.light_color = lc
 	sun.light_energy = sun_e
 	sun.visible = sun_e > 0.001
+	# softer shadows while the sun is low (long shadows read harsh with a tight blur), tight at noon
+	sun.shadow_blur = lerpf(0.7, 1.15, smoothstep(0.45, 0.12, sun_dir.y) * smoothstep(-0.02, 0.06, sun_dir.y))
 	sun.global_transform = Transform3D(Basis.looking_at(-sun_dir, Vector3.UP), Vector3.ZERO)
 	moon.light_color = Color(0.6, 0.7, 1.0)
 	moon.light_energy = moon_e
@@ -403,7 +419,8 @@ func _apply() -> void:
 
 	environment.ambient_light_color = amb
 	environment.ambient_light_energy = amb_e
-	environment.fog_light_color = fogc.lerp(Color(0.52, 0.47, 0.40), 0.34 * haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0))
+	var haze_day: float = haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0)
+	environment.fog_light_color = fogc.lerp(Color(0.52, 0.47, 0.40), 0.34 * haze_day).lerp(Color(0.78, 0.79, 0.80), overcast * 0.4)
 	# light shafts: thicken the (high-preset) volumetric haze while the sun is low, so a dawn or dusk sun throws
 	# visible rays through the gaps between clouds; thin again by day so the noon air stays clear
 	if environment.volumetric_fog_enabled:
@@ -420,7 +437,6 @@ func _apply() -> void:
 		_mist_mat.density = MIST_DENSITY * mist_k
 		_mist_mat.albedo = Color(0.95, 0.95, 0.97).lerp(lc, 0.35 * clampf(sun_e, 0.0, 1.0))
 		_mist.visible = environment.volumetric_fog_enabled and mist_k > 0.01
-	var haze_day: float = haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0)
 	environment.fog_density = (FOG_GAIN if ng_light else 1.0) * (float(s[9]) + FOG_DENSITY_BASE) * fog_mul * (1.0 + HAZE_FOG_MUL * haze_day * (0.45 + 0.55 * haze_low)) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
 	sun_color = lc
 	horizon_color = hor
@@ -446,3 +462,4 @@ func _apply() -> void:
 	sky_material.set_shader_parameter("moon_dir", moon_dir)
 	sky_material.set_shader_parameter("sun_color", lc.lightened(0.3))
 	sky_material.set_shader_parameter("star_amount", float(s[8]) * (1.0 - sky_dim))
+	sky_material.set_shader_parameter("overcast", overcast)

@@ -18,6 +18,8 @@ uniform vec3 sun_dir = vec3(0.0, 1.0, 0.0);                          // towards 
 uniform vec3 moon_dir = vec3(0.0, -1.0, 0.0);                        // towards the moon
 uniform vec3 sun_color : source_color = vec3(1.0, 0.95, 0.8);        // sun-light colour (warm when low)
 uniform float star_amount = 0.0;                                     // 0 day .. 1 night
+uniform float overcast = 0.0;                                        // 0 clear .. 1 full grey deck: flattens the
+                                                                     // palette and fades the sun disc / scatter
 
 // 0 = full day, 1 = full night. Registered in project.godot [shader_globals] and set by TimeOfDay.
 global uniform float night_amount;
@@ -63,6 +65,14 @@ void sky() {
 		col = mix(horizon_color, ground_color, smoothstep(0.0, -0.30, h));
 	}
 
+	// under a cloud deck the dome becomes one soft grey light: flatten the gradient toward its own luminance
+	// (faintly cooler, like cloud shade) and let the sun's scatter and disc fade with (1 - overcast)
+	float oc = clamp(overcast, 0.0, 1.0);
+	if (oc > 0.001) {
+		float gl = dot(col, vec3(0.333));
+		col = mix(col, vec3(gl) * vec3(1.0, 1.015, 1.03), oc * 0.55);
+	}
+
 	// --- azimuth: how far this ray points toward (1) or away from (0) the sun ---
 	vec2 dh = normalize(vec2(d.x, d.z) + vec2(1e-5));
 	vec2 sh = normalize(vec2(sdir.x, sdir.z) + vec2(1e-5));
@@ -77,12 +87,12 @@ void sky() {
 	float sd = dot(d, sdir);
 	float core = pow(max(sd, 0.0), mix(5.0, 40.0, smoothstep(-0.05, 0.45, elev)));  // low exponent = wide bloom
 	float halo = pow(max(sd, 0.0), 1.7) * 0.10;                                     // very broad, subtle
-	col += warm_col * (core + halo) * day * (0.35 + 0.9 * warm);
+	col += warm_col * (core + halo) * day * (0.35 + 0.9 * warm) * (1.0 - oc);
 	// a horizon-hugging bloom toward the sun, strongest when the sun sits low
-	col += warm_col * exp(-max(h, 0.0) * 6.0) * sunw * day * (0.25 + 0.9 * warm);
+	col += warm_col * exp(-max(h, 0.0) * 6.0) * sunw * day * (0.25 + 0.9 * warm) * (1.0 - oc);
 
 	// --- sun disc: small, smooth-edged, driven above 1.0 so the bloom pass catches it ---
-	float disc = smoothstep(0.99955, 0.99985, sd) * smoothstep(-0.03, 0.03, elev);
+	float disc = smoothstep(0.99955, 0.99985, sd) * smoothstep(-0.03, 0.03, elev) * (1.0 - oc);
 	col = mix(col, mix(vec3(1.0, 0.97, 0.92), sun_color, 0.6) * 8.0, disc);
 
 	// --- moon: a cool soft halo plus a disc, only at night and above the horizon ---
