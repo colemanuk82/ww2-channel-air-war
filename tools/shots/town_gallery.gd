@@ -41,7 +41,26 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "guns":
+	if view == "tanks":
+		gm.albedo_color = Color(0.36, 0.40, 0.28)
+		var specs: Array = [["sherman", "Allies", 5.8, 2.6, 0.9, 1.0, 0.0, false], ["panzer4", "Axis", 5.9, 2.8, 0.9, 1.0, 1.0, true], ["tiger", "Axis", 7.0, 3.6, 1.1, 1.1, 1.8, true]]
+		var kk: int = 0
+		for sp in specs:
+			var cc2: Color = GroundKit.team_color(sp[1])
+			var th := MeshInstance3D.new()
+			th.mesh = TownModels.tank_hull(cc2, sp[2], sp[3], sp[4], sp[7])
+			th.position = Vector3(-9.0 + float(kk) * 9.0, 0.0, 0.0)
+			th.rotation.y = 0.5
+			add_child(th)
+			var tu := MeshInstance3D.new()
+			tu.mesh = TownModels.tank_turret(cc2, sp[2], sp[3], sp[5], 3.2 + sp[6], sp[6] > 0.0)
+			tu.position = Vector3(0.0, 0.75 + sp[4], -0.2)
+			th.add_child(tu)
+			kk += 1
+		cam.position = Vector3(2.0, 9.0, 16.0)
+		cam.look_at(Vector3(0.0, 1.0, 0.0))
+		cam.fov = 50.0
+	elif view == "guns":
 		gm.albedo_color = Color(0.36, 0.40, 0.28)
 		for gi in 2:
 			var big: bool = gi == 1

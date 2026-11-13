@@ -121,6 +121,21 @@ func _build_intact(root: Node3D) -> void:
 
 
 func _build_tank(c: Color, length: float, width: float, hull_h: float, turret_s: float, barrel_extra: float, skirts: bool) -> void:
+	if TownModels.enabled():
+		var hm := MeshInstance3D.new()
+		hm.mesh = TownModels.tank_hull(c, length, width, hull_h, skirts)
+		_vis.add_child(hm)
+		_turret = Node3D.new()
+		_turret.position = Vector3(0, 0.75 + hull_h, -0.2)
+		_vis.add_child(_turret)
+		var tb: float = 3.2 + barrel_extra
+		var tm := MeshInstance3D.new()
+		tm.mesh = TownModels.tank_turret(c, length, width, turret_s, tb, barrel_extra > 0.0)
+		_turret.add_child(tm)
+		_tip = Node3D.new()
+		_tip.position = Vector3(0, 0.45 * turret_s, -length * 0.21 * turret_s - tb + 0.2)
+		_turret.add_child(_tip)
+		return
 	var dark: Color = c.darkened(0.45)
 	GroundKit.box(_vis, Vector3(width * 0.78, hull_h, length * 0.92), Vector3(0, 0.75 + hull_h * 0.5, 0), c)
 	GroundKit.box(_vis, Vector3(width * 0.9, 0.35, length * 0.2), Vector3(0, 0.95, -length * 0.47), c, Vector3(-28, 0, 0))    # glacis

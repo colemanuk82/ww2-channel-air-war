@@ -174,6 +174,24 @@ class MB:
 		face([c[2], c[3], c[7], c[6]], col, zz)
 		face([c[0], c[1], c[5], c[4]], col, -zz)
 
+	## A cylinder lying along X (a wheel or roller): centre, radius, width, segments.
+	func wheel(cx: float, cy: float, cz: float, r: float, w: float, segs: int, col: Color) -> void:
+		var x0: float = cx - w * 0.5
+		var x1: float = cx + w * 0.5
+		var left: Array = []
+		var right: Array = []
+		for i in segs:
+			var a0: float = TAU * float(i) / float(segs)
+			var a1: float = TAU * float(i + 1) / float(segs)
+			var p0 := Vector3(0.0, cy + sin(a0) * r, cz + cos(a0) * r)
+			var p1 := Vector3(0.0, cy + sin(a1) * r, cz + cos(a1) * r)
+			var am: float = (a0 + a1) * 0.5
+			face([Vector3(x0, p0.y, p0.z), Vector3(x1, p0.y, p0.z), Vector3(x1, p1.y, p1.z), Vector3(x0, p1.y, p1.z)], col, Vector3(0.0, sin(am), cos(am)))
+			left.append(Vector3(x0, p0.y, p0.z))
+			right.append(Vector3(x1, p0.y, p0.z))
+		face(left, col, Vector3.LEFT)
+		face(right, col.lightened(0.05), Vector3.RIGHT)
+
 	func commit(material: Material) -> ArrayMesh:
 		var arr: Array = []
 		arr.resize(Mesh.ARRAY_MAX)
@@ -914,6 +932,108 @@ static func aa_pitch(big: bool, c: Color) -> ArrayMesh:
 			b.box(sx2 - 0.15, sx2 + 0.15, 1.05, 1.3, -0.1, 0.4, steel, true)
 		b.box(-0.2, 0.2, 0.45, 0.8, 0.5, 1.2, Color(0.12, 0.12, 0.12), true)
 		b.box(-1.0, 1.0, -0.4, 0.4, 1.5, 1.9, c.darkened(0.25), true)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m
+
+
+# ------------------------------------------------------------------ tanks (GroundVehicle)
+
+## Tank hull and running gear in GroundVehicle's layout: the hull deck at y = 0.75 + hull_h, nose toward -Z, the
+## tracks 0.2 x width wide either side. Upper hull has a sloped glacis, fenders, engine louvres, hatches, lights and
+## stowage; the road wheels show under the optional side skirts.
+static func tank_hull(c: Color, length: float, width: float, hull_h: float, skirts: bool) -> ArrayMesh:
+	var key: String = "tank_hull_%s_%d_%d_%s" % [c.to_html(false), int(length * 10.0), int(width * 10.0), str(skirts)]
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var dark: Color = c.darkened(0.45)
+	var iron := Color(0.12, 0.12, 0.12)
+	var y0: float = 0.75
+	var top: float = y0 + hull_h
+	var wh: float = width * 0.39
+	var zf: float = -length * 0.47
+	var zr: float = length * 0.46
+	var zg: float = -length * 0.30
+	# running gear: track runs with road wheels, sprocket, idler and return rollers
+	for sx in [-1.0, 1.0]:
+		var xc: float = sx * width * 0.42
+		var tw: float = width * 0.2
+		b.box(xc - tw * 0.5, xc + tw * 0.5, 0.12, 0.98, -length * 0.5, length * 0.5, dark, true, dark.lightened(0.05))
+		var nr: int = 7
+		for i in nr:
+			var wz: float = lerpf(-length * 0.40, length * 0.40, float(i) / float(nr - 1))
+			b.wheel(xc + sx * tw * 0.5, 0.52, wz, 0.40, 0.10, 8, dark.darkened(0.3) if i % 2 == 0 else dark.lightened(0.04))
+		b.wheel(xc + sx * tw * 0.5, 0.62, zr, 0.50, 0.12, 10, dark.lightened(0.08))
+		b.wheel(xc + sx * tw * 0.5, 0.62, -length * 0.5 + 0.35, 0.46, 0.12, 10, dark.lightened(0.08))
+		# fender over the track
+		b.box(sx * width * 0.5 - 0.05, sx * width * 0.5 + 0.05, 0.0, 0.0, 0.0, 0.0, c, false)
+		b.box(minf(sx * width * 0.32, sx * width * 0.52), maxf(sx * width * 0.32, sx * width * 0.52), 0.99, 1.06, -length * 0.5, length * 0.5, c.darkened(0.08), true, c.darkened(0.04))
+		if skirts:
+			var segs: int = 5
+			for i in segs:
+				var z0: float = lerpf(-length * 0.44, length * 0.34, float(i) / float(segs)) + 0.06
+				var z1: float = lerpf(-length * 0.44, length * 0.34, float(i + 1) / float(segs)) - 0.06
+				var xs: float = sx * (width * 0.53)
+				b.box(minf(xs, xs + sx * 0.06), maxf(xs, xs + sx * 0.06), 0.45, 1.06, z0, z1, c.darkened(0.12), true, c.darkened(0.06))
+		# tow cable and a spare track link block on the hull side
+		b.box(minf(sx * wh, sx * (wh + 0.05)), maxf(sx * wh, sx * (wh + 0.05)), y0 + hull_h * 0.3, y0 + hull_h * 0.42, -length * 0.25, length * 0.30, iron, false)
+	# upper hull: side profile extruded across the width (deck, sloped glacis, nose, rear plate)
+	var pr: Array = [Vector2(zr, y0), Vector2(zr, top), Vector2(zg, top), Vector2(zf, y0 + hull_h * 0.30), Vector2(zf, y0)]
+	var np: int = pr.size()
+	var rt: Array = []
+	var lf: Array = []
+	for p in pr:
+		var pv: Vector2 = p
+		rt.append(Vector3(wh, pv.y, pv.x))
+		lf.append(Vector3(-wh, pv.y, pv.x))
+	var rtr: Array = rt.duplicate()
+	rtr.reverse()
+	b.face(rt, c, Vector3.RIGHT)
+	b.face(lf, c, Vector3.LEFT)
+	b.face([lf[1], rt[1], rt[2], lf[2]], c.lightened(0.03), Vector3.UP)           # engine / fighting deck
+	b.face([lf[2], rt[2], rt[3], lf[3]], c.lightened(0.06), Vector3(0.0, 0.6, -1.0))   # sloped glacis
+	b.face([lf[3], rt[3], rt[4], lf[4]], c, Vector3.FORWARD)
+	b.face([lf[0], rt[0], rt[1], lf[1]], c.darkened(0.08), Vector3.BACK)
+	# engine louvres and exhaust, driver and radio-operator hatches, headlights, hull MG
+	for i in 4:
+		var lz: float = zr - 0.4 - float(i) * 0.38
+		b.box(-wh * 0.62, wh * 0.62, top, top + 0.05, lz - 0.1, lz + 0.1, iron, false)
+	for sx2 in [-1.0, 1.0]:
+		b.box(minf(sx2 * wh * 0.78, sx2 * wh * 0.95), maxf(sx2 * wh * 0.78, sx2 * wh * 0.95), y0 + 0.1, y0 + hull_h * 0.55, zr, zr + 0.25, iron, false)
+		b.box(sx2 * wh * 0.72 - 0.19, sx2 * wh * 0.72 + 0.19, top, top + 0.16, zg - 0.55, zg - 0.05, c.darkened(0.2), true, iron)
+		b.box(sx2 * wh * 0.5 - 0.07, sx2 * wh * 0.5 + 0.07, y0 + hull_h * 0.7, y0 + hull_h * 0.7 + 0.14, zg - 0.58, zg - 0.45, Color(0.7, 0.68, 0.55), false)
+	b.box(-0.05, 0.05, y0 + hull_h * 0.45, y0 + hull_h * 0.5, zf - 0.28, zf, iron, false)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m
+
+
+## Turret and gun, origin on the turret ring, barrel along -Z. `ts` is the turret scale of the vehicle type.
+static func tank_turret(c: Color, length: float, width: float, ts: float, blen: float, brake: bool) -> ArrayMesh:
+	var key: String = "tank_turret_%s_%d_%d_%d_%s" % [c.to_html(false), int(length * 10.0), int(ts * 10.0), int(blen * 10.0), str(brake)]
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var iron := Color(0.12, 0.12, 0.12)
+	var rx: float = width * 0.34 * ts
+	var rz: float = length * 0.23 * ts
+	var h: float = 0.82 * ts
+	b.prism(0.0, 0.0, 0.0, h * 0.62, rx, rz, rx * 0.97, rz * 0.97, 10, c, false)
+	b.prism(0.0, 0.0, h * 0.62, h, rx * 0.97, rz * 0.97, rx * 0.72, rz * 0.7, 10, c.lightened(0.04), true)
+	# mantlet, rear stowage bin, cupola with hatch, loader's hatch, aerial base
+	b.box(-0.55 * ts, 0.55 * ts, 0.14 * ts, 0.70 * ts, -rz - 0.24, -rz * 0.8, c.darkened(0.1), true)
+	b.box(-rx * 0.8, rx * 0.8, 0.12 * ts, 0.62 * ts, rz * 0.92, rz * 0.92 + 0.38, c.darkened(0.16), true, c.darkened(0.08))
+	b.prism(rx * 0.36, rz * 0.22, h * 0.92, h * 0.92 + 0.3, 0.30 * ts, 0.30 * ts, 0.27 * ts, 0.27 * ts, 8, c.darkened(0.08), true)
+	b.box(rx * 0.36 - 0.16, rx * 0.36 + 0.16, h * 0.92 + 0.3, h * 0.92 + 0.38, rz * 0.22 - 0.16, rz * 0.22 + 0.16, iron, false)
+	b.box(-rx * 0.5 - 0.2, -rx * 0.5 + 0.2, h * 0.88, h * 0.88 + 0.1, rz * 0.1, rz * 0.5, c.darkened(0.2), true, iron)
+	# the gun, centred at 0.45 ts: barrel, thicker at the breech end, with a muzzle brake on the Panzer IV and Tiger
+	var gy: float = 0.45 * ts
+	var gz0: float = -length * 0.21 * ts + 0.2
+	b.box(-0.07, 0.07, gy - 0.07, gy + 0.07, gz0 - blen, gz0, iron, true)
+	b.box(-0.11, 0.11, gy - 0.11, gy + 0.11, gz0 - blen * 0.35, gz0, c.darkened(0.3), true)
+	if brake:
+		b.box(-0.17, 0.17, gy - 0.17, gy + 0.17, gz0 - blen - 0.26, gz0 - blen + 0.04, iron.lightened(0.04), true)
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache[key] = m
 	return m
