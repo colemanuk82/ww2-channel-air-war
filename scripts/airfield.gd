@@ -518,12 +518,12 @@ func _patch_mm(mat: Material, patches: Array) -> void:
 ## track, and E-type blast pens round it, each pen holding two fighters.
 func _build_raf_grass(earth: Material) -> void:
 	var L: float = runway_length
-	var mown: Material = ToonUtil.make_toon(Color(0.26, 0.33, 0.17), {"outline": false, "detail": 4, "patch": Color(0.34, 0.29, 0.18), "patch_amount": 0.22, "patch_scale": 1.1})
-	var mown2: Material = ToonUtil.make_toon(Color(0.20, 0.26, 0.12), {"outline": false, "detail": 4, "patch": Color(0.31, 0.27, 0.16), "patch_amount": 0.18, "patch_scale": 1.3})
-	var mown_edge: Material = ToonUtil.make_toon(Color(0.37, 0.44, 0.24), {"outline": false, "detail": 4})
-	var bare: Material = ToonUtil.make_toon(Color(0.27, 0.23, 0.14), {"outline": false, "detail": 4, "patch": Color(0.20, 0.23, 0.11), "patch_amount": 0.38, "patch_scale": 1.8})
-	# the mown landing area (two mown directions, ragged edge, ruts, worn patches) is one shaded surface, and
-	# real grass blades grow on it close up - see _grass_surface / _grass_blades
+	# the heavily used landing area has gone to dust, with a ragged grass ring blending into the fields; one
+	# shaded surface, real grass blades grow on it close up - see _grass_surface / _grass_blades
+	var mown: Material = ToonUtil.make_toon(Color(0.40, 0.36, 0.26), {"outline": false, "detail": 4, "patch": Color(0.34, 0.30, 0.21), "patch_amount": 0.22, "patch_scale": 1.1})
+	var mown2: Material = ToonUtil.make_toon(Color(0.35, 0.31, 0.22), {"outline": false, "detail": 4, "patch": Color(0.31, 0.27, 0.19), "patch_amount": 0.18, "patch_scale": 1.3})
+	var mown_edge: Material = ToonUtil.make_toon(Color(0.285, 0.335, 0.17), {"outline": false, "detail": 4})
+	var bare: Material = ToonUtil.make_toon(Color(0.30, 0.265, 0.185), {"outline": false, "detail": 4, "patch": Color(0.24, 0.23, 0.14), "patch_amount": 0.38, "patch_scale": 1.8})
 	_grass_surface(L, mown, mown2, mown_edge, bare, true)
 	_strip_lamps(runway_width * 1.12, L)
 	_grass_blades(L)
@@ -567,10 +567,11 @@ func _build_raf_grass(earth: Material) -> void:
 ## aircraft dispersed round the field edge under camouflage nets on worn earth pads, joined by dirt tracks.
 func _build_lw_field(earth: Material) -> void:
 	var L: float = runway_length
-	var rolled: Material = ToonUtil.make_toon(Color(0.26, 0.32, 0.16), {"outline": false, "detail": 4, "patch": Color(0.33, 0.28, 0.17), "patch_amount": 0.24, "patch_scale": 1.2})
-	var worn: Material = ToonUtil.make_toon(Color(0.38, 0.33, 0.22), {"outline": false, "detail": 4, "patch": Color(0.24, 0.27, 0.14), "patch_amount": 0.30, "patch_scale": 1.6})
-	var mown2: Material = ToonUtil.make_toon(Color(0.21, 0.27, 0.13), {"outline": false, "detail": 4, "patch": Color(0.33, 0.28, 0.17), "patch_amount": 0.20, "patch_scale": 1.4})
-	var edge: Material = ToonUtil.make_toon(Color(0.35, 0.40, 0.23), {"outline": false, "detail": 4})
+	# the strip is rolled bare earth with dust bands; grass takes the ragged edge - one shaded surface
+	var rolled: Material = ToonUtil.make_toon(Color(0.40, 0.36, 0.26), {"outline": false, "detail": 4, "patch": Color(0.34, 0.30, 0.21), "patch_amount": 0.24, "patch_scale": 1.2})
+	var worn: Material = ToonUtil.make_toon(Color(0.30, 0.265, 0.185), {"outline": false, "detail": 4, "patch": Color(0.26, 0.25, 0.15), "patch_amount": 0.30, "patch_scale": 1.6})
+	var mown2: Material = ToonUtil.make_toon(Color(0.35, 0.31, 0.22), {"outline": false, "detail": 4, "patch": Color(0.32, 0.28, 0.19), "patch_amount": 0.20, "patch_scale": 1.4})
+	var edge: Material = ToonUtil.make_toon(Color(0.285, 0.335, 0.17), {"outline": false, "detail": 4})
 	# rolled bands, ragged edge, wandering ruts and worn patches: one shaded surface plus grass blades close up
 	_grass_surface(L, rolled, mown2, edge, worn, false)
 	_strip_lamps(runway_width * 0.95, L)

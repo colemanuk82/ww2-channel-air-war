@@ -12,10 +12,10 @@ uniform float half_w = 75.0;          // half width of the surface
 uniform float half_l = 600.0;         // half length of the surface
 uniform float rw = 50.0;              // the airfield's runway_width (the ruts sit at fractions of it)
 uniform float seed = 0.0;
-uniform vec3 col_a : source_color = vec3(0.26, 0.33, 0.17);   // mown
-uniform vec3 col_b : source_color = vec3(0.20, 0.26, 0.12);   // mown the other way
-uniform vec3 col_edge : source_color = vec3(0.37, 0.44, 0.24); // longer grass round the mown area
-uniform vec3 col_bare : source_color = vec3(0.27, 0.23, 0.14); // worn earth and ruts
+uniform vec3 col_a : source_color = vec3(0.40, 0.36, 0.26);    // landing area: dry dust (heavily used ground goes bare)
+uniform vec3 col_b : source_color = vec3(0.35, 0.31, 0.22);    // traffic bands the other way
+uniform vec3 col_edge : source_color = vec3(0.285, 0.335, 0.17);// grass ring: ~the terrain's grass_a, so it blends with the fields
+uniform vec3 col_bare : source_color = vec3(0.30, 0.265, 0.185);// churned earth in the ruts and worn patches
 uniform float cross_on = 0.0;         // RAF stations: a second mown direction across the field
 uniform float cross_angle = 1.13;
 
@@ -62,20 +62,20 @@ void fragment() {
 	float swing = (vnoise(vec2(z * 0.004, sd)) - 0.5) * 0.7;
 	float bc = x / (rw * 0.31) + swing;
 	float band = smoothstep(0.42, 0.58, fract(bc * 0.5)) - smoothstep(0.92, 1.0, fract(bc * 0.5));
-	vec3 c = mix(col_a, col_b, band * 0.8);
+	vec3 c = mix(col_a, col_b, band * 0.55);
 	if (cross_on > 0.5) {
 		vec2 r = vec2(cos(cross_angle) * x - sin(cross_angle) * z, sin(cross_angle) * x + cos(cross_angle) * z);
 		float inside = (1.0 - smoothstep(rw * 0.9, rw * 1.05, abs(r.x))) * (1.0 - smoothstep(half_l * 0.62, half_l * 0.72, abs(r.y)));
 		float cb = smoothstep(0.42, 0.58, fract(r.x / (rw * 0.29) * 0.5 + 0.25));
-		c = mix(c, mix(col_b, col_a, cb), inside * 0.45);
+		c = mix(c, mix(col_b, col_a, cb), inside * 0.35);
 	}
 
-	// ragged edge of the mown area, then longer, lighter grass out to the border
+	// ragged edge of the dust area, then longer grass out to the border
 	float en = fbm(vec2(z * 0.035, sd * 3.1)) * 2.0 - 1.0;
 	float edge_x = rw * 1.16 + en * rw * 0.10;
-	float outer = smoothstep(edge_x - 2.5, edge_x + 2.5, abs(x));
+	float outer = smoothstep(edge_x - 6.0, edge_x + 6.0, abs(x));
 	float tuft = fbm(lp * 0.22 + sd) ;
-	c = mix(c, mix(col_edge, col_b, smoothstep(0.45, 0.75, tuft) * 0.6), outer * 0.85);
+	c = mix(c, mix(col_edge, col_b, smoothstep(0.45, 0.75, tuft) * 0.6), outer * 0.75);
 
 	// wheel ruts: two pairs wandering gently along the strip, broken up where the grass has recovered
 	float ruts = 0.0;
@@ -90,7 +90,7 @@ void fragment() {
 	// worn patches inside the field, more of them where aircraft turn at the ends
 	float ends = smoothstep(half_l * 0.70, half_l * 0.92, abs(z)) * (1.0 - outer);
 	float worn = smoothstep(0.66 - ends * 0.18, 0.80 - ends * 0.18, fbm(lp * 0.045 + sd * 2.0)) * (1.0 - outer * 0.6);
-	c = mix(c, col_bare, clamp(ruts * 0.72 + worn * 0.55, 0.0, 0.85));
+	c = mix(c, col_bare, clamp(ruts * 0.6 + worn * 0.4, 0.0, 0.7));
 
 	// grass mottling and blade texture
 	float fine = vnoise(lp * 2.3 + sd) * 0.6 + vnoise(lp * 0.55) * 0.4;
@@ -104,6 +104,6 @@ void fragment() {
 	// fade the border into the terrain (hashed alpha: opaque pass, no sorting; temporal AA smooths it)
 	float bx = half_w * 0.94 + en * half_w * 0.05;
 	float bz = half_l * 0.97 + (vnoise(vec2(x * 0.05, sd)) - 0.5) * 18.0;
-	ALPHA = (1.0 - smoothstep(bx - 9.0, bx, abs(x))) * (1.0 - smoothstep(bz - 14.0, bz, abs(z)));
+	ALPHA = (1.0 - smoothstep(bx - 26.0, bx, abs(x))) * (1.0 - smoothstep(bz - 40.0, bz, abs(z)));
 	ALPHA_HASH_SCALE = 1.0;
 }
