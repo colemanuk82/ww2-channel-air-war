@@ -41,6 +41,7 @@ static var _imagery_tex: Texture2D
 static var _urban_tex: Texture2D
 static var _wood_tex: Texture2D
 static var _sea_tex: Texture2D
+static var _detail_tex: Texture2D
 
 
 func _ready() -> void:
@@ -64,6 +65,14 @@ func _make_material() -> void:
 			material.set_shader_parameter(names[i], Vector4(z.x, z.y, z.z, 0.0))
 		else:
 			material.set_shader_parameter(names[i], Vector4(0, 0, 0, 0))
+	# Close-range detail texture (terrain.gdshader P2): turf/soil micro grain + micro bump. Cached
+	# statically like the imagery above so a replay / next mission reuses it; if the PNG has not been
+	# generated, use_detail simply stays false and the ground keeps its procedural grain.
+	if _detail_tex == null and ResourceLoader.exists("res://assets/textures/terrain_detail/terrain_detail.png"):
+		_detail_tex = load("res://assets/textures/terrain_detail/terrain_detail.png") as Texture2D
+	if _detail_tex != null:
+		material.set_shader_parameter("detail_tex", _detail_tex)
+		material.set_shader_parameter("use_detail", true)
 	_apply_imagery()
 
 
