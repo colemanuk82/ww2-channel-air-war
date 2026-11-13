@@ -241,6 +241,12 @@ func _build_bridge(root: Node3D) -> void:
 	var concrete: Color = GroundKit.COL_CONCRETE
 	_collapse = Node3D.new()
 	root.add_child(_collapse)
+	if TownModels.enabled():
+		var bm := MeshInstance3D.new()
+		bm.mesh = TownModels.strike_bridge()
+		root.add_child(bm)
+		hit_radius = 75.0
+		return
 	# deck: along local X so heading 90 = east-west... deck runs along X
 	_b(root, Vector3(L, 2.4, 13.0), Vector3(0, 14.0, 0), Color(0.3, 0.3, 0.32))
 	_b(root, Vector3(L, 1.0, 1.0), Vector3(0, 15.6, 6.4), steel, Vector3.ZERO, false)

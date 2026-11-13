@@ -41,7 +41,15 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "hangars":
+	if view == "bridge":
+		var bmi := MeshInstance3D.new()
+		bmi.mesh = TownModels.strike_bridge()
+		add_child(bmi)
+		gm.albedo_color = Color(0.10, 0.20, 0.30)
+		cam.position = Vector3(70.0, 55.0, 110.0)
+		cam.look_at(Vector3(0.0, 14.0, 0.0))
+		cam.fov = 45.0
+	elif view == "hangars":
 		gm.albedo_color = Color(0.36, 0.40, 0.28)
 		var hm1 := MeshInstance3D.new()
 		hm1.mesh = AirfieldAssets.t2_hangar("Allies")

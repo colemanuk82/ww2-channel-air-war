@@ -160,6 +160,20 @@ class MB:
 		if cap and top.size() >= 3:
 			face(top, col, Vector3.UP)
 
+	## A rectangular bar between two points in the XY plane (thickness `wy` in that plane, `wz` across it).
+	func beam(a: Vector3, bpt: Vector3, wy: float, wz: float, col: Color) -> void:
+		var d: Vector3 = (bpt - a)
+		if d.length() < 1.0e-4:
+			return
+		d = d.normalized()
+		var up := Vector3(-d.y, d.x, 0.0) * wy
+		var zz := Vector3(0.0, 0.0, wz)
+		var c: Array = [a - up - zz, a + up - zz, a + up + zz, a - up + zz, bpt - up - zz, bpt + up - zz, bpt + up + zz, bpt - up + zz]
+		face([c[1], c[2], c[6], c[5]], col, up)
+		face([c[0], c[3], c[7], c[4]], col, -up)
+		face([c[2], c[3], c[7], c[6]], col, zz)
+		face([c[0], c[1], c[5], c[4]], col, -zz)
+
 	func commit(material: Material) -> ArrayMesh:
 		var arr: Array = []
 		arr.resize(Mesh.ARRAY_MAX)
@@ -708,4 +722,64 @@ static func hangar(w: float, l: float, h: float, rise: float, skin: Color) -> Ar
 	b.prism(ax1 - 1.2, az0 + 2.0, 4.0, 6.2, 0.22, 0.22, 0.20, 0.20, 6, Color(0.20, 0.20, 0.20), true)
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache[key] = m
+	return m
+
+
+# ------------------------------------------------------------------ strike-mission bridge
+
+## 150 m through-arch road bridge on five elliptical masonry piers with cutwaters: a road deck with kerbs and
+## parapets, a steel arch rib each side with vertical hangers, diagonal bracing and top lateral struts, and portal
+## braces at the springings. The deck runs along X at y = 14 (same layout as the old box bridge).
+static func strike_bridge() -> ArrayMesh:
+	if _cache.has("strike_bridge"):
+		return _cache["strike_bridge"]
+	var b := MB.new()
+	var L: float = 150.0
+	var steel := Color(0.36, 0.38, 0.42)
+	var pier := Color(0.46, 0.44, 0.40)
+	var road := Color(0.20, 0.20, 0.21)
+	var deck: float = 14.0
+	for i in 5:
+		var x: float = (float(i) - 2.0) * (L / 4.0 - 4.0)
+		b.prism(x, 0.0, -3.0, deck - 1.2, 2.8, 5.6, 2.3, 5.2, 14, pier, true)
+		b.box(x - 3.2, x + 3.2, deck - 1.4, deck - 1.1, -6.2, 6.2, pier.lightened(0.1))
+		b.prism(x, 0.0, 0.0, 1.2, 3.2, 6.2, 3.2, 6.2, 14, pier.darkened(0.15), false)
+	# deck: road surface, girder fascias and kerbs
+	b.box(-L * 0.5, L * 0.5, deck - 1.2, deck + 0.4, -6.5, 6.5, steel.darkened(0.12), true, road)
+	for sz in [-1.0, 1.0]:
+		var z0: float = minf(sz * 6.5, sz * 6.1)
+		var z1: float = maxf(sz * 6.5, sz * 6.1)
+		b.box(-L * 0.5, L * 0.5, deck - 1.4, deck + 1.2, z0 - 0.1, z1 + 0.1, steel, true, steel.lightened(0.06))
+		b.box(-L * 0.5, L * 0.5, deck + 0.4, deck + 0.55, minf(sz * 5.6, sz * 5.0), maxf(sz * 5.6, sz * 5.0), pier.lightened(0.15))
+	b.box(-0.3, 0.3, deck + 0.4, deck + 0.44, -5.0, 5.0, Color(0.55, 0.52, 0.40))
+	# the arch ribs and what hangs from them
+	var n: int = 12
+	var pts: Array = []
+	for i in n + 1:
+		var t: float = float(i) / float(n)
+		pts.append(Vector3(lerpf(-L * 0.42, L * 0.42, t), deck + 0.6 + 22.0 * (1.0 - pow(2.0 * t - 1.0, 2.0)), 0.0))
+	for sz2 in [-6.0, 6.0]:
+		for i in n:
+			var p0: Vector3 = pts[i]
+			var p1: Vector3 = pts[i + 1]
+			b.beam(Vector3(p0.x, p0.y, sz2), Vector3(p1.x, p1.y, sz2), 0.55, 0.5, steel)
+		for i in range(1, n):
+			var p: Vector3 = pts[i]
+			b.beam(Vector3(p.x, deck + 1.0, sz2), Vector3(p.x, p.y, sz2), 0.14, 0.14, steel.darkened(0.12))
+			if i < n - 1 and i > 1:
+				var q: Vector3 = pts[i + 1]
+				var from_y: float = deck + 1.0 if i % 2 == 0 else q.y
+				var to_y: float = q.y if i % 2 == 0 else deck + 1.0
+				b.beam(Vector3(p.x, from_y if i % 2 == 0 else p.y, sz2), Vector3(q.x, to_y, sz2), 0.12, 0.12, steel.darkened(0.2))
+	for i in range(2, n - 1):
+		var p2: Vector3 = pts[i]
+		b.box(p2.x - 0.25, p2.x + 0.25, p2.y - 0.3, p2.y + 0.3, -5.8, 5.8, steel.darkened(0.1))
+	# portal bracing at each springing, and the abutment wing walls
+	for sx in [-1.0, 1.0]:
+		var xe: float = sx * L * 0.42
+		b.box(minf(xe - 0.5, xe + 0.5), maxf(xe - 0.5, xe + 0.5), deck + 1.0, deck + 4.0, -6.5, 6.5, steel.darkened(0.05))
+		b.box(minf(sx * L * 0.5, sx * (L * 0.5 + 6.0)), maxf(sx * L * 0.5, sx * (L * 0.5 + 6.0)), 0.0, deck + 0.4, -7.0, 7.0, pier)
+		b.box(minf(sx * L * 0.5, sx * (L * 0.5 + 6.0)), maxf(sx * L * 0.5, sx * (L * 0.5 + 6.0)), deck + 0.4, deck + 0.55, -6.5, 6.5, road)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache["strike_bridge"] = m
 	return m
