@@ -109,6 +109,18 @@ vec3 detail_building(vec3 col, inout float emit, float cam_dist) {
 		col = mix(col, vec3(dot(col, vec3(0.333))), 0.18);   // walls: brick and render a little less saturated
 		vec3 stone = vec3(0.50, 0.46, 0.39) * (0.80 + 0.35 * t_hash12(floor(w_pos.xz / 8.0) + 31.0));   // weathered, sooty limestone
 		col = mix(col, stone / BUILDING_DARKEN * 0.72, fr * 0.65);
+		// Normandy facades are not all one limestone: whitewashed and ochre render, grey cement and sooty stone,
+		// each house its own, so a street reads as a row of homes rather than one pale block
+		float fh = t_hash12(floor(w_pos.xz / 7.0) + 53.0);
+		vec3 fac = fh < 0.30 ? vec3(0.60, 0.56, 0.48) : (fh < 0.50 ? vec3(0.56, 0.47, 0.33) : (fh < 0.68 ? vec3(0.45, 0.45, 0.43) : (fh < 0.84 ? vec3(0.50, 0.44, 0.36) : vec3(0.38, 0.34, 0.29))));
+		col = mix(col, fac / BUILDING_DARKEN * 0.72, fr * 0.75);
+		// grounding: walls darken toward the street (the houses sit sunk into the ground, so the gradient runs the
+		// whole height rather than a thin plinth band) and the eaves throw shade under the roof (unit-box houses
+		// only: obj_p is the -0.5..0.5 model box)
+		if (abs(obj_p.y) < 0.75 && abs(obj_p.x) < 0.75) {
+			col *= mix(0.58, 1.0, smoothstep(-0.45, 0.30, obj_p.y));
+			col *= 1.0 - 0.20 * smoothstep(0.34, 0.50, obj_p.y);
+		}
 	}
 #endif
 	// Distant towns are thousands of roofs only a pixel or two across: as the aircraft moves each pixel flips
