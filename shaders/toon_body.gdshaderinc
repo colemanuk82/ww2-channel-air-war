@@ -383,15 +383,6 @@ void fragment() {
 		// breaks into lit and shaded clusters under the sun. Faded with range so distant woods do not sparkle.
 		float fd = length(w_pos - CAMERA_POSITION_WORLD);
 		float fk = 1.0 - smoothstep(900.0, 4500.0, fd);
-		// Ragged leafy silhouettes: near the edge of a crown (or hedge) seen side-on, cut away leaf-sized holes
-		// with the clump noise, so the outline breaks into sprays of foliage instead of a smooth lumpy ball.
-		// Only close up (it would shimmer far away); TAA smooths the cut edge.
-		float sk = 1.0 - smoothstep(180.0, 520.0, fd);
-		if (sk > 0.001) {
-			float edge = 1.0 - abs(dot(normalize(NORMAL), normalize(VIEW)));
-			float leaf = t_vnoise3(w_pos * 1.9) * 0.6 + t_vnoise3(w_pos * 4.7) * 0.4;
-			if (leaf < smoothstep(0.45, 0.95, edge) * 0.85 * sk - 0.05) { discard; }
-		}
 		if (fk > 0.001) {
 			vec3 lp = w_pos * 0.55;
 			float hb = (t_vnoise3(lp * 1.6) * 0.55 + t_vnoise3(lp * 4.1) * 0.30 + t_vnoise3(lp * 9.5) * 0.15 * (1.0 - smoothstep(150.0, 600.0, fd))) * 2.2 * fk;
