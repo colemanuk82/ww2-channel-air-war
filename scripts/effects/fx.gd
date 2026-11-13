@@ -402,7 +402,7 @@ func flak_burst(pos: Vector3, scale_v: float = 1.0, quiet: bool = false) -> void
 			puffs.spawn(pos, d * randf_range(25.0, 60.0) * k, randf_range(0.5, 1.1), 1.6 * k, 0.4 * k,
 				Color(1.0, 0.8, 0.35, 1.0), Color(1.0, 0.35, 0.05, 0.0), 0.0, 9.0, 0.8)
 	# Black powder puffs hang in the air long after the flash: the burst swells into a dirty blot that drifts with the
-	# wind and stays visible for half a minute, so a battery's work leaves a whole field of smudges in the sky.
+	# wind and fades over about ten seconds, so a battery's work leaves a whole field of smudges in the sky.
 	var wind: Vector3 = Vector3.ZERO
 	var wm: Node = get_node_or_null("/root/WeatherManager")
 	if wm != null and wm.has_method("get_wind"):
@@ -410,8 +410,8 @@ func flak_burst(pos: Vector3, scale_v: float = 1.0, quiet: bool = false) -> void
 	wind = Vector3(wind.x, 0.0, wind.z).limit_length(8.0)
 	for i in 8:
 		var off: Vector3 = _rv(2.5 * k)
-		puffs.spawn(pos + off, off * 0.5 + Vector3(0.0, 0.4, 0.0) + wind * 0.6, randf_range(18.0, 30.0), 3.0 * k, randf_range(14.0, 24.0) * k,
-			Color(0.06, 0.06, 0.07, 0.95), Color(0.26, 0.26, 0.28, 0.0), 0.8, -0.12, 0.35)
+		puffs.spawn(pos + off, off * 0.5 + Vector3(0.0, 0.4, 0.0) + wind * 0.6, randf_range(9.0, 15.0), 3.0 * k, randf_range(14.0, 24.0) * k,
+			Color(0.07, 0.07, 0.08, 0.9), Color(0.30, 0.30, 0.32, 0.0), 0.8, -0.12, 0.35)
 	if not quiet:
 		# Close bursts get the cracking voice and extra level (the distant one is mostly low rumble and falls to nothing
 		# beside you); both bypass the rate gate when near, so a barrage never swallows the one right on top of you.
