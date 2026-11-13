@@ -27,6 +27,7 @@ const TIME_SPEEDS := [0.0, 1.0, 6.0, 12.0, 30.0, 120.0]
 const TIME_SPEED_NAMES := ["Frozen", "Real time", "6x", "12x", "30x", "120x"]
 var time_speed: int = 2        # day/night cycle speed (index into TIME_SPEEDS; Options > Time passes)
 var completed_missions: Array = []   # ids of historical missions the player has completed (shown as [DONE] in the list)
+var mission_grades: Dictionary = {}  # historical mission id -> best grade so far (MissionBrief.grade: 1..3)
 # Audio mixer (Options > Audio): 0..1 per category, persisted in settings.cfg [audio]; AudioManager reads them from here.
 var vol_master: float = 1.0
 var vol_fx: float = 1.0
@@ -244,6 +245,8 @@ func _load_settings() -> void:
 	outline_near = clampf(float(cf.get_value("ui", "outline_near", outline_near)), 0.0, 5000.0)
 	outline_fade = clampf(float(cf.get_value("ui", "outline_fade", outline_fade)), outline_near + 1000.0, 15000.0)
 	completed_missions = cf.get_value("progress", "completed_missions", completed_missions)
+	var mg: Variant = cf.get_value("progress", "mission_grades", mission_grades)
+	mission_grades = mg if mg is Dictionary else {}
 	last_sortie = cf.get_value("sortie", "last", last_sortie)
 	if not (last_sortie is Dictionary):
 		last_sortie = {}
@@ -308,12 +311,27 @@ func is_mission_done(id: String) -> bool:
 	return completed_missions.has(id)
 
 
+## Keep the best grade earned on a historical mission (a worse later result never lowers it).
+func record_mission_grade(id: String, grade: int, save_now: bool = true) -> void:
+	if id == "" or grade <= mission_grade(id):
+		return
+	mission_grades[id] = grade
+	if save_now:
+		save_settings()
+
+
+func mission_grade(id: String) -> int:
+	return int(mission_grades.get(id, 0))
+
+
 func mission_label(id: String, mission_name: String) -> String:
 	if DatedOps.is_dated(id) and not DatedOps.is_open(id):
 		return "[LOCKED: opens %s]  %s" % [DatedOps.opens_text(id), mission_name]
 	var t: String = mission_name      # completed missions are tinted green in the menu list (see StartMenu), not tagged
 	if DatedOps.is_dated(id):
 		t += "   (dated: %s)" % DatedOps.opens_text(id)
+	if mission_grade(id) > 0:
+		t += "   - %s" % MissionBrief.grade_name(mission_grade(id))
 	return t
 
 
@@ -348,6 +366,7 @@ func save_settings() -> void:
 	cf.set_value("ui", "outline_near", outline_near)
 	cf.set_value("ui", "outline_fade", outline_fade)
 	cf.set_value("progress", "completed_missions", completed_missions)
+	cf.set_value("progress", "mission_grades", mission_grades)
 	cf.set_value("sortie", "last", last_sortie)
 	cf.set_value("ui", "time_speed", time_speed)
 	cf.set_value("ui", "radio_static", radio_static)

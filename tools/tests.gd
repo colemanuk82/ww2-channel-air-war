@@ -25,6 +25,7 @@ func _ready() -> void:
 	_test_audio()
 	_test_logbook_voice()
 	_test_custom_missions()
+	_test_mission_briefs()
 	_test_escape_and_backup()
 	_test_interior_cockpit()
 	_test_data_files()
@@ -806,6 +807,89 @@ func _peak(s: AudioStreamWAV) -> float:
 	for i in range(0, d.size() - 1, 2):
 		m = maxf(m, absf(float(d.decode_s16(i))) / 32768.0)
 	return m
+
+
+## Historical missions: every briefing names real places, every mission has two bonus objectives, and the grade,
+## debrief and raid plans behave (MissionBrief, DefendMode.raid_plan, ResultsScreen).
+func _test_mission_briefs() -> void:
+	print("-- mission briefings, bonus objectives and debrief")
+	var n: int = 0
+	var bad_place: Array = []
+	var bad_brief: Array = []
+	var bad_bonus: Array = []
+	for m in HistoricalMissions.list():
+		for sd in HistoricalMissions.sides_of(str(m["id"])):
+			n += 1
+			var tag: String = "%s/%s" % [m["id"], sd]
+			for id in MissionBrief.task_ids(m, sd):
+				if not MissionBrief.has_place(str(id)):
+					bad_place.append("%s:%s" % [tag, id])
+			var br: String = HistoricalMissions.briefing_for(str(m["id"]), sd)
+			if not (br.contains("TASK  ") and br.contains("OPPOSITION  ") and br.contains("CONDITIONS  ") and br.contains(str(m["brief"]))):
+				bad_brief.append(tag)
+			var bs: Array = MissionBrief.bonuses(m, sd)
+			var ok: bool = bs.size() == MissionBrief.BONUS_COUNT and str(bs[0]["id"]) != str(bs[1]["id"])
+			for b in bs:
+				ok = ok and str(b["text"]) != "" and str(b["short"]) != "" and str(b["text"]) != str(b["id"])
+			if not ok or JSON.stringify(bs) != JSON.stringify(MissionBrief.bonuses(m, sd)):
+				bad_bonus.append(tag)
+	_check(n >= 74, "every historical mission side is briefed (%d)" % n)
+	_check(bad_place.is_empty(), "mission tasks name places that are in locations.json %s" % str(bad_place))
+	_check(bad_brief.is_empty(), "every briefing has its task, opposition and conditions %s" % str(bad_brief))
+	_check(bad_bonus.is_empty(), "every mission side has two different, stable bonus objectives %s" % str(bad_bonus))
+	var kent: Dictionary = HistoricalMissions.get_mission("bob_kent")
+	var kb: String = MissionBrief.briefing(kent, "Allies")
+	_check(not kb.contains("Radar Dover Ch") and kb.contains(MissionBrief.place_name("radar_dover_ch")), "a briefing uses the real name of a target, not its id")
+	_check(MissionBrief.route_line(kent, "Allies").contains(MissionBrief.place_name("biggin_hill")), "the route line starts from the home airfield")
+	_check(absf(MissionBrief.latlon_km(51.0, 0.0, 52.0, 0.0) - 111.2) < 1.0, "one degree of latitude is about 111 km")
+	_check(MissionBrief.compass(0.0) == "north" and MissionBrief.compass(135.0) == "south-east" and MissionBrief.compass(350.0) == "north", "bearings read as compass points")
+	_check(MissionBrief.date_text("1940-08-15") == "15 August 1940", "mission dates are written out")
+	var wales: Dictionary = HistoricalMissions.get_mission("train_wales_bomber")
+	var wids: Array = []
+	for b in MissionBrief.bonuses(wales, "Allies"):
+		wids.append(str(b["id"]))
+	_check(not wids.has("air_kill"), "a mission with no enemy fighters never asks for an air kill %s" % str(wids))
+	# grades and bonuses
+	_check(MissionBrief.grade(false, 2) == 0 and MissionBrief.grade(true, 0) == 1 and MissionBrief.grade(true, 2) == 3, "the grade is 0 for a failure, otherwise 1 plus the bonuses")
+	var par: Dictionary = MissionBrief._bonus("par", {"time_limit": 1200})
+	_check(MissionBrief.bonus_done(par, {"success": true, "time": 1100.0}) and not MissionBrief.bonus_done(par, {"success": true, "time": 1300.0}), "the par bonus needs the mission finished inside the time")
+	_check(not MissionBrief.bonus_done(par, {"success": false, "time": 100.0}), "no bonus counts on a failed mission")
+	_check(MissionBrief.bonus_lost(par, {"time": 1300.0}) and not MissionBrief.bonus_lost(par, {"time": 900.0}), "the par bonus is lost once the time is up")
+	var acc: Dictionary = MissionBrief._bonus("accuracy", {})
+	_check(MissionBrief.bonus_done(acc, {"success": true, "bombs_dropped": 4, "bombs_hit": 2}) and not MissionBrief.bonus_done(acc, {"success": true, "bombs_dropped": 4, "bombs_hit": 1})
+		and not MissionBrief.bonus_done(acc, {"success": true, "bombs_dropped": 0}), "the accuracy bonus needs half the bombs dropped to hit")
+	var cln: Dictionary = MissionBrief._bonus("clean", {})
+	_check(MissionBrief.bonus_done(cln, {"success": true, "health_frac": 0.8}) and not MissionBrief.bonus_done(cln, {"success": true, "health_frac": 0.3}), "the light-damage bonus reads the airframe")
+	var itc: Dictionary = MissionBrief._bonus("intact", {})
+	_check(MissionBrief.bonus_done(itc, {"success": true, "protected": 2, "protected_alive": 2}) and MissionBrief.bonus_lost(itc, {"protected": 2, "protected_alive": 1}), "the all-sites bonus is lost with the first site")
+	var db: Dictionary = MissionBrief.debrief(kent, "Allies", {"success": true, "time": 900.0, "air_kills": 4, "protected": 2, "protected_alive": 2, "health_frac": 0.9})
+	_check((db["objectives"] as Array).size() == 1 + MissionBrief.BONUS_COUNT and bool(db["objectives"][0]["primary"]) and bool(db["objectives"][0]["done"]), "the debrief lists the task and the bonuses")
+	_check(int(db["grade"]) == 3 and str(db["grade_name"]) == "Outstanding" and str(db["summary"]).length() > 20, "a clean defence is graded Outstanding with a written account (%s)" % str(db["grade_name"]))
+	var dbf: Dictionary = MissionBrief.debrief(kent, "Allies", {"success": false, "reason": "killed - shot down", "protected": 2, "protected_alive": 1})
+	_check(int(dbf["grade"]) == 0 and str(dbf["summary"]).contains("shot down"), "a failed mission is graded 0 and says why")
+	# best grade per mission
+	var keep: Dictionary = GameState.mission_grades.duplicate()
+	GameState.mission_grades = {}
+	GameState.record_mission_grade("zz_test", 2, false)
+	GameState.record_mission_grade("zz_test", 1, false)
+	_check(GameState.mission_grade("zz_test") == 2 and GameState.mission_grade("zz_none") == 0, "the best grade on a mission is kept")
+	_check(GameState.mission_label("zz_test", "X").contains("Commended"), "the mission list shows the best grade")
+	GameState.mission_grades = keep
+	# raids on a defend mission differ
+	_check(str(DefendMode.raid_plan(1, 3)["kind"]) == "mass" and str(DefendMode.raid_plan(3, 3)["kind"]) == "big", "the first raid is massed and the last is the heaviest")
+	_check(str(DefendMode.raid_plan(2, 4, 0)["kind"]) != str(DefendMode.raid_plan(3, 4, 0)["kind"]), "the middle raids alternate between low raids and fighter sweeps")
+	_check(str(DefendMode.raid_plan(2, 3, 0)["kind"]) != str(DefendMode.raid_plan(2, 3, 1)["kind"]), "the raid mix differs between missions")
+	for k in ["mass", "low", "sweep", "big"]:
+		_check(DefendMode.raid_call({"kind": k}, 2, 3, "Dover").contains("Dover"), "the %s raid call names the target" % k)
+	_check(ResultsScreen.star_points(Vector2.ZERO, 10.0).size() == 10, "a grade star has ten points")
+	# the objective card text
+	var hm := HistoricalMissions.create("bob_kent", "Allies")
+	hm._bonuses = MissionBrief.bonuses(kent, "Allies")
+	hm._objective_text = "Protect: Dover"
+	var card: String = hm.objective_card_text({"time": 60.0, "air_kills": 1, "protected": 2, "protected_alive": 2, "health_frac": 1.0})
+	_check(card.begins_with("OBJECTIVES\nProtect: Dover") and card.count("BONUS") == MissionBrief.BONUS_COUNT, "the objective card lists the task and both bonuses")
+	_check(hm.pursuit_type() == "bf109", "the fighters sent after the player are a type the enemy flies in that mission (%s)" % hm.pursuit_type())
+	hm.free()
 
 
 # ------------------------------------------------------------------ 1940s world content (Phase 6)

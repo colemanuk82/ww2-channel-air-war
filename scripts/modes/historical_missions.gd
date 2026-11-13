@@ -54,25 +54,7 @@ static func sides_of(id: String) -> Array:
 
 
 static func briefing_for(id: String, p_side: String) -> String:
-	var m: Dictionary = get_mission(id)
-	if m.is_empty():
-		return ""
-	var objs: Array = (m.get("objectives", {}) as Dictionary).get(p_side, [])
-	var role_s: String = str((m.get("roles", {}) as Dictionary).get(p_side, "strike"))
-	var verb: String = {"strike": "Destroy", "strafe": "Strafe and sink", "defend": "Protect", "escort": "Escort the bombers to"}.get(role_s, "Attack")
-	if role_s == "sweep":
-		return "%s (%s)
-
-%s
-
-Objective: clear the skies of enemy fighters." % [m["name"], m["date"], m["brief"]]
-	var names: Array = []
-	var pr: Array = objs
-	if role_s == "defend":
-		pr = (m.get("protect", {}) as Dictionary).get(p_side, objs)
-	for id2 in pr:
-		names.append(str(id2).replace("_", " ").capitalize())
-	return "%s (%s)\n\n%s\n\nObjective: %s %s." % [m["name"], m["date"], m["brief"], verb, ", ".join(names)]
+	return MissionBrief.briefing(get_mission(id), p_side)
 
 
 static func create(id: String, p_side: String = "Allies") -> HistoricalMissions:
@@ -92,6 +74,11 @@ func live_stats() -> Dictionary:
 	if _ev_kills > 0:
 		d["air_kills"] = _ev_kills
 	d["mission"] = str(mission.get("name", mission_id))
+	var f: Dictionary = _facts(d)
+	for i in _bonuses.size():
+		var b: Dictionary = _bonuses[i]
+		var note: String = MissionBrief.bonus_progress(b, f)
+		d["bonus_%d" % (i + 1)] = "%s%s" % [str(b["short"]), (" (%s)" % note) if note != "" else ""]
 	return d
 
 
@@ -171,12 +158,22 @@ func configure(cfg: Dictionary) -> void:
 	inner.radio_quiet = true
 	inner.setup(world, player, hud)
 	inner.call("configure", icfg)
+	_bonuses = MissionBrief.bonuses(mission, side)
 	inner.mission_complete.connect(func(ok: bool, st: Dictionary) -> void:
 		_line("win" if ok else "lose")
 		var stats: Dictionary = st.duplicate()
 		stats["mission"] = str(mission.get("name", mission_id))
+		stats["success"] = ok
+		var db: Dictionary = MissionBrief.debrief(mission, side, _facts(stats))
+		stats["debrief"] = db
+		stats["grade"] = str(db["grade_name"])
+		if ok:
+			GameState.record_mission_grade(mission_id, int(db["grade"]))
 		finish(ok, stats))
-	inner.objective_updated.connect(func(t: String) -> void: objective_updated.emit(t))
+	inner.objective_updated.connect(func(t: String) -> void:
+		_objective_text = t
+		_card_show_t = CARD_SHOW_S
+		objective_updated.emit(t))
 	inner.score_changed.connect(func(sc: int) -> void:
 		score = sc
 		score_changed.emit(sc))
@@ -202,6 +199,7 @@ func start() -> void:
 	_spawn_wing()
 	if _wing != null:
 		_support_skip_bombers = true   # this mission already flies its own bomber stream; add the escort only
+	_build_objective_card()
 	_line("start_1", 1.0)
 	_line("start_2", 2.0)
 	if hud and hud.has_method("show_message"):
@@ -351,6 +349,8 @@ func _process(delta: float) -> void:
 	if _dlg_t > 0.0:
 		return
 	_dlg_t = 1.0
+	_goals_tick()
+	_beats_tick()
 	if role == "defend":
 		var lost: int = _count_destroyed((mission.get("protect", {}) as Dictionary).get(side, []))
 		if lost >= 1:
@@ -501,5 +501,211 @@ func _on_event_enemy_down(ac: Aircraft, killer: Node) -> void:
 
 func stop() -> void:
 	super.stop()
+	if _card != null and is_instance_valid(_card):
+		_card.queue_free()
 	if inner != null and is_instance_valid(inner):
 		inner.stop()
+
+
+# ------------------------------------------------------------------ objectives: the primary task and two bonuses
+## The bonus objectives (MissionBrief.bonuses) are tracked from facts gathered once a second; the objective card
+## shows at the start and for a while whenever something changes, then gets out of the way.
+const CARD_SHOW_S := 30.0
+var _bonuses: Array = []
+var _bonus_state: Dictionary = {}       # bonus id -> "done" | "lost" (told to the pilot once)
+var _objective_text: String = ""
+var _card: Label
+var _card_show_t: float = CARD_SHOW_S
+var _lives_lost: int = 0
+
+
+## The facts MissionBrief scores the sortie from. `st` is the inner mode's stats (live or final).
+func _facts(st: Dictionary) -> Dictionary:
+	var f: Dictionary = st.duplicate()
+	f["time"] = elapsed
+	var air: int = int(player_kills["air"]) + int(player_kills["v1"])
+	if inner != null and is_instance_valid(inner):
+		air = maxi(air, int(inner.player_kills["air"]) + int(inner.player_kills["v1"]))
+	f["air_kills"] = air
+	f["ground_kills"] = int(player_kills["ground"]) + int(player_kills["ships"])
+	var pl: Aircraft = (player as Aircraft) if player != null and is_instance_valid(player) else null
+	var hf: float = 0.0
+	if pl != null and pl.stats != null and pl.state == Aircraft.State.ALIVE:
+		hf = clampf(pl.health / maxf(pl.stats.max_health, 1.0), 0.0, 1.0)
+	f["health_frac"] = hf
+	var lost: int = _lives_lost
+	if inner != null and is_instance_valid(inner):
+		var dv: Variant = inner.get("deaths")
+		if dv != null:
+			lost = maxi(lost, int(dv))
+		var pd: Variant = inner.get("_player_dead")
+		if pd != null and bool(pd):
+			lost = maxi(lost, 1)
+		if inner is BombingMode:
+			var dropped: int = 0
+			var hit: int = 0
+			for e in (inner as BombingMode)._bda:
+				for mk in (e["marks"] as Array):
+					dropped += 1
+					if bool(mk["hit"]):
+						hit += 1
+			f["bombs_dropped"] = dropped
+			f["bombs_hit"] = hit
+			f["targets_destroyed"] = (inner as BombingMode)._destroyed_count
+			f["targets"] = (inner as BombingMode).targets.size()
+		elif inner is DefendMode:
+			f["protected_alive"] = (inner as DefendMode)._alive_protected().size()
+			f["protected"] = (inner as DefendMode).protected_nodes.size()
+		elif inner is EscortMode:
+			var fm: BomberFormation = (inner as EscortMode).formation
+			f["bombers_alive"] = fm.alive_count() if fm != null and is_instance_valid(fm) else 0
+			f["bombers"] = (inner as EscortMode)._count
+	f["lives_lost"] = lost
+	return f
+
+
+func _build_objective_card() -> void:
+	_card = Label.new()
+	_card.add_theme_color_override("font_color", Color(0.95, 0.93, 0.82))
+	if hud and hud.has_method("add_widget"):
+		hud.call("add_widget", _card)
+	if _objective_text == "":
+		_objective_text = MissionBrief.task_line(mission, side)
+
+
+## Text of the objective card: heading, the task, then one line per bonus with its state.
+func objective_card_text(f: Dictionary) -> String:
+	var lines: Array = ["OBJECTIVES", _objective_text]
+	for b in _bonuses:
+		var st: String = str(_bonus_state.get(str(b["id"]), ""))
+		var note: String = MissionBrief.bonus_progress(b, f)
+		var tag: String = "BONUS"
+		if st == "done":
+			tag = "DONE"
+			note = ""
+		elif st == "lost":
+			tag = "MISSED"
+		lines.append("%s  %s%s" % [tag, str(b["short"]), ("   (%s)" % note) if note != "" else ""])
+	return "\n".join(PackedStringArray(lines))
+
+
+func _goals_tick() -> void:
+	if _card == null or not is_instance_valid(_card) or inner == null or not is_instance_valid(inner):
+		return
+	var f: Dictionary = _facts(inner.live_stats())
+	f["success"] = true          # "would this bonus stand if the mission ended well now?"
+	for b in _bonuses:
+		var id: String = str(b["id"])
+		if _bonus_state.has(id) and _bonus_state[id] == "lost":
+			continue
+		if MissionBrief.bonus_lost(b, f):
+			_bonus_state[id] = "lost"
+			_card_show_t = 12.0
+			if hud and hud.has_method("show_message"):
+				hud.call("show_message", "Bonus missed: %s" % str(b["short"]), 3.0)
+			continue
+		# counted bonuses are settled as soon as the count is reached; the rest are judged when the mission ends
+		if id in ["air_kill", "air_kills", "bomber_kills", "ground_kills"] and not _bonus_state.has(id) and MissionBrief.bonus_done(b, f):
+			_bonus_state[id] = "done"
+			_card_show_t = 12.0
+			if hud and hud.has_method("show_message"):
+				hud.call("show_message", "Bonus achieved: %s" % str(b["short"]), 3.0)
+		if id == "par" and not _par_warned and float(b["need"]) - elapsed < 300.0 and elapsed > 60.0:
+			_par_warned = true
+			_card_show_t = 12.0
+			if hud and hud.has_method("show_message"):
+				hud.call("show_message", "Five minutes left for the commendation", 3.5)
+	_card_show_t -= 1.0
+	var want: String = objective_card_text(f) if _card_show_t > 0.0 else ""
+	if _card.text != want:
+		_card.text = want
+
+
+# ------------------------------------------------------------------ pacing: calls that mark the stages of the sortie
+## Strike and strafe sorties get a call on reaching the target area, a pair of fighters sent after the player on
+## the way out of a defended target, and a call with the home field in sight.
+const TARGET_AREA_KM := 12.0
+const HOME_SIGHT_KM := 9.0
+const PURSUIT_DELAY_S := 18.0
+var _par_warned: bool = false
+var _beat_area: bool = false
+var _beat_home: bool = false
+var _beat_pursuit: bool = false
+var _rtb_s: float = 0.0
+
+
+func _ops_name() -> String:
+	return "Operations Room" if side == "Allies" else "Ground Control"
+
+
+func _beats_tick() -> void:
+	if not (role in ["strike", "strafe"]) or inner == null or not is_instance_valid(inner):
+		return
+	var pl: Aircraft = (player as Aircraft) if player != null and is_instance_valid(player) else null
+	if pl == null or pl.state != Aircraft.State.ALIVE:
+		return
+	var rtb: bool = inner is BombingMode and (inner as BombingMode).phase == "rtb"
+	var np: Variant = inner.nav_point()
+	if np == null:
+		return
+	var km: float = Vector2((np as Vector3).x - pl.global_position.x, (np as Vector3).z - pl.global_position.z).length() * WorldCoords.HORIZ_COMPRESSION / 1000.0
+	if not rtb:
+		if not _beat_area and km < TARGET_AREA_KM and elapsed > 20.0 and not pl.on_ground:
+			_beat_area = true
+			var txt: String = "Target area coming up, ten kilometres. The flak will be waiting: make the first run count."
+			if role == "strafe":
+				txt = "You are nearly on them. Come in low and fast, and do not fly the same line twice."
+			Radio.say(_ops_name(), txt, Radio.Kind.CONTROL)
+			if hud and hud.has_method("show_message"):
+				hud.call("show_message", "Target area ahead", 3.0)
+		return
+	_rtb_s += 1.0
+	if not _beat_pursuit and _rtb_s >= PURSUIT_DELAY_S:
+		_beat_pursuit = true
+		if not bool(mission.get("no_fighters", false)) and float(mission.get("difficulty_hint", 0.5)) >= 0.4 and km > HOME_SIGHT_KM:
+			_spawn_pursuit(pl)
+	if not _beat_home and km < HOME_SIGHT_KM:
+		_beat_home = true
+		Radio.say(_ops_name(), "We have you in sight. The circuit is clear: bring her in.", Radio.Kind.CONTROL)
+		if hud and hud.has_method("show_message"):
+			hud.call("show_message", "Home field ahead: land, or pass low over the runway", 4.5)
+
+
+## A fighter type the other side flies in this mission (its own list, else a scripted hostile fighter, else the default).
+func pursuit_type() -> String:
+	var enemy: String = AircraftCatalog.opposite(side)
+	for s in mission.get("sides", []):
+		if str(s.get("side", "")) == enemy:
+			for id in s.get("aircraft", []):
+				if not AircraftCatalog.is_bomber(str(id)) and AircraftCatalog.ids_for_side(enemy).has(str(id)):
+					return str(id)
+	for e in mission.get("events", []):
+		if e is Dictionary and (e as Dictionary).has("aircraft"):
+			var eid: String = str(e["aircraft"])
+			if AircraftCatalog.ids_for_side(enemy).has(eid) and not AircraftCatalog.ids_for_side(side).has(eid) and not AircraftCatalog.is_bomber(eid):
+				return eid
+	return AircraftCatalog.default_fighter(enemy)
+
+
+## Two enemy fighters come up from the target and chase the player on the way home.
+func _spawn_pursuit(pl: Aircraft) -> void:
+	var id: String = pursuit_type()
+	var enemy: String = AircraftCatalog.opposite(side)
+	var fwd: Vector3 = Vector3(pl.get_forward().x, 0.0, pl.get_forward().z)
+	fwd = fwd.normalized() if fwd.length() > 0.1 else Vector3(0, 0, -1)
+	var right := Vector3(-fwd.z, 0.0, fwd.x)
+	var pp: Vector3 = pl.global_position
+	var skill: float = clampf(float(mission.get("difficulty_hint", 0.5)), 0.2, 0.9)
+	for i in 2:
+		var pos: Vector3 = pp - fwd * 5200.0 + right * (float(i) - 0.5) * 320.0
+		pos.y = maxf(pp.y + 250.0, GroundKit.ground_y(pos.x, pos.z) + 500.0)
+		var ac: Aircraft = AIFactory.spawn(world, id, enemy, pos, WorldCoords.dir_to_heading(fwd), -1.0, skill, AIPilot.Role.FIGHTER)
+		var pilot: AIPilot = AIFactory.pilot_of(ac)
+		if pilot != null:
+			pilot.detect_range = 8000.0
+			pilot.patrol_center = pp
+		AIFactory.add_marker(hud, ac, Color(1.0, 0.3, 0.2))
+		ac.destroyed.connect(_on_event_enemy_down)
+	Radio.say(_ops_name(), "Fighters are up from the target and coming after you. Do not hang about.", Radio.Kind.CONTROL, 0.0, "", true)
+	if hud and hud.has_method("show_message"):
+		hud.call("show_message", "Enemy fighters in pursuit", 3.0)
