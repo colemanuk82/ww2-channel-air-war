@@ -86,6 +86,10 @@ static func _static_mesh(t: String) -> ArrayMesh:
 	if _merged.has(key):
 		return _merged[key]
 	var big: bool = t == "88mm"
+	if TownModels.enabled():
+		var sm: ArrayMesh = TownModels.aa_static(big)
+		_merged[key] = sm
+		return sm
 	var ring_r: float = 6.5 if big else 5.0
 	var parts: Array = []
 	for i in 10:
@@ -103,6 +107,10 @@ static func _yaw_mesh(t: String, team: String) -> ArrayMesh:
 	if _merged.has(key):
 		return _merged[key]
 	var c: Color = GroundKit.team_color(team)
+	if TownModels.enabled():
+		var ym: ArrayMesh = TownModels.aa_yaw(t == "88mm", c)
+		_merged[key] = ym
+		return ym
 	var parts: Array = []
 	parts.append(GroundKit.cyl_part(1.4, 1.7, 1.4, Vector3(0, 0.7, 0), c.darkened(0.15), Vector3.ZERO, 8))
 	if t != "88mm":
@@ -118,6 +126,10 @@ static func _pitch_mesh(t: String, team: String) -> ArrayMesh:
 	if _merged.has(key):
 		return _merged[key]
 	var c: Color = GroundKit.team_color(team)
+	if TownModels.enabled():
+		var pm: ArrayMesh = TownModels.aa_pitch(t == "88mm", c)
+		_merged[key] = pm
+		return pm
 	var parts: Array = []
 	if t == "88mm":
 		parts.append(GroundKit.box_part(Vector3(3.0, 2.0, 0.3), Vector3(0, 0.4, -1.0), c))                                   # shield

@@ -41,7 +41,30 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "bridge":
+	if view == "guns":
+		gm.albedo_color = Color(0.36, 0.40, 0.28)
+		for gi in 2:
+			var big: bool = gi == 1
+			var tt: String = "88mm" if big else "bofors"
+			var cc: Color = GroundKit.team_color("Axis")
+			var holder := Node3D.new()
+			holder.position = Vector3(-8.0 + float(gi) * 16.0, 0.0, 0.0)
+			add_child(holder)
+			var m1 := MeshInstance3D.new()
+			m1.mesh = AAGun._static_mesh(tt)
+			holder.add_child(m1)
+			var m2 := MeshInstance3D.new()
+			m2.mesh = AAGun._yaw_mesh(tt, "Axis")
+			holder.add_child(m2)
+			var m3 := MeshInstance3D.new()
+			m3.mesh = AAGun._pitch_mesh(tt, "Axis")
+			m3.position = Vector3(0.0, 2.4, 0.0)
+			m3.rotation_degrees = Vector3(35.0, 0.0, 0.0)
+			holder.add_child(m3)
+		cam.position = Vector3(2.0, 14.0, 18.0)
+		cam.look_at(Vector3(0.0, 2.0, 0.0))
+		cam.fov = 50.0
+	elif view == "bridge":
 		var bmi := MeshInstance3D.new()
 		bmi.mesh = TownModels.strike_bridge()
 		add_child(bmi)

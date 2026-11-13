@@ -783,3 +783,137 @@ static func strike_bridge() -> ArrayMesh:
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache["strike_bridge"] = m
 	return m
+
+
+# ------------------------------------------------------------------ anti-aircraft guns (AAGun parts)
+
+## Sandbag emplacement: two courses of staggered bags in a ring with an entrance gap, ammunition niches, a trodden
+## earth floor with a concrete gun pad, and a few ammunition boxes.
+static func aa_static(big: bool) -> ArrayMesh:
+	var key: String = "aa_static_%s" % str(big)
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var r: float = 6.5 if big else 5.0
+	var sand := Color(0.55, 0.49, 0.36)
+	var n: int = 22
+	b.prism(0.0, 0.0, 0.0, 0.12, r + 0.3, r + 0.3, r + 0.3, r + 0.3, 20, Color(0.30, 0.25, 0.17), true)
+	b.prism(0.0, 0.0, 0.12, 0.3, r * 0.42, r * 0.42, r * 0.40, r * 0.40, 16, Color(0.40, 0.40, 0.38), true)
+	for course in 2:
+		for i in n:
+			var a0: float = TAU * (float(i) + 0.5 * float(course)) / float(n)
+			# a gap in the ring on the +Z side where the crew comes in
+			if cos(a0 - PI * 0.5) > 0.93 and course == 0:
+				continue
+			if cos(a0 - PI * 0.5) > 0.93 and course == 1:
+				continue
+			var cx: float = cos(a0) * r
+			var cz: float = sin(a0) * r
+			var tan := Vector2(-sin(a0), cos(a0))
+			var hl: float = TAU * r / float(n) * 0.56
+			var y0: float = float(course) * 0.62
+			var tone: float = 0.92 + 0.12 * fmod(float(i * 7 + course * 3), 5.0) / 5.0
+			var corners: Array = []
+			for sa in [-1.0, 1.0]:
+				for sr in [-1.0, 1.0]:
+					var rr: float = r + sr * 0.55
+					var ang: float = a0 + sa * hl / r
+					corners.append(Vector2(cos(ang) * rr, sin(ang) * rr))
+			var c0: Vector2 = corners[0]
+			var c1: Vector2 = corners[1]
+			var c2: Vector2 = corners[2]
+			var c3: Vector2 = corners[3]
+			var h: float = 0.62
+			var col: Color = sand * tone
+			b.face([Vector3(c0.x, y0, c0.y), Vector3(c2.x, y0, c2.y), Vector3(c2.x, y0 + h, c2.y), Vector3(c0.x, y0 + h, c0.y)], col, Vector3(cx, 0, cz).rotated(Vector3.UP, 0.0) * -1.0 * -1.0 + Vector3(-tan.x, 0, -tan.y) * 0.0 - Vector3(0, 0, 0) - Vector3(cx, 0, cz) * 2.0 + Vector3(cx, 0, cz) * 2.0)
+			b.face([Vector3(c1.x, y0, c1.y), Vector3(c3.x, y0, c3.y), Vector3(c3.x, y0 + h, c3.y), Vector3(c1.x, y0 + h, c1.y)], col, Vector3(cx, 0, cz))
+			b.face([Vector3(c0.x, y0 + h, c0.y), Vector3(c1.x, y0 + h, c1.y), Vector3(c3.x, y0 + h, c3.y), Vector3(c2.x, y0 + h, c2.y)], col * 1.08, Vector3.UP)
+			b.face([Vector3(c0.x, y0, c0.y), Vector3(c1.x, y0, c1.y), Vector3(c1.x, y0 + h, c1.y), Vector3(c0.x, y0 + h, c0.y)], col * 0.95, Vector3(-tan.x, 0, -tan.y))
+			b.face([Vector3(c2.x, y0, c2.y), Vector3(c3.x, y0, c3.y), Vector3(c3.x, y0 + h, c3.y), Vector3(c2.x, y0 + h, c2.y)], col * 0.95, Vector3(tan.x, 0, tan.y))
+	# ammunition boxes and a ready-use rack inside the wall
+	for k in 3:
+		var ka: float = PI * 1.15 + float(k) * 0.34
+		var kx: float = cos(ka) * (r - 1.6)
+		var kz: float = sin(ka) * (r - 1.6)
+		b.box(kx - 0.5, kx + 0.5, 0.3, 0.75, kz - 0.35, kz + 0.35, Color(0.24, 0.26, 0.18), true, Color(0.30, 0.32, 0.22))
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m
+
+
+## Rotating mount: a round turntable on a cruciform base with outrigger legs, traverse gear housing and the
+## gunner's seat and platform.
+static func aa_yaw(big: bool, c: Color) -> ArrayMesh:
+	var key: String = "aa_yaw_%s_%s" % [str(big), c.to_html(false)]
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var dk: Color = c.darkened(0.2)
+	b.prism(0.0, 0.0, 0.0, 0.5, 1.7, 1.7, 1.6, 1.6, 10, dk.darkened(0.1), true)
+	b.prism(0.0, 0.0, 0.5, 1.2, 1.5, 1.5, 1.2, 1.2, 10, dk, true)
+	if big:
+		# cruciform carriage: four outrigger legs with levelling feet
+		for lg in 4:
+			var ang: float = float(lg) * PI * 0.5
+			var ex: float = cos(ang) * 3.4
+			var ez: float = sin(ang) * 3.4
+			var ax: float = absf(cos(ang))
+			b.box(minf(0.0, ex) - 0.3, maxf(0.0, ex) + 0.3, 0.2, 0.6, minf(0.0, ez) - 0.3, maxf(0.0, ez) + 0.3, dk.darkened(0.05), true)
+			b.box(ex - 0.45, ex + 0.45, 0.0, 0.3, ez - 0.45, ez + 0.45, Color(0.15, 0.15, 0.15), true)
+	else:
+		for lg in 4:
+			var ang2: float = float(lg) * PI * 0.5
+			var ex2: float = cos(ang2) * 2.6
+			var ez2: float = sin(ang2) * 2.6
+			b.box(minf(0.0, ex2) - 0.22, maxf(0.0, ex2) + 0.22, 0.2, 0.5, minf(0.0, ez2) - 0.22, maxf(0.0, ez2) + 0.22, dk.darkened(0.05), true)
+			b.box(ex2 - 0.35, ex2 + 0.35, 0.0, 0.25, ez2 - 0.35, ez2 + 0.35, Color(0.15, 0.15, 0.15), true)
+		# gunner's seat on a bracket, and a foot plate
+		b.box(1.2, 2.0, 1.1, 1.3, 0.8, 1.6, dk.darkened(0.1), true)
+		b.box(1.5, 1.7, 0.5, 1.1, 1.1, 1.3, Color(0.15, 0.15, 0.15), false)
+	b.box(-0.9, 0.9, 1.2, 1.9, -0.9, 0.9, dk.lightened(0.04), true)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m
+
+
+## The pitching part, barrels along -Z about the trunnion at the origin: for the 88 a long barrel with a recoil
+## sleeve, muzzle brake and big breech under an angled shield; for the Bofors twin barrels with flash hiders, a
+## clip-fed magazine on top and a splinter shield.
+static func aa_pitch(big: bool, c: Color) -> ArrayMesh:
+	var key: String = "aa_pitch_%s_%s" % [str(big), c.to_html(false)]
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var dk: Color = c.darkened(0.3)
+	var steel := Color(0.17, 0.17, 0.18)
+	if big:
+		# shield: a flat plate with side wings
+		b.box(-1.5, 1.5, -0.6, 1.4, -1.15, -1.0, c, true)
+		for sx in [-1.0, 1.0]:
+			b.box(minf(sx * 1.5, sx * 1.62), maxf(sx * 1.5, sx * 1.62), -0.6, 1.4, -1.1, 0.3, c.darkened(0.06), true)
+		# cradle, recoil sleeve, barrel with a step and muzzle brake
+		b.box(-0.55, 0.55, -0.45, 0.45, -1.0, 1.8, c.darkened(0.15), true)
+		b.prism(0.0, -3.4, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3, steel, false)
+		b.box(-0.30, 0.30, -0.30, 0.30, -4.2, -1.0, steel.lightened(0.03), true)
+		b.box(-0.23, 0.23, -0.23, 0.23, -9.6, -4.2, steel, true)
+		b.box(-0.36, 0.36, -0.36, 0.36, -10.4, -9.6, steel.lightened(0.05), true)
+		# breech block, elevating arc and a sight
+		b.box(-0.7, 0.7, -0.6, 0.6, 1.8, 2.8, c.darkened(0.25), true)
+		b.box(-0.2, 0.2, 0.45, 0.9, -0.3, 0.2, Color(0.12, 0.12, 0.12), true)
+		b.box(-1.4, -1.1, 0.0, 0.5, -0.4, 0.4, dk, true)
+	else:
+		# splinter shield and cradle
+		b.box(-1.35, 1.35, -0.55, 0.9, -0.95, -0.82, c, true)
+		b.box(-1.1, 1.1, -0.45, 0.45, -0.8, 1.5, c.darkened(0.12), true)
+		for sx2 in [-0.62, 0.62]:
+			b.box(sx2 - 0.16, sx2 + 0.16, -0.12, 0.2, -4.0, -0.8, steel, true)
+			b.box(sx2 - 0.19, sx2 + 0.19, -0.15, 0.23, -5.6, -4.0, steel.lightened(0.03), true)
+			b.box(sx2 - 0.3, sx2 + 0.3, -0.26, 0.34, -5.9, -5.6, steel.lightened(0.06), true)
+			# clip-fed magazine above the breech
+			b.box(sx2 - 0.22, sx2 + 0.22, 0.45, 1.05, -0.2, 0.5, Color(0.26, 0.28, 0.2), true)
+			b.box(sx2 - 0.15, sx2 + 0.15, 1.05, 1.3, -0.1, 0.4, steel, true)
+		b.box(-0.2, 0.2, 0.45, 0.8, 0.5, 1.2, Color(0.12, 0.12, 0.12), true)
+		b.box(-1.0, 1.0, -0.4, 0.4, 1.5, 1.9, c.darkened(0.25), true)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m
