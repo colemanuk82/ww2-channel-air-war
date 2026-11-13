@@ -1,4 +1,4 @@
-extends Node3D
+﻿extends Node3D
 ## Building model gallery (review shots): the ten town house units in a street row, or the landmark buildings.
 ## Run on the hidden desktop: godot --path . tools/shots/town_gallery.tscn -- --view=houses|back|land --shot=<png>
 
@@ -45,7 +45,7 @@ func _ready() -> void:
 		var xs: Array = [-55.0, 0.0, 60.0]
 		for i in 3:
 			var mi := MeshInstance3D.new()
-			mi.mesh = TownModels.church(true) if i == 0 else (TownModels.church(false) if i == 1 else TownModels.town_hall())
+			mi.mesh = TownModels.church(true) if i == 0 else (TownModels.market_square() if i == 1 else TownModels.town_hall())
 			mi.position = Vector3(xs[i], 0.0, 0.0)
 			mi.rotation.y = 0.0 if i < 2 else PI
 			add_child(mi)
@@ -89,3 +89,4 @@ func _process(_dt: float) -> void:
 	if _frames == 40 and _shot != "":
 		get_viewport().get_texture().get_image().save_png(_shot)
 		get_tree().quit()
+

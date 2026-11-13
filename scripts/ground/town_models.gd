@@ -598,3 +598,39 @@ static func town_hall() -> ArrayMesh:
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache[key] = m
 	return m
+
+
+## Market square: cobbled paving with a kerb, a stepped market cross, and two rows of covered stalls on posts
+## with striped awnings (46 x 38 m).
+static func market_square() -> ArrayMesh:
+	if _cache.has("market"):
+		return _cache["market"]
+	var b := MB.new()
+	var stone := Color(0.62, 0.58, 0.50)
+	b.box(-23.0, 23.0, 0.0, 0.35, -19.0, 19.0, Color(0.50, 0.48, 0.44), true, Color(0.46, 0.44, 0.40))
+	b.box(-23.3, 23.3, 0.0, 0.5, -19.3, -19.0, stone)
+	b.box(-23.3, 23.3, 0.0, 0.5, 19.0, 19.3, stone)
+	b.box(-23.3, -23.0, 0.0, 0.5, -19.0, 19.0, stone)
+	b.box(23.0, 23.3, 0.0, 0.5, -19.0, 19.0, stone)
+	# market cross: three steps, a shaft and a cross-head under a little pyramid
+	for s in 3:
+		var h: float = 2.4 - float(s) * 0.7
+		b.box(-h, h, 0.35 + float(s) * 0.4, 0.75 + float(s) * 0.4, -h, h, stone * (0.95 + 0.03 * s))
+	b.prism(0.0, 0.0, 1.55, 6.8, 0.55, 0.55, 0.38, 0.38, 6, stone * 1.04, true)
+	b.box(-0.9, 0.9, 6.8, 7.5, -0.35, 0.35, stone * 1.04)
+	b.prism(0.0, 0.0, 7.5, 8.6, 0.55, 0.55, 0.0, 0.0, 4, stone * 0.92, false, PI * 0.25)
+	# covered stalls: posts, a striped sloping awning, a counter
+	var awn: Array = [Color(0.56, 0.27, 0.22), Color(0.66, 0.62, 0.54), Color(0.27, 0.36, 0.45), Color(0.62, 0.50, 0.28)]
+	for row in 2:
+		var zz: float = -12.0 if row == 0 else 12.0
+		for i in 5:
+			var xx: float = -16.0 + float(i) * 8.0
+			var ac: Color = awn[(i + row * 2) % 4]
+			for px in [-2.6, 2.6]:
+				b.box(xx + px - 0.12, xx + px + 0.12, 0.35, 2.9, zz - 1.7, zz - 1.46, Color(0.30, 0.24, 0.18), false)
+				b.box(xx + px - 0.12, xx + px + 0.12, 0.35, 2.4, zz + 1.46, zz + 1.7, Color(0.30, 0.24, 0.18), false)
+			b.face([Vector3(xx - 3.0, 2.9, zz - 1.9), Vector3(xx + 3.0, 2.9, zz - 1.9), Vector3(xx + 3.0, 2.4, zz + 1.9), Vector3(xx - 3.0, 2.4, zz + 1.9)], ac, Vector3.UP)
+			b.box(xx - 2.5, xx + 2.5, 0.35, 1.1, zz - 0.7, zz + 0.7, Color(0.42, 0.33, 0.24), true, Color(0.55, 0.46, 0.34))
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache["market"] = m
+	return m

@@ -1310,6 +1310,11 @@ static func _build_civic(root: Node3D, c: Dictionary) -> void:
 			holder.add_child(rf)
 			GroundKit.cyl(holder, 0.0, 3.2 * sc, 16.0 * sc, Vector3(0.0, 21.0 * sc, 0.0), Color(0.5, 0.48, 0.44), Vector3.ZERO, 4)
 			GroundKit.box(holder, Vector3(3.4, 3.4, 3.4) * sc, Vector3(0.0, 29.0 * sc, 0.0), Color(0.30, 0.30, 0.34))
+		"market" when TownModels.enabled():
+			var mk := MeshInstance3D.new()
+			mk.mesh = TownModels.market_square()
+			mk.scale = Vector3.ONE * sc
+			holder.add_child(mk)
 		"market":
 			GroundKit.box(holder, Vector3(46, 0.5, 38) * sc, Vector3(0.0, 0.25 * sc, 0.0), Color(0.56, 0.54, 0.5), Vector3.ZERO, false)
 			GroundKit.cyl(holder, 0.7, 1.0, 7.0 * sc, Vector3(0.0, 3.5 * sc, 0.0), Color(0.62, 0.58, 0.5), Vector3.ZERO, 6)
