@@ -1,4 +1,4 @@
-﻿extends Node3D
+extends Node3D
 ## Building model gallery (review shots): the ten town house units in a street row, or the landmark buildings.
 ## Run on the hidden desktop: godot --path . tools/shots/town_gallery.tscn -- --view=houses|back|land --shot=<png>
 
@@ -41,7 +41,22 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "land":
+	if view == "ships":
+		gm.albedo_color = Color(0.10, 0.20, 0.30)
+		var kinds: Array = ["destroyer", "cruiser", "battleship", "freighter", "collier", "trawler", "ferry", "landing_craft", "fishing_boat"]
+		var z: float = -20.0
+		var k: int = 0
+		for kd in kinds:
+			var cfg: Dictionary = GroundShip.TYPES[kd]
+			var mi4 := MeshInstance3D.new()
+			mi4.mesh = ShipModels.build(kd, true, float(cfg["len"]), float(cfg["beam"]))
+			mi4.position = Vector3(-60.0 + float(k % 3) * 60.0, 0.0, -60.0 + float(k / 3) * 46.0)
+			mi4.rotation.y = PI * 0.5 + 0.35
+			add_child(mi4)
+			k += 1
+		cam.position = Vector3(30.0, 90.0, 110.0)
+		cam.look_at(Vector3(0.0, 0.0, -20.0))
+	elif view == "land":
 		var xs: Array = [-55.0, 0.0, 60.0]
 		for i in 3:
 			var mi := MeshInstance3D.new()

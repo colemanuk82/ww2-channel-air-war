@@ -97,6 +97,13 @@ func _hull(color: Color, depth: float, fb: float, sharp: float) -> void:
 
 
 func _build_intact(root: Node3D) -> void:
+	if TownModels.enabled():
+		# detailed one-mesh model (ShipModels); the toon boxes below stay for the classic scenery setting
+		var sm := MeshInstance3D.new()
+		sm.mesh = ShipModels.build(stype, team == "Allies", _len, _beam)
+		_intact.add_child(sm)
+		_make_wake(root)
+		return
 	var grey: Color = Color(0.45, 0.5, 0.55) if team == "Allies" else Color(0.38, 0.4, 0.42)
 	match stype:
 		"destroyer":
