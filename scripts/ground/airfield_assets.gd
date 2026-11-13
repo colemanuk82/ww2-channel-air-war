@@ -108,6 +108,10 @@ static func nissen(team: String) -> ArrayMesh:
 	var iron: Color = Color(0.40, 0.42, 0.32) if team == "Allies" else Color(0.38, 0.38, 0.34)
 	var brick := Color(0.45, 0.31, 0.24)
 	var dark := Color(0.08, 0.08, 0.08)
+	if TownModels.enabled():
+		var nm: ArrayMesh = TownModels.nissen_hut(iron)
+		Scatter._meshes[key] = nm
+		return nm
 	var parts: Array = []
 	parts.append(GroundKit.cyl_part(3.0, 3.0, 11.0, Vector3(0, 1.3, 0), iron, Vector3(90, 0, 0), 12))
 	for i in 9:
@@ -128,6 +132,10 @@ static func tent(team: String) -> ArrayMesh:
 	if _cached(key) != null:
 		return _cached(key)
 	var cloth: Color = Color(0.45, 0.45, 0.32) if team == "Allies" else Color(0.40, 0.41, 0.36)
+	if TownModels.enabled():
+		var tm: ArrayMesh = TownModels.ridge_tent(cloth)
+		Scatter._meshes[key] = tm
+		return tm
 	var parts: Array = []
 	for sd in [-1.0, 1.0]:
 		parts.append(GroundKit.box_part(Vector3(3.12, 0.1, 6.0), Vector3(sd * 1.0, 1.2, 0), cloth, Vector3(0, 0, -sd * 50.2)))
@@ -145,6 +153,10 @@ static func fuel_tank() -> ArrayMesh:
 		return _cached("fuel_tank2")
 	var steel := Color(0.58, 0.58, 0.55)
 	var band := Color(0.34, 0.35, 0.34)
+	if TownModels.enabled():
+		var fm: ArrayMesh = TownModels.fuel_tank_model()
+		Scatter._meshes["fuel_tank2"] = fm
+		return fm
 	var parts: Array = []
 	parts.append(GroundKit.cyl_part(5.1, 5.1, 0.5, Vector3(0, 0.25, 0), Color(0.55, 0.54, 0.5), Vector3.ZERO, 14))
 	parts.append(GroundKit.cyl_part(4.5, 4.5, 5.6, Vector3(0, 3.3, 0), steel, Vector3.ZERO, 14))

@@ -1340,3 +1340,211 @@ static func field_gun_barrel(c: Color) -> ArrayMesh:
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache[key] = m
 	return m
+
+
+# ------------------------------------------------------------------ airfield clutter (detailed AirfieldAssets meshes)
+
+## Nissen hut: a half-round corrugated iron roof (radius 3.0, axis along Z, centred at y = 1.3) carried on a
+## concrete base, with brick half-disc end walls, a dark door and a small window to the +Z end, a small brick
+## porch and a stove pipe. Same placement footprint as the old cylinder-and-box model.
+static func nissen_hut(iron: Color) -> ArrayMesh:
+	var key: String = "nissen_hut_%s" % iron.to_html(false)
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var brick := Color(0.45, 0.31, 0.24)
+	var concrete := Color(0.54, 0.53, 0.49)
+	var dark := Color(0.08, 0.08, 0.08)
+	var glass := Color(0.16, 0.20, 0.22)
+	var r: float = 3.0
+	var cy: float = 1.3
+	var za: float = -5.5
+	var zb: float = 5.5
+	var arc: int = 12
+	# concrete base: the low walls the iron arch sits on
+	b.box(-r, r, -0.15, cy, za + 0.08, zb - 0.08, concrete, false)
+	# corrugated roof: flat strips over the upper arc, alternating tone so the corrugation reads at distance
+	var roof_lo: Color = iron.darkened(0.06)
+	var roof_hi: Color = iron.lightened(0.05)
+	for i in arc:
+		var a0: float = PI * float(i) / float(arc)
+		var a1: float = PI * float(i + 1) / float(arc)
+		var am: float = (a0 + a1) * 0.5
+		var col: Color = roof_hi if i % 2 == 0 else roof_lo
+		b.face([Vector3(cos(a0) * r, cy + sin(a0) * r, za), Vector3(cos(a1) * r, cy + sin(a1) * r, za), Vector3(cos(a1) * r, cy + sin(a1) * r, zb), Vector3(cos(a0) * r, cy + sin(a0) * r, zb)], col, Vector3(cos(am), sin(am), 0.0))
+	# a darker hoop rib every 1.2 m
+	var ribs: int = int((zb - za) / 1.2) + 1
+	var rib_col: Color = iron.darkened(0.28)
+	var rr: float = r + 0.06
+	for k in ribs:
+		var rz: float = za + float(k) * 1.2
+		for i in arc:
+			var r0: float = PI * float(i) / float(arc)
+			var r1: float = PI * float(i + 1) / float(arc)
+			var rm: float = (r0 + r1) * 0.5
+			b.face([Vector3(cos(r0) * rr, cy + sin(r0) * rr, rz - 0.06), Vector3(cos(r1) * rr, cy + sin(r1) * rr, rz - 0.06), Vector3(cos(r1) * rr, cy + sin(r1) * rr, rz + 0.06), Vector3(cos(r0) * rr, cy + sin(r0) * rr, rz + 0.06)], rib_col, Vector3(cos(rm), sin(rm), 0.0))
+	# brick end walls: a half-disc fan over the arc on a short base course at each end
+	for ez in [za, zb]:
+		var hint: Vector3 = Vector3.FORWARD if ez < 0.0 else Vector3.BACK
+		b.box(-r, r, 0.0, cy, ez - 0.08, ez + 0.08, brick, false)
+		var fan: Array = [Vector3(0.0, cy, ez)]
+		for i in range(arc + 1):
+			var a: float = PI * float(i) / float(arc)
+			fan.append(Vector3(cos(a) * r, cy + sin(a) * r, ez))
+		b.face(fan, brick, hint)
+	# the +Z door, window and a small brick porch round the door
+	b.box(-1.5, -0.4, 0.0, 2.1, zb + 0.02, zb + 0.18, dark, false)
+	b.box(0.9, 1.9, 1.4, 2.2, zb + 0.02, zb + 0.14, glass, false)
+	b.box(-1.85, -1.55, 0.0, 2.3, zb, zb + 0.9, brick, false)
+	b.box(-0.45, -0.15, 0.0, 2.3, zb, zb + 0.9, brick, false)
+	b.box(-1.85, -0.15, 1.9, 2.3, zb, zb + 0.9, brick, true)
+	b.box(-1.95, -0.05, 2.3, 2.45, zb - 0.05, zb + 1.0, brick.darkened(0.12), true)
+	# stove pipe through the roof at (0.8, -1.5) with a cowl
+	b.prism(0.8, -1.5, 1.5, 4.9, 0.16, 0.16, 0.16, 0.16, 6, dark, false)
+	b.prism(0.8, -1.5, 4.9, 5.15, 0.34, 0.34, 0.10, 0.10, 6, dark.darkened(0.3), true)
+	var m2: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m2
+	return m2
+
+
+## Ridge tent: about 4 x 6 m, ridge along Z at y = 2.42, eaves at y = 0.5 on short vertical walls, slightly
+## lighter roof panels, a dark open door flap in the +Z end, a ridge pole through both ends, and four guy ropes
+## per side with pegs.
+static func ridge_tent(cloth: Color) -> ArrayMesh:
+	var key: String = "ridge_tent_%s" % cloth.to_html(false)
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var dark := Color(0.10, 0.09, 0.07)
+	var rope := Color(0.14, 0.13, 0.11)
+	var wall: Color = cloth.darkened(0.10)
+	var roof: Color = cloth.lightened(0.06)
+	var flap: Color = cloth.darkened(0.40)
+	var ridge_y: float = 2.42
+	var eave_y: float = 0.5
+	var hw: float = 2.0
+	var za: float = -3.0
+	var zb: float = 3.0
+	# slightly lighter roof panels, eave to ridge
+	b.face([Vector3(-hw, eave_y, za), Vector3(-hw, eave_y, zb), Vector3(0.0, ridge_y, zb), Vector3(0.0, ridge_y, za)], roof, Vector3(-0.5, 1.0, 0.0))
+	b.face([Vector3(hw, eave_y, za), Vector3(hw, eave_y, zb), Vector3(0.0, ridge_y, zb), Vector3(0.0, ridge_y, za)], roof, Vector3(0.5, 1.0, 0.0))
+	# short vertical walls below the eaves
+	for sx in [-1.0, 1.0]:
+		var wx: float = sx * hw
+		b.box(wx - 0.055, wx + 0.055, 0.0, eave_y, za, zb, wall, false)
+	# end walls as triangles over a short wall course
+	for ez in [za, zb]:
+		var hint: Vector3 = Vector3.FORWARD if ez < 0.0 else Vector3.BACK
+		b.box(-hw, hw, 0.0, eave_y, ez - 0.06, ez + 0.06, wall, false)
+		b.face([Vector3(-hw, eave_y, ez), Vector3(hw, eave_y, ez), Vector3(0.0, ridge_y, ez)], cloth, hint)
+	# dark open door flap in the +Z end: a dark opening with two angled flap faces
+	b.face([Vector3(-1.3, 0.5, zb + 0.02), Vector3(1.3, 0.5, zb + 0.02), Vector3(0.0, 2.2, zb + 0.02)], dark, Vector3.BACK)
+	b.face([Vector3(0.0, 2.3, zb + 0.03), Vector3(-1.45, 0.55, zb + 0.03), Vector3(-2.2, 0.55, zb + 0.95), Vector3(-0.6, 2.3, zb + 0.95)], flap, Vector3(-0.3, 0.1, 1.0))
+	b.face([Vector3(0.0, 2.3, zb + 0.03), Vector3(1.45, 0.55, zb + 0.03), Vector3(2.2, 0.55, zb + 0.95), Vector3(0.6, 2.3, zb + 0.95)], flap, Vector3(0.3, 0.1, 1.0))
+	# ridge pole sticking out past both ends
+	b.box(-0.05, 0.05, ridge_y - 0.05, ridge_y + 0.05, za - 0.4, zb + 0.4, dark, false)
+	# four guy ropes per side, each to a peg
+	for sz in [-2.4, -0.8, 0.8, 2.4]:
+		for sg in [-1.0, 1.0]:
+			b.beam(Vector3(sg * hw, eave_y + 0.05, sz), Vector3(sg * 3.3, 0.06, sz), 0.025, 0.025, rope)
+			b.box(sg * 3.3 - 0.05, sg * 3.3 + 0.05, 0.0, 0.24, sz - 0.05, sz + 0.05, dark, true)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m
+
+
+## Bulk fuel tank: concrete plinth, a 16-sided banded steel drum, a low conical roof with a hatch, a caged ladder
+## on the +X side, a railing ring on the roof edge, a pipe run with a valve box toward +Z, and a low earth bund
+## with a gap toward +Z. Centre at origin, base y = 0 (same layout as the old fuel_tank()).
+static func fuel_tank_model() -> ArrayMesh:
+	var key: String = "fuel_tank_model"
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var steel := Color(0.58, 0.58, 0.55)
+	var band := Color(0.34, 0.35, 0.34)
+	var concrete := Color(0.55, 0.54, 0.50)
+	var iron := Color(0.15, 0.15, 0.15)
+	var earth := Color(0.34, 0.29, 0.20)
+	var segs: int = 16
+	# concrete plinth and the banded steel drum
+	b.prism(0.0, 0.0, 0.0, 0.5, 5.1, 5.1, 5.1, 5.1, segs, concrete, true)
+	b.prism(0.0, 0.0, 0.5, 6.1, 4.5, 4.5, 4.5, 4.5, segs, steel, true)
+	for yb in [1.5, 3.3, 5.1]:
+		b.prism(0.0, 0.0, yb - 0.11, yb + 0.11, 4.56, 4.56, 4.56, 4.56, segs, band, false)
+	# low conical roof and its central hatch
+	b.prism(0.0, 0.0, 6.1, 7.2, 4.5, 4.5, 0.8, 0.8, segs, steel.darkened(0.06), false)
+	b.prism(0.0, 0.0, 7.2, 7.55, 0.8, 0.8, 0.8, 0.8, 8, band, true)
+	b.prism(0.0, 0.0, 7.55, 7.68, 0.9, 0.9, 0.9, 0.9, 8, iron, true)
+	# caged ladder up the +X side
+	var lx: float = 4.62
+	b.box(lx, lx + 0.07, 0.4, 6.3, -0.36, -0.26, iron, false)
+	b.box(lx, lx + 0.07, 0.4, 6.3, 0.26, 0.36, iron, false)
+	for i in 15:
+		var ry: float = 0.6 + float(i) * 0.4
+		b.box(lx, lx + 0.05, ry, ry + 0.04, -0.26, 0.26, iron, false)
+	for i in 5:
+		var cy2: float = 2.6 + float(i) * 0.9
+		b.box(lx + 0.5, lx + 0.56, cy2, cy2 + 0.05, -0.55, 0.55, iron, false)
+	b.box(lx + 0.5, lx + 0.56, 2.6, 6.5, -0.57, -0.51, iron, false)
+	b.box(lx + 0.5, lx + 0.56, 2.6, 6.5, 0.51, 0.57, iron, false)
+	# railing ring of short posts and a top rail round the roof edge
+	var posts: int = 16
+	var rail_r: float = 4.5
+	for i in posts:
+		var a: float = TAU * float(i) / float(posts)
+		var rx: float = cos(a) * rail_r
+		var rz: float = sin(a) * rail_r
+		b.box(rx - 0.05, rx + 0.05, 6.0, 6.9, rz - 0.05, rz + 0.05, iron, false)
+	for i in posts:
+		var a0: float = TAU * float(i) / float(posts)
+		var a1: float = TAU * float(i + 1) / float(posts)
+		b.beam(Vector3(cos(a0) * rail_r, 6.85, sin(a0) * rail_r), Vector3(cos(a1) * rail_r, 6.85, sin(a1) * rail_r), 0.04, 0.04, iron)
+	# pipe run toward +Z with a valve box
+	var nseg: int = 8
+	var pipe_y: float = 0.9
+	var pipe_r: float = 0.28
+	var ring: Array = []
+	for s in nseg:
+		var a: float = TAU * float(s) / float(nseg)
+		ring.append(Vector2(cos(a) * pipe_r, pipe_y + sin(a) * pipe_r))
+	for s in nseg:
+		var q0: Vector2 = ring[s]
+		var q1: Vector2 = ring[(s + 1) % nseg]
+		var outv := Vector3(q0.x, q0.y - pipe_y, 0.0).normalized()
+		b.face([Vector3(q0.x, q0.y, 4.4), Vector3(q1.x, q1.y, 4.4), Vector3(q1.x, q1.y, 7.0), Vector3(q0.x, q0.y, 7.0)], band, outv)
+	var cap: Array = []
+	for s in nseg:
+		var a: float = TAU * float(s) / float(nseg)
+		cap.append(Vector3(cos(a) * pipe_r, pipe_y + sin(a) * pipe_r, 7.0))
+	b.face(cap, band.darkened(0.2), Vector3.BACK)
+	b.box(-0.45, 0.45, 0.45, 1.35, 5.35, 5.95, iron, true)
+	b.prism(0.0, 5.65, 1.35, 1.9, 0.12, 0.12, 0.12, 0.12, 6, iron, true)
+	b.box(-0.22, 0.22, 1.9, 2.0, 5.43, 5.87, iron.darkened(0.2), true)
+	# earth bund wall ring (low, radius 8.5, gap toward +Z)
+	var bsegs: int = 16
+	var bund_o: float = 8.5
+	var bund_i: float = 7.9
+	var bund_h: float = 1.3
+	for i in bsegs:
+		if i == 3 or i == 4:
+			continue
+		var a0: float = TAU * float(i) / float(bsegs)
+		var a1: float = TAU * float(i + 1) / float(bsegs)
+		var am: float = (a0 + a1) * 0.5
+		var o0 := Vector3(cos(a0) * bund_o, 0.0, sin(a0) * bund_o)
+		var o1 := Vector3(cos(a1) * bund_o, 0.0, sin(a1) * bund_o)
+		var i0 := Vector3(cos(a0) * bund_i, 0.0, sin(a0) * bund_i)
+		var i1 := Vector3(cos(a1) * bund_i, 0.0, sin(a1) * bund_i)
+		b.face([o0, o1, Vector3(o1.x, bund_h, o1.z), Vector3(o0.x, bund_h, o0.z)], earth, Vector3(cos(am), 0.2, sin(am)))
+		b.face([i0, i1, Vector3(i1.x, bund_h, i1.z), Vector3(i0.x, bund_h, i0.z)], earth.darkened(0.08), Vector3(-cos(am), 0.2, -sin(am)))
+		b.face([Vector3(o0.x, bund_h, o0.z), Vector3(o1.x, bund_h, o1.z), Vector3(i1.x, bund_h, i1.z), Vector3(i0.x, bund_h, i0.z)], earth.lightened(0.08), Vector3.UP)
+	for ge in [3, 5]:
+		var ga: float = TAU * float(ge) / float(bsegs)
+		var g0 := Vector3(cos(ga) * bund_i, 0.0, sin(ga) * bund_i)
+		var g1 := Vector3(cos(ga) * bund_o, 0.0, sin(ga) * bund_o)
+		var gh: Vector3 = Vector3(-sin(ga), 0.1, cos(ga)) if ge == 3 else Vector3(sin(ga), 0.1, -cos(ga))
+		b.face([g0, g1, Vector3(g1.x, bund_h, g1.z), Vector3(g0.x, bund_h, g0.z)], earth.darkened(0.05), gh)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m

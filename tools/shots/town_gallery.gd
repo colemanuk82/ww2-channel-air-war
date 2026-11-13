@@ -41,7 +41,19 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "vehicles":
+	if view == "props":
+		gm.albedo_color = Color(0.36, 0.40, 0.28)
+		var pmeshes: Array = [AirfieldAssets.nissen("Allies"), AirfieldAssets.tent("Allies"), AirfieldAssets.fuel_tank()]
+		for pi in 3:
+			var pmi := MeshInstance3D.new()
+			pmi.mesh = pmeshes[pi]
+			pmi.position = Vector3(-14.0 + float(pi) * 13.0, 0.0, 0.0)
+			pmi.rotation.y = -0.5
+			add_child(pmi)
+		cam.position = Vector3(4.0, 13.0, 26.0)
+		cam.look_at(Vector3(0.0, 2.0, 0.0))
+		cam.fov = 50.0
+	elif view == "vehicles":
 		gm.albedo_color = Color(0.36, 0.40, 0.28)
 		var vk: Array = ["truck", "bowser", "firetender", "halftrack", "kubel", "jeep", "car", "bus"]
 		var vc: Color = GroundKit.team_color("Allies")
