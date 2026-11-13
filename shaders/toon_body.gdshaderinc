@@ -38,6 +38,7 @@ global uniform float raid_black_r;     // radius of the raided town's built-up a
 global uniform float blackout;         // 0 = windows lit as usual, 1 = wartime blackout (towns almost dark)
 global uniform float wetness;          // 0..1 ground wetness (WeatherManager): wet grass/runways darken and sheen
 global uniform float lamp_amount;      // 0..1 night / dusk activity: keeps active airfields and lit sites visible in blackout
+global uniform vec3 wind_sway;         // xz = the direction crowns lean TOWARD (downwind) times a 0..1 strength (WeatherManager); y unused
 
 varying vec3 obj_n;
 varying vec3 obj_p;
@@ -65,12 +66,27 @@ void vertex() {
 			float hk = h / 15.0;
 			vec2 cell = mod(floor(org.xz), 997.0);
 			float ph = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453) * 6.2832;
-			vec2 wdir = vec2(0.8, 0.6);
+			// per-instance vigour, hashed from the instance origin like the phase: some crowns sway a little
+			// harder and quicker than their neighbours, so a wood never moves as one sheet
+			float vh = fract(sin(dot(cell, vec2(269.5, 183.3))) * 43758.5453);
+			float sway_k = 0.85 + 0.30 * vh;
+			float freq_k = 0.88 + 0.24 * fract(vh * 7.31);
+			// wind_sway.xz is the downwind lean vector (direction times 0..1 strength); without it (unset
+			// global) fall back to the old fixed light breeze
+			vec2 wdir = wind_sway.xz;
+			float wstr = length(wdir);
+			if (wstr < 0.01) {
+				wdir = vec2(0.8, 0.6);
+				wstr = 0.15;
+			} else {
+				wdir /= wstr;
+				wstr = clamp(wstr, 0.0, 1.0);
+			}
 			float t = TIME;
-			float lean = sin(t * 1.15 + ph) * 0.6 + sin(t * 0.73 + ph * 1.7) * 0.4;
-			lean = (lean * 0.5 + 0.55) * 0.25 * hk * hk;
+			float lean = sin(t * 1.15 * freq_k + ph) * 0.6 + sin(t * 0.73 * freq_k + ph * 1.7) * 0.4;
+			lean = min(lean * 0.5 + 0.55, 1.05) * 0.25 * wstr * sway_k * hk * hk;
 			vec3 lp = mod(w_pos, 97.0);
-			float fl = sin(t * 7.3 + dot(lp, vec3(1.7, 2.3, 1.9)) + ph) * 0.04 * hk;
+			float fl = sin(t * 7.3 * freq_k + dot(lp, vec3(1.7, 2.3, 1.9)) + ph) * 0.04 * hk;
 			vec3 off = vec3(wdir.x * lean, 0.0, wdir.y * lean) + vec3(fl * 0.6, fl * 0.5, -fl * 0.4);
 			off *= fade;
 			w_pos += off;
@@ -151,7 +167,9 @@ vec3 detail_building(vec3 col, inout float emit, float cam_dist) {
 		float line_v = smoothstep(0.0, 0.10, fract(u));
 		float tiles = mix(0.85, 0.70 + 0.30 * line_h * line_v, aa);
 		col *= mix(0.85, tiles, near_k);         // average roof tone preserved
-		col *= mix(1.0, 0.88 + 0.24 * t_vnoise2(w_pos.xz * 0.7), near_k);
+		// moss / soot staining on the tiles, eased back a notch (1940s roofs were grimy, not black):
+		// the blotch swing is cut ~30% so the roofscape reads a shade cleaner while keeping its variation
+		col *= mix(1.0, 0.91 + 0.17 * t_vnoise2(w_pos.xz * 0.7), near_k);
 	} else if (abs(n.y) <= 0.35) {
 		// walls: plain brick / render, no windows (owner's call - the window grid made towns look busy)
 		vec2 tg = normalize(vec2(-n.z, n.x) + 1e-5);

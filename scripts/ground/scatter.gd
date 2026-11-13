@@ -734,6 +734,13 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 	# Streets inside the town radius (real road polylines; empty in synthetic-fallback areas).
 	var streets: Array = RoadMesh.routes_in_rect(cen, radius)
 	var pitch: float = clampf(11.0 + rng.randf_range(-1.0, 1.0), 9.0, 13.5)
+	# named-town trees (P3): per-species transform lists, filled hash-keyed from the terrace rows so they
+	# never disturb the layout's rng stream (rebuilds stay put); drawn by make_town_from
+	var strees: Dictionary = {}
+	var gtrees: Dictionary = {}
+	for v in TREE_VARIANTS:
+		strees[v] = []
+		gtrees[v] = []
 	if not streets.is_empty():
 		# 2.1 street-driven: terraces run ALONG each street away from junctions / street ends.
 		var jhash: Dictionary = {}
@@ -746,11 +753,15 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 					arr.append(si)
 					jhash[key] = arr
 		var ctx: Dictionary = {"lists": lists, "rng": rng, "size": size, "radius": radius, "cen": cen,
-			"wdir": wdir, "wedge": wedge, "rblk": rblk, "ct": ct, "pitch": pitch}
+			"wdir": wdir, "wedge": wedge, "rblk": rblk, "ct": ct, "pitch": pitch, "seed": seed_v,
+			"slotrec": [], "nst": 0, "ngt": 0, "strees": strees, "gtrees": gtrees}
 		var step: float = pitch
 		for si2 in range(streets.size()):
 			var pts: PackedVector2Array = streets[si2]["pts"]
 			ctx["half"] = float(RoadMesh.WIDTHS.get(String(streets[si2]["k"]), 8.0)) * 0.75
+			ctx["si"] = si2
+			# about three streets in five are tree-lined (hashed on the street, not the shared rng)
+			ctx["lined"] = _ih(seed_v + si2 * 131, si2 * 3 + 1, 41) < 0.62
 			var run_p: int = 0
 			var run_m: int = 0
 			for i in range(pts.size() - 1):
@@ -763,17 +774,29 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 					run_m = 0
 					continue
 				var dv: Vector2 = (bb - aa) / seg_len
-				var nseg: int = maxi(int(round(seg_len / step)), 1)
-				for k in range(nseg):
-					var p: Vector2 = aa.lerp(bb, float(k) / float(nseg))
+				# the slots step by the LOCAL pitch: the old centre (inside ~0.45 of the town radius) sits
+				# ~0.7x tighter so the oldest streets read as narrow lanes (P4.5); junction logic unchanged
+				var tpos: float = 0.0
+				var kslot: int = 0
+				while tpos <= seg_len - 0.25:
+					var p: Vector2 = aa + dv * tpos
+					var p_eff: float = step * _lane_pitch_k(p, cen, radius, seed_v)
 					if p.distance_to(cen) <= radius * _edge_k(p.x, p.y) and not _near_junction(p, si2, jhash):
+						ctx["pitch"] = p_eff
+						ctx["k"] = kslot
 						run_p = _lay_side(ctx, p, dv, 1.0, run_p)
 						run_m = _lay_side(ctx, p, dv, -1.0, run_m)
 					else:
 						ct["longest"] = maxi(int(ct["longest"]), maxi(run_p, run_m))
 						run_p = 0
 						run_m = 0
+					tpos += p_eff
+					kslot += 1
 			ct["longest"] = maxi(int(ct["longest"]), maxi(run_p, run_m))
+		ct["nst"] = int(ctx["nst"])
+		ct["ngt"] = int(ctx["ngt"])
+		# P4: join the laid core / inner terrace runs into party-wall row meshes (pure, worker-safe)
+		_merge_terraces(ctx, lists)
 	else:
 		# Fallback (synthetic-fallback areas): the legacy jittered rectilinear grid, one yaw for the town.
 		var grid_yaw: float = rng.randf() * PI
@@ -961,10 +984,15 @@ static func _town_layout(center: Vector3, size: int, seed_v: int, church: bool =
 		var cp2: Vector3 = center + Vector3(rng.randf_range(-20, 20), 0, rng.randf_range(-20, 20))
 		if _land(cp2.x, cp2.z, 1.2):
 			church_d = {"pos": Vector3(cp2.x, GroundKit.ground_y(cp2.x, cp2.z), cp2.z), "yaw": rng.randf() * TAU, "scale": rng.randf_range(0.9, 1.4)}
+	var ctx_rows: Dictionary = ct.get("rowdict", {})
+	var ctx_kerbs: Array = ct.get("kerbs", [])
 	var stats: Dictionary = {"streets": streets.size(), "houses": int(ct["houses"]), "longest_run": int(ct["longest"]),
 		"core": int(ct["core"]), "suburban": int(ct["suburban"]), "industrial": int(ct["industrial"]),
-		"civic": civic.size(), "waterfront": wdir != Vector2.ZERO}
-	return {"houses": lists, "civic": civic, "church": church_d, "smokes": smokes, "stats": stats, "radius": radius}
+		"civic": civic.size(), "waterfront": wdir != Vector2.ZERO,
+		"street_trees": int(ct.get("nst", 0)), "garden_trees": int(ct.get("ngt", 0)),
+		"terrace_rows": int(ct.get("rows", 0)), "terrace_row_units": int(ct.get("row_units", 0))}
+	return {"houses": lists, "civic": civic, "church": church_d, "smokes": smokes, "stats": stats, "radius": radius,
+		"strees": strees, "gtrees": gtrees, "rows": ctx_rows, "kerbs": ctx_kerbs}
 
 
 ## Stats for --city-test without building any nodes.
@@ -998,6 +1026,26 @@ static func make_town_from(center: Vector3, d: Dictionary) -> Node3D:
 		if (lists[i] as Array).is_empty():
 			continue
 		_add_houses(root, i, lists[i], 8000.0)
+	# P4: the joined terrace rows (near/far pair like the single houses) and their kerb strips
+	_add_rows(root, d.get("rows", {}))
+	var kerbs: Array = d.get("kerbs", [])
+	if not kerbs.is_empty():
+		var km: MultiMeshInstance3D = multi(TownModels.kerb_strip(), kerbs, HOUSE_NEAR, false)
+		km.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		km.visibility_range_end_margin = 150.0
+		root.add_child(km)
+	# P3: named-town street and garden trees - the tile trees' own species split, LOD pair and
+	# per-instance foliage colours, but on the town's own multimeshes (the town path never reaches
+	# build_tile_nodes, so the trees ride with the town at the same draw range as its houses)
+	_emit_town_trees(root, d.get("strees", {}))
+	_emit_town_trees(root, d.get("gtrees", {}))
+	# the rows replaced band-0/1 houses in `lists`, so fold them back in (weighted by their unit count)
+	# before the HLOD / occluder clustering, keeping the far roofscape and the static boxes honest
+	for rk in (d.get("rows", {}) as Dictionary).keys():
+		var rx: Array = (d["rows"] as Dictionary)[rk] as Array
+		for xf in rx:
+			for wu in int(String(rk).split("_")[0]):
+				(lists[0] as Array).append(xf)
 	# Far town HLOD: one merged roofscape mesh, then the detailed terraces stop drawing. The occluders are
 	# coarse boxes generated from the same house clusters, so the static occlusion pass can cull whole blocks
 	# without any editor bake step.
@@ -1016,6 +1064,61 @@ static func make_town_from(center: Vector3, d: Dictionary) -> Node3D:
 		ch.rotation.y = float(cd["yaw"])
 		root.add_child(ch)
 	return root
+
+
+## Joined party-wall terrace rows (named towns, P4.4): the detailed TownModels row mesh up close, the
+## simple stretched terrace unit further out - the same near/far pair and ranges the single houses use.
+static func _add_rows(root: Node, rows: Dictionary) -> void:
+	if rows.is_empty():
+		return
+	for rk in rows.keys():
+		var bits: PackedStringArray = (rk as String).split("_")
+		if bits.size() != 2:
+			continue
+		var n_u: int = clampi(int(bits[0]), 3, 6)
+		var hv: int = int(bits[1])
+		var xforms: Array = rows[rk] as Array
+		if xforms.is_empty():
+			continue
+		var a: MultiMeshInstance3D = multi(TownModels.terrace_row(n_u, hv), xforms, HOUSE_NEAR)
+		a.visibility_range_end_margin = 150.0
+		root.add_child(a)
+		var b: MultiMeshInstance3D = multi(row_far_mesh(TownModels.terrace_row_warm(hv)), xforms, 8000.0, false)   # same instances: solid once
+		b.visibility_range_begin = HOUSE_NEAR * vis_scale
+		b.visibility_range_begin_margin = 150.0
+		root.add_child(b)
+
+
+## Far stand-in for a joined terrace row: the simple unit box with the continuous ridge-along-X roof,
+## stretched over the run by the row's own transform - in the row's wall tone (warm stone or sooty brick)
+## so the LOD switch at HOUSE_NEAR does not shift the street's colour.
+static func row_far_mesh(warm: bool) -> ArrayMesh:
+	var key: String = "row_far_warm" if warm else "row_far_sooty"
+	if _meshes.has(key):
+		return _meshes[key]
+	var wall: Color = Color(0.60, 0.55, 0.46) if warm else Color(0.35, 0.23, 0.18)
+	var roof: Color = Color(0.31, 0.32, 0.35) if warm else Color(0.26, 0.27, 0.30)
+	var parts: Array = []
+	parts.append([_boxm(1.0, 1.0, 1.0), Transform3D.IDENTITY, _dmat(wall, 1, 0.0, false)])
+	parts.append([GroundKit.prism_mesh(1.0, 1.06, 0.44), Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0.0, 0.5, 0.0)), _dmat(roof, 1, 0.0, false)])
+	var m: ArrayMesh = _merge(parts)
+	_meshes[key] = m
+	return m
+
+
+## The named towns' own street / garden trees (P3): one LOD-paired multimesh per species, exactly how the
+## countryside tile draws its trees (near clustered crown, far stand-in, per-instance colour spread).
+static func _emit_town_trees(root: Node, by_species: Dictionary) -> void:
+	for v in by_species.keys():
+		var arr: Array = by_species[v] as Array
+		if arr.is_empty():
+			continue
+		var vi: int = int(v)
+		if vi < 0 or vi >= TREE_VARIANTS:
+			continue
+		var kind: String = "tree_v%d" % vi
+		var md: Dictionary = multi_data(arr)
+		_add_lod_pair(root, tree_variant(vi), far_mesh(kind), md, 8000.0, _near_end(kind), _foliage_instance_colors(md))
 
 
 ## Realistic scenery: the detailed house models are several times the triangles of the simple units (and are
@@ -1149,11 +1252,16 @@ static func _lay_side(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: float, run
 		h += 0.6
 	h += core * float(size) * rng.randf_range(0.3, 1.2)
 	var yaw: float = atan2(-dir.y, dir.x) + (0.0 if sgn > 0.0 else PI) + rng.randf_range(-0.03, 0.03)
+	# old-centre lanes (P4.5): a slow, district-seeded yaw wobble bends the rows so the core reads as
+	# tight curving streets rather than a ruled grid (kept small; the street alignment still leads)
+	if _lane_pitch_k(hp, cen, radius, int(ctx["seed"])) < 0.95:
+		yaw += (_ivn(hp.x * 0.008 + float(int(ctx["seed"]) % 89), hp.y * 0.008, 64) - 0.5) * 0.22
 	if waterside:
 		yaw = atan2(-wdir.x, -wdir.y)            # the nearest rows face the water
 	var y: float = GroundKit.ground_y(hp.x, hp.y) + h * 0.5 - 0.4
 	var w: float = float(ctx["pitch"]) * 1.16
-	(lists[vi] as Array).append(_xf(Vector3(hp.x, y, hp.y), yaw, Vector3(w, h, depth)))
+	var xf_laid: Transform3D = _xf(Vector3(hp.x, y, hp.y), yaw, Vector3(w, h, depth))
+	(lists[vi] as Array).append(xf_laid)
 	ct["houses"] = int(ct["houses"]) + 1
 	if band == 0:
 		ct["core"] = int(ct["core"]) + 1
@@ -1161,6 +1269,14 @@ static func _lay_side(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: float, run
 		ct["suburban"] = int(ct["suburban"]) + 1
 	elif band == 3:
 		ct["industrial"] = int(ct["industrial"]) + 1
+	# P4 terrace rows: remember the plain terrace units of the core / inner bands so consecutive slots on
+	# one side of one street can be joined into a single party-wall row mesh afterwards (_merge_terraces)
+	if vi <= 1 and band <= 1:
+		ctx["slotrec"].append({"si": int(ctx.get("si", 0)), "k": int(ctx.get("k", 0)), "sgn": sgn,
+			"vi": vi, "band": band, "xf": xf_laid, "yaw": yaw, "dir": dir, "half": float(ctx.get("half", 6.0)),
+			"fr": off - depth * 0.5, "w": w, "depth": depth})
+	# P3: named-town street / garden trees for this slot (hash-keyed, capped per town)
+	_town_slot_trees(ctx, p, dir, sgn, depth, off - depth * 0.5)
 	run += 1
 	if run > int(ct["longest"]):
 		ct["longest"] = run
@@ -1186,17 +1302,21 @@ static func _pick_variant(band: int, at_junction: bool, rng: RandomNumberGenerat
 			if at_junction and rng.randf() < 0.12 + 0.03 * float(size):
 				return 8                                     # the odd cinema at a street corner
 			var r0: float = rng.randf()
-			if r0 < 0.34:
+			# (P4.7) the sooty warehouse share is trimmed to a minority; shopfronts and villas (red brick
+			# and render) plus the terrace runs (warm stone once joined) carry most of the core
+			if r0 < 0.40:
 				return 4                                     # shopfront / corner block
-			if r0 < 0.62:
+			if r0 < 0.66:
 				return 5                                     # taller villa block
-			if r0 < 0.80:
+			if r0 < 0.78:
 				return 6                                     # warehouse / commercial
 			return 0
 		1:
 			if at_junction and rng.randf() < 0.14:
 				return 4
-			return 0 if rng.randf() < 0.58 else 1
+			# the sooty terrace is now a minority of the inner band (P4.7): most fronts read warm
+			# limestone / render, the way a kept 1930s street does, with the odd grimy survivor
+			return 0 if rng.randf() < 0.75 else 1
 		2:
 			var r2: float = rng.randf()
 			if r2 < 0.42:
@@ -1221,6 +1341,202 @@ static func _near_junction(p: Vector2, si: int, jhash: Dictionary) -> bool:
 				if int(s) != si:
 					return true
 	return false
+
+
+# ------------------------------------------------------------------ named-town lanes, rows and trees
+
+## Old-centre lane pitch (P4.5): slots inside ~0.45 of the town radius sit ~0.7x tighter (0.70..0.80 with a
+## slow district-seeded wobble), easing back out through the inner ring; 1.0 outside. Pure, worker-safe.
+static func _lane_pitch_k(p: Vector2, cen: Vector2, radius: float, seed_v: int) -> float:
+	var f: float = p.distance_to(cen) / maxf(radius, 1.0)
+	var core: float = 1.0 - smoothstep(0.38, 0.55, f)
+	var wob: float = _ivn(p.x * 0.011 + float(seed_v % 97), p.y * 0.011, 63)
+	return lerpf(1.0, 0.70 + 0.10 * wob, core)
+
+
+## Species for a named-town tree. Street rows favour lime (7) and planetree-like broad oak (4); garden
+## trees mix lime, oak and beech. Hash-driven (no rng), so rebuilds are deterministic.
+static func _town_tree_species(hx: int, hy: int, street: bool) -> int:
+	var r: float = _ih(hx, hy, 46)
+	if street:
+		if r < 0.62:
+			return 7
+		if r < 0.85:
+			return 4
+		return 1
+	if r < 0.40:
+		return 7
+	if r < 0.62:
+		return 4
+	if r < 0.82:
+		return 1
+	return 5
+
+
+## Like _ok_tree, but the road rule suits the town's own streets: `road_clear` >= 0 keeps the near_road()
+## ribbon test (garden trees, far behind the rows - near_road measures from the centreline with the whole
+## verge ribbon included); `road_clear` < -0.5 skips it for KERB trees, which stand inside that ribbon on
+## the pavement of the street they line - their carriageway clearance is by construction (the kerb offset
+## is computed from the street's own half-width) and a near_road() test would reject every one of them.
+## Crossing roads are still covered: junction cells are skipped outright and the slot's house has already
+## cleared every other ribbon. Worker-safe (RiverMesh.near_river is worker-owned, see _ok).
+static func _ok_town_tree(p: Vector2, exclude: Array, road_clear: float) -> bool:
+	if GroundKit.raw_y(p.x, p.y) < 1.2 or RoadMesh.near_rail(p) or RiverMesh.near_river(p):
+		return false
+	if road_clear >= -0.5 and RoadMesh.near_road(p, road_clear):
+		return false
+	if _beach(p) or in_lake(p.x, p.y):
+		return false
+	for e in exclude:
+		var c: Vector3 = e[0]
+		var r: float = e[1]
+		if Vector2(c.x, c.z).distance_squared_to(p) < r * r:
+			return false
+	return true
+
+
+## Street and garden trees for one named-town terrace slot (P3): the class-50 grid's _add_town_trees()
+## hash scheme adapted to a real street's facing vector. Street trees stand at the kerb (1.8 m in front of
+## the house fronts, clear of the carriageway, three streets in five tree-lined); garden trees stand behind
+## the row's back walls. Keyed on the town seed + street + slot and capped per town, so rebuilds agree and
+## the shared layout rng stream is never touched. Runs on the layout worker: pure data.
+static func _town_slot_trees(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: float, depth: float, fr: float) -> void:
+	var seed_v: int = int(ctx["seed"])
+	var size: int = int(ctx["size"])
+	var nst_cap: int = clampi(30 + size * 10, 40, 80)      # street trees per town (scales with size)
+	var ngt_cap: int = clampi(24 + size * 8, 30, 60)       # garden trees per town
+	var nst: int = int(ctx["nst"])
+	var ngt: int = int(ctx["ngt"])
+	var si: int = int(ctx.get("si", 0))
+	var k: int = int(ctx.get("k", 0))
+	var side: int = 1 if sgn > 0.0 else 0
+	var nrm := Vector2(-dir.y, dir.x) * sgn
+	var hx: int = seed_v * 7 + si * 131
+	var hy: int = k * 2 + side
+	if nst < nst_cap and bool(ctx.get("lined", false)):
+		# kerb tree; the presence chance eases off as the town's cap fills so trees spread over all streets
+		if _ih(hx, hy, 42) < 0.62 * float(nst_cap - nst) / float(nst_cap):
+			var kerb: float = fr - 1.8
+			# clear of this street's carriageway edge (WIDTHS * 0.5, see RoadMesh._add_line) by 0.4 m;
+			# the road-ribbon test itself is skipped for kerb trees (see _ok_town_tree)
+			var car_edge: float = float(ctx.get("half", 6.0)) * 0.6667 + 0.4
+			var tp: Vector2 = p + nrm * kerb + dir * (_ih(hx, hy * 3 + 1, 43) - 0.5) * 6.0
+			if kerb > car_edge and kerb > 2.8 and _ok_town_tree(tp, [], -1.0):
+				var sc: float = lerpf(0.72, 1.0, _ih(hx, hy * 3 + 1, 44))
+				var v: int = _town_tree_species(hx * 5 + k, hy * 7 + side, true)
+				((ctx["strees"] as Dictionary)[v] as Array).append(_xf(Vector3(tp.x, GroundKit.ground_y(tp.x, tp.y) - 0.3, tp.y),
+					_ih(hx, hy * 3 + 1, 45) * TAU, Vector3(sc, sc * 1.12, sc)))
+				ctx["nst"] = nst + 1
+	if ngt < ngt_cap:
+		if _ih(hx + 977, hy * 3 + 2, 47) < 0.45 * float(ngt_cap - ngt) / float(ngt_cap):
+			var g_d: float = fr + depth + 1.2 + _ih(hx, hy * 3 + 2, 49) * 3.0     # behind the back wall
+			var gp: Vector2 = p + nrm * g_d + dir * (_ih(hx, hy * 3 + 2, 48) - 0.5) * 5.0
+			if _ok_town_tree(gp, [], 2.5):
+				var gs: float = lerpf(0.42, 0.72, _ih(hx, hy * 3 + 2, 50))
+				var gv: int = _town_tree_species(hx * 5 + k + 977, hy * 7 + side + 3, false)
+				((ctx["gtrees"] as Dictionary)[gv] as Array).append(_xf(Vector3(gp.x, GroundKit.ground_y(gp.x, gp.y) - 0.3, gp.y),
+					_ih(hx, hy * 3 + 2, 51) * TAU, Vector3(gs, gs * 1.05, gs)))
+				ctx["ngt"] = ngt + 1
+
+
+## Sort key for the terrace-row merge: street, then side, then slot, so consecutive slots group up.
+static func _slot_before(a: Dictionary, b: Dictionary) -> bool:
+	if int(a["si"]) != int(b["si"]):
+		return int(a["si"]) < int(b["si"])
+	if int(a["sgn"]) != int(b["sgn"]):
+		return int(a["sgn"]) < int(b["sgn"])
+	return int(a["k"]) < int(b["k"])
+
+
+## Join the laid core / inner terrace-unit runs into party-wall rows (P4.4): consecutive slots on one side
+## of one street (plain terrace variants, no junction or run gap between them) become ONE instance of
+## TownModels.terrace_row of 3-6 units, with a kerb/pavement strip (P4.6) laid at the kerb in front.
+## Runs at the end of the layout on the worker: pure data, no nodes, no rng (row schemes hash off the
+## town seed + slot), so nothing else in the layout moves.
+static func _merge_terraces(ctx: Dictionary, lists: Array) -> void:
+	var rows: Dictionary = {}
+	var kerbs: Array = []
+	var ct: Dictionary = ctx["ct"]
+	var n_rows: int = 0
+	var n_units: int = 0
+	var recs: Array = ctx.get("slotrec", [])
+	if recs.size() >= 3 and TownModels.enabled():
+		var seed_v: int = int(ctx["seed"])
+		recs.sort_custom(_slot_before)
+		var i: int = 0
+		while i < recs.size():
+			var grp: Array = [recs[i]]
+			var j: int = i + 1
+			while j < recs.size():
+				var pr: Dictionary = recs[j - 1]
+				var nx: Dictionary = recs[j]
+				if int(nx["si"]) == int(pr["si"]) and int(nx["sgn"]) == int(pr["sgn"]) and int(nx["k"]) == int(pr["k"]) + 1:
+					grp.append(nx)
+					j += 1
+				else:
+					break
+			i = j
+			var left: int = grp.size()
+			var gi: int = 0
+			while left - gi >= 3:
+				var r0: Dictionary = grp[gi]
+				var hx: int = seed_v + int(r0["si"]) * 7919
+				var hy: int = int(r0["k"]) * 17 + (1 if float(r0["sgn"]) > 0.0 else 0)
+				var hv: int = int(_ih(hx, hy, 71) * 47.0)                    # row scheme (TownModels cache key)
+				var n_u: int = 3 + int(_ih(hx, hy, 72) * 3.999)              # per-run unit count 3-6
+				if left - gi - n_u < 3:
+					n_u = (left - gi) if (left - gi) <= 6 else (left - gi - 3)
+				var chunk: Array = grp.slice(gi, gi + n_u)
+				gi += n_u
+				# row frame from the units' own laid transforms (the row runs along the laid yaw; the
+				# facing normal points from the street toward the houses, as in _lay_side)
+				var yaw: float = float(chunk[0]["yaw"])
+				var along := Vector2(cos(yaw), -sin(yaw))
+				var dv: Vector2 = chunk[0]["dir"]
+				var nrm := Vector2(-dv.y, dv.x) * (1.0 if float(chunk[0]["sgn"]) > 0.0 else -1.0)
+				var h_sum: float = 0.0
+				var d_sum: float = 0.0
+				var fr_sum: float = 0.0
+				var c_sum := Vector2.ZERO
+				for r in chunk:
+					var rd: Dictionary = r
+					var o: Vector3 = (rd["xf"] as Transform3D).origin
+					c_sum += Vector2(o.x, o.z)
+					h_sum += (rd["xf"] as Transform3D).basis.get_scale().y
+					d_sum += (rd["xf"] as Transform3D).basis.get_scale().z
+					fr_sum += float(rd["fr"])
+				var cn := c_sum / float(n_u)
+				# frontage: the projected spread of the unit centres plus one unit width (the singles
+				# overlapped their neighbours by 1.16x, so the row keeps that rhythm)
+				var u_lo: float = 1.0e12
+				var u_hi: float = -1.0e12
+				for r2 in chunk:
+					var o2: Vector3 = ((r2 as Dictionary)["xf"] as Transform3D).origin
+					var u2: float = (Vector2(o2.x, o2.z) - cn).dot(along)
+					u_lo = minf(u_lo, u2)
+					u_hi = maxf(u_hi, u2)
+				var len_f: float = (u_hi - u_lo) + float(chunk[0]["w"])
+				var h_r: float = h_sum / float(n_u)
+				var d_r: float = d_sum / float(n_u)
+				var y_r: float = GroundKit.ground_y(cn.x, cn.y) + h_r * 0.5 - 0.4
+				var key := "%d_%d" % [n_u, hv]
+				if not rows.has(key):
+					rows[key] = []
+				(rows[key] as Array).append(_xf(Vector3(cn.x, y_r, cn.y), yaw, Vector3(len_f, h_r, d_r)))
+				# kerb + pavement strip: the carriageway edge is ~2/3 of the setback half-width; the strip's
+				# kerb line clears it by 0.15 m and the 3.6 m slab runs back toward the house fronts
+				var fr_avg: float = fr_sum / float(n_u)
+				var strip_d: float = float(chunk[0]["half"]) * 0.6667 + 1.95
+				var sp: Vector2 = cn + nrm * (strip_d - fr_avg)
+				kerbs.append(_xf(Vector3(sp.x, GroundKit.ground_y(sp.x, sp.y), sp.y), yaw, Vector3(len_f, 1.0, 1.0)))
+				for r3 in chunk:
+					(lists[int((r3 as Dictionary)["vi"])] as Array).erase((r3 as Dictionary)["xf"])
+				n_rows += 1
+				n_units += n_u
+	ct["rowdict"] = rows
+	ct["kerbs"] = kerbs
+	ct["rows"] = n_rows
+	ct["row_units"] = n_units
 
 
 ## Nearest water (river/canal or coast) around a town: {"dir": Vector2 toward it, "edge": distance, "river_pts": Array}.

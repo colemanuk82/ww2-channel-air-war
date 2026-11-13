@@ -57,6 +57,14 @@ var _wind_timer: float = 0.0
 var _wind_t: float = 0.0
 var cloud_drift: Vector2 = Vector2.ZERO    # accumulated cloud movement with the wind
 
+# ---- tree sway (toon_body.gdshaderinc "wind_sway" global): xz = the direction crowns lean TOWARD
+# (downwind, i.e. get_wind()'s blow-TO convention) times a 0..1 strength from the mean wind speed.
+var _sway_cur: Vector2 = Vector2(0.8, 0.6) * 0.5   # starts at the project.godot default breeze
+var _sway_tick: float = 0.0
+const SWAY_PERIOD: float = 0.5    # seconds between publishes
+const SWAY_CALM: float = 0.15     # fog-quiet morning
+const SWAY_STORM: float = 1.0     # full storm wind band
+
 var _from: Dictionary = {}
 var _to: Dictionary = {}
 var _cur: Dictionary = {}
@@ -85,6 +93,7 @@ func _ready() -> void:
 	add_child(cpf)
 	_front_timer = randf_range(300.0, 600.0)
 	_apply()
+	_update_sway(1.0)    # publish the sway global once up front so trees never start frozen
 	TimeOfDay.time_changed.connect(func(_h: float) -> void: _apply())
 
 
@@ -112,6 +121,28 @@ func get_wind(pos: Vector3) -> Vector3:
 	var g: float = 0.5 * sin(_wind_t * 0.7 + pos.x * 0.0009) + 0.3 * sin(_wind_t * 1.9 + pos.z * 0.0013 + 1.3) + 0.2 * sin(_wind_t * 4.3 + (pos.x + pos.z) * 0.002)
 	var spd: float = maxf(wind_speed * shear + g * wind_speed * 0.2, 0.0)
 	return WorldCoords.heading_to_dir(wind_dir_deg + veer + 180.0) * spd
+
+
+## Publish the foliage sway global (RenderingServer "wind_sway"): the downwind lean vector near the player,
+## sampled every SWAY_PERIOD and smoothed (the shader leans crowns TOWARD it). Magnitude maps the mean
+## wind speed onto calm ~0.15 .. storm 1.0; direction from get_wind() at the camera, low over the ground
+## where the crowns actually are. Setting an unregistered global is harmless; project.godot registers it.
+func _update_sway(delta: float) -> void:
+	_sway_tick -= delta
+	if _sway_tick > 0.0:
+		return
+	_sway_tick = SWAY_PERIOD
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	var w: Vector3 = get_wind(cam.global_position if cam != null else Vector3(0.0, 60.0, 0.0))
+	var target := Vector2(w.x, w.z)
+	var str_v: float = clampf(lerpf(SWAY_CALM, SWAY_STORM, clampf((wind_speed - 2.0) / 25.0, 0.0, 1.0)), SWAY_CALM, SWAY_STORM)
+	var spd: float = target.length()
+	if spd > 0.01:
+		target = target / spd * str_v      # unit blow-TO direction scaled by the strength band
+	else:
+		target = Vector2(0.8, 0.6).normalized() * str_v
+	_sway_cur = _sway_cur.lerp(target, 0.1)
+	RenderingServer.global_shader_parameter_set("wind_sway", Vector3(_sway_cur.x, 0.0, _sway_cur.y))
 
 
 ## 0..1 low-level turbulence (rough air): grows with wind strength, worst near the ground and in storms.
@@ -215,6 +246,7 @@ func _process(delta: float) -> void:
 	var dd: float = rad_to_deg(angle_difference(deg_to_rad(wind_dir_deg), deg_to_rad(_wind_target_dir)))
 	wind_dir_deg = fposmod(wind_dir_deg + clampf(dd, -0.5 * delta, 0.5 * delta), 360.0)
 	cloud_drift += Vector2(get_wind(Vector3(0, 1500, 0)).x, get_wind(Vector3(0, 1500, 0)).z) * delta
+	_update_sway(delta)
 	if fronts_enabled:
 		_front_tick(delta)
 	_update_rain(delta)

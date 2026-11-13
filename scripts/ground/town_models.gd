@@ -668,6 +668,108 @@ static func market_square() -> ArrayMesh:
 	return m
 
 
+# ------------------------------------------------------------------ joined terrace rows (named towns, P4)
+
+## True when the row's wall scheme is the warm limestone / sandstone one. terrace_row() uses the same
+## rule, so the far LOD (Scatter._add_rows) always picks the matching simple unit.
+static func terrace_row_warm(rng_or_hash: int) -> bool:
+	return absi(rng_or_hash) % 48 % 5 != 4
+
+
+## One joined party-wall terrace row of `units` (3-6) houses as a single ArrayMesh (P4.4). The whole run
+## fills the placement unit box (local X -0.5..0.5 = the row's frontage, street front at -Z, ridge along X),
+## so a street of N-unit rows costs one instance and one draw instead of one per house. Party walls are
+## shared - the gable triangles only stand at the two ends - and the door / bay / roof rhythm and the wall
+## tones vary per unit through the vertex colours (house_material is world_pbr + use_vcol), with raised
+## party-wall firebreaks stepping the roof line. `rng_or_hash` seeds the scheme deterministically; the
+## caller hashes town + street + slot, so rebuilds agree and the cache stays bounded (48 schemes per size).
+static func terrace_row(units: int, rng_or_hash: int) -> ArrayMesh:
+	var n: int = clampi(units, 3, 6)
+	var hv: int = absi(rng_or_hash) % 48
+	var key: String = "trow_%d_%d" % [n, hv]
+	if _cache.has(key):
+		return _cache[key]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hv * 7919 + n
+	var b := MB.new()
+	var warm: bool = terrace_row_warm(rng_or_hash)
+	var wu: float = 1.0 / float(n)
+	# wall tones: warm limestone / sandstone rows (with the odd sooty brick unit kept - 1940s streets were
+	# dirty, just not uniformly black), or the fully sooty row for the minority of rows
+	var stone_walls: Array = [Color(0.62, 0.57, 0.47), Color(0.57, 0.52, 0.43), Color(0.65, 0.60, 0.50), Color(0.53, 0.48, 0.40)]
+	var door_cols: Array = [Color(0.16, 0.13, 0.11), Color(0.19, 0.25, 0.17), Color(0.24, 0.19, 0.14)]
+	var step_i: int = rng.randi_range(1, n - 2)          # the one unit whose roof steps up
+	var walls: Array = []                                # per-unit wall tones (the firebreaks reuse them)
+	for i in n:
+		var x0: float = -0.5 + float(i) * wu
+		var x1: float = x0 + wu
+		var uh: int = rng.randi()
+		var wall: Color
+		if warm:
+			wall = stone_walls[uh % stone_walls.size()]
+			if uh % 6 == 5:
+				wall = BRICK_DK                       # the odd sooty unit even in a kept row
+		else:
+			wall = BRICK_DK * (0.92 + 0.16 * float(uh % 4) / 3.0)
+		walls.append(wall)
+		var rr: float = float(uh % 10) / 10.0
+		var roof: Color
+		if warm:
+			roof = SLATE if rr < 0.45 else (TILE * 1.05 if rr < 0.80 else Color(0.42, 0.33, 0.26))
+		else:
+			roof = SLATE * 0.9
+		# the unit's party-walled block (no top: the gable roof closes it), its continuous roof slice,
+		# front door with doorstep and hood-side step, alternating left / right through the row
+		b.box(x0, x1, -0.5, 0.5, -0.5, 0.5, wall, false)
+		b.gable_x(x0, x1, -0.5, 0.5, 0.5, 0.54 if i == step_i else 0.46, 0.06, roof, wall, 0.02 if i == 0 or i == n - 1 else 0.0)
+		var left: bool = uh % 2 == 0
+		var dx0: float = x0 + wu * (0.12 if left else 0.58)
+		var dx1: float = dx0 + wu * 0.28
+		b.box(dx0, dx1, -0.5, -0.455, -0.555, -0.5, STONE * 0.9)
+		b.box(dx0 + 0.008, dx1 - 0.008, -0.10, -0.075, -0.562, -0.5, door_cols[uh % door_cols.size()])
+		# ground-floor bay on about one unit in three, with its own little roof
+		if uh % 3 == 0:
+			var bx0: float = x0 + wu * 0.30
+			var bx1: float = bx0 + wu * 0.40
+			b.box(bx0, bx1, -0.5, 0.0, -0.585, -0.5, wall * 0.95, false)
+			b.mono(bx0, bx1, -0.585, -0.5, 0.0, 0.10, "z1", roof, wall * 0.95, 0.012)
+	# raised party-wall firebreaks: always either side of the stepped unit (they close its roof step),
+	# otherwise on about half the party walls - the classic broken terrace silhouette from the air
+	for i2 in range(1, n):
+		var xp: float = -0.5 + float(i2) * wu
+		var next_to_step: bool = i2 == step_i or i2 == step_i + 1
+		if next_to_step or rng.randf() < 0.45:
+			var fh: float = 0.57 if next_to_step else 0.52
+			var fb: Color = (walls[i2 - 1] as Color) * 0.92
+			b.gable_x(xp - 0.014, xp + 0.014, -0.545, 0.545, 0.5, fh, 0.0, fb, fb)
+	# shared ridge stacks on about half the party walls
+	for i3 in range(1, n):
+		if rng.randf() < 0.5:
+			b.chimney(-0.5 + float(i3) * wu, 0.02, 0.72, 1.08, 0.10, 0.15, STACK, 2)
+	var m: ArrayMesh = b.commit(house_material())
+	_cache[key] = m
+	return m
+
+
+## Kerb + pavement strip laid in front of a named-town terrace row (P4.6): one low slab the length of the
+## run (the instance scales local X), 3.6 m wide (local Z -1.8..1.8), 0.14 m proud of the ground with the
+## kerb line on the street side (-Z). Built on the painted-prop material like the market square's cobbles;
+## the near-house draw range and no cast shadows are set by the caller.
+static func kerb_strip() -> ArrayMesh:
+	if _cache.has("kerb_strip"):
+		return _cache["kerb_strip"]
+	var b := MB.new()
+	var pave := Color(0.52, 0.51, 0.48)
+	var kerb := Color(0.60, 0.58, 0.54)
+	# pavement slab: 0.24 thick so it sinks 0.10 m into sloping ground, 0.14 m proud, lighter worn top
+	b.box(-0.5, 0.5, -0.10, 0.14, -1.8, 1.8, pave, true, pave * 1.06)
+	# kerb stones along the carriageway edge: a narrower coping standing a shade taller
+	b.box(-0.5, 0.5, -0.10, 0.17, -1.8, -1.55, kerb, true, kerb * 1.04)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache["kerb_strip"] = m
+	return m
+
+
 # ------------------------------------------------------------------ airfield hangars
 
 ## Steel-framed aircraft hangar (the RAF T1 / T2 type): corrugated walls with a concrete plinth and pilasters, a

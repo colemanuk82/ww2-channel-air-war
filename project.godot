@@ -174,3 +174,7 @@ real_rivers={
 "type": "float",
 "value": 0.0
 }
+wind_sway={
+"type": "vec3",
+"value": Vector3(0.4, 0, 0.3)
+}
