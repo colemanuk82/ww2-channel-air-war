@@ -52,10 +52,11 @@ float wave_h(vec2 p, float t) {
 	float env = 0.55 + 0.9 * t_vnoise2(p * 0.0021 + vec2(t * 0.01, 0.0));
 	// domain warp: bends the swell crests so the three wave trains never line up into the regular rows of
 	// glints that read as a tiled texture from altitude
-	vec2 q = p + (vec2(t_vnoise2(p * 0.0045 + 3.0), t_vnoise2(p * 0.0045 + 41.0)) - 0.5) * 160.0;
-	h += sin(dot(q, vec2(1.0, 0.35)) * 0.045 + t * 1.10) * 1.00;
-	h += sin(dot(q, vec2(-0.40, 1.0)) * 0.072 + t * 0.75) * 0.50;
-	h += sin(dot(q, vec2(0.75, -0.65)) * 0.115 + t * 1.45) * 0.22;
+	vec2 q = p + (vec2(t_vnoise2(p * 0.0014 + 3.0), t_vnoise2(p * 0.0014 + 41.0)) - 0.5) * 70.0;
+	vec2 sg = vec2(t_vnoise2(p * 0.0019 + 71.0), t_vnoise2(p.yx * 0.0023 + 13.0));
+	h += sin(dot(q, vec2(1.0, 0.35)) * 0.045 + t * 1.10 + sg.y * 5.0) * 1.00 * mix(0.45, 1.35, sg.x);
+	h += sin(dot(q, vec2(0.84, 0.66)) * 0.072 + t * 0.75 + sg.x * 6.0) * 0.50 * mix(0.35, 1.5, sg.y);
+	h += sin(dot(q, vec2(1.0, -0.12)) * 0.115 + t * 1.45 - sg.y * 7.0) * 0.22 * mix(0.35, 1.5, 1.0 - sg.x);
 	h *= env;
 	h += (t_vnoise2(p * 0.012 + t * 0.06) - 0.5) * 0.75;
 	return h;
@@ -63,18 +64,28 @@ float wave_h(vec2 p, float t) {
 
 // Short crossing wave trains for chop and ripples. Analytic sines on purpose: the gradient of value noise is
 // discontinuous at its lattice cells, which drew a square grid into the sun glitter (the old "dash grid").
-vec2 chop_grad(vec2 p, float t, float k) {
+// fp = size of one pixel on the water (m): a train fades out before its wavelength nears the pixel size,
+// otherwise it aliases into moire rings and chequer lattices at mid distance.
+float train_fade(float freq, float fp) {
+	return 1.0 - smoothstep(0.10, 0.28, fp * freq * 0.159);
+}
+
+vec2 chop_grad(vec2 p, float t, float k, float fp) {
 	vec2 g = vec2(0.0);
-	vec2 d0 = vec2(0.94, 0.34);
-	vec2 d1 = vec2(0.17, 0.98);
-	vec2 d2 = vec2(-0.71, 0.70);
-	vec2 d3 = vec2(0.56, -0.83);
-	vec2 d4 = vec2(-0.96, -0.28);
-	g += d0 * cos(dot(p, d0) * 0.21 * k + t * 1.9) * 0.21 * k * 0.30;
-	g += d1 * cos(dot(p, d1) * 0.33 * k + t * 2.3 + 1.3) * 0.33 * k * 0.20;
-	g += d2 * cos(dot(p, d2) * 0.47 * k + t * 2.9 + 2.1) * 0.47 * k * 0.13;
-	g += d3 * cos(dot(p, d3) * 0.71 * k + t * 3.4 + 0.7) * 0.71 * k * 0.08;
-	g += d4 * cos(dot(p, d4) * 1.03 * k + t * 4.1 + 4.2) * 1.03 * k * 0.05;
+	vec2 d0 = vec2(0.854, 0.520);   // all trains within ~50 degrees of the wind: crossing trains draw a chequerboard
+	vec2 d1 = vec2(0.995, -0.099);
+	vec2 d2 = vec2(0.540, 0.841);
+	vec2 d3 = vec2(0.981, 0.196);
+	vec2 d4 = vec2(0.877, -0.480);
+	// each train gets its own slow phase drift and amplitude swell (wave groups). Five fixed sines interfere into
+	// a chequer lattice; a strong domain warp instead bends them into pond rings. Slow per-train drift does neither.
+	vec2 n = vec2(t_vnoise2(p * 0.007 * k + 11.0), t_vnoise2(p * 0.007 * k + 63.0));
+	vec2 n2 = vec2(t_vnoise2(p.yx * 0.0045 * k + 29.0), t_vnoise2(p * 0.011 * k + 87.0));
+	g += d0 * cos(dot(p, d0) * 0.21 * k + t * 1.9 + n.x * 7.0) * train_fade(0.21 * k, fp) * 0.21 * k * 0.30 * mix(0.35, 1.5, n2.x);
+	g += d1 * cos(dot(p, d1) * 0.33 * k + t * 2.3 + 1.3 + n.y * 7.0) * train_fade(0.33 * k, fp) * 0.33 * k * 0.20 * mix(0.35, 1.5, n2.y);
+	g += d2 * cos(dot(p, d2) * 0.47 * k + t * 2.9 + 2.1 - n.x * 8.0 + n2.y * 5.0) * train_fade(0.47 * k, fp) * 0.47 * k * 0.13 * mix(0.35, 1.5, n.y);
+	g += d3 * cos(dot(p, d3) * 0.71 * k + t * 3.4 + 0.7 + n2.x * 9.0) * train_fade(0.71 * k, fp) * 0.71 * k * 0.08 * mix(0.35, 1.5, 1.0 - n2.y);
+	g += d4 * cos(dot(p, d4) * 1.03 * k + t * 4.1 + 4.2 - n.y * 9.0 + n2.x * 6.0) * train_fade(1.03 * k, fp) * 1.03 * k * 0.05 * mix(0.35, 1.5, 1.0 - n.x);
 	return g;
 }
 
@@ -118,6 +129,8 @@ void fragment() {
 	float tw = TIME * 0.5;
 	float e = 1.6;
 	float dist = length(w_pos - CAMERA_POSITION_WORLD);
+	float graze = max(abs(CAMERA_POSITION_WORLD.y - w_pos.y) / max(dist, 1.0), 0.02);
+	float fp = dist * 0.0007 / graze;
 	float wfade = 1.0 - smoothstep(500.0, 4200.0, dist);
 	float rfade = 1.0 - smoothstep(60.0, 700.0, dist);
 	float h0 = wave_h(wp, tw);
@@ -127,14 +140,14 @@ void fragment() {
 	// mid-scale chop: irregular facets so the swell never reads as a regular sine lattice
 	float mfade = 1.0 - smoothstep(300.0, 2600.0, dist);
 	// warp the chop trains so their five fixed directions never interfere into a visible chequer lattice
-	vec2 cw = (vec2(t_vnoise2(wp * 0.017 + 5.0), t_vnoise2(wp * 0.017 + 77.0)) - 0.5) * 34.0;
+	vec2 cw = (vec2(t_vnoise2(wp * 0.0045 + 5.0), t_vnoise2(wp * 0.0045 + 77.0)) - 0.5) * 9.0;
 	if (mfade > 0.0) {
 		// chop strength varies smoothly across the sea so it never reads as a uniform texture
 		float cenv = 0.6 + 0.8 * t_vnoise2(wp * 0.004 + 17.0);
-		g += chop_grad(wp + cw, TIME, 1.0) * 0.55 * mfade * cenv;
+		g += chop_grad(wp + cw, TIME, 1.0, fp) * 0.55 * mfade * cenv;
 	}
 	if (rfade > 0.0) {
-		g += chop_grad((wp + cw * 0.5).yx * 1.3 + 50.0, TIME * 1.6, 3.2) * 0.12 * rfade;
+		g += chop_grad((wp + cw * 0.5).yx * 1.3 + 50.0, TIME * 1.6, 3.2, fp) * 0.12 * rfade;
 	}
 	// far away the facets average out: a gentle residual slope keeps a soft sheen instead of a mirror line
 	g += (vec2(t_vnoise2(wp * 0.004 + tw * 0.02), t_vnoise2(wp * 0.004 + 9.0 - tw * 0.02)) - 0.5) * 0.10 * (1.0 - wfade);
@@ -156,7 +169,7 @@ void fragment() {
 	// whitecaps: short streaks stretched down-wind, small and scattered, only on the higher crests
 	vec2 wq = vec2(dot(wp, vec2(0.94, 0.33)), dot(wp, vec2(-0.33, 0.94)));
 	float cap_n = t_vnoise2(wq * vec2(0.035, 0.11) + vec2(tw * 0.2, 0.0));
-	float crest = smoothstep(0.78, 0.90, cap_n) * smoothstep(0.55, 1.15, h0) * wfade * patch;
+	float crest = smoothstep(0.72, 0.95, cap_n) * smoothstep(0.55, 1.15, h0) * wfade * patch;
 	// foam streaks: long thin wind lanes (the old round fbm blobs read as ice floes)
 	float lane = t_vnoise2(wq * vec2(0.010, 0.09) + vec2(tw * 0.05, 0.0)) * 0.7 + t_vnoise2(wq * vec2(0.03, 0.2) + 5.0) * 0.3;
 	float streak = smoothstep(0.80, 0.93, lane) * smoothstep(0.40, 0.95, h0) * wfade * patch;
@@ -177,7 +190,17 @@ void fragment() {
 	float surf = (surf_line * 0.85 + lace) * surf_zone;
 	float wake = max(max(wake_one(wp, wake_0), wake_one(wp, wake_1)), max(wake_one(wp, wake_2), wake_one(wp, wake_3)));
 	float foam = clamp(shore + edge + crest * 0.9 + streak * 0.4 + surf * 0.85 + wake * 0.9, 0.0, 1.0) * (1.0 - lake_mode);
-	float foam_m = smoothstep(0.30, 0.62, foam);
+	// coast, surf and wakes keep the crisp white; open-sea whitecaps are soft, broken and semi-opaque
+	// (a hard threshold on them drew paper-white confetti flakes across the Channel)
+	float coast_m = smoothstep(0.30, 0.62, clamp(shore + edge + surf * 0.85 + wake * 0.9, 0.0, 1.0));
+	float open_f = clamp(crest * 0.9 + streak * 0.4, 0.0, 1.0);
+	float ofade = 1.0 - smoothstep(250.0, 1800.0, dist);
+	float brk = t_vnoise2(wq * vec2(0.22, 0.55) + vec2(tw * 0.3, 0.0)) * 0.6 + t_vnoise2(wp * 0.7 + 3.0) * 0.4;
+	float open_m = smoothstep(0.10, 0.90, open_f) * mix(0.25, 1.0, smoothstep(0.30, 0.75, brk)) * 0.62 * ofade
+		+ open_f * 0.10 * (1.0 - ofade);
+	// aerated water around a breaking crest reads lighter and greener just under the foam
+	col += vec3(0.010, 0.040, 0.035) * smoothstep(0.0, 0.6, open_f) * ofade;
+	float foam_m = max(coast_m, open_m) * (1.0 - lake_mode);
 
 	// --- sky reflection (Fresnel) ---
 	vec3 vw = normalize(CAMERA_POSITION_WORLD - w_pos);
