@@ -44,12 +44,14 @@ varying vec3 obj_p;
 varying vec2 strip_wl;
 varying vec3 w_pos;
 varying vec3 w_nrm;
+varying vec3 inst_o;   // the instance's own origin: one id per house, so a roof or facade never splits into patches
 
 void vertex() {
 	obj_n = NORMAL;
 	obj_p = VERTEX;
 	strip_wl = vec2(length(MODEL_MATRIX[0].xyz), length(MODEL_MATRIX[2].xyz));
 	w_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	inst_o = MODEL_MATRIX[3].xyz;
 #ifdef NG_REAL
 	// Wind sway for foliage (trees, hedges): a slow crown lean plus a quick leaf flutter, both growing with
 	// height above the instance origin and phased per instance so a wood never moves in step. Faded out
@@ -97,7 +99,7 @@ vec3 detail_building(vec3 col, inout float emit, float cam_dist) {
 	if (n.y > 0.35) {
 		// Roofscape: every house its own roof - weathered terracotta, dark clay tile, Welsh slate, old brown tile
 		// or lichen-stained - so a street reads as a real roofscape rather than uniform orange blocks.
-		vec2 bid = floor(w_pos.xz / 8.0);
+		vec2 bid = floor(inst_o.xz * 0.5);
 		float rh = t_hash12(bid + 5.3);
 		float slate_share = mix(0.30, 0.72, fr) + (quarter - 0.5) * 0.4;
 		vec3 rc = rh < slate_share ? mix(vec3(0.20, 0.21, 0.25), vec3(0.34, 0.35, 0.38), t_hash12(bid + 2.0))
@@ -111,7 +113,7 @@ vec3 detail_building(vec3 col, inout float emit, float cam_dist) {
 		col = mix(col, stone / BUILDING_DARKEN * 0.72, fr * 0.65);
 		// Normandy facades are not all one limestone: whitewashed and ochre render, grey cement and sooty stone,
 		// each house its own, so a street reads as a row of homes rather than one pale block
-		float fh = t_hash12(floor(w_pos.xz / 7.0) + 53.0);
+		float fh = t_hash12(floor(inst_o.xz * 0.5) + 53.0);
 		vec3 fac = fh < 0.30 ? vec3(0.60, 0.56, 0.48) : (fh < 0.50 ? vec3(0.56, 0.47, 0.33) : (fh < 0.68 ? vec3(0.45, 0.45, 0.43) : (fh < 0.84 ? vec3(0.50, 0.44, 0.36) : vec3(0.38, 0.34, 0.29))));
 		col = mix(col, fac / BUILDING_DARKEN * 0.72, fr * 0.75);
 		// grounding: walls darken toward the street (the houses sit sunk into the ground, so the gradient runs the
@@ -381,6 +383,15 @@ void fragment() {
 		// breaks into lit and shaded clusters under the sun. Faded with range so distant woods do not sparkle.
 		float fd = length(w_pos - CAMERA_POSITION_WORLD);
 		float fk = 1.0 - smoothstep(900.0, 4500.0, fd);
+		// Ragged leafy silhouettes: near the edge of a crown (or hedge) seen side-on, cut away leaf-sized holes
+		// with the clump noise, so the outline breaks into sprays of foliage instead of a smooth lumpy ball.
+		// Only close up (it would shimmer far away); TAA smooths the cut edge.
+		float sk = 1.0 - smoothstep(180.0, 520.0, fd);
+		if (sk > 0.001) {
+			float edge = 1.0 - abs(dot(normalize(NORMAL), normalize(VIEW)));
+			float leaf = t_vnoise3(w_pos * 1.9) * 0.6 + t_vnoise3(w_pos * 4.7) * 0.4;
+			if (leaf < smoothstep(0.45, 0.95, edge) * 0.85 * sk - 0.05) { discard; }
+		}
 		if (fk > 0.001) {
 			vec3 lp = w_pos * 0.55;
 			float hb = (t_vnoise3(lp * 1.6) * 0.55 + t_vnoise3(lp * 4.1) * 0.30 + t_vnoise3(lp * 9.5) * 0.15 * (1.0 - smoothstep(150.0, 600.0, fd))) * 2.2 * fk;

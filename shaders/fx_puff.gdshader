@@ -50,7 +50,7 @@ void fragment() {
 	float ndv = clamp(dot(n, normalize(VIEW)), 0.0, 1.0);
 	// smoke (soft puffs) takes a gentle, smooth light instead of the three hard toon bands: banded shading on a
 	// sphere is exactly what made big puffs read as solid balls. Debris keeps its crisp bands.
-	float soft_pre = max(1.0 - step(0.5, v_shade), smoothstep(3.0, 8.0, v_size));
+	float soft_pre = max(1.0 - step(0.5, v_shade), smoothstep(1.5, 3.5, v_size));
 	float smooth_l = 0.84 + 0.16 * smoothstep(-0.4, 0.8, l);
 	vec3 c = v_col.rgb * mix(1.0, mix(band, smooth_l, soft_pre), v_shade);
 	c *= mix(1.0, light_k, step(0.5, v_shade));
@@ -61,7 +61,7 @@ void fragment() {
 	float soft_amt = max(1.0 - step(0.5, v_shade), 1.0 - smoothstep(0.85, 0.99, v_col.a));
 	// debris chunks are small; anything bigger than a few metres is smoke or a burst, whatever its alpha (big opaque
 	// puffs drew as hard flat polygons across the screen when the aircraft flew close to them)
-	soft_amt = max(soft_amt, smoothstep(3.0, 8.0, v_size));
+	soft_amt = max(soft_amt, smoothstep(1.5, 3.5, v_size));   // (flak bursts are 2-6 m: soft and lit like the ground smoke, not dark discs)
 	float edge = smoothstep(0.10, 0.95, ndv);      // wide soft rim: a low-poly hull must never show its polygon outline
 	edge *= edge;                                  // (squared: the fade starts well inside the silhouette)
 	vec3 q = ROT_M * v_loc;
@@ -79,8 +79,8 @@ void fragment() {
 	float dist = length(VERTEX);
 	float haze = 1.0 - exp(-dist * haze_density);
 	float smoke = step(0.5, v_shade);
-	c = mix(c, haze_color, haze * mix(0.35, 1.0, smoke));
-	a *= 1.0 - 0.45 * haze * smoke;        // far smoke thins out rather than reading as solid balls
+	c = mix(c, haze_color, haze * mix(0.35, 0.5, smoke));   // far smoke stays smoke-grey (fully hazed it read as pale noisy balls in the sky)
+	a *= 1.0 - 0.80 * haze * smoke;        // far smoke thins out rather than reading as solid balls
 	// right next to the camera a puff fills half the screen as one flat translucent polygon: thin it out (not away -
 	// a close flak burst must still be seen)
 	a *= mix(1.0, mix(0.22, 1.0, smoothstep(40.0, 450.0, dist)), soft_amt);

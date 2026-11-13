@@ -190,7 +190,15 @@ void fragment() {
 		stage = fract(season_center + (stage - 0.5) * 0.5);   // most fields near the season's stage, a spread either side
 	}
 
-	vec3 soil = soil_col * (0.85 + 0.30 * fh2);
+	// Ploughed land: a warm, freshly turned brown with the plough's 'lands' (broad strips worked up and down
+	// the field) and the furrows themselves where they are wide enough on screen - a dead flat brown otherwise.
+	vec2 pdir = normalize(vec2(t_hash12(cell_id + 3.1) - 0.5, t_hash12(cell_id + 8.7) - 0.5) + vec2(0.001));
+	float pu = dot(xz, pdir);
+	float p_lands = 0.5 + 0.5 * sin(pu * 0.68 + fh3 * 6.0);
+	float p_fw = fwidth(pu / 1.15);
+	float p_fur = mix(0.5, abs(fract(pu / 1.15) - 0.5) * 2.0, 1.0 - smoothstep(0.25, 0.6, p_fw));
+	vec3 soil = soil_col * vec3(1.10, 1.0, 0.90) * (0.85 + 0.30 * fh2) * (0.86 + 0.20 * p_lands) * (0.80 + 0.40 * p_fur);
+	soil *= 0.92 + 0.16 * t_vnoise2(xz * 0.045 + fh2 * 20.0);    // damp and dry patches across the field
 	vec3 young = mix(crop_young_col, grass_b, 0.40 * fh3);
 	vec3 ripe = mix(field_wheat, mix(field_wheat, stubble_col, 0.55), fh3);   // wheat vs barley, per field
 	vec3 fallow = mix(field_brown * 1.05, grass_b * 0.85, clamp(t_vnoise2(xz * 0.06 + fh3 * 30.0), 0.0, 1.0));
@@ -390,6 +398,46 @@ void fragment() {
 		vec3 gardens = ph < 0.55 ? lawn : (ph < 0.75 ? beds : yard);
 		float garden_k = smoothstep(0.30, 0.55, t_vnoise2(xz * 0.035 + 21.0)) * 0.75;   // leafier suburbs, denser centres
 		town = mix(town, gardens, garden_k * (1.0 - smoothstep(0.85, 1.0, urban) * 0.4));
+		// Streets: the same district grid that Scatter._add_street_row lays the terraces on (420 m districts, each
+		// turned by its own hash; 34 m blocks = 8 m street + front row + back yards + back row; a cross street
+		// in every 130 m). Carriageway, pavements and kerbs in front of each row, yards behind, so a town reads as
+		// streets and blocks from any height. Faded out where a street is under ~2 px wide (no crawling lines).
+		{
+			vec2 dcell = floor(xz / 420.0);
+			float sa = t_hash12(dcell + vec2(3.0, 7.0)) * PI;
+			vec2 s_al = vec2(cos(sa), -sin(sa));
+			vec2 s_ac = vec2(-s_al.y, s_al.x);
+			vec2 rel = xz - dcell * 420.0;
+			float su = dot(rel, s_al);
+			float sv = dot(rel, s_ac);
+			float fv = mod(sv, 34.0);
+			float fu = mod(su, 26.0);
+			float slot_u = (floor(su / 26.0) + 0.5) * 26.0;
+			float cross_k = step(mod(slot_u, 130.0), 25.99);
+			float px = max(fwidth(sv), fwidth(su));
+			float s_aa = 1.0 - smoothstep(1.2, 4.0, px);
+			float cv = abs(fv - 4.0);                       // across the main street, from its centre line
+			float cu = abs(fu - 13.0) + (1.0 - cross_k) * 100.0;   // across a cross street (only in its slot)
+			float c_road = min(cv, cu);
+			float road_k = 1.0 - smoothstep(2.3, 2.6, c_road);
+			float pave_k = (1.0 - smoothstep(3.8, 4.1, c_road)) * (1.0 - road_k);
+			float st_k = smoothstep(0.55, 0.85, urban);       // only in the built-up core, not over the fields at a town's ragged edge
+			road_k *= st_k;
+			pave_k *= st_k;
+			float kerb = (1.0 - smoothstep(0.0, 0.25, abs(c_road - 2.45))) * s_aa * st_k;
+			vec3 setts = tarmac_col * (0.92 + 0.16 * t_vnoise2(xz * 0.5)) * (0.94 + 0.12 * t_vnoise2(xz * 3.1));
+			setts = mix(setts, setts * 0.75, smoothstep(0.6, 0.85, t_vnoise2(xz * 0.21 + 4.0)) * 0.6);   // oil and wet patches
+			vec3 pave = paving_col * 1.12 * (0.93 + 0.14 * t_vnoise2(xz * 1.3));
+			vec3 avg_street = mix(setts, pave, 0.4);
+			setts = mix(avg_street, setts, s_aa);
+			pave = mix(avg_street, pave, s_aa);
+			float yard_k = smoothstep(16.0, 17.5, fv) * (1.0 - smoothstep(24.5, 26.0, fv)) * (1.0 - cross_k) * st_k;
+			vec3 yard_g = mix(gardens, mix(soil_col, mud_col, 0.5) * 0.85, 0.35) * 0.88;
+			town = mix(town, yard_g, yard_k * 0.8);
+			town = mix(town, pave, pave_k);
+			town = mix(town, setts, road_k);
+			town *= 1.0 - 0.35 * kerb;
+		}
 		col = mix(col, town, urban * 0.92);
 		// Public parks inside towns (mirrored by Scatter.in_park)
 		float pk = smoothstep(0.76, 0.80, t_vnoise2(xz * 0.0042 + 31.0));

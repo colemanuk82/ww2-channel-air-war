@@ -364,9 +364,9 @@ static func build(id: String) -> Node3D:
 		"caen_abbey":
 			# Abbaye-aux-Hommes (St-Etienne): twin Romanesque west towers carrying tall Gothic spires (~80 m),
 			# and a lantern tower over the crossing
-			_cathedral(root, 100.0, 26.0, 50.0, 2, 34.0, Color(0.74, 0.71, 0.62))
-			_b(root, Vector3(15, 30, 15), Vector3(0, 15, -8), Color(0.72, 0.69, 0.60))
-			GroundKit.cyl(root, 0.0, 9.0, 12.0, Vector3(0, 36, -8), Color(0.32, 0.33, 0.36), Vector3.ZERO, 8)
+			_cathedral(root, 130.0, 34.0, 68.0, 2, 48.0, Color(0.78, 0.74, 0.64))
+			_b(root, Vector3(20, 40, 20), Vector3(0, 20, -10), Color(0.76, 0.72, 0.62))
+			GroundKit.cyl(root, 0.0, 12.0, 16.0, Vector3(0, 48, -10), Color(0.32, 0.33, 0.36), Vector3.ZERO, 8)
 		"bayeux_cathedral":
 			_cathedral(root, 100.0, 30.0, 58.0, 2, 20.0, Color(0.7, 0.66, 0.58))
 		"windsor_castle":
