@@ -38,7 +38,8 @@
    "lon": 1.3461,
    "heading_deg": 100,
    "runway_len_m": 2700,
-   "in_bounds": true
+   "in_bounds": true,
+   "style": "raf_bomber"
   },
   {
    "id": "tangmere",
@@ -151,7 +152,8 @@
    "heading_deg": 60,
    "runway_len_m": 1500,
    "in_bounds": true,
-   "liberated": "1944-09-02"
+   "liberated": "1944-09-02",
+   "style": "lw_fliegerhorst"
   },
   {
    "id": "caen_carpiquet",
@@ -195,7 +197,8 @@
    "heading_deg": 90,
    "runway_len_m": 1200,
    "in_bounds": true,
-   "liberated": "1944-09-04"
+   "liberated": "1944-09-04",
+   "style": "lw_fliegerhorst"
   },
   {
    "id": "lille_nord",
@@ -590,7 +593,8 @@
    "lon": -0.4764,
    "heading_deg": 70,
    "runway_len_m": 1800,
-   "in_bounds": true
+   "in_bounds": true,
+   "style": "raf_bomber"
   },
   {
    "id": "cottesmore",

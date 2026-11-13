@@ -12,7 +12,8 @@ var heading_deg: float = 0.0
 var surface_y: float = 0.0
 var team: String = ""          # "Allies" / "Axis" allegiance of the field
 var lights_active: bool = true # at night the flare path / runway lamps show only while the field is active
-var style: String = "triangle"  # "triangle" (paved three-runway field) or "grass" (dirt strip + big apron, Luftwaffe style)
+var style: String = "triangle"  # "triangle", "grass", "cross", "parallel", "forward", "raf_grass", "lw_field",
+	# "raf_bomber", "raf_fighter", "raf_satellite", "night_fighter", "lw_fliegerhorst", "usaf_alg", "glider_strip"
 
 const GRASS_IDS := []
 ## Pre-war RAF grass stations as they were in 1940: no paved runway, an arc of big hangars behind a concrete apron,
@@ -52,6 +53,31 @@ static func style_for(id: String) -> String:
 	if id == "manston":
 		return "triangle"
 	return ["triangle", "grass", "cross", "parallel", "forward"][absi(hash(id)) % 5]
+
+
+## Style strings a record may declare in data/locations.json ("style": "..."). Anything else falls back
+## to the id-list / hash layout above.
+const STYLE_KEYS := ["raf_bomber", "raf_fighter", "raf_satellite", "night_fighter", "lw_fliegerhorst",
+	"lw_field", "usaf_alg", "glider_strip"]
+
+
+## Which layout an airfield gets, with the record's own say and the war date taken into account:
+##  1. an explicit "style" key in the locations.json record wins (unknown values are ignored),
+##  2. era rules: the RAF fighter stations lay concrete runways and E-pens from the invasion build-up on,
+##     and the af_* forward strips become American advanced landing grounds for the same period,
+##  3. otherwise the plain id-list / hash choice of style_for().
+static func style_for_record(id: String, rec: Dictionary) -> String:
+	var declared: String = str(rec.get("style", ""))
+	if declared in STYLE_KEYS:
+		return declared
+	var base: String = style_for(id)
+	var late: bool = EraClock.band() in ["buildup", "liberation", "1945"]
+	if base == "raf_grass" and late:
+		return "raf_fighter"
+	if base == "forward" and id.begins_with("af_") and late:
+		return "usaf_alg"
+	return base
+
 
 ## Footprint (radius in world units) that scenery / trees must keep clear of.
 var clear_radius: float = 1900.0
@@ -119,12 +145,18 @@ func build_layout() -> void:
 			_build_cross(earth)
 		"parallel":
 			_build_parallel(earth)
-		"forward":
+		"forward", "usaf_alg":
 			_build_forward(earth)
 		"raf_grass":
 			_build_raf_grass(earth)
 		"lw_field":
 			_build_lw_field(earth)
+		"raf_bomber":
+			_build_raf_bomber(earth)
+		"raf_fighter", "night_fighter", "lw_fliegerhorst":
+			_build_triangle(earth)
+		"raf_satellite", "glider_strip":
+			_build_grass(earth)
 		_:
 			_build_triangle(earth)
 
@@ -253,6 +285,47 @@ func _build_triangle(earth: Material) -> void:
 		var hubw := Vector3(p1.x - 85.0, 0, wz)
 		_link(Vector3(p1.x, 0, wz), hubw, 8.0, _asphalt2)
 		_clover(hubw, PI * 1.5, pan_mat, earth)
+
+
+## RAF heavy-bomber station: the three-runway triangle plus frying-pan hardstandings round the outer sides
+## of the perimeter track (the pans face the bombing circles; the west side stays the technical site).
+func _build_raf_bomber(earth: Material) -> void:
+	_build_triangle(earth)
+	var L: float = runway_length
+	var p1 := Vector3(-L * 0.12, 0, -L * 0.5 - L * 0.13)
+	var p2 := Vector3(-L * 0.12, 0, L * 0.5 + L * 0.13)
+	var p3 := Vector3(L * 0.62 + L * 0.15, 0, 0)
+	var pan: Material = ToonUtil.make_toon(Color(0.58, 0.57, 0.54), {"outline": false, "rim": 0.0, "detail": 4})
+	_frying_pans([p1, p2, p3], pan, 240.0, Vector2(-L * 0.12, 0.0), L * 0.72)
+
+
+## RAF fighter station after the 1944 paving (Epsom runways on a fighter field): the triangle geometry plus
+## E-type blast pens round the outside of the cloverleaf hardstandings, each opening onto a short stub track.
+func _build_raf_fighter(earth: Material) -> void:
+	_build_triangle(earth)
+	var L: float = runway_length
+	var p1 := Vector3(-L * 0.12, 0, -L * 0.5 - L * 0.13)
+	var p2 := Vector3(-L * 0.12, 0, L * 0.5 + L * 0.13)
+	var p3 := Vector3(L * 0.62 + L * 0.15, 0, 0)
+	var loop: Array = [p1, p2, p3]
+	for i in 3:
+		var a: Vector3 = loop[i]
+		var b: Vector3 = loop[(i + 1) % 3]
+		if (a as Vector3).x < 0.0 and (b as Vector3).x < 0.0:
+			continue                          # the west side is the technical site: hangars and dumps
+		for kk in 4:
+			var t: float = 0.16 + float(kk) * 0.23      # in the gaps between the cloverleaf stems
+			var p: Vector3 = (a as Vector3).lerp(b as Vector3, t)
+			var dirv: Vector3 = ((b as Vector3) - (a as Vector3)).normalized()
+			var outv := Vector3(-dirv.z, 0.0, dirv.x)
+			if outv.dot(p) < 0.0:
+				outv = -outv
+			var c: Vector3 = p + outv * 150.0           # beyond the cloverleaf lobes, on the grass
+			var yaw: float = atan2(outv.x, outv.z) + PI
+			pens_local.append(Transform3D(Basis(Vector3.UP, yaw), c))
+			_link(p, p + outv * 138.0, 8.0, _asphalt2)
+			for bay in [-7.0, 7.0]:
+				_dispersal_local.append(c + Basis(Vector3.UP, yaw) * Vector3(bay, 0.0, 2.0))
 
 
 ## Runway edge / threshold lamps for a grass or dirt strip, in the airfield's local frame. Paved runways

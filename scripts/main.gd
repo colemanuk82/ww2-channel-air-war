@@ -120,6 +120,13 @@ func _ready() -> void:
 	for a in _args:       # debug: --seed=N makes every randf()/randi() repeatable (fair A/B perf runs)
 		if a.begins_with("--seed="):
 			seed(int(a.substr(7)))
+	# The war date must be known before the world builds: the core airfields pick their era style at
+	# build time (mown grass 1940 / concrete fighter station 1944), and start_game's config pass
+	# re-applies the same string, so nothing rebuilds twice.
+	for a in _args:
+		if a.begins_with("--date="):
+			GameState.era_date = a.substr(7)
+			EraClock.set_date(GameState.era_date)
 	get_viewport().use_occlusion_culling = true
 	_build_perf_overlay()
 	HeightField.force_procedural = _args.has("--procedural")
@@ -135,7 +142,7 @@ func _ready() -> void:
 		var y: float = terrain.add_flat_zone(wp, 1000.0, 500.0)
 		var af := Airfield.create(d["name"], wp, d["heading"], y)
 		af.team = _airfield_team(id)
-		af.style = Airfield.style_for(id)
+		af.style = Airfield.style_for_record(id, {})
 		af.add_to_group("airfield")
 		add_child(af)
 		airfields[id] = af
@@ -821,6 +828,54 @@ func _airfield_furniture_test() -> void:
 		remove_child(af)
 		af.free()
 	print("[airfield-furn] %d airfields dressed, %d meshes total" % [done, tot_meshes])
+	# P5 styles: one representative field per new style, dressed exactly as _build_airfield dresses it
+	# (populator dresser + furniture), printing per-style mesh and prop-cluster counts.
+	var style_ids := {"raf_bomber": "wittering", "raf_satellite": "christchurch", "night_fighter": "ford",
+		"lw_fliegerhorst": "saint_omer", "usaf_alg": "af_asch", "glider_strip": "lympne"}
+	var by_id: Dictionary = {}
+	for e2 in airs:
+		by_id[str(e2["id"])] = e2
+	var wp := WorldPopulator.new()
+	var style_tot: int = 0
+	for st in style_ids:
+		var sid: String = style_ids[st]
+		if not by_id.has(sid):
+			print("[airfield-furn] no record for style demo %s (%s)" % [st, sid])
+			continue
+		var rec: Dictionary = by_id[sid]
+		var spos: Vector3 = WorldCoords.latlon_to_world(float(rec["lat"]), float(rec["lon"]))
+		var saf: Airfield = Airfield.create(str(rec.get("name", sid)), spos, float(rec.get("heading_deg", 0.0)), GroundKit.ground_y(spos.x, spos.z))
+		saf.style = st
+		add_child(saf)
+		var srng := RandomNumberGenerator.new()
+		srng.seed = hash(sid)
+		var scontainer := Node3D.new()
+		var saxf := Transform3D(Basis(Vector3.UP, saf.rotation.y), saf.position)
+		var steam: String = WorldPopulator.airfield_team(rec)
+		match st:
+			"raf_satellite":
+				wp._dress_satellite(scontainer, saf, saxf, saf.surface_y, steam, srng)
+			"usaf_alg":
+				wp._dress_usaf_alg(scontainer, saf, saxf, saf.surface_y, steam, srng)
+			"lw_fliegerhorst":
+				wp._dress_lw_fliegerhorst(scontainer, saf, saxf, saf.surface_y, steam, srng)
+			"glider_strip":
+				wp._dress_glider_strip(scontainer, saf, saxf, saf.surface_y, steam, srng)
+			_:
+				wp._dress_triangle(scontainer, saf, saxf, saf.surface_y, steam, srng)
+		if st not in ["raf_satellite", "glider_strip"]:
+			AirfieldFurniture.dress(scontainer, saf, saxf, saf.surface_y, steam, srng)
+		add_child(scontainer)
+		var sm: int = _count_meshes(scontainer)
+		var sprops: int = scontainer.find_children("*", "AirfieldProp", true, false).size()
+		style_tot += sm
+		print("[airfield-furn] style %-15s @ %-18s -> %3d meshes, %d prop clusters" % [st, sid, sm, sprops])
+		remove_child(scontainer)
+		scontainer.free()
+		remove_child(saf)
+		saf.free()
+	wp.free()
+	print("[airfield-furn] style demos placed %d meshes" % style_tot)
 	get_tree().quit()
 
 

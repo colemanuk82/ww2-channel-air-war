@@ -30,10 +30,10 @@ static func _build(parts: Array) -> ArrayMesh:
 ## Loading-screen jobs: the airfield and camp props for both sides (each mesh is cached on first build).
 static func warm_jobs() -> Array:
 	var out: Array = []
-	for f0 in ["fuel_tank", "bomb_bank", "chance_light", "e_pen", "boundary_marker", "landing_t"]:
+	for f0 in ["fuel_tank", "bomb_bank", "chance_light", "e_pen", "boundary_marker", "landing_t", "lw_watch_office"]:
 		out.append(Callable(AirfieldAssets, f0))
 	for team in ["Allies", "Axis"]:
-		for f in ["truck", "blister", "nissen", "tent", "t2_hangar", "t1_hangar", "revetment", "dummy_aircraft", "camo_net", "tank", "halftrack", "field_gun", "marquee"]:
+		for f in ["truck", "blister", "nissen", "tent", "t2_hangar", "t1_hangar", "revetment", "dummy_aircraft", "camo_net", "tank", "halftrack", "field_gun", "marquee", "lw_hangar"]:
 			out.append(Callable(AirfieldAssets, f).bind(team))
 	return out
 
@@ -235,6 +235,54 @@ static func t1_hangar(team: String) -> ArrayMesh:
 	parts.append(GroundKit.box_part(Vector3(29.0, 8.0, 0.4), Vector3(0, 4.0, -28.2), skin.darkened(0.05)))
 	var m: ArrayMesh = _build(parts)
 	Scatter._meshes[key] = m
+	return m
+
+
+## Luftwaffe fliegerhorst hangar: a big curved grey-green roof shed (the standard 1930s Doppelhalle look),
+## ribbed shell, dark open door end. Nose at -Z, arch about 18 m wide and 9 m tall over a 40 m span.
+static func lw_hangar(team: String) -> ArrayMesh:
+	var key: String = "lw_hangar_" + team
+	if _cached(key) != null:
+		return _cached(key)
+	var skin: Color = Color(0.4, 0.44, 0.34) if team == "Axis" else Color(0.44, 0.47, 0.37)
+	var rib: Color = skin.darkened(0.18)
+	var dark := Color(0.07, 0.07, 0.07)
+	var parts: Array = []
+	# curved shell: a half-buried arched cylinder with raised ribs along its length
+	parts.append(GroundKit.cyl_part(9.0, 9.0, 40.0, Vector3(0, 0.0, 0), skin, Vector3(90, 0, 0), 14))
+	for i in 9:
+		parts.append(GroundKit.cyl_part(9.25, 9.25, 0.6, Vector3(0, 0.0, -18.0 + float(i) * 4.5), rib, Vector3(90, 0, 0), 14, false))
+	# open door end: dark interior, door frame and a half-open sliding leaf
+	parts.append(GroundKit.box_part(Vector3(16.4, 7.6, 0.35), Vector3(0, 3.6, 19.9), dark, Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(0.7, 8.2, 0.6), Vector3(-7.8, 3.9, 20.05), rib))
+	parts.append(GroundKit.box_part(Vector3(0.7, 8.2, 0.6), Vector3(7.8, 3.9, 20.05), rib))
+	parts.append(GroundKit.box_part(Vector3(16.4, 0.7, 0.6), Vector3(0, 8.0, 20.05), rib))
+	parts.append(GroundKit.box_part(Vector3(7.6, 7.8, 0.3), Vector3(-3.9, 3.7, 20.3), skin.lightened(0.05)))
+	# blank rear wall
+	parts.append(GroundKit.box_part(Vector3(16.0, 8.0, 0.35), Vector3(0, 3.8, -19.9), skin.darkened(0.04)))
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes[key] = m
+	return m
+
+
+## German fliegerhorst watch office: a stone ground floor, brick first floor and a glazed gallery under a
+## flat roof with a signal mast. Base at y = 0, about 16 x 10 m.
+static func lw_watch_office() -> ArrayMesh:
+	if _cached("lw_watch_office") != null:
+		return _cached("lw_watch_office")
+	var stone := Color(0.52, 0.5, 0.45)
+	var brick := Color(0.44, 0.31, 0.24)
+	var dark := Color(0.1, 0.12, 0.13)
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(16.0, 4.2, 10.0), Vector3(0, 2.1, 0), stone))
+	parts.append(GroundKit.box_part(Vector3(16.3, 0.4, 10.3), Vector3(0, 4.3, 0), stone.darkened(0.08), Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(12.0, 3.2, 8.0), Vector3(0, 6.1, 0), brick))
+	parts.append(GroundKit.box_part(Vector3(12.4, 0.35, 8.4), Vector3(0, 7.85, 0), Color(0.3, 0.3, 0.32), Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(10.4, 1.6, 0.3), Vector3(0, 6.3, 4.05), dark, Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(0.3, 1.6, 6.4), Vector3(6.05, 6.3, 0), dark, Vector3.ZERO, false))
+	parts.append(GroundKit.cyl_part(0.1, 0.12, 4.0, Vector3(6.8, 9.8, 0), Color(0.15, 0.15, 0.15), Vector3.ZERO, 6, false))
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes["lw_watch_office"] = m
 	return m
 
 

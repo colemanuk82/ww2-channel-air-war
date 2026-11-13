@@ -48,6 +48,7 @@ func _ready() -> void:
 	_test_canal_furniture()
 	_test_rail_drama()
 	_test_airfield_furniture()
+	_test_airfield_styles()
 	_test_oil_fuel()
 	_test_aircraft_industry()
 	_test_v_weapons()
@@ -1489,6 +1490,57 @@ func _test_airfield_furniture() -> void:
 	container.free()
 	remove_child(af)
 	af.free()
+
+
+## P5: the new airfield styles. For each style a small Airfield is built and dressed the way
+## WorldPopulator._build_airfield dresses it (furniture for the triangle-family styles, the satellite
+## populator dresser for the satellite), and must place meshes and destructible prop clusters.
+func _test_airfield_styles() -> void:
+	print("-- airfield styles (P5)")
+	var meshes: Array = [AirfieldAssets.lw_hangar("Axis"), AirfieldAssets.lw_watch_office()]
+	var names: Array = ["lw_hangar", "lw_watch_office"]
+	var mfails: Array = []
+	for i in meshes.size():
+		var mm: ArrayMesh = meshes[i]
+		if mm == null or mm.get_surface_count() < 1:
+			mfails.append(String(names[i]))
+	_check(mfails.is_empty(), "new airfield style meshes build (%d); fail: %s" % [meshes.size(), ", ".join(PackedStringArray(mfails))])
+	var keep: String = EraClock.current()
+	EraClock.set_date("")
+	_check(Airfield.style_for_record("biggin_hill", {}) == "raf_grass", "style_for_record keeps the 1940 grass look without a date era")
+	EraClock.set_date("1944-05-01")
+	_check(Airfield.style_for_record("biggin_hill", {}) == "raf_fighter", "RAF fighter stations pave up in the buildup band")
+	_check(Airfield.style_for_record("af_asch", {}) == "usaf_alg", "af_* forward strips become US ALGs in the buildup band")
+	_check(Airfield.style_for_record("biggin_hill", {"style": "night_fighter"}) == "night_fighter", "a record's own style key wins over the era rules")
+	_check(Airfield.style_for_record("biggin_hill", {"style": "not_a_style"}) == "raf_fighter", "an unknown style string falls back to the era rules")
+	EraClock.set_date("" if keep == EraClock.DEFAULT else keep)
+	var wp := WorldPopulator.new()      # dressers are instance methods; none of them awaits or needs the tree
+	var fails: Array = []
+	for st in ["raf_bomber", "raf_satellite", "night_fighter", "lw_fliegerhorst", "usaf_alg"]:
+		var af: Airfield = Airfield.create("Style Test", Vector3.ZERO, 90.0, 0.0)
+		af.style = st
+		add_child(af)
+		var container := Node3D.new()
+		add_child(container)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 4242
+		var axf := Transform3D(Basis(Vector3.UP, af.rotation.y), af.position)
+		if st == "raf_satellite":
+			wp._dress_satellite(container, af, axf, 0.0, "Allies", rng)
+		else:
+			AirfieldFurniture.dress(container, af, axf, 0.0, "Allies", rng)
+		var m: int = _mesh_count(container)
+		var props: int = container.find_children("*", "AirfieldProp", true, false).size()
+		if not _check(m >= 6, "%s dresses meshes (meshes=%d)" % [st, m]):
+			fails.append(st)
+		if not _check(props >= 1, "%s includes destructible prop clusters (props=%d)" % [st, props]):
+			fails.append(st)
+		remove_child(container)
+		container.free()
+		remove_child(af)
+		af.free()
+	_check(fails.is_empty(), "every new airfield style dresses; fail: %s" % ", ".join(PackedStringArray(fails)))
+	wp.free()
 
 
 ## P9: oil_fuel_1940.json parses, every site builds scenery + a destructible structure, and every kind builds.

@@ -8,9 +8,24 @@ extends RefCounted
 const ALLIED_FIGHTERS := ["spitfire", "hurricane", "typhoon", "tempest", "mosquito"]
 const ALLIED_US_FIGHTERS := ["p47", "p51", "p38"]
 const ALLIED_BOMBERS := ["blenheim", "lancaster", "b26", "b25", "a20", "c47"]
+## The war the ground is built for shifts what sits on the ordinary fighter fields: 1940 squadrons fly
+## Spitfires and Hurricanes against the 109, by 1944 Tempests and Mustangs against the 190.
+const ALLIED_FIGHTERS_EARLY := ["spitfire", "hurricane"]
+const ALLIED_FIGHTERS_LATE := ["tempest", "p51", "spitfire"]
 const AXIS_FIGHTERS := ["bf109", "fw190", "bf110", "bf109"]
+const AXIS_FIGHTERS_EARLY := ["bf109"]
+const AXIS_FIGHTERS_LATE := ["fw190", "bf109"]
 const AXIS_DIVE := ["ju87", "bf109", "ju87", "bf110"]
 const AXIS_BOMBERS := ["he111", "ju88", "do17", "ju52", "fw200"]
+## What a bomber station, a night-fighter squadron, an American ALG and a glider strip keep. Only ids that
+## exist in data/aircraft/ (lancaster, blenheim, b26, b25, a20, mosquito, bf110, p47, p51, c47 all do;
+## no Stirling or Halifax model exists in the project, so Lancaster stations mix in the mediums).
+const RAF_BOMBER_LATE := ["lancaster", "b26", "b25", "a20"]
+const RAF_BOMBER_EARLY := ["blenheim", "a20"]
+const NIGHT_FIGHTER := {"Allies": ["mosquito"], "Axis": ["bf110"]}
+const USAF_ALG := ["p47", "p51", "c47"]
+const LW_FLIEGERHORST_EARLY := ["bf109", "ju87", "he111"]
+const LW_FLIEGERHORST_LATE := ["fw190", "bf109", "ju88"]
 
 static var _cache: Dictionary = {}
 static var _static_shader: Shader
@@ -108,31 +123,55 @@ static func _collect(n: Node3D, parent_xf: Transform3D, out: Array) -> void:
 			_collect(c as Node3D, t, out)
 
 
-## Which types a field keeps: decided per airfield (stable), with the odd visitor from the same side.
-static func _pick(team: String, h: int, rng: RandomNumberGenerator) -> String:
+## Which types a field keeps: decided per airfield (stable), with the odd visitor from the same side. The
+## field's style (af.style, threaded from place()) specialises the mix - a bomber station parks bombers, an
+## ALG Thunderbolts and Mustangs, a night-fighter field Mosquitos or 110s - and the era shifts the ordinary
+## fighter lists. Unclassified fields use the plain hash fallback.
+static func _pick(team: String, h: int, rng: RandomNumberGenerator, style: String = "") -> String:
 	var role: int = posmod(h, 10)
 	var primary: String
 	var mix: Array
-	if team == "Allies":
-		if role < 6:
-			primary = ALLIED_FIGHTERS[posmod(h / 10, 4)]
-			mix = ALLIED_FIGHTERS
-		elif role < 8:
-			primary = ALLIED_US_FIGHTERS[posmod(h / 10, 3)]
-			mix = ALLIED_US_FIGHTERS
-		else:
-			primary = ALLIED_BOMBERS[posmod(h / 10, ALLIED_BOMBERS.size())]
-			mix = ALLIED_BOMBERS
-	else:
-		if role < 5:
-			primary = AXIS_FIGHTERS[posmod(h / 10, 3)]
-			mix = AXIS_FIGHTERS
-		elif role < 7:
-			primary = AXIS_DIVE[posmod(h / 10, 2)]
-			mix = AXIS_DIVE
-		else:
-			primary = AXIS_BOMBERS[posmod(h / 10, AXIS_BOMBERS.size())]
-			mix = AXIS_BOMBERS
+	var late: bool = EraClock.band() in ["buildup", "liberation", "1945"]
+	match style:
+		"raf_bomber":
+			mix = RAF_BOMBER_EARLY if not late else RAF_BOMBER_LATE
+			primary = mix[posmod(h / 10, mix.size())]
+		"raf_satellite":
+			mix = ALLIED_FIGHTERS_EARLY if not late else ["spitfire", "tempest", "p51"]
+			primary = mix[posmod(h / 10, mix.size())]
+		"night_fighter":
+			mix = NIGHT_FIGHTER.get(team, NIGHT_FIGHTER["Allies"])
+			primary = mix[posmod(h / 10, mix.size())]
+		"usaf_alg":
+			mix = USAF_ALG
+			primary = mix[posmod(h / 10, 3)]
+		"lw_fliegerhorst":
+			mix = LW_FLIEGERHORST_EARLY if not late else LW_FLIEGERHORST_LATE
+			primary = mix[posmod(h / 10, mix.size())]
+		"glider_strip":
+			mix = ["c47"]                     # the tugs wait beside the gliders
+			primary = "c47"
+		_:
+			if team == "Allies":
+				if role < 6:
+					mix = ALLIED_FIGHTERS_EARLY if not late else ALLIED_FIGHTERS_LATE
+					primary = mix[posmod(h / 10, mix.size())]
+				elif role < 8:
+					primary = ALLIED_US_FIGHTERS[posmod(h / 10, 3)]
+					mix = ALLIED_US_FIGHTERS
+				else:
+					primary = ALLIED_BOMBERS[posmod(h / 10, ALLIED_BOMBERS.size())]
+					mix = ALLIED_BOMBERS
+			else:
+				if role < 5:
+					mix = AXIS_FIGHTERS_EARLY if not late else AXIS_FIGHTERS_LATE
+					primary = mix[posmod(h / 10, mix.size())]
+				elif role < 7:
+					primary = AXIS_DIVE[posmod(h / 10, 2)]
+					mix = AXIS_DIVE
+				else:
+					primary = AXIS_BOMBERS[posmod(h / 10, AXIS_BOMBERS.size())]
+					mix = AXIS_BOMBERS
 	if rng.randf() < 0.68:
 		return primary
 	return mix[rng.randi() % mix.size()]
@@ -144,7 +183,7 @@ static func place(container: Node3D, xforms: Array, team: String, af: Airfield) 
 	var rng := RandomNumberGenerator.new()
 	rng.seed = h
 	for t in xforms:
-		var id: String = _pick(team, h, rng)
+		var id: String = _pick(team, h, rng, af.style if af != null else "")
 		var mesh: ArrayMesh = mesh_for(id)
 		if mesh == null:
 			continue
