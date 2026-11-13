@@ -101,6 +101,29 @@ global uniform float real_rivers;
 varying vec3 w_pos;
 varying vec3 w_normal;
 
+// Exact integer hash, bit-for-bit the same as Scatter._ih on the CPU. Everything the scatter mirrors (field lattice
+// the hedges are laid on, street grid, parks, lakes) uses it: the float hash (t_hash12) drifts in float32 at these
+// world coordinates by up to a whole field, so the hedges were being laid on a different field pattern from the
+// one painted here and cut across the painted fields.
+float s_ih(ivec2 p, uint seed) {
+	uint n = uint(p.x) * 73856093u ^ uint(p.y) * 19349663u ^ seed * 83492791u;
+	n = (n ^ (n >> 16u)) * 73244475u;
+	n = (n ^ (n >> 16u)) * 73244475u;
+	n = n ^ (n >> 16u);
+	return float(n >> 8u) * (1.0 / 16777216.0);
+}
+float s_ivn(vec2 p, uint seed) {
+	vec2 fl = floor(p);
+	ivec2 i = ivec2(fl);
+	vec2 f = p - fl;
+	f = f * f * (3.0 - 2.0 * f);
+	float a = s_ih(i, seed);
+	float b = s_ih(i + ivec2(1, 0), seed);
+	float c = s_ih(i + ivec2(0, 1), seed);
+	float d = s_ih(i + ivec2(1, 1), seed);
+	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
 void vertex() {
 	w_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	w_normal = normalize(mat3(MODEL_MATRIX) * NORMAL);
@@ -131,9 +154,9 @@ void fragment() {
 	// (Lattice kept identical to the previous version so Scatter.field_edge() stays in sync.)
 	// a gentle warp only: hedges run nearly straight with the odd kink, as real field boundaries do (a strong
 	// warp bent every field into curved bananas)
-	vec2 warp = vec2(t_vnoise2(xz * 0.004), t_vnoise2(xz * 0.004 + 53.7)) - 0.5;
-	float strip = step(0.55, t_vnoise2(xz * 0.0012 + 41.0));   // hard districts: a smooth blend would swirl the lattice into rings
-	float zn = t_vnoise2(xz * 0.0009 + 77.0);
+	vec2 warp = vec2(s_ivn(xz * 0.004, 1u), s_ivn(xz * 0.004, 2u)) - 0.5;
+	float strip = step(0.55, s_ivn(xz * 0.0012, 3u));   // hard districts: a smooth blend would swirl the lattice into rings
+	float zn = s_ivn(xz * 0.0009, 4u);
 	float zscale = zn < 0.22 ? 0.65 : (zn < 0.42 ? 1.0 : (zn < 0.58 ? 1.6 : 1.2));   // small old enclosures .. big arable
 	float zjit = zn < 0.42 ? 0.85 : (zn < 0.58 ? 0.6 : 0.12);
 	// regional farming patterns (hard flags, see RegionMap.type_weights)
@@ -153,7 +176,7 @@ void fragment() {
 	zscale = mix(zscale, zscale * 0.72, r_weald);        // Weald: small fields between the shaws
 	float zrect = step(0.58, zn) * (1.0 - strip) * (1.0 - r_boc);       // regular rectangular enclosure: straight hedges and ditches
 	float zrot = max(strip, step(0.42, zn));
-	float sang = t_hash12(floor(xz * 0.00035) + 5.0) * 3.14159 * zrot;   // one bearing per district, no swirl
+	float sang = s_ih(ivec2(floor(xz * 0.00035)), 5u) * 3.14159 * zrot;   // one bearing per district, no swirl
 	vec2 sdir = vec2(cos(sang), sin(sang));
 	vec2 wq = xz + warp * 30.0;
 	float sa = dot(wq, sdir);
@@ -168,7 +191,7 @@ void fragment() {
 	for (int y = -1; y <= 1; y++) {
 		for (int x = -1; x <= 1; x++) {
 			vec2 o = vec2(float(x), float(y));
-			vec2 jit = vec2(t_hash12(cell_id + o), t_hash12(cell_id + o + 19.7)) - 0.5;
+			vec2 jit = vec2(s_ih(ivec2(cell_id + o), 6u), s_ih(ivec2(cell_id + o), 7u)) - 0.5;
 			vec2 rr = gv - (o + jit * mix(zjit, 0.85, strip));
 			float dc = max(abs(rr.x), abs(rr.y));
 			float d = mix(dot(rr, rr), dc * dc, zrect);   // Chebyshev metric gives square-cornered rectangular fields
@@ -314,13 +337,21 @@ void fragment() {
 		if (muv.x >= 0.0 && muv.x <= 1.0 && muv.y >= 0.0 && muv.y <= 1.0) {
 			vec3 mc = texture(map_tex, muv).rgb;
 			veg = clamp((mc.g - max(mc.r, mc.b)) * 9.0, 0.0, 1.0);
+			// Farmland: the imagery is ~150 m a pixel, so drawn sharp it paints its own blocky 'fields' (bilinear
+			// quads) that have nothing to do with the field lattice the hedges are laid on - hedges then cut
+			// across them. Over lowland farmland it is blurred to a regional tint, and the field patchwork below
+			// (the same cells Scatter.field_edge traces the hedges along) gives each enclosure its colour.
+			vec2 bo = map_rect.zw * 280.0;
+			vec3 mcb = (mc + texture(map_tex, muv + vec2(bo.x, 0.0)).rgb + texture(map_tex, muv - vec2(bo.x, 0.0)).rgb
+				+ texture(map_tex, muv + vec2(0.0, bo.y)).rgb + texture(map_tex, muv - vec2(0.0, bo.y)).rgb) * 0.2;
+			mc = mix(mc, mcb, lowland * (1.0 - urban));
 			col = mix(col, mc, map_amount);
 		}
 	}
 
 	// Re-apply the field patchwork / land-use colours over the imagery so variety, hedges and heath survive.
 	// (with a war date set, crop fields show their season's stage more strongly: stubble, plough, green shoots)
-	col = mix(col, mix(col, field, 0.34 + (season_center >= 0.0 ? 0.28 * is_crop : 0.0)), lowland * (1.0 - urban));
+	col = mix(col, mix(col, field, 0.62 + (season_center >= 0.0 ? 0.20 * is_crop : 0.0)), lowland * (1.0 - urban));   // (was 0.34: the imagery's own blocky parcels showed through and hedges crossed them)
 	col = mix(col, field, wood * 0.7 * (1.0 - urban));      // under forest the ground is canopy, whatever the imagery says
 	// Dull farmland: the aerial imagery and the field palette are both graded a shade down and slightly
 	// desaturated over the lowland, so the patchwork reads as muted wartime countryside rather than a
@@ -374,7 +405,7 @@ void fragment() {
 	}
 	// Lakes and ponds: blobby still water in hollows of the lowlands, ringed with reed and mud
 	{
-		float ln = t_vnoise2(xz * 0.00085 + 300.0) * 0.62 + t_vnoise2(xz * 0.0032 + 9.0) * 0.38;
+		float ln = s_ivn(xz * 0.00085, 8u) * 0.62 + s_ivn(xz * 0.0032, 9u) * 0.38;
 		float lok = (1.0 - smoothstep(35.0, 110.0, h)) * smoothstep(2.0, 4.0, h) * (1.0 - smoothstep(0.08, 0.2, slope)) * (1.0 - urban);
 		// rarer and darker than before: at dusk the old pale teal ponds glowed like snow patches across the land
 		float lake = smoothstep(0.800, 0.815, ln);
@@ -404,7 +435,7 @@ void fragment() {
 		// streets and blocks from any height. Faded out where a street is under ~2 px wide (no crawling lines).
 		{
 			vec2 dcell = floor(xz / 420.0);
-			float sa = t_hash12(dcell + vec2(3.0, 7.0)) * PI;
+			float sa = s_ih(ivec2(dcell), 10u) * PI;
 			vec2 s_al = vec2(cos(sa), -sin(sa));
 			vec2 s_ac = vec2(-s_al.y, s_al.x);
 			vec2 rel = xz - dcell * 420.0;
@@ -440,7 +471,7 @@ void fragment() {
 		}
 		col = mix(col, town, urban * 0.92);
 		// Public parks inside towns (mirrored by Scatter.in_park)
-		float pk = smoothstep(0.76, 0.80, t_vnoise2(xz * 0.0042 + 31.0));
+		float pk = smoothstep(0.76, 0.80, s_ivn(xz * 0.0042, 11u));
 		if (pk > 0.0) {
 			vec3 mown = mix(grass_a, grass_b, 0.5) * (0.95 + 0.14 * t_vnoise2(xz * 0.15));
 			mown = mix(mown, grass_a * 0.8, smoothstep(0.55, 0.8, t_vnoise2(xz * 0.9)) * 0.35);

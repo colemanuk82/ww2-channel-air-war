@@ -1993,7 +1993,7 @@ const CROSS_EVERY: float = 130.0     # a cross street every ~130 m
 ## streets cut the rows every ~130 m, so streets and junctions show from the air. Each slot is built once.
 static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator, base_yaw: float, done: Dictionary, exclude: Array) -> void:
 	var dc := Vector2i(floori(p.x / 420.0), floori(p.y / 420.0))
-	var a: float = _fh(float(dc.x) + 3.0, float(dc.y) + 7.0) * PI     # by district, not by tile, so tiles agree
+	var a: float = _ih(dc.x, dc.y, 10) * PI     # by district, not by tile, so tiles agree
 	var along := Vector2(cos(a), -sin(a))
 	var across := Vector2(-along.y, along.x)
 	var org := Vector2(dc.x * 420.0, dc.y * 420.0)
@@ -2052,6 +2052,30 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 const FIELD_CELL: float = 190.0      # = terrain.gdshader field_cell (it was 62 vs the shader's 124: the hedges missed the painted boundaries)
 
 
+## Exact 32-bit integer hash, bit-for-bit terrain.gdshader's s_ih (GPU uint arithmetic): the mirrored field lattice,
+## street grid, parks and lakes use it so the CPU and the GPU agree exactly (the float hash differs in float32).
+const _M32: int = 0xFFFFFFFF
+static func _ih(x: int, y: int, seed: int) -> float:
+	var n: int = (((x & _M32) * 73856093) & _M32) ^ (((y & _M32) * 19349663) & _M32) ^ ((seed * 83492791) & _M32)
+	n = ((n ^ (n >> 16)) * 73244475) & _M32
+	n = ((n ^ (n >> 16)) * 73244475) & _M32
+	n = n ^ (n >> 16)
+	return float(n >> 8) / 16777216.0
+
+
+static func _ivn(px: float, py: float, seed: int) -> float:   # s_ivn
+	var ix: int = int(floorf(px))
+	var iy: int = int(floorf(py))
+	var fx: float = px - floorf(px)
+	var fy: float = py - floorf(py)
+	fx = fx * fx * (3.0 - 2.0 * fx)
+	fy = fy * fy * (3.0 - 2.0 * fy)
+	var a: float = _ih(ix, iy, seed)
+	var b: float = _ih(ix + 1, iy, seed)
+	var c: float = _ih(ix, iy + 1, seed)
+	var d: float = _ih(ix + 1, iy + 1, seed)
+	return lerpf(lerpf(a, b, fx), lerpf(c, d, fx), fy)
+
 static func _fh(px: float, py: float) -> float:        # t_hash12
 	var ax: float = fposmod(px * 0.1031, 1.0)
 	var ay: float = fposmod(py * 0.1031, 1.0)
@@ -2067,13 +2091,13 @@ static func _fh(px: float, py: float) -> float:        # t_hash12
 
 # Mirrors the terrain shader's town-park mask (smoothstep(0.76,0.80, vnoise(xz*0.0042+31)))
 static func in_park(x: float, z: float) -> bool:
-	return _vn(x * 0.0042 + 31.0, z * 0.0042 + 31.0) > 0.775
+	return _ivn(x * 0.0042, z * 0.0042, 11) > 0.775
 
 
 # Mirrors the terrain shader's lake mask (blobs of vnoise in lowland hollows). Lakes are painted colour on the
 # terrain, not real water, so nothing may be scattered on them: trees, hedges, forests, farms and cattle.
 static func lake_noise(x: float, z: float) -> float:
-	return _vn(x * 0.00085 + 300.0, z * 0.00085 + 300.0) * 0.62 + _vn(x * 0.0032 + 9.0, z * 0.0032 + 9.0) * 0.38
+	return _ivn(x * 0.00085, z * 0.00085, 8) * 0.62 + _ivn(x * 0.0032, z * 0.0032, 9) * 0.38
 
 
 static func in_lake(x: float, z: float) -> bool:
@@ -2130,10 +2154,10 @@ static func _built_frac(p: Vector2, r: float = 34.0) -> float:
 ## strip-field districts, field-size zones and rectangular-enclosure districts - keep in sync with shaders/terrain.gdshader).
 ## Returns {"q": Vector2 point on the boundary, "tan": Vector2 unit tangent, "dist": metres} .
 static func field_edge(p: Vector2) -> Dictionary:
-	var wx: float = _vn(p.x * 0.004, p.y * 0.004) - 0.5
-	var wy: float = _vn(p.x * 0.004 + 53.7, p.y * 0.004 + 53.7) - 0.5
-	var strip: float = 1.0 if _vn(p.x * 0.0012 + 41.0, p.y * 0.0012 + 41.0) >= 0.55 else 0.0
-	var zn: float = _vn(p.x * 0.0009 + 77.0, p.y * 0.0009 + 77.0)
+	var wx: float = _ivn(p.x * 0.004, p.y * 0.004, 1) - 0.5
+	var wy: float = _ivn(p.x * 0.004, p.y * 0.004, 2) - 0.5
+	var strip: float = 1.0 if _ivn(p.x * 0.0012, p.y * 0.0012, 3) >= 0.55 else 0.0
+	var zn: float = _ivn(p.x * 0.0009, p.y * 0.0009, 4)
 	var zscale: float = 0.65 if zn < 0.22 else (1.0 if zn < 0.42 else (1.6 if zn < 0.58 else 1.2))
 	var zjit: float = 0.85 if zn < 0.42 else (0.6 if zn < 0.58 else 0.12)
 	var rg: Vector4 = RegionMap.type_weights(p.x, p.y)       # [bocage, open, polder, weald] - as terrain.gdshader
@@ -2144,7 +2168,7 @@ static func field_edge(p: Vector2) -> Dictionary:
 	zscale = lerpf(zscale, zscale * 0.72, rg.w)
 	var zrect: float = (1.0 if zn >= 0.58 else 0.0) * (1.0 - strip) * (1.0 - rg.x)
 	var zrot: float = maxf(strip, 1.0 if zn >= 0.42 else 0.0)
-	var sang: float = _fh(floorf(p.x * 0.00035) + 5.0, floorf(p.y * 0.00035) + 5.0) * 3.14159 * zrot
+	var sang: float = _ih(int(floorf(p.x * 0.00035)), int(floorf(p.y * 0.00035)), 5) * 3.14159 * zrot
 	var sdir := Vector2(cos(sang), sin(sang))
 	var perp := Vector2(-sdir.y, sdir.x)
 	var wq := Vector2(p.x + wx * 30.0, p.y + wy * 30.0)
@@ -2161,8 +2185,8 @@ static func field_edge(p: Vector2) -> Dictionary:
 	var f2 := Vector2.ZERO
 	for oy in range(-1, 2):
 		for ox in range(-1, 2):
-			var jx: float = _fh(cid.x + ox, cid.y + oy) - 0.5
-			var jy: float = _fh(cid.x + ox + 19.7, cid.y + oy + 19.7) - 0.5
+			var jx: float = _ih(int(cid.x) + ox, int(cid.y) + oy, 6) - 0.5
+			var jy: float = _ih(int(cid.x) + ox, int(cid.y) + oy, 7) - 0.5
 			var f := Vector2(ox + jx * jit_k, oy + jy * jit_k)
 			var rr: Vector2 = gv - f
 			var dc: float = maxf(absf(rr.x), absf(rr.y))
