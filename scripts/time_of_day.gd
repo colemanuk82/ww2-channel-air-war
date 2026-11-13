@@ -16,7 +16,7 @@ var _keys: Array = []
 const FOG_DENSITY_BASE := 0.000006
 # industrial smog over cities (HAZE_AREAS): stronger in the brownish daylight, faint at night
 const HAZE_FOG_MUL := 0.55
-const HAZE_VOL_MUL := 0.0011
+const HAZE_VOL_MUL := 0.0006
 # Next-gen light balance (post_fx >= 1): a stronger sun against a dimmer, sky-coloured fill, so sunlit faces,
 # shadowed faces and cast shadows separate the way they do outdoors. Level 0 keeps the old flat balance.
 const SUN_GAIN := 1.8
@@ -232,6 +232,9 @@ var _tick_acc: float = 0.0
 const HAZE_AREAS := [[51.47, 7.10, 38.0, 1.0], [51.51, -0.10, 22.0, 0.7], [50.62, 5.55, 14.0, 0.5], [50.42, 4.45, 14.0, 0.5],
 	[50.64, 3.07, 14.0, 0.45], [51.92, 4.48, 12.0, 0.35], [51.22, 4.40, 12.0, 0.35], [52.48, -1.90, 22.0, 0.6]]
 var haze_k: float = 0.0
+## smog is a low layer: 1 inside it, 0 once the camera has climbed above (the near veil then lifts and the
+## city below stays readable from bombing height instead of washing out grey)
+var haze_low: float = 1.0
 var _haze_acc: float = 1.0
 
 
@@ -250,8 +253,10 @@ func _update_haze(delta: float) -> void:
 		var dlon: float = (ll.y - float(a[1])) * 71.0
 		var d: float = sqrt(dlat * dlat + dlon * dlon)
 		k = maxf(k, float(a[3]) * (1.0 - smoothstep(float(a[2]) * 0.55, float(a[2]) * 1.35, d)))
-	if absf(k - haze_k) > 0.0005:
+	var low: float = 1.0 - smoothstep(500.0, 1600.0, cam.global_position.y)
+	if absf(k - haze_k) > 0.0005 or absf(low - haze_low) > 0.01:
 		haze_k = lerpf(haze_k, k, 0.5) if absf(k - haze_k) > 0.02 else k
+		haze_low = low
 		_apply()
 
 
@@ -404,7 +409,7 @@ func _apply() -> void:
 	if environment.volumetric_fog_enabled:
 		var low: float = smoothstep(0.42, 0.06, sun_dir.y) * smoothstep(-0.06, 0.03, sun_dir.y)
 		var day_k: float = clampf(sun_dir.y * 4.0, 0.0, 1.0)
-		environment.volumetric_fog_density = (0.00012 + 0.0005 * low + haze_k * HAZE_VOL_MUL * day_k) * clampf(fog_mul, 0.6, 2.0)
+		environment.volumetric_fog_density = (0.00012 + 0.0005 * low + haze_k * haze_low * HAZE_VOL_MUL * day_k) * clampf(fog_mul, 0.6, 2.0)
 		environment.volumetric_fog_albedo = Color(0.92, 0.94, 1.0).lerp(lc, 0.45 * low).lerp(Color(0.62, 0.56, 0.48), 0.35 * haze_k * day_k)
 		environment.volumetric_fog_anisotropy = 0.62 + 0.12 * low     # (0.85 at low sun scattered a blinding halo)
 		sun.light_volumetric_fog_energy = 1.0 + 0.35 * low
@@ -416,7 +421,7 @@ func _apply() -> void:
 		_mist_mat.albedo = Color(0.95, 0.95, 0.97).lerp(lc, 0.35 * clampf(sun_e, 0.0, 1.0))
 		_mist.visible = environment.volumetric_fog_enabled and mist_k > 0.01
 	var haze_day: float = haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0)
-	environment.fog_density = (FOG_GAIN if ng_light else 1.0) * (float(s[9]) + FOG_DENSITY_BASE) * fog_mul * (1.0 + HAZE_FOG_MUL * haze_day) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
+	environment.fog_density = (FOG_GAIN if ng_light else 1.0) * (float(s[9]) + FOG_DENSITY_BASE) * fog_mul * (1.0 + HAZE_FOG_MUL * haze_day * (0.45 + 0.55 * haze_low)) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
 	sun_color = lc
 	horizon_color = hor
 	light_level = clampf(sun_e / (1.3 * (SUN_GAIN if ng_light else 1.0)) + moon_e * 0.3 + 0.12, 0.0, 1.0)

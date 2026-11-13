@@ -468,6 +468,20 @@ void fragment() {
 			town = mix(town, pave, pave_k);
 			town = mix(town, setts, road_k);
 			town *= 1.0 - 0.35 * kerb;
+			// Far roofscape: beyond the range the 3D houses are drawn at, a city was a flat grey plain from bombing
+			// height. Tint the built-up core with the roofs' own colours (brick and tile, slate by district, soot-dark
+			// lanes between) so it still reads as a city of roofs until the houses fade in underneath.
+			float roof_far = smoothstep(2200.0, 4200.0, length(VERTEX)) * st_k;
+			if (roof_far > 0.0) {
+				float slate_k = s_ih(ivec2(dcell), 12u) * 0.65;
+				vec3 roofs = mix(vec3(0.33, 0.20, 0.155), vec3(0.20, 0.21, 0.235), slate_k);
+				float m1 = t_vnoise2(xz * 0.016 + 31.0);
+				float m2 = t_vnoise2(xz * 0.06 + 7.0);
+				roofs *= 0.80 + 0.30 * m1 + 0.16 * m2;
+				roofs = mix(roofs, vec3(0.20, 0.21, 0.235), smoothstep(0.62, 0.80, m2) * 0.5);   // slate terraces among the tile
+				float lanes = smoothstep(0.35, 0.65, t_vnoise2(xz * 0.03 + 55.0));
+				town = mix(town, roofs, roof_far * mix(0.45, 0.70, lanes));
+			}
 		}
 		col = mix(col, town, urban * 0.92);
 		// Public parks inside towns (mirrored by Scatter.in_park)

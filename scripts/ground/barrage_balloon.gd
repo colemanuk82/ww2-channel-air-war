@@ -49,7 +49,13 @@ func _build_intact(root: Node3D) -> void:
 	# winch truck
 	GroundKit.box(root, Vector3(5.0, 2.6, 8.0), Vector3(0, 1.4 - altitude, 0), GroundKit.COL_ALLY_VEH)
 	# cable
-	GroundKit.cyl(root, 0.12, 0.12, altitude, Vector3(0, -altitude * 0.5, 0), Color(0.15, 0.15, 0.15), Vector3.ZERO, 4, false)
+	# the wire is far thinner than a pixel beyond a few hundred metres, where it aliased into a curtain of dark
+	# dashes across the sky: pale steel, and not drawn at range (the HUD chart still marks the hazard)
+	var cable: MeshInstance3D = GroundKit.cyl(root, 0.12, 0.12, altitude, Vector3(0, -altitude * 0.5, 0), Color(0.42, 0.44, 0.47), Vector3.ZERO, 4, false)
+	cable.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	cable.visibility_range_end = 900.0
+	cable.visibility_range_end_margin = 200.0
+	cable.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 	_balloon = Node3D.new()
 	root.add_child(_balloon)
 	var silver: Color = Color(0.7, 0.74, 0.78)
