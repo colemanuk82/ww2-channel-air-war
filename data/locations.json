@@ -2309,8 +2309,8 @@
    "id": "caen_abbey",
    "name": "Abbaye aux Hommes, Caen",
    "type": "landmark",
-   "lat": 49.186,
-   "lon": -0.3495,
+   "lat": 49.1814,
+   "lon": -0.3728,
    "radius_m": 400,
    "in_bounds": true
   },

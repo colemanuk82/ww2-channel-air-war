@@ -68,7 +68,19 @@ static func _cathedral(root: Node3D, nave_len: float, nave_w: float, tower_h: fl
 		var z: float = nave_len * 0.5 - nave_w * 0.18
 		_b(root, Vector3(nave_w * 0.34, tower_h, nave_w * 0.34), Vector3(x, tower_h * 0.5, z), col)
 		if spire_h > 0.0:
-			GroundKit.cyl(root, 0.0, nave_w * 0.22, spire_h, Vector3(x, tower_h + spire_h * 0.5, z), dark, Vector3.ZERO, 4)
+			# octagonal stone spire with four corner pinnacles (a square 4-sided cone read as a toy pyramid)
+			var tw: float = nave_w * 0.34
+			GroundKit.cyl(root, 0.0, tw * 0.46, spire_h, Vector3(x, tower_h + spire_h * 0.5, z), col * 0.86, Vector3.ZERO, 8)
+			for cx in [-1.0, 1.0]:
+				for cz in [-1.0, 1.0]:
+					GroundKit.cyl(root, 0.0, tw * 0.09, spire_h * 0.22, Vector3(x + cx * tw * 0.42, tower_h + spire_h * 0.11, z + cz * tw * 0.42), col * 0.9, Vector3.ZERO, 6)
+	# rounded east end (apse) and a ridge of buttresses down each side of the nave: the silhouette of a great church
+	GroundKit.cyl(root, nave_w * 0.5, nave_w * 0.5, wall_h * 0.92, Vector3(0, wall_h * 0.46, -nave_len * 0.5), col * 0.97, Vector3.ZERO, 12)
+	GroundKit.cyl(root, 0.0, nave_w * 0.55, tower_h * 0.12, Vector3(0, wall_h * 0.92 + tower_h * 0.06, -nave_len * 0.5), dark, Vector3.ZERO, 12)
+	for bi in 6:
+		var bz: float = lerpf(-nave_len * 0.38, nave_len * 0.30, float(bi) / 5.0)
+		for bx in [-1.0, 1.0]:
+			_b(root, Vector3(nave_w * 0.10, wall_h * 0.8, nave_w * 0.07), Vector3(bx * nave_w * 0.53, wall_h * 0.4, bz), col * 0.92)
 	if dome:
 		GroundKit.sphere(root, nave_w * 0.5, Vector3(0, wall_h + nave_w * 0.25, nave_len * 0.05), Color(0.5, 0.58, 0.56), Vector3(1, 0.8, 1))
 
@@ -350,7 +362,11 @@ static func build(id: String) -> Node3D:
 		"amiens_cathedral":
 			_cathedral(root, 140.0, 44.0, 66.0, 2, 0.0, Color(0.72, 0.68, 0.58))
 		"caen_abbey":
-			_cathedral(root, 90.0, 28.0, 80.0, 2, 24.0, Color(0.72, 0.7, 0.62))
+			# Abbaye-aux-Hommes (St-Etienne): twin Romanesque west towers carrying tall Gothic spires (~80 m),
+			# and a lantern tower over the crossing
+			_cathedral(root, 100.0, 26.0, 50.0, 2, 34.0, Color(0.74, 0.71, 0.62))
+			_b(root, Vector3(15, 30, 15), Vector3(0, 15, -8), Color(0.72, 0.69, 0.60))
+			GroundKit.cyl(root, 0.0, 9.0, 12.0, Vector3(0, 36, -8), Color(0.32, 0.33, 0.36), Vector3.ZERO, 8)
 		"bayeux_cathedral":
 			_cathedral(root, 100.0, 30.0, 58.0, 2, 20.0, Color(0.7, 0.66, 0.58))
 		"windsor_castle":

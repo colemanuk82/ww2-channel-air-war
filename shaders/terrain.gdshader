@@ -418,8 +418,20 @@ void fragment() {
 		// blade/stalk streaks and clods: stretched noise along the field direction plus fine speckle
 		float streak = t_vnoise2(vec2(dot(xz, fdir) * 0.9, dot(xz, vec2(-fdir.y, fdir.x)) * 5.0)) - 0.5;
 		float speck = t_hash12(floor(xz * 3.0)) - 0.5;
-		detail += streak * 0.30 * lowland + speck * 0.12 + (t_vnoise2(xz * 6.0) - 0.5) * 0.14;
+		// (streaks halved: under a low sun the stretched noise read as a motion-blur smear across the fields)
+		detail += streak * 0.15 * lowland + speck * 0.12 + (t_vnoise2(xz * 6.0) - 0.5) * 0.14;
 		col *= 1.0 + detail * near_k * 1.5 * (0.6 + 0.4 * detail_strength);
+		// close to the camera: patchy sward - drier, yellower patches and lusher, darker ones a few metres
+		// across, plus clover / weed specks - so low passes see a living surface rather than a smooth tint
+		float nk = 1.0 - smoothstep(120.0, 900.0, dist_v);
+		if (nk > 0.0) {
+			float pt = t_vnoise2(xz * 0.09 + 41.0) * 0.6 + t_vnoise2(xz * 0.31 + 7.0) * 0.4;
+			vec3 dry = col * vec3(1.12, 1.06, 0.82);
+			vec3 lush = col * vec3(0.86, 0.96, 0.84);
+			col = mix(col, mix(lush, dry, smoothstep(0.35, 0.68, pt)), 0.55 * nk * lowland * (1.0 - crop * 0.6));
+			float fl = smoothstep(0.82, 0.95, t_hash12(floor(xz * 1.7) + 13.0)) * (1.0 - crop);
+			col = mix(col, col * vec3(1.18, 1.16, 1.02), fl * 0.35 * nk * lowland);
+		}
 	}
 	// Airfield grass: a gently lightened, mown version of the surrounding colour, fading out over `softness` metres.
 	// af_b.w is the zone kind: 1 = aerodrome grass, 2 = army camp (trampled grass and mud), 3 = POW / labour
@@ -639,7 +651,9 @@ void fragment() {
 		float rk = (1.0 - smoothstep(1800.0, 9000.0, cam_d)) * (1.0 - water_k) * (1.0 - urban * 0.8);
 		if (rk > 0.001) {
 			float hb = t_vnoise2(xz * 0.016 + 3.0) * 3.2 + t_vnoise2(xz * 0.055 + 11.0) * 1.1
-				+ t_vnoise2(xz * 0.19 + 23.0) * 0.30 * (1.0 - smoothstep(300.0, 1200.0, cam_d));
+				+ t_vnoise2(xz * 0.19 + 23.0) * 0.30 * (1.0 - smoothstep(300.0, 1200.0, cam_d))
+				// tussocks and clods right under the camera: catch the low sun as a fine broken surface
+				+ (t_vnoise2(xz * 0.85 + 5.0) * 0.10 + t_vnoise2(xz * 2.9 + 17.0) * 0.035) * (1.0 - smoothstep(80.0, 450.0, cam_d));
 			hb *= rk * (1.0 + 0.6 * rough);
 			vec3 dpx = dFdx(VERTEX);
 			vec3 dpy = dFdy(VERTEX);

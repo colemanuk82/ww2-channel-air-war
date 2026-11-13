@@ -133,7 +133,8 @@ static func _boxm(w: float, h: float, d: float) -> BoxMesh:
 ## 4 corner shop, 5 Victorian villa, 6 warehouse, 7 works / factory, 8 cinema / picture palace,
 ## 9 railway station front (all share the unit box; 0-7 are unchanged - MultiMeshes index by variant).
 static func house_mesh(variant: int) -> ArrayMesh:
-	var key: String = "house%d" % variant
+	var real: bool = GameState.realistic_scenery and variant < 4
+	var key: String = ("house%d" if not real else "house%d_r") % variant
 	if _meshes.has(key):
 		return _meshes[key]
 	var brick: Color = Color(0.46, 0.28, 0.21)        # red brick: the common UK stock
@@ -193,9 +194,32 @@ static func house_mesh(variant: int) -> ArrayMesh:
 			parts.append([_boxm(1.0, 0.82, 1.0), Transform3D(Basis.IDENTITY, Vector3(0, -0.09, 0)), _dmat(brick_dk * 1.1, 1, 0.0, false)])
 			parts.append([_boxm(1.02, 0.08, 1.02), Transform3D(Basis.IDENTITY, Vector3(0, 0.33, 0)), _dmat(Color(0.30, 0.29, 0.28), 1, 0.0, false)])
 			parts.append([_boxm(0.16, 0.70, 0.16), Transform3D(Basis.IDENTITY, Vector3(0.34, 0.70, 0.30)), _dmat(chimney, 1, 0.0, false)])
+	if real:
+		_realistic_roofs(parts)
 	var m: ArrayMesh = _merge(parts)
 	_meshes[key] = m
 	return m
+
+
+## Realistic towns: the house units are laid side by side along their street (local X), so the roof ridge must
+## run along X too - the toon models' ridges ran front-to-back, which turned every terrace into a sawtooth of
+## separate gabled boxes. Each prism roof is turned 90 degrees, given eaves that overhang the front and back
+## walls and a slightly steeper pitch, so a row reads as one continuous roof line.
+static func _realistic_roofs(parts: Array) -> void:
+	for i in parts.size():
+		var p: Array = parts[i]
+		var mesh: Mesh = p[0]
+		if mesh is PrimitiveMesh:
+			continue                       # walls, bays and stacks are BoxMeshes; the roofs are prism ArrayMeshes
+		var xf: Transform3D = p[1]
+		var aabb: AABB = mesh.get_aabb()
+		if aabb.size.y < 0.15 or aabb.size.y > 0.8:
+			continue
+		var w: float = aabb.size.x
+		var l: float = aabb.size.z
+		var h: float = aabb.size.y * 1.12
+		var roof: ArrayMesh = GroundKit.prism_mesh(l + 0.10, w, h)     # ridge along X; eaves front and back
+		parts[i] = [roof, Transform3D(Basis(Vector3.UP, PI * 0.5), xf.origin), p[2]]
 
 
 static func tree_mesh(round_tree: bool) -> ArrayMesh:
@@ -1996,16 +2020,32 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 	var n: int = int(floorf((STREET_SEG - 2.0) / unit_w))
 	var depth: float = rng.randf_range(7.5, 9.5)
 	var base_h: float = rng.randf_range(6.5, 10.0)
-	var lst: Array = lists[rng.randi() % 4]
+	var row_v: int = rng.randi() % 4
 	var start: Vector2 = c - along * unit_w * float(n - 1) * 0.5
 	var face: float = a + (0.0 if row == 0 else PI)          # each row faces its own street
+	var back: Vector2 = across * (1.0 if row == 0 else -1.0)  # from the row towards its back yards
 	for i in n:
 		var q: Vector2 = start + along * unit_w * float(i)
 		if not _land(q.x, q.y, 1.2) or RoadMesh.near_road(q, depth * 0.6):
 			continue
-		var h: float = base_h + rng.randf_range(-0.6, 0.6)
+		# mostly one builder's row, but an odd house is rebuilt, taller or lower: a broken, real roof line
+		var hv: float = rng.randf_range(-0.6, 0.6)
+		var r: float = rng.randf()
+		if r < 0.12:
+			hv += rng.randf_range(2.5, 4.0)
+		elif r < 0.22:
+			hv -= rng.randf_range(1.5, 2.5)
+		var h: float = maxf(base_h + hv, 4.5)
+		var vi: int = row_v if rng.randf() < 0.75 else rng.randi() % 4
 		var y: float = GroundKit.ground_y(q.x, q.y) + h * 0.5 - 0.4
-		lst.append(_xf(Vector3(q.x, y, q.y), face, Vector3(unit_w * 1.02, h, depth)))
+		(lists[vi] as Array).append(_xf(Vector3(q.x, y, q.y), face, Vector3(unit_w * 1.02, h, depth * rng.randf_range(0.92, 1.08))))
+		# back extension / wash-house / shed in the yard behind about half the houses
+		if rng.randf() < 0.5:
+			var eq: Vector2 = q + back * (depth * 0.5 + 1.8) + along * rng.randf_range(-1.2, 1.2)
+			if _land(eq.x, eq.y, 1.2) and not RoadMesh.near_road(eq, 3.0):
+				var eh: float = rng.randf_range(3.0, 4.2)
+				var ey: float = GroundKit.ground_y(eq.x, eq.y) + eh * 0.5 - 0.4
+				(lists[3] as Array).append(_xf(Vector3(eq.x, ey, eq.y), face, Vector3(rng.randf_range(2.8, 4.0), eh, rng.randf_range(3.0, 4.0))))
 
 
 # ------------------------------------------------------------------ field boundaries (mirrors shaders/terrain.gdshader)

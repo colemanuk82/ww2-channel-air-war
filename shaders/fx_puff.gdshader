@@ -83,11 +83,13 @@ void fragment() {
 	a *= 1.0 - 0.45 * haze * smoke;        // far smoke thins out rather than reading as solid balls
 	// right next to the camera a puff fills half the screen as one flat translucent polygon: thin it out (not away -
 	// a close flak burst must still be seen)
-	a *= mix(1.0, mix(0.35, 1.0, smoothstep(40.0, 300.0, dist)), soft_amt);
+	a *= mix(1.0, mix(0.22, 1.0, smoothstep(40.0, 450.0, dist)), soft_amt);
 	// and never let one puff cover a big part of the screen: fade by its angular size (and when the camera is
 	// almost inside it), so a near burst is a soft cloud at the edge of view, not a grey sheet over half the frame
 	float ang = v_size / max(dist, 1.0);
-	a *= mix(1.0, (1.0 - smoothstep(0.18, 0.55, ang)) * smoothstep(v_size * 0.6, v_size * 2.0, dist), soft_amt);
+	a *= mix(1.0, (1.0 - smoothstep(0.10, 0.40, ang)) * smoothstep(v_size * 0.6, v_size * 2.0, dist), soft_amt);
+	// a soft smoke body never goes fully opaque: the player can always make out the aircraft through it
+	a = min(a, mix(1.0, 0.78, soft_amt));
 	ALBEDO = c;
 	ALPHA = clamp(a, 0.0, 1.0);
 }

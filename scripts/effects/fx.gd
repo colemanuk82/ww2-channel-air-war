@@ -101,6 +101,7 @@ func _ready() -> void:
 		mi.mesh = quad
 		var m := ShaderMaterial.new()
 		m.shader = _star_shader
+		m.set_shader_parameter("soft_flash", GameState.realistic_scenery)
 		mi.material_override = m
 		mi.visible = false
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

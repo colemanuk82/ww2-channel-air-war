@@ -36,8 +36,8 @@ void fragment() {
 
 	// Real river water from the air: dark, peaty green-brown where you look into it, and a mirror of the sky at
 	// a grazing angle (fresnel). No painted sparkle dashes - those read as road markings.
-	vec3 deep = vec3(0.040, 0.055, 0.040);
-	vec3 shallow = vec3(0.085, 0.095, 0.060);
+	vec3 deep = vec3(0.026, 0.036, 0.026);
+	vec3 shallow = vec3(0.055, 0.062, 0.040);
 	vec3 col = mix(deep, shallow, smoothstep(0.35, 0.92, aa));
 	float f1 = t_vnoise2(vec2(UV.x * 3.0, along * 0.035 - TIME * scroll_speed));
 	float f2 = t_vnoise2(vec2(UV.x * 9.0 + 11.0, along * 0.05 - TIME * scroll_speed * 2.1));
@@ -51,7 +51,7 @@ void fragment() {
 	// ripples: a small slope from two drifting noise layers (finite differences in channel space), faded with
 	// range so distant water is a calm mirror rather than noise. The reflected ray picks sky colour from horizon
 	// (grazing) to zenith (steep), so the surface shows the sky's gradient, not one flat tone.
-	float rk = (1.0 - smoothstep(150.0, 1800.0, dist)) * 0.22;
+	float rk = (1.0 - smoothstep(60.0, 650.0, dist)) * 0.22;   // ripples only near: from altitude they tiled
 	vec2 rp = vec2(UV.x * 6.0, along * 0.22 - TIME * scroll_speed * 3.0);
 	float r0 = t_vnoise2(rp) + 0.5 * t_vnoise2(rp * 2.7 + 4.0);
 	float rx = t_vnoise2(rp + vec2(0.15, 0.0)) + 0.5 * t_vnoise2((rp + vec2(0.15, 0.0)) * 2.7 + 4.0);
@@ -66,9 +66,11 @@ void fragment() {
 	vec3 refl = mix(sky_horizon, sky_top, smoothstep(0.0, 0.6, ry)) * (1.0 - 0.85 * night_amount);
 
 	// dark wet mud along both banks, then the grass verge (the terrain shows through the faded edge)
-	float bank = smoothstep(0.76, 1.0, aa);
-	vec3 mud = silt_col * 0.55;
-	col = mix(col, mud, bank * 0.9);
+	// dark wet mud and reed margins along both banks, broken up along the channel
+	float reed = t_vnoise2(vec2(along * 0.08, UV.x * 2.0 + 3.0));
+	float bank = smoothstep(0.66 - 0.08 * reed, 0.95, aa);
+	vec3 mud = mix(silt_col * 0.42, vec3(0.10, 0.12, 0.06), smoothstep(0.45, 0.7, reed));
+	col = mix(col, mud, bank * 0.95);
 	fres *= 1.0 - bank;
 
 	// far rivers stay a quiet sheen, not graphic strips
@@ -79,7 +81,7 @@ void fragment() {
 	float a_bank = (1.0 - smoothstep(0.70, 1.0, aa)) * 0.45 * (1.0 - smoothstep(2500.0, 6000.0, dist));
 
 	ALBEDO = col;
-	EMISSION = min(refl, vec3(0.8)) * fres * 0.38;
+	EMISSION = min(refl, vec3(0.8)) * fres * 0.30;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
 	ALPHA = max(a_water, a_bank);
@@ -87,7 +89,7 @@ void fragment() {
 
 void light() {
 	float t = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
-	DIFFUSE_LIGHT += (0.35 + 0.65 * t) * LIGHT_COLOR / PI;
+	DIFFUSE_LIGHT += (0.25 + 0.45 * t) * LIGHT_COLOR / PI;   // water absorbs: a dark body, the sky reflection carries it
 	// sun glint off the ripples (soft-edged so it never aliases into square sparkles)
 	vec3 hv = normalize(LIGHT + VIEW);
 	float nh = clamp(dot(NORMAL, hv), 0.0, 1.0);
