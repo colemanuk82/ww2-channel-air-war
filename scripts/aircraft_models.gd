@@ -7,7 +7,7 @@ extends RefCounted
 ##   "MuzzleL"/"MuzzleR" (Node3D marker positions for guns), "CockpitEye" (pilot eye point).
 
 
-static func build(model_id: String, nation: String = "RAF") -> Node3D:
+static func build(model_id: String, nation: String = "RAF", wear_salt: int = 0) -> Node3D:
 	# Building a procedural airframe costs 70-250 ms of main-thread time, which was the hitch every time an
 	# aircraft appeared (worst in dogfights, where a wave spawns at once). Each type is built once into a
 	# prototype and every aircraft after that is a copy of it (a few ms: meshes and materials are shared).
@@ -15,8 +15,34 @@ static func build(model_id: String, nation: String = "RAF") -> Node3D:
 	if proto == null:
 		return null
 	var m: Node3D = proto.duplicate() as Node3D
+	_unique_wear(m, model_id, nation, wear_salt)   # own skin material + wear seed, so sisterships streak differently
 	apply_historical_markings(m, GameState.historical_markings)
 	return m
+
+
+## duplicate() shares the prototype's materials, so every copy of a type wears the SAME skin ShaderMaterial and
+## a plain wear uniform set on it would sync all sisterships. Give each built model its own duplicate of the
+## skin material and set wear_seed on it (GltfModels.wear_seed): the shader shifts and re-weights the oil /
+## exhaust streaks per machine. Parked aircraft bake through here too (ParkedAircraft.mesh_for builds via
+## build()), so the seed is set BEFORE their mesh is baked, and ParkedAircraft._static_mat copies every plain
+## uniform - wear_seed included - into the baked mesh's material, so it survives the strip of the instance
+## uniforms. wear_salt is the machine's identity at spawn (Aircraft passes its instance id); 0 for shared
+## builds (parked meshes, cutscenes), which keeps their seed deterministic per type.
+static func _unique_wear(m: Node3D, model_id: String, nation: String, salt: int) -> void:
+	var skins: Dictionary = {}    # skin ShaderMaterial -> array of MeshInstance3D wearing it
+	for n in m.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		var sm := mi.material_override as ShaderMaterial
+		if sm == null or sm.shader != GltfModels.shader():
+			continue
+		if not skins.has(sm):
+			skins[sm] = []
+		(skins[sm] as Array).append(mi)
+	for sm in skins:
+		var d := (sm as ShaderMaterial).duplicate() as ShaderMaterial
+		d.set_shader_parameter("wear_seed", GltfModels.wear_seed(model_id, nation, salt))
+		for mi2 in skins[sm]:
+			(mi2 as MeshInstance3D).material_override = d
 
 
 static var _protos: Dictionary = {}

@@ -12,6 +12,12 @@ uniform float under_amount : hint_range(0.0, 1.0) = 0.85;
 uniform float base_roughness : hint_range(0.0, 1.0) = 0.66;
 uniform float metallic : hint_range(0.0, 1.0) = 0.06;
 uniform float wear : hint_range(0.0, 1.0) = 0.6;          // seams, grime, chipping
+// Per-aircraft wear seed 0..1 (AircraftModels gives every built machine its own copy of the skin material with
+// this set): shifts the oil / exhaust-streak noise and re-weights their strength, so sisterships of one type do
+// not carry identical stains. Deliberately a PLAIN uniform, never an instance uniform: the parked bake
+// (ParkedAircraft._static_mat) re-declares instance uniforms as plain ones and would re-overflow the
+// instance-variable buffer for the hundreds of parked aircraft, while a plain uniform simply copies across.
+uniform float wear_seed = 0.0;
 uniform float gloss : hint_range(0.0, 1.0) = 0.0;          // extra sheen (bare metal)
 uniform vec4 tint : source_color = vec4(1, 1, 1, 1);
 uniform float night_amount = 0.0;
@@ -162,16 +168,22 @@ void fragment() {
 	col = mix(col, vec3(0.50, 0.51, 0.50), chip * 0.18 * wear);
 	float up = smoothstep(0.5, 0.95, n.y);
 	col = mix(col, col * 1.06 + vec3(0.006), up * 0.25 * wear);
-	float streak = vnoise2(vec2(o_p.x * 14.0 + o_p.y * 9.0, o_p.z * 0.8)) * smoothstep(0.35, 0.9, vnoise2(vec2(o_p.x * 3.0, o_p.z * 0.35)));
-	col *= 1.0 - streak * 0.08 * wear * (1.0 - up * 0.5);
+	// per-aircraft variation (wear_seed): the seed shifts the streak pattern so it sits differently on every
+	// machine and varies how heavily it is streaked (0.85 .. 1.35x); the aft ramp adds ~30% contrast from just
+	// behind the exhaust outlet band back to the tail, where the streaks run
+	float wsh = wear_seed * 7.31;
+	float wst = 0.85 + 0.5 * fract(wear_seed * 13.7);
+	float aft = smoothstep(-1.6, 1.8, o_p.z);
+	float streak = vnoise2(vec2(o_p.x * 14.0 + o_p.y * 9.0 + wsh, o_p.z * 0.8 + wsh * 0.6)) * smoothstep(0.35, 0.9, vnoise2(vec2(o_p.x * 3.0 + wsh * 1.7, o_p.z * 0.35 - wsh)));
+	col *= 1.0 - streak * 0.08 * wear * (1.0 - up * 0.5) * wst * (1.0 + 0.30 * aft);
 
 	// sun-bleached paint on the upper surfaces: large soft patches fading the colour toward chalky, as on real
 	// aircraft left out in the weather, and dark oil / exhaust streaks running aft along the fuselage sides
 	float fade_n = vnoise2(o_p.xz * 0.9 + 5.0) * 0.6 + vnoise2(o_p.xz * 2.7 + 9.0) * 0.4;
 	float fade = smoothstep(0.45, 0.85, fade_n) * up;
 	col = mix(col, vec3(dot(col, vec3(0.333))) * 1.18 + vec3(0.025), fade * 0.30 * wear);
-	float oil = smoothstep(0.55, 0.85, vnoise2(vec2(o_p.y * 9.0, o_p.z * 0.45 + 3.0))) * side_w * (1.0 - up);
-	col *= 1.0 - oil * 0.20 * wear;
+	float oil = smoothstep(0.55, 0.85, vnoise2(vec2(o_p.y * 9.0, o_p.z * 0.45 + 3.0 + wsh))) * side_w * (1.0 - up) * (0.8 + 0.6 * fract(wear_seed * 31.7));
+	col *= 1.0 - oil * 0.20 * wear * (1.0 + 0.30 * aft);
 
 	float micro = (vnoise2(o_p.xy * 6.0) - 0.5) + (vnoise2(o_p.zy * 6.0) - 0.5);
 	NORMAL = normalize(NORMAL + vec3(micro * 0.015 * wear));

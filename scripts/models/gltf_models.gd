@@ -113,6 +113,13 @@ static func make_skin(scheme: String, tint: Color = Color(1, 1, 1)) -> ShaderMat
 	return m
 
 
+## Stable 0..1 wear seed for one machine's oil / exhaust streaks (aircraft_pbr's wear_seed uniform): hashed
+## from the type plus a caller salt - the aircraft node's instance id at spawn, or 0 for a shared parked bake -
+## so sisterships of one type streak differently while a given parked mesh never changes within a run.
+static func wear_seed(model_id: String, nation: String, salt: int = 0) -> float:
+	return float(posmod(hash("wear|%s|%s|%d" % [model_id, nation, salt]), 65521)) / 65521.0
+
+
 static func _metal(col: Color, rough: float = 0.45, met: float = 0.85) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = col
@@ -143,6 +150,9 @@ static func _glass() -> StandardMaterial3D:
 
 static func _rewire(root: Node3D, model_id: String, nation: String) -> void:
 	var skin: ShaderMaterial = make_skin(camo_for(model_id, nation))
+	# type-level default seed so the paint path (livery or procedural markings alike) always wears a seed;
+	# AircraftModels._unique_wear re-sets it per individual machine on its own copy of this material
+	skin.set_shader_parameter("wear_seed", wear_seed(model_id, nation))
 	var metal: StandardMaterial3D = _metal(COL_METAL, 0.42, 0.9)
 	var dark: StandardMaterial3D = _paint(COL_METAL, 0.55)
 	var glass: StandardMaterial3D = _glass()

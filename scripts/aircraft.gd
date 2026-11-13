@@ -206,7 +206,8 @@ func _build_model() -> void:
 		_lod_model.queue_free()
 	_lod_model = null
 	_lod_shown = false
-	_model = AircraftModels.build(stats.model_id, stats.nation)
+	# own instance id as the wear salt: sisterships of one type must not wear identical oil / exhaust streaks
+	_model = AircraftModels.build(stats.model_id, stats.nation, get_instance_id())
 	for cn in _contrail_nodes:
 		if cn != null and is_instance_valid(cn):
 			cn.queue_free()
