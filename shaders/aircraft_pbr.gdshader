@@ -141,7 +141,7 @@ void fragment() {
 	float hatch_on = step(0.83, hash12(cell + 3.7));
 	vec2 hf = abs(fract(hp + 0.5) - 0.5);
 	float hatch = (1.0 - smoothstep(0.0, 0.025, abs(max(hf.x, hf.y) - 0.30))) * hatch_on;
-	float panel_tone = (hash12(cell) - 0.5) * 0.05;
+	float panel_tone = (hash12(cell) - 0.5) * 0.11;     // panels repainted or faded differently, visible even from a chase camera
 	// rivet rows either side of each seam
 	float riv = 0.0;
 	riv = max(riv, rivet_row(o_p.y, o_p.z, 0.48, 0.016, 0.042) * side_w);
@@ -165,6 +165,14 @@ void fragment() {
 	float streak = vnoise2(vec2(o_p.x * 14.0 + o_p.y * 9.0, o_p.z * 0.8)) * smoothstep(0.35, 0.9, vnoise2(vec2(o_p.x * 3.0, o_p.z * 0.35)));
 	col *= 1.0 - streak * 0.08 * wear * (1.0 - up * 0.5);
 
+	// sun-bleached paint on the upper surfaces: large soft patches fading the colour toward chalky, as on real
+	// aircraft left out in the weather, and dark oil / exhaust streaks running aft along the fuselage sides
+	float fade_n = vnoise2(o_p.xz * 0.9 + 5.0) * 0.6 + vnoise2(o_p.xz * 2.7 + 9.0) * 0.4;
+	float fade = smoothstep(0.45, 0.85, fade_n) * up;
+	col = mix(col, vec3(dot(col, vec3(0.333))) * 1.18 + vec3(0.025), fade * 0.30 * wear);
+	float oil = smoothstep(0.55, 0.85, vnoise2(vec2(o_p.y * 9.0, o_p.z * 0.45 + 3.0))) * side_w * (1.0 - up);
+	col *= 1.0 - oil * 0.20 * wear;
+
 	float micro = (vnoise2(o_p.xy * 6.0) - 0.5) + (vnoise2(o_p.zy * 6.0) - 0.5);
 	NORMAL = normalize(NORMAL + vec3(micro * 0.015 * wear));
 
@@ -187,7 +195,7 @@ void fragment() {
 
 	col *= 1.0 - 0.18 * wetness;
 	ALBEDO = col;
-	ROUGHNESS = clamp(base_roughness + grime * 0.12 + seam * 0.1 - gloss * 0.25 - 0.4 * wetness, 0.05, 1.0);
+	ROUGHNESS = clamp(base_roughness + grime * 0.12 + seam * 0.1 + fade * 0.10 - oil * 0.08 - gloss * 0.25 - 0.4 * wetness, 0.05, 1.0);
 	METALLIC = clamp(metallic + chip * 0.4 * wear, 0.0, 1.0);
 	SPECULAR = 0.42 + gloss * 0.3;
 	// Silhouette specular taming: where the skin turns edge-on to the camera, the grazing sun highlight and sky
