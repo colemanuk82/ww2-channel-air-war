@@ -10,6 +10,13 @@ static func _b(root: Node3D, size: Vector3, pos: Vector3, color: Color, rot: Vec
 
 static func church(s: float = 1.0) -> Node3D:
 	var root := Node3D.new()
+	if TownModels.enabled():
+		# detailed parish church (one mesh); two in three carry a spire, the rest a battlemented tower
+		var mi := MeshInstance3D.new()
+		mi.mesh = TownModels.church(int(round(s * 1000.0)) % 3 != 0)
+		root.add_child(mi)
+		root.scale = Vector3.ONE * s
+		return root
 	var stone := Color(0.62, 0.58, 0.5)
 	_b(root, Vector3(10, 9, 24), Vector3(0, 4.5, 0), stone)
 	var roof := MeshInstance3D.new()

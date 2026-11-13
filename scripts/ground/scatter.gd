@@ -132,7 +132,10 @@ static func _boxm(w: float, h: float, d: float) -> BoxMesh:
 ## 0/1 brick and rendered terrace units (the classic UK street), 2 semi-detached pair, 3 cottage,
 ## 4 corner shop, 5 Victorian villa, 6 warehouse, 7 works / factory, 8 cinema / picture palace,
 ## 9 railway station front (all share the unit box; 0-7 are unchanged - MultiMeshes index by variant).
-static func house_mesh(variant: int) -> ArrayMesh:
+static func house_mesh(variant: int, far: bool = false) -> ArrayMesh:
+	# Realistic scenery: the detailed models (TownModels) up close; these simple units are the far stand-ins.
+	if TownModels.enabled() and not far:
+		return TownModels.house(variant)
 	var real: bool = GameState.realistic_scenery and variant < 4
 	var key: String = ("house%d" if not real else "house%d_r") % variant
 	if _meshes.has(key):
@@ -994,7 +997,7 @@ static func make_town_from(center: Vector3, d: Dictionary) -> Node3D:
 	for i in range(lists.size()):
 		if (lists[i] as Array).is_empty():
 			continue
-		root.add_child(multi(house_mesh(i), lists[i], 8000.0))
+		_add_houses(root, i, lists[i], 8000.0)
 	# Far town HLOD: one merged roofscape mesh, then the detailed terraces stop drawing. The occluders are
 	# coarse boxes generated from the same house clusters, so the static occlusion pass can cull whole blocks
 	# without any editor bake step.
@@ -1013,6 +1016,25 @@ static func make_town_from(center: Vector3, d: Dictionary) -> Node3D:
 		ch.rotation.y = float(cd["yaw"])
 		root.add_child(ch)
 	return root
+
+
+## Realistic scenery: the detailed house models are several times the triangles of the simple units (and are
+## drawn again into each shadow cascade), so they are only used near the camera; further out the same instances
+## draw the simple units. The switch is per multimesh, on its AABB centre distance.
+const HOUSE_NEAR: float = 1500.0
+
+
+static func _add_houses(root: Node, variant: int, xforms: Array, vis_end: float) -> void:
+	if not TownModels.enabled():
+		root.add_child(multi(house_mesh(variant), xforms, vis_end))
+		return
+	var a: MultiMeshInstance3D = multi(house_mesh(variant), xforms, HOUSE_NEAR)
+	a.visibility_range_end_margin = 150.0
+	root.add_child(a)
+	var b: MultiMeshInstance3D = multi(house_mesh(variant, true), xforms, vis_end, false)    # same instances as `a`: solid once
+	b.visibility_range_begin = HOUSE_NEAR * vis_scale
+	b.visibility_range_begin_margin = 150.0
+	root.add_child(b)
 
 
 ## Coarse house clusters used by both the far town HLOD and its static occluder boxes.
@@ -1274,6 +1296,11 @@ static func _build_civic(root: Node3D, c: Dictionary) -> void:
 	holder.rotation.y = float(c["yaw"])
 	root.add_child(holder)
 	match kind:
+		"townhall" when TownModels.enabled():
+			var th := MeshInstance3D.new()
+			th.mesh = TownModels.town_hall()
+			th.scale = Vector3.ONE * sc
+			holder.add_child(th)
 		"townhall":
 			GroundKit.box(holder, Vector3(24, 13, 16) * sc, Vector3(0.0, 6.5 * sc, 0.0), Color(0.56, 0.52, 0.46))
 			var rf := MeshInstance3D.new()
@@ -1445,7 +1472,7 @@ static func make_tile(origin: Vector2, cell: float, seed_v: int, exclude: Array)
 					trees_r.append(tr)
 	for i in 4:
 		if not (houses[i] as Array).is_empty():
-			root.add_child(multi(house_mesh(i), houses[i], 6500.0))
+			_add_houses(root, i, houses[i], 6500.0)
 	if not hedges.is_empty():
 		root.add_child(multi(box_unit(Color(0.18, 0.29, 0.13), false), hedges, 7000.0))
 	if LIVESTOCK and not cows.is_empty():
@@ -1692,6 +1719,9 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 					mesh = wood_blob_mesh(int(kind.substr(5)))
 				else:
 					mesh = house_mesh(int(kind.substr(5)))
+					if TownModels.enabled():
+						_add_lod_pair(root, mesh, house_mesh(int(kind.substr(5)), true), m[1], float(m[2]), HOUSE_NEAR)
+						continue
 		var colors: PackedColorArray = _foliage_instance_colors(m[1]) if (kind.begins_with("tree_v") or kind.begins_with("wtree_v") or kind.begins_with("wblob")) else PackedColorArray()
 		if kind.begins_with("tree_v") or kind == "hedge":
 			_add_lod_pair(root, mesh, far_mesh(kind), m[1], float(m[2]), _near_end(kind), colors)
