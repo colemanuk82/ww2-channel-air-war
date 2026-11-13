@@ -192,6 +192,10 @@ static func t2_hangar(team: String) -> ArrayMesh:
 	if _cached(key) != null:
 		return _cached(key)
 	var skin: Color = Color(0.5, 0.51, 0.47) if team == "Allies" else Color(0.46, 0.46, 0.43)
+	if TownModels.enabled():
+		var hm: ArrayMesh = TownModels.hangar(34.0, 72.0, 9.0, 5.0, skin)
+		Scatter._meshes[key] = hm
+		return hm
 	var rib: Color = skin.darkened(0.2)
 	var door: Color = Color(0.34, 0.35, 0.33)
 	var parts: Array = []
@@ -214,6 +218,10 @@ static func t1_hangar(team: String) -> ArrayMesh:
 	if _cached(key) != null:
 		return _cached(key)
 	var skin: Color = Color(0.49, 0.5, 0.46) if team == "Allies" else Color(0.45, 0.45, 0.42)
+	if TownModels.enabled():
+		var hm: ArrayMesh = TownModels.hangar(29.0, 56.0, 8.0, 4.4, skin)
+		Scatter._meshes[key] = hm
+		return hm
 	var rib: Color = skin.darkened(0.2)
 	var door: Color = Color(0.34, 0.35, 0.33)
 	var parts: Array = []

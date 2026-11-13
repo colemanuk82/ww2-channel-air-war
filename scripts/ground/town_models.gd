@@ -634,3 +634,78 @@ static func market_square() -> ArrayMesh:
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache["market"] = m
 	return m
+
+
+# ------------------------------------------------------------------ airfield hangars
+
+## Steel-framed aircraft hangar (the RAF T1 / T2 type): corrugated walls with a concrete plinth and pilasters, a
+## low-pitch roof with eaves, ridge ventilator and rib lines, two big sliding door leaves with their rail and
+## overhead track on the +Z end, a lean-to workshop annex along one side and a service door in the blank -Z end.
+## Footprint matches the old box hangars (w x l metres, wall height h) so placement and wreck swaps stay the same.
+static func hangar(w: float, l: float, h: float, rise: float, skin: Color) -> ArrayMesh:
+	var key: String = "hangar_%d_%d_%s" % [int(w), int(l), skin.to_html(false)]
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var hw: float = w * 0.5
+	var hl: float = l * 0.5
+	var rib: Color = skin.darkened(0.2)
+	var plinth := Color(0.46, 0.45, 0.42)
+	var roof: Color = Color(0.27, 0.29, 0.27)
+	var dark := Color(0.07, 0.07, 0.07)
+	var door: Color = skin.darkened(0.18)
+	# walls, concrete plinth, pilasters at the bays
+	b.box(-hw, hw, 0.0, h, -hl, hl, skin, false)
+	b.box(-hw - 0.12, hw + 0.12, 0.0, 1.1, -hl - 0.12, hl + 0.12, plinth)
+	var bays: int = int(round(l / 8.5))
+	for i in bays + 1:
+		var z: float = -hl + float(i) * l / float(bays)
+		b.box(-hw - 0.25, -hw, 0.0, h + 0.15, z - 0.28, z + 0.28, rib)
+		b.box(hw, hw + 0.25, 0.0, h + 0.15, z - 0.28, z + 0.28, rib)
+	# eaves band and the roof: gable with overhang, rib lines and a raised ridge ventilator with glazed sides
+	b.box(-hw - 0.2, hw + 0.2, h, h + 0.4, -hl - 0.2, hl + 0.2, rib, false)
+	b.gable_z(-hw - 0.2, hw + 0.2, -hl - 0.35, hl + 0.35, h + 0.3, rise, 0.5, roof, skin.darkened(0.05), 0.0)
+	for i in bays + 1:
+		var z2: float = -hl + float(i) * l / float(bays)
+		b.gable_z(-hw - 0.2, hw + 0.2, z2 - 0.14, z2 + 0.14, h + 0.36, rise + 0.02, 0.5, roof.darkened(0.2), roof.darkened(0.2), 0.0)
+	var vw: float = w * 0.12
+	var vy: float = h + 0.3 + rise - 0.2
+	b.box(-vw, vw, vy, vy + 0.8, -hl * 0.86, hl * 0.86, skin.darkened(0.08), false)
+	b.box(-vw - 0.04, vw + 0.04, vy + 0.25, vy + 0.62, -hl * 0.84, hl * 0.84, Color(0.12, 0.17, 0.19), false)
+	b.gable_z(-vw - 0.25, vw + 0.25, -hl * 0.86 - 0.15, hl * 0.86 + 0.15, vy + 0.8, 0.5, 0.0, roof.lightened(0.04), skin, 0.0)
+	# the door end (+Z): rail, two door leaves with panel ribs, an overhead track and a dark gap showing the interior
+	var zd: float = hl
+	b.box(-hw * 0.99, hw * 0.99, 0.0, h * 0.93, zd - 0.05, zd + 0.15, dark, false)
+	b.box(-hw - 1.0, hw + 1.0, 0.0, 0.1, zd + 0.1, zd + 0.6, plinth, true)
+	for sx in [-1.0, 1.0]:
+		var x0: float = minf(sx * hw * 0.05, sx * hw * 0.97)
+		var x1: float = maxf(sx * hw * 0.05, sx * hw * 0.97)
+		var slide: float = 0.0 if sx < 0.0 else hw * 0.30          # one leaf pulled partly open
+		b.box(x0 + (0.0 if sx < 0.0 else slide), x1 + (0.0 if sx < 0.0 else slide) * 0.0, 0.15, h * 0.92, zd + 0.15, zd + 0.5, door, true, door.lightened(0.08))
+		var panels: int = 7
+		for p in panels:
+			var px: float = lerpf(x0, x1, (float(p) + 0.5) / float(panels))
+			b.box(px - 0.08, px + 0.08, 0.15, h * 0.92, zd + 0.5, zd + 0.62, rib, false)
+		b.box(x0, x1, h * 0.46, h * 0.46 + 0.18, zd + 0.5, zd + 0.64, rib, false)
+	b.box(-hw - 0.2, hw + 0.2, h * 0.93, h * 0.93 + 0.5, zd + 0.15, zd + 0.8, rib)
+	b.box(-hw * 0.99, hw * 0.99, 0.0, 0.18, zd + 0.1, zd + 0.7, Color(0.20, 0.20, 0.20), false)
+	# blank rear end: a service door under a small canopy and a louvre
+	b.box(-1.0, 1.0, 0.0, 2.5, -hl - 0.12, -hl - 0.02, dark, false)
+	b.box(-1.5, 1.5, 2.5, 2.7, -hl - 0.12, -hl - 0.9, rib)
+	b.box(-hw * 0.4, -hw * 0.4 + 2.6, h * 0.62, h * 0.62 + 1.0, -hl - 0.12, -hl - 0.02, Color(0.18, 0.18, 0.17), false)
+	# lean-to workshop annex along the east side with a row of small windows and its own mono roof
+	var ax0: float = hw
+	var ax1: float = hw + 5.0
+	var az0: float = -hl * 0.55
+	var az1: float = hl * 0.35
+	b.box(ax0, ax1, 0.0, 3.4, az0, az1, skin.lightened(0.05), false)
+	b.mono(ax0, ax1, az0, az1, 3.4, 4.4, "x0", roof.lightened(0.03), skin.lightened(0.05), 0.25)
+	var nwin: int = 6
+	for i in nwin:
+		var wz: float = lerpf(az0 + 2.0, az1 - 2.0, float(i) / float(nwin - 1))
+		b.box(ax1, ax1 + 0.06, 1.5, 2.5, wz - 0.7, wz + 0.7, Color(0.13, 0.17, 0.19), false)
+	b.box(ax1, ax1 + 0.08, 0.0, 2.3, az1 - 3.0, az1 - 1.8, dark, false)
+	b.prism(ax1 - 1.2, az0 + 2.0, 4.0, 6.2, 0.22, 0.22, 0.20, 0.20, 6, Color(0.20, 0.20, 0.20), true)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m

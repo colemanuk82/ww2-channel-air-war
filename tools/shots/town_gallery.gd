@@ -41,7 +41,22 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "ships":
+	if view == "hangars":
+		gm.albedo_color = Color(0.36, 0.40, 0.28)
+		var hm1 := MeshInstance3D.new()
+		hm1.mesh = AirfieldAssets.t2_hangar("Allies")
+		hm1.position = Vector3(-30.0, 0.0, 0.0)
+		hm1.rotation.y = PI
+		add_child(hm1)
+		var hm2 := MeshInstance3D.new()
+		hm2.mesh = AirfieldAssets.t1_hangar("Allies")
+		hm2.position = Vector3(30.0, 0.0, 0.0)
+		hm2.rotation.y = PI
+		add_child(hm2)
+		cam.position = Vector3(10.0, 50.0, -95.0)
+		cam.look_at(Vector3(0.0, 2.0, 0.0))
+		cam.fov = 55.0
+	elif view == "ships":
 		gm.albedo_color = Color(0.10, 0.20, 0.30)
 		var kinds: Array = ["destroyer", "cruiser", "battleship", "freighter", "collier", "trawler", "ferry", "landing_craft", "fishing_boat"]
 		var z: float = -20.0
