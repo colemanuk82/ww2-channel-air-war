@@ -1670,7 +1670,7 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 					mesh = house_mesh(int(kind.substr(5)))
 		var colors: PackedColorArray = _foliage_instance_colors(m[1]) if (kind.begins_with("tree_v") or kind.begins_with("wtree_v") or kind.begins_with("wblob")) else PackedColorArray()
 		if kind.begins_with("tree_v") or kind == "hedge":
-			_add_lod_pair(root, mesh, far_mesh(kind), m[1], float(m[2]), TREE_NEAR if kind != "hedge" else HEDGE_NEAR, colors)
+			_add_lod_pair(root, mesh, far_mesh(kind), m[1], float(m[2]), _near_end(kind), colors)
 		elif kind.begins_with("wtree_v"):
 			_add_lod_pair(root, mesh, far_mesh("tree_v" + kind.substr(7)), m[1], float(m[2]), WOOD_TREE_NEAR, colors)
 		elif kind.begins_with("wblob"):
@@ -1701,6 +1701,16 @@ static func _add_lod_pair(root: Node, near_mesh: Mesh, far: Mesh, d: Dictionary,
 
 
 const TREE_NEAR: float = 2200.0
+# Realistic scenery: the clustered crowns and clump hedges are ~10x the triangles of the toon models (and are drawn
+# again into each shadow cascade), so the full models switch to the stand-ins much sooner.
+const TREE_NEAR_REAL: float = 1100.0
+const HEDGE_NEAR_REAL: float = 450.0
+
+
+static func _near_end(kind: String) -> float:
+	if kind == "hedge":
+		return HEDGE_NEAR_REAL if GameState.realistic_scenery else HEDGE_NEAR
+	return TREE_NEAR_REAL if GameState.realistic_scenery else TREE_NEAR
 const WOOD_TREE_NEAR: float = 700.0      # forest interior: full trees only this close ...
 const WOOD_TREE_VIS: float = 2400.0      # ... low-poly crowns out to here, then the clump blobs take over
 const WOOD_BLOB_BEGIN: float = 0.0    # blobs show at every range (fill between the crowns up close, the whole canopy far off)
@@ -1760,9 +1770,15 @@ static func far_mesh(kind: String) -> ArrayMesh:
 		return _meshes[key]
 	var parts: Array = []
 	if kind == "hedge":
-		var hb := BoxMesh.new()
-		hb.size = Vector3(1.0, 0.92, 0.72)
-		parts.append([hb, Transform3D.IDENTITY, _dmat(Color(0.20, 0.30, 0.15), 3, 0.0, false)])
+		# six low-poly clumps (about a fifth of the near hedge's triangles), same footprint and ragged top line
+		for i in 6:
+			var t: float = (float(i) + 0.5) / 6.0
+			var hs := SphereMesh.new()
+			hs.radius = 0.46 if i % 2 == 0 else 0.40
+			hs.height = 0.92 if i % 3 != 1 else 1.10
+			hs.radial_segments = 5
+			hs.rings = 3
+			parts.append([hs, Transform3D(Basis.IDENTITY, Vector3(t - 0.5, -0.04, 0.10 if i % 2 == 0 else -0.10)), _dmat(Color(0.22, 0.31, 0.16), 3, 0.0, false)])
 	else:
 		var spec: Array = TREE_FAR[clampi(int(kind.substr(6)), 0, TREE_FAR.size() - 1)]
 		var shape: PrimitiveMesh
@@ -1775,6 +1791,19 @@ static func far_mesh(kind: String) -> ArrayMesh:
 			cm.rings = 1
 			cm.cap_top = false
 			shape = cm
+		elif GameState.realistic_scenery:
+			# a few lumpy clumps instead of one ball, so the switch from the clustered near crown is not a pop
+			var rx: float = float(spec[2])
+			var ry: float = float(spec[3]) * 0.5
+			var c0: Vector3 = spec[1]
+			var offs: Array = [Vector3(0.0, 0.25, 0.0), Vector3(-0.42, -0.15, 0.25), Vector3(0.40, -0.10, -0.30), Vector3(0.05, -0.05, 0.45)]
+			for i in offs.size():
+				var o: Vector3 = offs[i]
+				var lm: ArrayMesh = _lumpy_sphere(snappedf(rx * 0.62, 0.1), snappedf(ry * 1.25, 0.1), 6, 3, float(i + 2))
+				parts.append([lm, Transform3D(Basis.IDENTITY, c0 + Vector3(o.x * rx, o.y * ry, o.z * rx)), _dmat(_calm(spec[4]) * (0.92 + 0.06 * i), 3, 0.1, false)])
+			var mr: ArrayMesh = _merge(parts)
+			_meshes[key] = mr
+			return mr
 		else:
 			var sm := SphereMesh.new()
 			sm.radius = float(spec[2])
