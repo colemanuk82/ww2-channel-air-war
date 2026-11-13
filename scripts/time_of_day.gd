@@ -185,14 +185,18 @@ func apply_post(level: int) -> void:
 	# sky reflections on glass, metal and wet surfaces (was disabled, which killed every specular)
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY if on else Environment.REFLECTION_SOURCE_DISABLED
 	environment.glow_enabled = on
-	environment.glow_intensity = 0.7
-	environment.glow_strength = 1.0
-	environment.glow_bloom = 0.06
-	environment.glow_hdr_threshold = 1.0
-	environment.glow_hdr_scale = 2.0
+	# glare kept to a bright disc with a soft halo: a low sun bloomed into a white ball over a third of the
+	# frame, hiding the aircraft and the horizon. Highlights are capped before the blur and the widest level is
+	# cut, so the halo stays tight; the god rays and fog shafts carry the low-sun drama instead.
+	environment.glow_intensity = 0.5
+	environment.glow_strength = 0.9
+	environment.glow_bloom = 0.03
+	environment.glow_hdr_threshold = 1.15
+	environment.glow_hdr_scale = 1.6
+	environment.glow_hdr_luminance_cap = 3.0
 	environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
 	for i in 7:
-		environment.set_glow_level(i, 1.0 if i in [2, 3, 4] else 0.0)
+		environment.set_glow_level(i, 1.0 if i in [2, 3] else (0.35 if i == 4 else 0.0))
 	environment.adjustment_enabled = true
 	# a real camera is not oversaturated: keep the grade subtle, the materials carry the colour now
 	environment.adjustment_contrast = 1.12 if on else 1.0
@@ -379,6 +383,9 @@ func _apply() -> void:
 		# golden hour: a low sun grazes flat fields (N.L ~ 0.2-0.3), which left them a muddy olive. Push the sun
 		# up as it sinks so lit ground glows warm against crisp shadows (the ambient is left alone).
 		sun_e *= 1.0 + 1.5 * smoothstep(0.45, 0.12, sun_dir.y) * smoothstep(0.0, 0.06, sun_dir.y)
+		# ... and lift the sky fill while the sun is low and just after it sets, so shaded fields keep their colour
+		# instead of going near-black (the sky still carries a lot of light at dusk)
+		amb_e *= 1.0 + 0.9 * smoothstep(0.35, 0.06, sun_dir.y) * smoothstep(-0.12, 0.0, sun_dir.y)
 
 	sun.light_color = lc
 	sun.light_energy = sun_e
@@ -399,8 +406,8 @@ func _apply() -> void:
 		var day_k: float = clampf(sun_dir.y * 4.0, 0.0, 1.0)
 		environment.volumetric_fog_density = (0.00012 + 0.0005 * low + haze_k * HAZE_VOL_MUL * day_k) * clampf(fog_mul, 0.6, 2.0)
 		environment.volumetric_fog_albedo = Color(0.92, 0.94, 1.0).lerp(lc, 0.45 * low).lerp(Color(0.62, 0.56, 0.48), 0.35 * haze_k * day_k)
-		environment.volumetric_fog_anisotropy = 0.65 + 0.2 * low
-		sun.light_volumetric_fog_energy = 1.0 + 0.8 * low
+		environment.volumetric_fog_anisotropy = 0.62 + 0.12 * low     # (0.85 at low sun scattered a blinding halo)
+		sun.light_volumetric_fog_energy = 1.0 + 0.35 * low
 	if _mist != null:
 		var dawn: float = smoothstep(4.8, 5.8, hour) * (1.0 - smoothstep(7.6, 9.2, hour))
 		var dusk: float = smoothstep(16.6, 17.8, hour) * (1.0 - smoothstep(19.2, 20.5, hour))

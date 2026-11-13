@@ -25,6 +25,7 @@ void vertex() {
 }
 
 global uniform vec3 sky_horizon;
+global uniform vec3 sky_top;
 global uniform float night_amount;
 
 void fragment() {
@@ -47,11 +48,22 @@ void fragment() {
 	// fresnel sky reflection, broken up by the slow ripple pattern
 	// the ribbon is drawn double-sided and its top is the BACK face (Godot flips NORMAL there), which made every
 	// river a full-strength mirror: use world up instead
-	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+	// ripples: a small slope from two drifting noise layers (finite differences in channel space), faded with
+	// range so distant water is a calm mirror rather than noise. The reflected ray picks sky colour from horizon
+	// (grazing) to zenith (steep), so the surface shows the sky's gradient, not one flat tone.
+	float rk = (1.0 - smoothstep(150.0, 1800.0, dist)) * 0.22;
+	vec2 rp = vec2(UV.x * 6.0, along * 0.22 - TIME * scroll_speed * 3.0);
+	float r0 = t_vnoise2(rp) + 0.5 * t_vnoise2(rp * 2.7 + 4.0);
+	float rx = t_vnoise2(rp + vec2(0.15, 0.0)) + 0.5 * t_vnoise2((rp + vec2(0.15, 0.0)) * 2.7 + 4.0);
+	float rz = t_vnoise2(rp + vec2(0.0, 0.15)) + 0.5 * t_vnoise2((rp + vec2(0.0, 0.15)) * 2.7 + 4.0);
+	vec3 wn = normalize(vec3(-(rx - r0) * rk * 6.0, 1.0, -(rz - r0) * rk * 6.0));
+	NORMAL = normalize((VIEW_MATRIX * vec4(wn, 0.0)).xyz);
 	float ndv = clamp(abs(dot(NORMAL, normalize(VIEW))), 0.0, 1.0);
-	float fres = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
-	fres = clamp(fres, 0.0, 0.8) * (0.85 + 0.30 * (f2 - 0.5));
-	vec3 refl = mix(sky_horizon, sky_horizon * vec3(0.78, 0.88, 1.05), 0.4) * (1.0 - 0.85 * night_amount);
+	float fres = 0.05 + 0.95 * pow(1.0 - ndv, 4.0);
+	fres = clamp(fres, 0.0, 0.6);
+	vec3 rv = reflect(-normalize(VIEW), NORMAL);
+	float ry = clamp((INV_VIEW_MATRIX * vec4(rv, 0.0)).y, 0.0, 1.0);
+	vec3 refl = mix(sky_horizon, sky_top, smoothstep(0.0, 0.6, ry)) * (1.0 - 0.85 * night_amount);
 
 	// dark wet mud along both banks, then the grass verge (the terrain shows through the faded edge)
 	float bank = smoothstep(0.76, 1.0, aa);
@@ -67,7 +79,7 @@ void fragment() {
 	float a_bank = (1.0 - smoothstep(0.70, 1.0, aa)) * 0.45 * (1.0 - smoothstep(2500.0, 6000.0, dist));
 
 	ALBEDO = col;
-	EMISSION = min(refl, vec3(0.75)) * fres * 0.45;
+	EMISSION = min(refl, vec3(0.8)) * fres * 0.38;
 	ROUGHNESS = 1.0;
 	SPECULAR = 0.0;
 	ALPHA = max(a_water, a_bank);
@@ -76,4 +88,8 @@ void fragment() {
 void light() {
 	float t = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
 	DIFFUSE_LIGHT += (0.35 + 0.65 * t) * LIGHT_COLOR / PI;
+	// sun glint off the ripples (soft-edged so it never aliases into square sparkles)
+	vec3 hv = normalize(LIGHT + VIEW);
+	float nh = clamp(dot(NORMAL, hv), 0.0, 1.0);
+	SPECULAR_LIGHT += (smoothstep(0.3, 0.9, pow(nh, 220.0)) * 0.9 + pow(nh, 40.0) * 0.08) * LIGHT_COLOR * ATTENUATION;
 }

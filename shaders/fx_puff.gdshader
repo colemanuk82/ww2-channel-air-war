@@ -48,7 +48,11 @@ void fragment() {
 	float l = dot(n, normalize(vec3(-0.35, 0.75, 0.55)));
 	float band = l > 0.3 ? 1.0 : (l > -0.2 ? 0.8 : 0.62);
 	float ndv = clamp(dot(n, normalize(VIEW)), 0.0, 1.0);
-	vec3 c = v_col.rgb * mix(1.0, band, v_shade);
+	// smoke (soft puffs) takes a gentle, smooth light instead of the three hard toon bands: banded shading on a
+	// sphere is exactly what made big puffs read as solid balls. Debris keeps its crisp bands.
+	float soft_pre = max(1.0 - step(0.5, v_shade), smoothstep(3.0, 8.0, v_size));
+	float smooth_l = 0.84 + 0.16 * smoothstep(-0.4, 0.8, l);
+	vec3 c = v_col.rgb * mix(1.0, mix(band, smooth_l, soft_pre), v_shade);
 	c *= mix(1.0, light_k, step(0.5, v_shade));
 	// puffs are translucent; opaque chunks (debris) skip the softening.
 	// Flames, embers and fireballs spawn at alpha 1.0, so an alpha-only test left every one of them a
@@ -64,7 +68,8 @@ void fragment() {
 	float lump = vnoise(q * 3.0 + vec3(v_id * 7.31, v_id * 3.17, v_id * 1.93)) * 0.5
 		+ vnoise(q * 7.0 + vec3(v_id * 2.13)) * 0.3
 		+ vnoise(q * 15.0 + vec3(v_id * 5.7)) * 0.2;
-	float erode = smoothstep(0.18, 0.72, lump + edge * 0.45);
+	// a wide, noisy falloff: the silhouette dissolves into wisps, so overlapping puffs merge into one body
+	float erode = smoothstep(0.25, 0.80, lump * 1.1 + edge * 0.50 - (1.0 - ndv) * 0.15);
 	float a = v_col.a * mix(1.0, edge * erode, soft_amt * 0.9);
 	float dz = textureLod(depth_tex, SCREEN_UV, 0.0).r;
 	vec4 sv = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, dz, 1.0);

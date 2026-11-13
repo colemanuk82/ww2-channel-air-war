@@ -163,7 +163,7 @@ static func _rewire(root: Node3D, model_id: String, nation: String) -> void:
 	# blades (AircraftModels.prop_blur swaps them in) - so a freshly built model shows its propeller
 	for d in discs:
 		var mi := d as MeshInstance3D
-		mi.material_override = _disc_material()
+		mi.material_override = _disc_material(mi.mesh.get_aabb().size if mi.mesh != null else Vector3(3.0, 0.02, 3.0))
 		mi.visible = false
 		_add_prop_tip_ring(mi)   # the blade-tip colour on the swirl: kept at the owner's request
 
@@ -364,12 +364,15 @@ static func _raster_tri(img: Image, slot: int, a: Vector2, b: Vector2, c2: Vecto
 				img.set_pixel(slot * DECAL_RES + x, y, Color(col.r, col.g, col.b, 1.0))
 
 
-static func _disc_material() -> StandardMaterial3D:
-	var dm := StandardMaterial3D.new()
-	dm.albedo_color = Color(0.15, 0.15, 0.15, 0.30)   # v5 value
-	dm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	dm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	dm.cull_mode = BaseMaterial3D.CULL_DISABLED
+static func _disc_material(size: Vector3 = Vector3(3.0, 0.02, 3.0)) -> ShaderMaterial:
+	# faint swirl, clear at the hub and the tips (shaders/prop_blur.gdshader): the old flat 30% grey plate
+	# read as a translucent sphere around the nose from the chase camera
+	var dm := ShaderMaterial.new()
+	dm.shader = load("res://shaders/prop_blur.gdshader") as Shader
+	var ax: int = 0 if size.x <= size.y and size.x <= size.z else (1 if size.y <= size.z else 2)
+	var big: float = maxf(maxf(size.x, size.y), size.z)
+	dm.set_shader_parameter("axis", ax)
+	dm.set_shader_parameter("radius", big * 0.5)
 	dm.render_priority = 40   # after the cloud volumes (20/21) so clouds never cut the blur
 	return dm
 

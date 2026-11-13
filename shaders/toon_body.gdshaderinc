@@ -420,7 +420,14 @@ void light() {
 		float nl = clamp(dot(NORMAL, LIGHT), 0.0, 1.0);
 		float lit = smoothstep(0.0, 0.75, nl) * mix(1.0, ATTENUATION, 0.85);
 		// (scaled for the next-gen sun, which is 1.8x the old one: sunlit walls land about where the old flat tone was)
+#ifdef NG_REAL
+		// realistic: plain Lambert with the full cast shadow and a lower floor (the sky ambient fills the shade),
+		// so walls turned from the sun and shadowed streets read as solid volumes rather than flat-coloured boxes
+		lit = nl * ATTENUATION;
+		DIFFUSE_LIGHT += (0.07 + 0.66 * lit + 0.05 * clamp(NORMAL.y, 0.0, 1.0)) * LIGHT_COLOR / PI;
+#else
 		DIFFUSE_LIGHT += (0.16 + 0.50 * lit + 0.04 * clamp(NORMAL.y, 0.0, 1.0)) * LIGHT_COLOR / PI;
+#endif
 	} else {
 		float t = clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION;
 #ifdef NG_REAL

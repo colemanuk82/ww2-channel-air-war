@@ -120,7 +120,7 @@ func _emit(p: Vector3, puffs: FXParticles, fade: float) -> void:
 		Kind.PILLAR:
 			# a tall, narrow, near-black column that climbs a kilometre or more, leans with the wind and thins out at the top
 			if smoke_on:
-				puffs.spawn(p + _jit(s * 0.12) * Vector3(1, 0.2, 1), drift * 0.35 + Vector3(0.0, 22.0 + s * 0.6, 0.0) + _jit(0.5), 44.0, s * 0.75, s * 4.0,
+				puffs.spawn(p + _jit(s * 0.12) * Vector3(1, 0.2, 1), drift * 0.6 + Vector3(0.0, 22.0 + s * 0.6, 0.0) + _jit(1.2), 44.0, s * 0.75, s * 5.5,
 					Color(0.035, 0.033, 0.036, 0.97 * fade), Color(0.17, 0.17, 0.18, 0.0), 1.0, 0.0, 0.04)
 			if aux != null and _tick % 2 == 0:
 				aux.spawn(p + _jit(s * 0.2) * Vector3(1, 0.3, 1), Vector3(0.0, s * 1.6, 0.0) + _jit(s * 0.25), 0.8, s * 0.55, s * 0.18,

@@ -259,7 +259,7 @@ static func tree_mesh(round_tree: bool) -> ArrayMesh:
 
 
 const TREE_CONES: Array = [0, 0, 2, 6]
-const TREE_ROUNDS: Array = [1, 1, 3, 4, 5, 7]
+const TREE_ROUNDS: Array = [1, 1, 3, 4, 5, 7, 1, 4, 5, 7, 1, 5]   # birch (3) only the odd stand: pale trunks read as white posts
 const TREE_VARIANTS: int = 8
 
 
@@ -328,7 +328,7 @@ static func tree_variant(v: int) -> ArrayMesh:
 			pc2.rings = 1
 			crown.append([pc2, Vector3(0, 5.6, 0), Color(0.17, 0.30, 0.12)])
 		3:   # silver birch: small airy crown on a pale trunk
-			trunk_col = Color(0.84, 0.83, 0.77)
+			trunk_col = Color(0.66, 0.64, 0.58)
 			trunk_h = 5.0
 			var bs := SphereMesh.new()
 			bs.radius = 2.5
