@@ -156,6 +156,11 @@ func _build_tank(c: Color, length: float, width: float, hull_h: float, turret_s:
 
 
 func _build_truck(c: Color) -> void:
+	if TownModels.enabled():
+		var vm := MeshInstance3D.new()
+		vm.mesh = TownModels.vehicle("truck", c)
+		_vis.add_child(vm)
+		return
 	var dark: Color = c.darkened(0.5)
 	GroundKit.box(_vis, Vector3(2.0, 1.5, 1.7), Vector3(0, 1.4, -2.0), c)                       # cab
 	GroundKit.box(_vis, Vector3(2.2, 0.3, 4.2), Vector3(0, 0.8, 1.0), dark)                      # bed base
@@ -166,6 +171,11 @@ func _build_truck(c: Color) -> void:
 
 
 func _build_bowser(c: Color) -> void:
+	if TownModels.enabled():
+		var vm := MeshInstance3D.new()
+		vm.mesh = TownModels.vehicle("bowser", c)
+		_vis.add_child(vm)
+		return
 	var dark: Color = c.darkened(0.5)
 	GroundKit.box(_vis, Vector3(2.0, 1.5, 1.7), Vector3(0, 1.4, -2.2), c)
 	GroundKit.box(_vis, Vector3(2.2, 0.3, 4.6), Vector3(0, 0.8, 1.0), dark)
@@ -187,6 +197,11 @@ func _build_tug(c: Color) -> void:
 
 
 func _build_firetender() -> void:
+	if TownModels.enabled():
+		var vm := MeshInstance3D.new()
+		vm.mesh = TownModels.vehicle("firetender", Color(0.72, 0.12, 0.1))
+		_vis.add_child(vm)
+		return
 	var red: Color = Color(0.72, 0.12, 0.1)
 	GroundKit.box(_vis, Vector3(2.0, 1.6, 1.8), Vector3(0, 1.4, -2.0), red)
 	GroundKit.box(_vis, Vector3(2.2, 1.4, 3.6), Vector3(0, 1.4, 1.2), red.darkened(0.1))
@@ -208,6 +223,11 @@ func _build_bombcart(c: Color) -> void:
 
 
 func _build_halftrack(c: Color) -> void:
+	if TownModels.enabled():
+		var vm := MeshInstance3D.new()
+		vm.mesh = TownModels.vehicle("halftrack", c)
+		_vis.add_child(vm)
+		return
 	var dark: Color = c.darkened(0.5)
 	GroundKit.box(_vis, Vector3(2.2, 1.3, 5.0), Vector3(0, 1.3, 0), c)
 	GroundKit.box(_vis, Vector3(2.0, 0.6, 1.8), Vector3(0, 2.0, -1.2), c.darkened(0.1))
@@ -220,6 +240,11 @@ func _build_halftrack(c: Color) -> void:
 func _build_car() -> void:
 	var cols: Array = [Color(0.08, 0.08, 0.09), Color(0.32, 0.33, 0.35), Color(0.38, 0.1, 0.1), Color(0.14, 0.26, 0.17), Color(0.75, 0.7, 0.55), Color(0.15, 0.2, 0.36)]
 	var c: Color = cols[randi() % cols.size()]
+	if TownModels.enabled():
+		var vm := MeshInstance3D.new()
+		vm.mesh = TownModels.vehicle("car", c)
+		_vis.add_child(vm)
+		return
 	var dark: Color = c.darkened(0.45)
 	GroundKit.box(_vis, Vector3(1.5, 0.62, 2.0), Vector3(0, 1.05, 0.55), c)                     # body / boot
 	GroundKit.box(_vis, Vector3(1.2, 0.7, 1.3), Vector3(0, 1.1, -1.25), c)                      # long bonnet
@@ -239,6 +264,11 @@ func _build_car() -> void:
 
 func _build_bus() -> void:
 	var c: Color = Color(0.55, 0.12, 0.1) if randf() < 0.6 else Color(0.2, 0.3, 0.2)
+	if TownModels.enabled():
+		var vm := MeshInstance3D.new()
+		vm.mesh = TownModels.vehicle("bus", c)
+		_vis.add_child(vm)
+		return
 	GroundKit.box(_vis, Vector3(2.1, 2.3, 5.6), Vector3(0, 1.75, 0.8), c)                       # upright body
 	GroundKit.box(_vis, Vector3(1.8, 0.35, 5.4), Vector3(0, 3.0, 0.8), c.darkened(0.15))         # roof
 	GroundKit.box(_vis, Vector3(2.14, 0.65, 5.0), Vector3(0, 2.25, 0.8), Color(0.55, 0.62, 0.66), Vector3.ZERO, false)   # window band
@@ -251,6 +281,11 @@ func _build_bus() -> void:
 
 ## Volkswagen Kubelwagen: flat-sided open German army car with a spare wheel on the bonnet.
 func _build_kubel(c: Color) -> void:
+	if TownModels.enabled():
+		var vm := MeshInstance3D.new()
+		vm.mesh = TownModels.vehicle("kubel", c)
+		_vis.add_child(vm)
+		return
 	GroundKit.box(_vis, Vector3(1.55, 0.7, 3.3), Vector3(0, 0.95, 0), c)
 	GroundKit.box(_vis, Vector3(1.4, 0.55, 0.12), Vector3(0, 1.55, -0.55), c.darkened(0.15))     # upright windscreen
 	GroundKit.box(_vis, Vector3(1.45, 0.08, 1.4), Vector3(0, 1.88, 0.45), Color(0.3, 0.28, 0.2), Vector3.ZERO, false)  # folded canvas hood
@@ -261,6 +296,11 @@ func _build_kubel(c: Color) -> void:
 
 
 func _build_jeep(c: Color) -> void:
+	if TownModels.enabled():
+		var vm := MeshInstance3D.new()
+		vm.mesh = TownModels.vehicle("jeep", c)
+		_vis.add_child(vm)
+		return
 	GroundKit.box(_vis, Vector3(1.6, 0.7, 3.2), Vector3(0, 0.9, 0), c)
 	GroundKit.box(_vis, Vector3(1.4, 0.8, 0.15), Vector3(0, 1.5, -0.8), c.darkened(0.2))
 	for z in [-1.1, 1.1]:

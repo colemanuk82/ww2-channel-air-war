@@ -41,7 +41,29 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "tanks":
+	if view == "vehicles":
+		gm.albedo_color = Color(0.36, 0.40, 0.28)
+		var vk: Array = ["truck", "bowser", "firetender", "halftrack", "kubel", "jeep", "car", "bus"]
+		var vc: Color = GroundKit.team_color("Allies")
+		var q: int = 0
+		for kd2 in vk:
+			var vmi := MeshInstance3D.new()
+			var col3: Color = vc
+			if kd2 == "firetender":
+				col3 = Color(0.72, 0.12, 0.1)
+			elif kd2 == "car":
+				col3 = Color(0.14, 0.26, 0.17)
+			elif kd2 == "bus":
+				col3 = Color(0.55, 0.12, 0.1)
+			vmi.mesh = TownModels.vehicle(kd2, col3)
+			vmi.position = Vector3(-14.0 + float(q % 4) * 9.0, 0.0, -4.0 + float(q / 4) * 9.0)
+			vmi.rotation.y = 0.5
+			add_child(vmi)
+			q += 1
+		cam.position = Vector3(2.0, 14.0, 20.0)
+		cam.look_at(Vector3(0.0, 1.0, 0.0))
+		cam.fov = 50.0
+	elif view == "tanks":
 		gm.albedo_color = Color(0.36, 0.40, 0.28)
 		var specs: Array = [["sherman", "Allies", 5.8, 2.6, 0.9, 1.0, 0.0, false], ["panzer4", "Axis", 5.9, 2.8, 0.9, 1.0, 1.0, true], ["tiger", "Axis", 7.0, 3.6, 1.1, 1.1, 1.8, true]]
 		var kk: int = 0

@@ -1037,3 +1037,108 @@ static func tank_turret(c: Color, length: float, width: float, ts: float, blen: 
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache[key] = m
 	return m
+
+
+# ------------------------------------------------------------------ wheeled vehicles (GroundVehicle)
+
+static func _tyre(b: MB, x: float, z: float, r: float, w: float) -> void:
+	b.wheel(x, r, z, r, w, 10, Color(0.07, 0.07, 0.07))
+	b.wheel(x + signf(x) * w * 0.5, r, z, r * 0.52, 0.04, 8, Color(0.30, 0.30, 0.28))
+
+
+## One mesh per wheeled vehicle type, in GroundVehicle's layout (nose -Z, ground y = 0). kind: truck, bowser,
+## kubel, jeep, halftrack, car, bus, firetender. `c` is the paint colour.
+static func vehicle(kind: String, c: Color) -> ArrayMesh:
+	var key: String = "veh_%s_%s" % [kind, c.to_html(false)]
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var dk: Color = c.darkened(0.45)
+	var glass := Color(0.18, 0.23, 0.26)
+	var chrome := Color(0.72, 0.72, 0.68)
+	match kind:
+		"truck", "bowser", "firetender":
+			# chassis rails, bonnet and cab with a windscreen, mudguards, headlamps, then the body
+			b.box(-0.8, 0.8, 0.55, 0.95, -3.2, 3.2, dk, false)
+			b.box(-0.95, 0.95, 0.95, 1.65, -3.35, -2.0, c, true, c.lightened(0.05))               # bonnet
+			b.box(-0.55, 0.55, 1.1, 1.6, -3.4, -3.3, chrome, false)                                 # grille
+			b.box(-1.0, 1.0, 0.95, 2.1, -2.0, -0.3, c.lightened(0.03), true, c.darkened(0.05))      # cab
+			b.box(-0.9, 0.9, 1.55, 2.0, -2.02, -1.98, glass, false)
+			b.box(-1.02, 1.02, 1.55, 1.95, -1.6, -0.6, glass, false)
+			for sx in [-1.0, 1.0]:
+				b.box(minf(sx * 0.85, sx * 1.2), maxf(sx * 0.85, sx * 1.2), 0.98, 1.06, -3.4, -2.0, dk, false)
+				b.box(minf(sx * 0.85, sx * 1.2), maxf(sx * 0.85, sx * 1.2), 0.98, 1.06, 0.2, 2.6, dk, false)
+				b.box(sx * 0.62 - 0.13, sx * 0.62 + 0.13, 1.1, 1.35, -3.43, -3.38, Color(0.9, 0.85, 0.6), false)
+			if kind == "bowser":
+				var tank: Color = Color(0.62, 0.64, 0.62) if c.get_luminance() > 0.25 else Color(0.4, 0.42, 0.4)
+				b.prism(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3, tank, false)
+				b.box(-0.95, 0.95, 1.0, 2.6, -0.1, 4.1, tank, true, tank.lightened(0.06))
+				b.box(-0.97, 0.97, 1.8, 2.05, -0.1, 4.1, Color(0.75, 0.15, 0.1), false)
+				b.box(-0.28, 0.28, 2.6, 2.85, 1.5, 2.3, tank.darkened(0.2), true)
+			elif kind == "firetender":
+				b.box(-1.1, 1.1, 0.95, 2.0, -0.1, 3.8, c.darkened(0.1), true, c.darkened(0.04))
+				b.box(-0.2, 0.2, 2.0, 2.2, -0.2, 3.8, Color(0.75, 0.7, 0.6), false)
+				b.box(-0.55, 0.55, 2.0, 2.5, 3.2, 3.8, Color(0.75, 0.7, 0.2), false)
+			else:
+				var canvas: Color = c.lerp(Color(0.45, 0.4, 0.28), 0.5)
+				b.box(-1.15, 1.15, 0.95, 1.4, 0.1, 4.2, c.darkened(0.1), true)
+				for i in 6:                                                                           # tilt hoops and canvas
+					var z0: float = 0.2 + float(i) * 0.65
+					b.box(-1.15, 1.15, 1.4, 2.85, z0, z0 + 0.62, canvas, false)
+				b.gable_z(-1.15, 1.15, 0.1, 4.2, 2.85, 0.5, 0.05, canvas.lightened(0.04), canvas.darkened(0.1), 0.05)
+				b.box(-0.8, 0.8, 1.45, 2.3, 4.2, 4.26, Color(0.12, 0.12, 0.13), false)
+			for z in [-2.1, 1.0, 2.5]:
+				for sx in [-1.0, 1.0]:
+					_tyre(b, sx * 1.0, z, 0.5, 0.35)
+		"kubel", "jeep":
+			var hood: float = 0.88 if kind == "jeep" else 0.95
+			b.box(-0.8, 0.8, 0.45, 0.95, -1.7, 1.7, c, true, c.darkened(0.05))
+			b.box(-0.6, 0.6, 0.95, 1.1, -1.65, -0.55, c.lightened(0.04), true)                       # bonnet
+			b.box(-0.82, 0.82, 0.95, 1.35, 0.5, 1.7, c, true, c.darkened(0.06))                     # rear tub
+			b.box(-0.68, 0.68, 1.1, 1.55, -0.62, -0.5, glass, false)                                # windscreen
+			b.box(-0.6, -0.15, 0.98, 1.2, -0.3, 0.3, dk, false)                                     # seat backs
+			b.box(0.15, 0.6, 0.98, 1.2, -0.3, 0.3, dk, false)
+			b.wheel(0.0, 0.95, -1.4 if kind == "kubel" else 1.7, 0.36, 0.2, 8, Color(0.08, 0.08, 0.08))   # spare wheel
+			for z in [-1.1, 1.1]:
+				for sx in [-1.0, 1.0]:
+					_tyre(b, sx * 0.85, z, 0.4, 0.25)
+		"halftrack":
+			b.box(-1.1, 1.1, 0.85, 1.9, -2.5, 2.5, c, true, c.darkened(0.04))
+			b.box(-1.0, 1.0, 1.9, 2.3, -1.9, -0.4, c.darkened(0.1), true)                           # cab/armour top
+			b.box(-0.8, 0.8, 1.2, 1.8, -2.55, -2.45, chrome.darkened(0.3), false)
+			for sx in [-1.0, 1.0]:
+				b.box(minf(sx * 0.75, sx * 1.25), maxf(sx * 0.75, sx * 1.25), 0.25, 1.05, -0.2, 2.5, dk, true, dk.lightened(0.05))
+				for i in 4:
+					b.wheel(sx * 1.0, 0.45, -0.1 + float(i) * 0.7, 0.32, 0.12, 8, dk.darkened(0.3))
+				_tyre(b, sx * 1.0, -1.9, 0.45, 0.3)
+		"car":
+			b.box(-0.75, 0.75, 0.75, 1.35, -0.45, 1.55, c, true, c.darkened(0.03))                  # body / boot
+			b.box(-0.6, 0.6, 0.75, 1.4, -1.95, -0.4, c, true, c.lightened(0.03))                    # long bonnet
+			b.box(-0.66, 0.66, 1.35, 2.17, -0.1, 1.2, c.lightened(0.04), false)                     # tall upright cabin
+			b.box(-0.69, 0.69, 2.17, 2.27, -0.1, 1.2, dk, false, dk)
+			b.box(-0.6, 0.6, 1.4, 2.1, -0.12, -0.08, glass, false)
+			b.box(-0.69, 0.69, 1.5, 2.05, 0.1, 1.0, glass, false)
+			b.box(-0.35, 0.35, 0.8, 1.45, -1.99, -1.94, chrome, false)
+			for sx in [-1.0, 1.0]:
+				b.box(minf(sx * 0.7, sx * 1.0), maxf(sx * 0.7, sx * 1.0), 0.95, 1.05, -2.0, -0.7, dk, false)
+				b.box(minf(sx * 0.7, sx * 1.0), maxf(sx * 0.7, sx * 1.0), 0.95, 1.05, 0.7, 1.6, dk, false)
+				b.box(sx * 0.5 - 0.1, sx * 0.5 + 0.1, 1.2, 1.4, -2.02, -1.96, Color(0.9, 0.88, 0.7), false)
+				b.box(minf(sx * 0.82, sx * 1.0), maxf(sx * 0.82, sx * 1.0), 0.5, 0.62, -1.5, 1.5, dk, false)
+			for z in [-1.3, 1.15]:
+				for sx in [-1.0, 1.0]:
+					_tyre(b, sx * 0.82, z, 0.36, 0.22)
+		"bus":
+			b.box(-1.05, 1.05, 0.6, 2.9, -2.0, 3.6, c, true, c.darkened(0.1))                       # body
+			b.box(-1.07, 1.07, 1.75, 2.45, -1.9, 3.5, Color(0.5, 0.58, 0.62), false)               # window band
+			for i in 6:
+				var wz: float = -1.5 + float(i) * 0.9
+				b.box(-1.08, 1.08, 1.75, 2.45, wz + 0.42, wz + 0.48, c.darkened(0.15), false)
+			b.box(-0.85, 0.85, 0.6, 1.9, -3.5, -1.9, c, true, c.lightened(0.04))                    # half-cab bonnet
+			b.box(-0.5, 0.5, 0.8, 1.7, -3.55, -3.5, chrome, false)
+			b.box(-1.0, 1.0, 2.9, 3.05, -1.9, 3.5, c.darkened(0.2), false, c.darkened(0.25))
+			for z in [-2.6, 2.3]:
+				for sx in [-1.0, 1.0]:
+					_tyre(b, sx * 1.0, z, 0.5, 0.3)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m
