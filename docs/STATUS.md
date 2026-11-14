@@ -46,3 +46,17 @@ Never open a visible game window on the developer's PC: everything with pictures
 * No commercial audio in the repo (see `CLAUDE.md`).
 * Liveries are our own painted textures (`tools/liveries/README.md`); never copy from other games.
 * The developer edits `README.md` on GitHub: merge before pushing README changes.
+
+## Recently added (November 2026)
+
+* **Loading:** road / river keep-out grids only cover the tile being laid out (Detling start 120+ s -> ~43 s,
+  Maidstone and Chatham builds ~3 s -> ~0.1 s). Distant realistic trees use a one-ball tier past 2.5 km.
+  Debug: `--loadnotes` (tile-job throughput), `--prim-audit=N` (triangles per mesh), `WW2_TILE_JOBS`.
+* **Visuals:** sash windows on near-LOD houses; bombed tile towns lose their trees; tree belts round paved
+  airfields (clear of runway lanes).
+* **UI:** Training > *First flight* (taxi from the dispersal, take-off, circuit, landing); keyboard rebinding
+  and three control profiles in Options > Controls; flight assists (auto-rudder, stall guard).
+* **Audio:** bullet whiz and ricochets, cockpit low-pass, combat-aware in-flight music (all procedural).
+* **Gameplay:** gun jams (on by default) and a convergence option; *Patrol Missions* mode (pick an Ops Room job:
+  intercept, recce, rescue, convoy hunt...); Pilot's Life squadron roster and branching story steps (`when`).
+* Known: in hidden-desktop screenshots the ground over Kent can render as water (also in v4.14); unconfirmed in play.

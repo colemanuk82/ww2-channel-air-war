@@ -43,7 +43,8 @@ jobs:
           pip install scons
           git clone --depth 1 --branch $env:GODOT_TAG https://github.com/godotengine/godot.git godot-src
           cd godot-src
-          scons platform=windows target=editor precision=double optimize=speed use_static_cpp=yes angle=no tests=no debug_symbols=no -j4
+          scons platform=windows target=editor precision=double optimize=speed use_static_cpp=yes angle=no accesskit=no d3d12=no tests=no debug_symbols=no -j4
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           New-Item -ItemType Directory -Force ../godot-bin | Out-Null
           Copy-Item bin/godot.windows.editor.double.x86_64*.exe ../godot-bin/
 
