@@ -1165,6 +1165,16 @@ func _test_landscape_data() -> void:
 	var dm: Variant = _load_json("res://data/dams_1940.json")
 	if _check(dm is Dictionary, "dams_1940.json parses"):
 		_check_has_entries(dm as Dictionary, "dams", "dams_1940.json dams")
+	# estuary mud-flat zones (terrain.gdshader estuary_a..f)
+	var hf := HeightField.new()
+	var ez: Array = hf.get_estuary_world_zones()
+	_check(ez.size() == 6, "%d estuary zones feed the tidal-flat mask" % ez.size())
+	var ok_ez: bool = true
+	for e in ez:
+		var v: Vector3 = e
+		if v.z <= 1000.0 or is_nan(v.x) or is_nan(v.y):
+			ok_ez = false
+	_check(ok_ez, "every estuary zone has a real radius and a projected position")
 
 
 ## Every sea-defence site in the data builds a non-null node with >= 1 mesh (P1).

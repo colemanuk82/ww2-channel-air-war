@@ -43,6 +43,12 @@ uniform vec4 chalk_b = vec4(0.0);
 uniform vec4 chalk_c = vec4(0.0);
 uniform vec4 chalk_d = vec4(0.0);
 uniform vec4 chalk_e = vec4(0.0);
+uniform vec4 estuary_a = vec4(0.0);
+uniform vec4 estuary_b = vec4(0.0);
+uniform vec4 estuary_c = vec4(0.0);
+uniform vec4 estuary_d = vec4(0.0);
+uniform vec4 estuary_e = vec4(0.0);
+uniform vec4 estuary_f = vec4(0.0);
 // Real imagery draped over the terrain. map_rect = (min_world_x, min_world_z, 1/size_x, 1/size_z).
 uniform sampler2D map_tex : source_color, filter_linear_mipmap, repeat_disable;
 uniform vec4 map_rect = vec4(0.0, 0.0, 0.0, 0.0);
@@ -137,6 +143,13 @@ void vertex() {
 }
 
 float chalk_w(vec4 z, vec2 p) {
+	if (z.z <= 0.0) { return 0.0; }
+	float d = length(p - z.xy);
+	return 1.0 - smoothstep(z.z * 0.7, z.z, d);
+}
+
+// estuary_a..f: [lat, lon, radius_m] estuaries with real intertidal flats (HeightField.estuary_zones)
+float est_w(vec4 z, vec2 p) {
 	if (z.z <= 0.0) { return 0.0; }
 	float d = length(p - z.xy);
 	return 1.0 - smoothstep(z.z * 0.7, z.z, d);
@@ -716,10 +729,14 @@ void fragment() {
 		sc = mix(sc, vec3(0.42, 0.45, 0.25) * (0.8 + 0.4 * grain), dune * 0.55);
 		col = mix(col, sc, sandm * 0.96);
 	}
-	// tidal flats: estuary mud just above the waterline, cut by drying channels, with wet sheen and sandier banks
+	// tidal flats: estuary mud just above the waterline, cut by drying channels, with wet sheen and
+	// sandier banks. Masked to the real estuaries (outer Thames, Medway, Solent, Southampton Water, the
+	// Wash, the Scheldt) with a ragged noise edge; a faint noise-only share keeps unlisted muddy creeks,
+	// but never on green ground (the polders stay grass).
 	{
 		float estuary_n = t_vnoise2(xz * 0.0018 + 40.0) * 0.7 + t_vnoise2(xz * 0.004 + 7.0) * 0.3;
-		float estuary = smoothstep(0.50, 0.66, estuary_n) * (1.0 - urban);
+		float est_real = max(max(max(est_w(estuary_a, xz), est_w(estuary_b, xz)), max(est_w(estuary_c, xz), est_w(estuary_d, xz))), max(est_w(estuary_e, xz), est_w(estuary_f, xz)));
+		float estuary = max(est_real * (0.62 + 0.38 * t_vnoise2(xz * 0.006 + 31.0)), smoothstep(0.50, 0.66, estuary_n) * (1.0 - smoothstep(0.55, 0.95, veg) * 0.9) * 0.45) * (1.0 - urban);
 		float flat_low = (1.0 - smoothstep(0.4, 3.4, h)) * smoothstep(-0.5, 0.25, h) * (1.0 - smoothstep(0.06, 0.18, slope));
 		// meandering channels and braided cuts through the flats
 		float chan_n = abs(t_vnoise2(xz * 0.045 + 12.0) - 0.5) * 0.65 + abs(t_vnoise2(xz * 0.12 + 3.0) - 0.5) * 0.35;

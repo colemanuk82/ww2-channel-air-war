@@ -64,6 +64,16 @@ var cliff_zones: Array = [
 	[49.71, 0.20, 10000.0],   # Etretat
 ]
 
+# [lat, lon, radius_m] estuary mouths with real intertidal mud flats (terrain shader estuary_a..f)
+var estuary_zones: Array = [
+	[51.55, 0.75, 12000.0],   # outer Thames (Maplin Sands / Sheppey shores)
+	[51.43, 0.58, 4500.0],    # the Medway (Sheerness / Queenborough)
+	[50.80, -1.28, 9000.0],   # the Solent (Portsmouth / Langstone / Keyhaven)
+	[50.89, -1.42, 3500.0],   # Southampton Water
+	[52.92, 0.20, 9000.0],    # the Wash
+	[51.40, 3.55, 8000.0],    # the Scheldt / Westerschelde
+]
+
 # Flat zones (airfields): Vector4(x, z, flat_radius, blend) + height array
 var _zones: Array = []
 const ZONE_CELL := 4000.0
@@ -391,6 +401,14 @@ func get_cliff_world_zones() -> Array:
 	for c in cliff_zones:
 		var p: Vector3 = WorldCoords.latlon_to_world(c[0], c[1])
 		out.append(Vector3(p.x, p.z, c[2] / WorldCoords.HORIZ_COMPRESSION))
+	return out
+
+
+func get_estuary_world_zones() -> Array:
+	var out: Array = []
+	for e in estuary_zones:
+		var p: Vector3 = WorldCoords.latlon_to_world(float(e[0]), float(e[1]))
+		out.append(Vector3(p.x, p.z, float(e[2]) / WorldCoords.HORIZ_COMPRESSION))
 	return out
 
 

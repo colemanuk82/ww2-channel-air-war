@@ -65,6 +65,14 @@ func _make_material() -> void:
 			material.set_shader_parameter(names[i], Vector4(z.x, z.y, z.z, 0.0))
 		else:
 			material.set_shader_parameter(names[i], Vector4(0, 0, 0, 0))
+	var ezones: Array = field.get_estuary_world_zones()
+	var enames: Array = ["estuary_a", "estuary_b", "estuary_c", "estuary_d", "estuary_e", "estuary_f"]
+	for i in enames.size():
+		if i < ezones.size():
+			var ez: Vector3 = ezones[i]
+			material.set_shader_parameter(enames[i], Vector4(ez.x, ez.y, ez.z, 0.0))
+		else:
+			material.set_shader_parameter(enames[i], Vector4(0, 0, 0, 0))
 	# Close-range detail texture (terrain.gdshader P2): turf/soil micro grain + micro bump. Cached
 	# statically like the imagery above so a replay / next mission reuses it; if the PNG has not been
 	# generated, use_detail simply stays false and the ground keeps its procedural grain.
