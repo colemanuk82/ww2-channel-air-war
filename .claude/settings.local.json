@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(powershell -NoProfile -File F:\\ww2_dlss\\tools\\cache\\ship.ps1*)"
+    ]
+  }
+}
