@@ -973,13 +973,15 @@ func _build_port(s: Dictionary) -> Node3D:
 	var size: int = int(s["size"])
 	var team: String = str(s["team"])
 	var seed_v: int = hash(id)
-	# a harbour sits on the nearest shoreline: search for it (wide, the DEM coast can be some way off)
-	var bv0: Variant = _shore_for(s, pos, 1200.0, 6, seed_v)
+	# a harbour sits on the nearest shoreline: search for it (wide, the DEM coast can be some way off;
+	# the search only accepts real sea since the inland-water fix, so the net is wide)
+	var bv0: Variant = _shore_for(s, pos, 2400.0, 6, seed_v)
 	if bv0 == null:
 		s["defer"] = true
 		return null
 	var best: Dictionary = bv0
 	if best.is_empty():
+		print("[docks] port %s: no sea shore within the search, site skipped" % id)
 		return Node3D.new()
 	# 3.3: branch by port type / size - estuary harbours get a river quay, size-1 ports a fishing harbour,
 	# the dockyards the shipyard silhouette; everything else stays the generic commercial / ferry port.
@@ -1027,12 +1029,13 @@ func _register_docks() -> void:
 func _build_dock(s: Dictionary) -> Node3D:
 	var pos: Vector3 = s["pos"]
 	var seed_v: int = hash(str(s["id"]))
-	var bv1: Variant = _shore_for(s, pos, 1400.0, 8, seed_v)
+	var bv1: Variant = _shore_for(s, pos, 2600.0, 8, seed_v)
 	if bv1 == null:
 		s["defer"] = true
 		return null
 	var best: Dictionary = bv1
 	if best.is_empty():
+		print("[docks] dock %s: no sea shore within the search, site skipped" % str(s["id"]))
 		return Node3D.new()
 	var size: int = int(s["size"])
 	var team: String = str(s["team"])

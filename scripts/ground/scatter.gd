@@ -2825,7 +2825,10 @@ static func _ok(p: Vector2, exclude: Array, min_h: float) -> bool:
 
 
 # ------------------------------------------------------------------ shore + obstacles
-## Random shoreline points (land cells next to sea) inside a circle. Each: {"pos": Vector3, "sea": Vector3 dir}
+## Random shoreline points (land cells next to the SEA) inside a circle. Each: {"pos": Vector3, "sea": Vector3 dir}.
+## The water must be the sea, not an inland canal, river or pond: the coast mask carves estuaries, harbours
+## and dock basins below sea level, while carved inland water stays at or above it - so the bed a little way
+## out along the water direction has to be genuinely below zero, or the candidate is not a shore.
 static func find_shore(center: Vector3, radius: float, count: int, rng: RandomNumberGenerator) -> Array:
 	var out: Array = []
 	var tries: int = 0
@@ -2839,6 +2842,14 @@ static func find_shore(center: Vector3, radius: float, count: int, rng: RandomNu
 			continue
 		var wd: Vector3 = GroundKit.water_dir(p, 60.0)
 		if wd == Vector3.ZERO:
+			continue
+		# ...and the water must be WIDE - harbour / sea water, not a canal, a ditch or a pond. Walk out
+		# along the water direction: open water (sea, estuary, tidal river, a dock basin) runs on for
+		# hundreds of metres, inland water ends within a length or two of a barge.
+		var wout: float = 0.0
+		while wout < 600.0 and GroundKit.is_water(p.x + wd.x * (60.0 + wout), p.z + wd.z * (60.0 + wout)):
+			wout += 30.0
+		if wout < 140.0:
 			continue
 		out.append({"pos": Vector3(p.x, GroundKit.ground_y(p.x, p.z), p.z), "sea": wd})
 	return out
