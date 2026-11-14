@@ -1408,8 +1408,8 @@ static func _town_slot_trees(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: flo
 		return                     # the slot is a ruin or a cleared site: no street or garden tree
 	var seed_v: int = int(ctx["seed"])
 	var size: int = int(ctx["size"])
-	var nst_cap: int = clampi(30 + size * 10, 40, 80)      # street trees per town (scales with size)
-	var ngt_cap: int = clampi(24 + size * 8, 30, 60)       # garden trees per town
+	var nst_cap: int = clampi(50 + size * 16, 70, 130)      # street trees per town (scales with size)
+	var ngt_cap: int = clampi(40 + size * 12, 50, 100)       # garden trees per town
 	var nst: int = int(ctx["nst"])
 	var ngt: int = int(ctx["ngt"])
 	var si: int = int(ctx.get("si", 0))
@@ -1420,7 +1420,7 @@ static func _town_slot_trees(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: flo
 	var hy: int = k * 2 + side
 	if nst < nst_cap and bool(ctx.get("lined", false)):
 		# kerb tree; the presence chance eases off as the town's cap fills so trees spread over all streets
-		if _ih(hx, hy, 42) < 0.62 * float(nst_cap - nst) / float(nst_cap):
+		if _ih(hx, hy, 42) < 0.85 * float(nst_cap - nst) / float(nst_cap):
 			var kerb: float = fr - 1.8
 			# clear of this street's carriageway edge (WIDTHS * 0.5, see RoadMesh._add_line) by 0.4 m;
 			# the road-ribbon test itself is skipped for kerb trees (see _ok_town_tree)
@@ -1433,7 +1433,7 @@ static func _town_slot_trees(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: flo
 					_ih(hx, hy * 3 + 1, 45) * TAU, Vector3(sc, sc * 1.12, sc)))
 				ctx["nst"] = nst + 1
 	if ngt < ngt_cap:
-		if _ih(hx + 977, hy * 3 + 2, 47) < 0.45 * float(ngt_cap - ngt) / float(ngt_cap):
+		if _ih(hx + 977, hy * 3 + 2, 47) < 0.70 * float(ngt_cap - ngt) / float(ngt_cap):
 			var g_d: float = fr + depth + 1.2 + _ih(hx, hy * 3 + 2, 49) * 3.0     # behind the back wall
 			var gp: Vector2 = p + nrm * g_d + dir * (_ih(hx, hy * 3 + 2, 48) - 0.5) * 5.0
 			if _ok_town_tree(gp, [], 2.5):
@@ -2443,7 +2443,7 @@ static func _add_town_trees(trees: Array, dc: Vector2i, bi: int, row: int, si: i
 	if lined:
 		var v_t: float = float(street_i) * STREET_BLOCK + (6.7 if row == 0 else 1.3)
 		for k in 2:
-			if _ih(hx, hy * 2 + k, 22) > 0.85:
+			if _ih(hx, hy * 2 + k, 22) > 0.95:
 				continue                                   # the odd gap where a tree was lost
 			var u_t: float = u_c + (float(k) - 0.5) * 13.0 + (_ih(hx, hy * 2 + k, 23) - 0.5) * 1.6
 			var tp: Vector2 = org + along * u_t + across * v_t
@@ -2453,7 +2453,7 @@ static func _add_town_trees(trees: Array, dc: Vector2i, bi: int, row: int, si: i
 			trees.append(_xf(Vector3(tp.x, GroundKit.ground_y(tp.x, tp.y) - 0.3, tp.y), _ih(hx, hy * 2 + k, 25) * TAU, Vector3(sc, sc * 1.12, sc)))
 	# back gardens: the yards run fv 17..25 between the two rows; the trees stand down the middle strip, clear of both rows' wash-houses
 	for g in 4:
-		if _ih(hx + 977, hy * 3 + g, 26) > 0.5:
+		if _ih(hx + 977, hy * 3 + g, 26) > 0.72:
 			continue
 		var u_g: float = u_c + (float(g) - 1.5) * 7.5 + (_ih(hx, hy * 3 + g, 27) - 0.5) * 4.0
 		var v_g: float = float(bi) * STREET_BLOCK + (20.5 if row == 0 else 21.6) + (_ih(hx, hy * 3 + g, 28) - 0.5) * 0.8
