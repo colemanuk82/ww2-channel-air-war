@@ -250,6 +250,15 @@ const LEAD := Color(0.34, 0.33, 0.31)
 
 
 ## Detailed house unit `variant` (0..9, the Scatter.house_mesh contract).
+## A sash window on a front wall (z = zf, facing -Z): a dark glass pane standing just proud of the wall and a stone
+## sill under it. 12 triangles; only the near house models carry them (the far stand-ins and the HLOD do not), so
+## the window rhythm shows up close without the busy grid the old shader windows gave whole towns from the air.
+const GLASS := Color(0.13, 0.16, 0.19)
+static func _win(b: MB, x0: float, x1: float, y0: float, y1: float, zf: float = -0.5) -> void:
+	b.face([Vector3(x0, y0, zf - 0.004), Vector3(x1, y0, zf - 0.004), Vector3(x1, y1, zf - 0.004), Vector3(x0, y1, zf - 0.004)], GLASS, Vector3.FORWARD)
+	b.box(x0 - 0.012, x1 + 0.012, y0 - 0.022, y0, zf - 0.022, zf, STONE * 1.1)
+
+
 static func house(variant: int) -> ArrayMesh:
 	var key: String = "house%d" % variant
 	if _cache.has(key):
@@ -293,6 +302,9 @@ static func _terrace_bay(b: MB) -> void:
 	# door step and hood beside the bay
 	b.box(-0.40, -0.24, -0.5, -0.455, -0.555, -0.5, STONE * 0.9)
 	b.box(-0.41, -0.23, -0.10, -0.075, -0.56, -0.5, LEAD)
+	_win(b, -0.38, -0.20, 0.10, 0.32)
+	_win(b, -0.06, 0.30, 0.10, 0.32)
+	_win(b, -0.08, 0.16, -0.32, -0.10, -0.585)
 	# rear outrigger (kitchen and back bedroom) with a mono-pitch roof against the party wall, and its own flue
 	b.box(0.05, 0.47, -0.5, 0.20, 0.5, 0.92, wall * 0.96, false)
 	b.mono(0.05, 0.47, 0.5, 0.92, 0.20, 0.36, "x1", TILE, wall * 0.96, 0.015)
@@ -309,6 +321,9 @@ static func _terrace_plain(b: MB) -> void:
 	b.chimney(0.37, -0.02, 0.72, 1.12, 0.12, 0.17, STACK, 2)
 	b.box(0.12, 0.30, -0.5, -0.455, -0.55, -0.5, STONE * 0.9)
 	b.box(0.11, 0.31, -0.10, -0.075, -0.555, -0.5, LEAD)
+	_win(b, -0.36, -0.08, -0.32, -0.10)
+	_win(b, -0.36, -0.08, 0.10, 0.32)
+	_win(b, 0.11, 0.31, 0.10, 0.32)
 	b.box(-0.47, -0.08, -0.5, 0.14, 0.5, 0.90, wall * 0.96, false)
 	b.gable_z(-0.47, -0.08, 0.5, 0.90, 0.14, 0.17, 0.015, SLATE, wall * 0.96, 0.01)
 	# wash-house against the back addition
@@ -328,6 +343,8 @@ static func _semi_pair(b: MB) -> void:
 		var x1: float = maxf(sx * 0.15, sx * 0.44)
 		b.box(x0, x1, -0.5, 0.5, -0.60, -0.5, wall, false)
 		b.gable_z(x0, x1, -0.60, -0.16, 0.5, 0.25, 0.02, TILE, render, 0.012)
+		_win(b, x0 + 0.04, x1 - 0.04, -0.32, -0.08, -0.60)
+		_win(b, x0 + 0.05, x1 - 0.05, 0.10, 0.32, -0.60)
 		# single-storey kitchen at the back, and a porch hood by each front door
 		b.box(minf(sx * 0.10, sx * 0.44), maxf(sx * 0.10, sx * 0.44), -0.5, -0.06, 0.5, 0.74, wall * 0.95, true, LEAD)
 		b.box(minf(sx * 0.02, sx * 0.13), maxf(sx * 0.02, sx * 0.13), -0.08, -0.05, -0.57, -0.5, LEAD)
@@ -345,6 +362,8 @@ static func _cottage(b: MB) -> void:
 	b.box(-0.30, 0.42, -0.5, -0.08, 0.5, 0.78, STONE * 0.95, false)
 	b.mono(-0.30, 0.42, 0.5, 0.78, -0.08, 0.26, "z0", THATCH, STONE * 0.95, 0.02)
 	b.box(-0.06, 0.14, -0.5, -0.06, -0.60, -0.5, STONE * 0.95, false)
+	_win(b, -0.40, -0.18, -0.26, -0.04)
+	_win(b, 0.24, 0.44, -0.26, -0.04)
 	b.gable_z(-0.06, 0.14, -0.60, -0.5, -0.06, 0.13, 0.015, THATCH, STONE * 0.95, 0.012)
 
 
@@ -727,6 +746,12 @@ static func terrace_row(units: int, rng_or_hash: int) -> ArrayMesh:
 		var dx1: float = dx0 + wu * 0.28
 		b.box(dx0, dx1, -0.5, -0.455, -0.555, -0.5, STONE * 0.9)
 		b.box(dx0 + 0.008, dx1 - 0.008, -0.10, -0.075, -0.562, -0.5, door_cols[uh % door_cols.size()])
+		# sash windows: two upstairs, and one downstairs beside the door where there is no bay
+		_win(b, x0 + wu * 0.14, x0 + wu * 0.40, 0.10, 0.32)
+		_win(b, x0 + wu * 0.60, x0 + wu * 0.86, 0.10, 0.32)
+		if uh % 3 != 0:
+			var gw0: float = x0 + wu * (0.60 if left else 0.14)
+			_win(b, gw0, gw0 + wu * 0.26, -0.30, -0.08)
 		# ground-floor bay on about one unit in three, with its own little roof
 		if uh % 3 == 0:
 			var bx0: float = x0 + wu * 0.30

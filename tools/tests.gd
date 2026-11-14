@@ -1700,7 +1700,15 @@ func _test_airfield_styles() -> void:
 	gcont.free()
 	# mid-session era change: the layout tears down and rebuilds for the new era's style
 	gaf.restyle("raf_fighter")
-	_check(gaf.style == "raf_fighter" and gaf._built and gaf.trees_local.is_empty() and not gaf._paved.is_empty(), "an airfield restyles to the new era's layout")
+	_check(gaf.style == "raf_fighter" and gaf._built and not gaf._paved.is_empty(), "an airfield restyles to the new era's layout")
+	# the paved stations' boundary tree belt: present, and never under the main runway's approach or climb-out
+	var half_l: float = gaf.runway_length * 0.5
+	var in_lane: int = 0
+	for tt in gaf.trees_local:
+		var o: Vector3 = (tt as Transform3D).origin
+		if absf(o.x) < 160.0 and absf(o.z) < half_l + 880.0:
+			in_lane += 1
+	_check(gaf.trees_local.size() >= 30 and in_lane == 0, "a paved station has a boundary tree belt clear of the runway lanes (%d trees, %d in a lane)" % [gaf.trees_local.size(), in_lane])
 	remove_child(gaf)
 	gaf.free()
 	wp.free()

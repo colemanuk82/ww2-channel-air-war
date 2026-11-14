@@ -508,6 +508,7 @@ func _build_triangle(earth: Material) -> void:
 		var hubw := Vector3(p1.x - 85.0, 0, wz)
 		_link(Vector3(p1.x, 0, wz), hubw, 8.0, _asphalt2)
 		_clover(hubw, PI * 1.5, pan_mat, earth)
+	_tree_belt(Vector3(L * 0.32, 0.0, 0.0), L * 0.45 + 230.0, L * 0.63 + 200.0, -L * 0.12 - 140.0, [[v1, v2], [v2, v3], [v3, v1]])
 
 
 ## RAF heavy-bomber station: the three-runway triangle plus frying-pan hardstandings round the outer sides
@@ -566,6 +567,35 @@ func _strip_lamps(half_w: float, length: float) -> void:
 			_night_cols.append(Color(1.0, 0.2, 0.12, 1.0))
 
 
+## Boundary tree belt for the paved-runway stations (the grass station plants its own): clumps of three trees
+## round an ellipse (centre c, radii ax / az), left out on the technical-site side (x < west_x: hangars, huts and
+## the apron) and wherever a runway's centreline, carried 900 m past its ends, passes within 170 m (approach and
+## climb-out stay clear - the trees are obstacles). The populator puts each tree on the real ground height.
+func _tree_belt(c: Vector3, ax: float, az: float, west_x: float, runways: Array) -> void:
+	var n: int = int(TAU * sqrt((ax * ax + az * az) * 0.5) / 75.0)
+	for j in n:
+		var a: float = TAU * (float(j) + 0.5) / float(n)
+		var tp := c + Vector3(sin(a) * ax, 0.0, cos(a) * az)
+		if tp.x < west_x:
+			continue
+		var clear: bool = true
+		for rw in runways:
+			var ra: Vector3 = rw[0]
+			var rb: Vector3 = rw[1]
+			var d: Vector3 = (rb - ra).normalized()
+			var t: float = clampf((tp - ra).dot(d), -900.0, (rb - ra).length() + 900.0)
+			if (ra + d * t).distance_to(tp) < 170.0:
+				clear = false
+				break
+		if not clear:
+			continue
+		var outward := Vector3(sin(a) / ax, 0.0, cos(a) / az).normalized()
+		var along := Vector3(outward.z, 0.0, -outward.x)
+		for k in 3:
+			var q: Vector3 = tp + outward * (float(k) - 1.0) * 13.0 + along * ((float((j * 5 + k) % 3) - 1.0) * 8.0)
+			trees_local.append(Transform3D(Basis(Vector3.UP, a + float((j * 7 + k) % 5) * 0.13), q))
+
+
 ## Dirt-strip field: one wide pale gravel/dirt runway, a big dirt apron with a row of arched hangars behind it,
 ## a taxi strip joining apron and runway, parked aircraft, huts and silos (set dressing is added by the populator).
 func _build_grass(earth: Material) -> void:
@@ -622,6 +652,7 @@ func _build_cross(earth: Material) -> void:
 		for r in 2:
 			_dispersal_local.append(Vector3(-hx - 60.0 - float(r) * 70.0, 0.0, -210.0 + float(i) * 55.0))
 	_frying_pans(loop, pan, 175.0, Vector2(-hx - 20.0, -90.0), 240.0)
+	_tree_belt(Vector3.ZERO, hx + 260.0, hz + 260.0, -hx - 60.0, [[Vector3(0, 0, -L * 0.5), Vector3(0, 0, L * 0.5)], [Vector3(0, 0, L * 0.05) - r2 * L * 0.4, Vector3(0, 0, L * 0.05) + r2 * L * 0.4]])
 
 
 ## Two parallel paved runways inside a rectangular perimeter track, cross-taxiways between them, a large terminal
@@ -648,6 +679,7 @@ func _build_parallel(earth: Material) -> void:
 		for i in 7:
 			_dispersal_local.append(Vector3(ax - 70.0 - float(r) * 60.0, 0.0, -L * 0.1 - 170.0 + float(i) * 56.0))
 	_frying_pans(loop, pan, 190.0, Vector2(ax - 20.0, -L * 0.1), 260.0)
+	_tree_belt(Vector3(cx, 0.0, 0.0), sep * 0.5 + 420.0, L * 0.58 + 270.0, ax + 40.0, [[Vector3(0, 0, -L * 0.5), Vector3(0, 0, L * 0.5)], [Vector3(sep, 0, -L * 0.37), Vector3(sep, 0, L * 0.49)]])
 
 
 ## The grass landing ground as one surface (shaders/grass_field.gdshader): mown bands, the RAF cross-mown

@@ -3039,6 +3039,8 @@ func _build_airfield(s: Dictionary) -> Node3D:
 		_dress_glider_strip(container, af, axf, y, team, rng)
 	else:
 		_dress_triangle(container, af, axf, y, team, rng)
+	if not grass_station and not af.trees_local.is_empty():
+		_add_boundary_trees(container, af, axf)        # the paved stations' boundary tree belts (Airfield._tree_belt)
 	await _slice(s)
 	AirfieldActivity.populate(container, af, axf, y, team, rng)     # ground crews, bowsers, tugs, bomb cart, fire tender
 	# P8 airfield furniture (all layouts): blast pens/revetments, Nissen camp, T2/T1 hangars, watch office,
@@ -3320,6 +3322,17 @@ func _build_af_camp(s: Dictionary) -> Node3D:
 ## Dressing for the grass layouts. raf_grass: aircraft in E-type pens and on the apron, an arc of big hangars, the
 ## watch office with its landing T, Nissen huts and lorries on the technical site. lw_field: aircraft under camouflage
 ## nets round the field edge, tents and lorries, a fuel-drum dump - no permanent buildings.
+## The field's boundary tree line. The paved stations' belts reach past the flattened field, so every tree stands
+## on the real ground height.
+func _add_boundary_trees(container: Node3D, af: Airfield, axf: Transform3D) -> void:
+	var tw: Array = _to_world(axf, af.trees_local)
+	for ti in tw.size():
+		var tt: Transform3D = tw[ti]
+		tt.origin.y = GroundKit.ground_y(tt.origin.x, tt.origin.z) - 0.3
+		tw[ti] = tt
+	container.add_child(Scatter.multi(Scatter.tree_variant(4), tw, 6500.0))
+
+
 func _dress_grass_station(container: Node3D, af: Airfield, axf: Transform3D, y: float, team: String, rng: RandomNumberGenerator) -> void:
 	var L: float = af.runway_length
 	var lw: bool = af.style == "lw_field"
@@ -3340,7 +3353,7 @@ func _dress_grass_station(container: Node3D, af: Airfield, axf: Transform3D, y: 
 	if not af.markers_local.is_empty():
 		container.add_child(Scatter.multi(AirfieldAssets.boundary_marker(), _to_world(axf, af.markers_local), 2200.0))
 	if not af.trees_local.is_empty():
-		container.add_child(Scatter.multi(Scatter.tree_variant(4), _to_world(axf, af.trees_local), 6500.0))
+		_add_boundary_trees(container, af, axf)
 	if lw:
 		# tents and lorries in the tree line beyond each row of nets, a fuel-drum dump, an ops tent with the T
 		var ex: float = L * 0.34

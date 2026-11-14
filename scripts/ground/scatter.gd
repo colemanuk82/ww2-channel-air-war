@@ -2470,7 +2470,7 @@ static func _add_town_trees(trees: Array, dc: Vector2i, bi: int, row: int, si: i
 				continue                                   # the odd gap where a tree was lost
 			var u_t: float = u_c + (float(k) - 0.5) * 13.0 + (_ih(hx, hy * 2 + k, 23) - 0.5) * 1.6
 			var tp: Vector2 = org + along * u_t + across * v_t
-			if not _ok_tree(tp, exclude) or RoadMesh.near_road(tp, 2.5):
+			if not _ok_tree(tp, exclude) or RoadMesh.near_road(tp, 2.5) or WarDamage.house_doomed(tp.x, tp.y):     # burnt / felled in a bombed street
 				continue
 			var sc: float = lerpf(0.72, 1.0, _ih(hx, hy * 2 + k, 24))
 			trees.append(_xf(Vector3(tp.x, GroundKit.ground_y(tp.x, tp.y) - 0.3, tp.y), _ih(hx, hy * 2 + k, 25) * TAU, Vector3(sc, sc * 1.12, sc)))
@@ -2481,7 +2481,7 @@ static func _add_town_trees(trees: Array, dc: Vector2i, bi: int, row: int, si: i
 		var u_g: float = u_c + (float(g) - 1.5) * 7.5 + (_ih(hx, hy * 3 + g, 27) - 0.5) * 4.0
 		var v_g: float = float(bi) * STREET_BLOCK + (20.5 if row == 0 else 21.6) + (_ih(hx, hy * 3 + g, 28) - 0.5) * 0.8
 		var gp: Vector2 = org + along * u_g + across * v_g
-		if not _ok_tree(gp, exclude) or RoadMesh.near_road(gp, 3.0):
+		if not _ok_tree(gp, exclude) or RoadMesh.near_road(gp, 3.0) or WarDamage.house_doomed(gp.x, gp.y):
 			continue
 		var gs: float = lerpf(0.42, 0.72, _ih(hx, hy * 3 + g, 29))
 		trees.append(_xf(Vector3(gp.x, GroundKit.ground_y(gp.x, gp.y) - 0.3, gp.y), _ih(hx, hy * 3 + g, 30) * TAU, Vector3(gs, gs * 1.05, gs)))
