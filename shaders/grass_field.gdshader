@@ -23,9 +23,10 @@ varying vec2 lp;
 varying vec3 wp;
 
 float h21(vec2 p) {
-	p = fract(p * vec2(123.34, 456.21));
-	p += dot(p, p + 45.32);
-	return fract(p.x * p.y);
+	// sine-free hash (Hoskins): no banding or precision streaks at large coordinates
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
 }
 
 float vnoise(vec2 p) {
@@ -94,11 +95,20 @@ void fragment() {
 	// grass mottling and blade texture: each frequency band fades out well inside its own aliasing
 	// range (a 14-cycles-per-metre stripe shimmers from 30 m up, the fine mottle from a few hundred),
 	// and there is no floor at distance - far off, the surface keeps only its mown bands and patches
+	// Each band fades by the size of a screen pixel on the ground (metres per pixel, from the derivatives),
+	// not by distance: it stays crisp wherever it is resolved and is gone before it can alias or shimmer,
+	// whatever the render resolution or upscaler. (Distance fades left a fuzzy band of noise 12-55 m out.)
+	float fp = max(length(dFdx(lp)), length(dFdy(lp)));
 	float fine = vnoise(lp * 2.3 + sd) * 0.6 + vnoise(lp * 0.55) * 0.4;
-	float blades = vnoise(vec2(lp.x * 14.0, lp.y * 3.0));
-	float fine_k = 1.0 - smoothstep(120.0, 420.0, dist);
-	float blade_k = 1.0 - smoothstep(12.0, 55.0, dist);
-	c *= 1.0 + (fine - 0.5) * 0.22 * fine_k + (blades - 0.5) * 0.10 * blade_k;
+	float fine_k = (1.0 - smoothstep(120.0, 420.0, dist)) * (1.0 - smoothstep(0.08, 0.4, fp));
+	// blades: thin, slightly leaning strands (cells 6 cm x 25 cm), a lighter tip and a dark gap between each,
+	// with two scales so no repeat shows; only where a pixel is smaller than a strand
+	vec2 bq = vec2(lp.x * 17.0 + vnoise(lp * 1.7) * 3.0, lp.y * 4.0 + lp.x * 1.3);
+	float b1 = vnoise(bq);
+	float b2 = vnoise(bq * vec2(2.3, 1.7) + 11.0);
+	float strand = smoothstep(0.25, 0.75, b1) * 0.65 + (b2 - 0.5) * 0.7;
+	float blade_k = (1.0 - smoothstep(0.02, 0.07, fp)) * (1.0 - smoothstep(60.0, 160.0, dist)) * (1.0 - outer * 0.3);
+	c *= 1.0 + (fine - 0.5) * 0.22 * fine_k + (strand - 0.32) * 0.30 * blade_k;
 
 	c *= mix(1.0, 0.72, clamp(wetness, 0.0, 1.0));
 	ALBEDO = c;
