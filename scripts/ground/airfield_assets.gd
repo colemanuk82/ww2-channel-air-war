@@ -79,6 +79,10 @@ static func blister(team: String) -> ArrayMesh:
 		return _cached(key)
 	var allied: bool = team == "Allies"
 	var skin: Color = Color(0.24, 0.30, 0.18) if allied else Color(0.32, 0.33, 0.28)
+	if TownModels.enabled():
+		var bh: ArrayMesh = TownModels.blister_hangar(skin)
+		Scatter._meshes[key] = bh
+		return bh
 	var rib: Color = skin.darkened(0.22)
 	var dark := Color(0.06, 0.06, 0.06)
 	var parts: Array = []

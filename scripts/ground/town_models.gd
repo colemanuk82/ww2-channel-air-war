@@ -1757,3 +1757,122 @@ static func cathedral(nave_len: float, nave_w: float, tower_h: float, towers: in
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache[key] = m
 	return m
+
+
+# ------------------------------------------------------------------ Calais belfry and blister hangar
+
+## The belfry and town hall of Calais (Flemish neo-Renaissance, red brick banded with pale stone): a square
+## tower with stone bands and corner turrets, a clock stage with four faces, an arcaded gallery, a slated bulbous
+## cap and lantern to about 75 m, beside the long gabled hall with stepped gables and dormers.
+static func calais_belfry() -> ArrayMesh:
+	if _cache.has("calais_belfry"):
+		return _cache["calais_belfry"]
+	var b := MB.new()
+	var brick := Color(0.62, 0.38, 0.30)
+	var stone := Color(0.72, 0.68, 0.58)
+	var slate := Color(0.26, 0.28, 0.32)
+	var dark := Color(0.13, 0.12, 0.12)
+	var gold := Color(0.70, 0.58, 0.24)
+	# tower shaft with stone bands and corner turrets
+	b.box(-7.0, 7.0, 0.0, 50.0, -7.0, 7.0, brick, false)
+	for i in 9:
+		var y: float = 4.0 + float(i) * 5.4
+		b.box(-7.15, 7.15, y, y + 0.9, -7.15, 7.15, stone)
+	for cx in [-1.0, 1.0]:
+		for cz in [-1.0, 1.0]:
+			b.prism(cx * 7.0, cz * 7.0, 0.0, 53.0, 1.5, 1.5, 1.4, 1.4, 8, stone.darkened(0.05), false)
+			b.prism(cx * 7.0, cz * 7.0, 53.0, 58.0, 1.7, 1.7, 0.0, 0.0, 8, slate, false)
+	# clock stage: wider, four gilt-rimmed faces
+	b.box(-8.2, 8.2, 50.0, 59.0, -8.2, 8.2, stone, true, slate)
+	b.box(-8.6, 8.6, 49.4, 50.0, -8.6, 8.6, stone.lightened(0.06))
+	b.box(-8.6, 8.6, 59.0, 59.7, -8.6, 8.6, stone.lightened(0.06))
+	for f in 4:
+		var ang: float = float(f) * PI * 0.5
+		var dx: float = cos(ang)
+		var dz: float = sin(ang)
+		if absf(dx) > 0.5:
+			b.box(dx * 8.2 - 0.12, dx * 8.2 + 0.12, 51.6, 57.6, -3.0, 3.0, gold, false)
+			b.box(dx * 8.3 - 0.12, dx * 8.3 + 0.12, 52.1, 57.1, -2.5, 2.5, Color(0.90, 0.88, 0.80), false)
+		else:
+			b.box(-3.0, 3.0, 51.6, 57.6, dz * 8.2 - 0.12, dz * 8.2 + 0.12, gold, false)
+			b.box(-2.5, 2.5, 52.1, 57.1, dz * 8.3 - 0.12, dz * 8.3 + 0.12, Color(0.90, 0.88, 0.80), false)
+	# arcaded gallery: eight columns round an open bell stage, then the bulbous cap, lantern and vane
+	for k in 8:
+		var ka: float = PI / 8.0 + float(k) * TAU / 8.0
+		b.prism(cos(ka) * 5.6, sin(ka) * 5.6, 59.7, 65.0, 0.6, 0.6, 0.6, 0.6, 6, stone, false)
+	b.prism(0.0, 0.0, 59.7, 65.0, 3.6, 3.6, 3.6, 3.6, 8, dark, false, PI / 8.0)
+	b.prism(0.0, 0.0, 65.0, 65.8, 6.6, 6.6, 6.6, 6.6, 8, stone, true, PI / 8.0)
+	b.prism(0.0, 0.0, 65.8, 68.5, 6.0, 6.0, 6.6, 6.6, 8, slate, false, PI / 8.0)
+	b.prism(0.0, 0.0, 68.5, 71.5, 6.6, 6.6, 3.2, 3.2, 8, slate.lightened(0.04), false, PI / 8.0)
+	b.prism(0.0, 0.0, 71.5, 74.5, 2.4, 2.4, 2.4, 2.4, 8, stone, true, PI / 8.0)
+	b.prism(0.0, 0.0, 74.5, 79.0, 2.8, 2.8, 0.0, 0.0, 8, slate, false, PI / 8.0)
+	b.prism(0.0, 0.0, 78.6, 82.0, 0.16, 0.16, 0.05, 0.05, 4, gold, false)
+	# the town hall range: brick with stone bands, steep slate roof, stepped end gable, dormers, entrance
+	b.box(-59.0, -9.0, 0.0, 16.0, -12.0, 12.0, brick, false)
+	for hy in [5.0, 10.4, 15.2]:
+		b.box(-59.2, -9.0, hy, hy + 0.8, -12.2, 12.2, stone)
+	b.gable_x(-59.0, -9.0, -12.0, 12.0, 16.0, 9.0, 0.6, slate, brick, 0.0)
+	for st in 5:
+		var sw: float = 12.0 - float(st) * 2.4
+		b.box(-60.0, -59.0, 16.0 + float(st) * 1.9, 17.9 + float(st) * 1.9, -sw, sw, stone.darkened(0.04))
+	for d in 6:
+		var dxx: float = -54.0 + float(d) * 8.0
+		for sz in [-1.0, 1.0]:
+			b.box(dxx - 1.2, dxx + 1.2, 17.0, 20.2, minf(sz * 9.0, sz * 10.4), maxf(sz * 9.0, sz * 10.4), stone, false)
+			b.gable_z(dxx - 1.2, dxx + 1.2, minf(sz * 7.0, sz * 10.4), maxf(sz * 7.0, sz * 10.4), 20.2, 1.6, 0.15, slate, stone, 0.0)
+	b.box(-37.0, -31.0, 0.0, 7.0, 12.0, 12.4, dark, false)
+	b.box(-39.0, -29.0, 0.0, 20.0, 12.0, 13.0, stone.darkened(0.02), false)
+	b.gable_z(-39.0, -29.0, 9.0, 13.0, 20.0, 5.0, 0.0, slate, stone, 0.0)
+	b.box(-36.5, -31.5, 0.0, 6.5, 13.0, 13.2, dark, false)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache["calais_belfry"] = m
+	return m
+
+
+## Blister hangar (the old AirfieldAssets.blister footprint: an arch of radius 5 on the ground, 15 m long, open at
+## +Z): corrugated arch in strips with raised ribs, a dark interior, a canvas door curtain drawn half across, the
+## blank rear wall with a small door, and sandbags along the foot of each side.
+static func blister_hangar(skin: Color) -> ArrayMesh:
+	var key: String = "blister_%s" % skin.to_html(false)
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var rib: Color = skin.darkened(0.22)
+	var dark := Color(0.06, 0.06, 0.06)
+	var r: float = 5.0
+	var n: int = 12
+	var z0: float = -7.5
+	var z1: float = 7.5
+	for i in n:
+		var a0: float = PI * float(i) / float(n)
+		var a1: float = PI * float(i + 1) / float(n)
+		var p0 := Vector2(cos(a0) * r, sin(a0) * r)
+		var p1 := Vector2(cos(a1) * r, sin(a1) * r)
+		var am: float = (a0 + a1) * 0.5
+		var outv := Vector3(cos(am), sin(am), 0.0)
+		var tone: Color = skin if i % 2 == 0 else skin.lightened(0.05)
+		b.face([Vector3(p0.x, p0.y, z0), Vector3(p1.x, p1.y, z0), Vector3(p1.x, p1.y, z1), Vector3(p0.x, p0.y, z1)], tone, outv)
+		# the inside of the shell, dark, so the open end reads as a cavern
+		b.face([Vector3(p0.x * 0.97, p0.y * 0.97, z0), Vector3(p1.x * 0.97, p1.y * 0.97, z0), Vector3(p1.x * 0.97, p1.y * 0.97, z1), Vector3(p0.x * 0.97, p0.y * 0.97, z1)], dark, -outv)
+		for k in 7:
+			var rz: float = -6.6 + float(k) * 2.2
+			b.face([Vector3(p0.x * 1.05, p0.y * 1.05, rz - 0.25), Vector3(p1.x * 1.05, p1.y * 1.05, rz - 0.25), Vector3(p1.x * 1.05, p1.y * 1.05, rz + 0.25), Vector3(p0.x * 1.05, p0.y * 1.05, rz + 0.25)], rib, outv)
+		# rear wall as a fan, and the front arch frame
+		b.face([Vector3(0.0, 0.0, z0), Vector3(p0.x, p0.y, z0), Vector3(p1.x, p1.y, z0)], skin.darkened(0.06), Vector3.FORWARD)
+		b.face([Vector3(0.0, 0.0, z0 + 0.05), Vector3(p0.x, p0.y, z0 + 0.05), Vector3(p1.x, p1.y, z0 + 0.05)], dark, Vector3.BACK)
+		b.face([Vector3(p0.x * 1.05, p0.y * 1.05, z1), Vector3(p1.x * 1.05, p1.y * 1.05, z1), Vector3(p1.x * 0.9, p1.y * 0.9, z1 + 0.05), Vector3(p0.x * 0.9, p0.y * 0.9, z1 + 0.05)], rib, Vector3.BACK)
+	b.box(-4.9, 4.9, 0.0, 0.08, z0, z1 + 3.0, Color(0.30, 0.29, 0.27), true)
+	b.box(-0.6, 0.6, 0.0, 2.1, z0 - 0.08, z0, dark, false)
+	# canvas curtain drawn across the starboard half of the opening, hanging in folds
+	var cloth: Color = skin.lerp(Color(0.42, 0.40, 0.30), 0.6)
+	for c in 5:
+		var cx0: float = 0.8 + float(c) * 0.78
+		var top: float = sqrt(maxf(r * r * 0.9 - (cx0 + 0.39) * (cx0 + 0.39), 0.1))
+		b.box(cx0, cx0 + 0.78, 0.05, top, z1 + (0.06 if c % 2 == 0 else 0.2), z1 + (0.14 if c % 2 == 0 else 0.28), cloth * (0.95 + 0.06 * float(c % 2)), false)
+	for sx in [-1.0, 1.0]:
+		for s in 6:
+			var sz: float = -6.2 + float(s) * 2.4
+			b.box(minf(sx * 5.0, sx * 5.7), maxf(sx * 5.0, sx * 5.7), 0.0, 0.5, sz - 0.9, sz + 0.9, Color(0.55, 0.49, 0.36) * (0.92 + 0.1 * float(s % 2)), true)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m

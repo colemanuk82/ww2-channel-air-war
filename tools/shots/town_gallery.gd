@@ -41,7 +41,22 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "cath":
+	if view == "belfry":
+		var bf := MeshInstance3D.new()
+		bf.mesh = TownModels.calais_belfry()
+		bf.position = Vector3(10.0, 0.0, 0.0)
+		bf.rotation.y = -0.5
+		add_child(bf)
+		for hb in 2:
+			var bl := MeshInstance3D.new()
+			bl.mesh = AirfieldAssets.blister("Allies" if hb == 0 else "Axis")
+			bl.position = Vector3(45.0 + float(hb) * 16.0, 0.0, 50.0)
+			bl.rotation.y = -0.6
+			add_child(bl)
+		cam.position = Vector3(30.0, 60.0, 150.0)
+		cam.look_at(Vector3(5.0, 28.0, 0.0))
+		cam.fov = 45.0
+	elif view == "cath":
 		var cspecs: Array = [[150.0, 46.0, 157.0, 2, 28.0, Color(0.34, 0.33, 0.32), false, false], [100.0, 34.0, 60.0, 1, 14.0, Color(0.66, 0.62, 0.54), true, false], [130.0, 34.0, 68.0, 2, 48.0, Color(0.78, 0.74, 0.64), false, false]]
 		for ci2 in 3:
 			var cs: Array = cspecs[ci2]

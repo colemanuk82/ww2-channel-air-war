@@ -333,6 +333,10 @@ static func build(id: String) -> Node3D:
 				_b(root, Vector3(10, 6.0, 8), Vector3(cos(a) * 24.0, 12.0 + float(k % 3) * 7.0, sin(a) * 24.0), Color(0.64, 0.6, 0.52), Vector3(0, -rad_to_deg(a), 0))
 			_b(root, Vector3(18, 14, 28), Vector3(0, 63, 0), stone)
 			GroundKit.cyl(root, 0.0, 3.5, 34.0, Vector3(0, 87, 0), dark, Vector3.ZERO, 6)
+		"beffroi_calais" when TownModels.enabled():
+			var bmi := MeshInstance3D.new()
+			bmi.mesh = TownModels.calais_belfry()
+			root.add_child(bmi)
 		"beffroi_calais":
 			_b(root, Vector3(14, 54, 14), Vector3(0, 27, 0), Color(0.62, 0.38, 0.3))
 			_b(root, Vector3(18, 9, 18), Vector3(0, 58, 0), Color(0.68, 0.64, 0.56))
