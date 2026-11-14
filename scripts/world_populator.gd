@@ -1987,7 +1987,7 @@ func _process(delta: float) -> void:
 		# debug builds: name the scenery work done in any frame that ran long (a hitch), to find what to spread out
 		var now_us: int = Time.get_ticks_usec()
 		var ft: int = now_us - _last_frame_us
-		if _last_frame_us > 0 and not boost and _frames > 60:
+		if _last_frame_us > 0 and (not boost or _load_notes) and _frames > 60:
 			_fstat[0] += ft
 			_fstat[1] += 1
 			_fstat[2] = maxi(_fstat[2], ft)
@@ -2171,6 +2171,7 @@ func _build_site(s: Dictionary) -> Node3D:
 	return n
 
 
+var _load_notes: bool = OS.get_cmdline_user_args().has("--loadnotes")   # debug: name the work in long frames of the load screen too
 var _last_frame_us: int = 0          # debug hitch log (see _process)
 var _frame_notes: PackedStringArray = []
 var _fstat: Array = [0, 0, 0]          # debug frame stats: total us, frames, worst us
@@ -2489,7 +2490,7 @@ func _job_has(k: Vector2i) -> bool:
 ## Tiles scattered at once: all spare cores on the load screen, a couple while flying (keeps the frame rate steady).
 func _max_tile_jobs() -> int:
 	var cores: int = maxi(OS.get_processor_count() / 2, 2)
-	return mini(cores, 6) if boost else 2
+	return mini(maxi(OS.get_processor_count() - 4, 2), 12) if boost else 2
 
 
 ## Scatter one tile on a worker thread. Placing a tile's few thousand houses / trees / hedges costs 100-300 ms of

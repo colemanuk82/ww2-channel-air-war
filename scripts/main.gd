@@ -1934,13 +1934,22 @@ func start_game(cfg: Dictionary) -> void:
 	warm.append_array(CampAssets.warm_jobs())
 	for wm in [Callable(Scatter, "hedgehog_mesh"), Callable(Scatter, "tooth_mesh"), Callable(Scatter, "pole_mesh"), Callable(WestwallKit, "teeth_mesh")]:
 		warm.append(wm)          # beach-defence and Westwall meshes: the first beach flown over no longer builds them
+	if _hitch_on:
+		RenderingServer.viewport_set_measure_render_time(get_viewport().get_viewport_rid(), true)
 	while waited < min_wait or (((pop != null and int(pop.get("pending")) > 0) or not terrain.is_settled()) and waited < 120.0):
 		await get_tree().process_frame
 		waited += get_process_delta_time()
+		if _hitch_on and Engine.get_process_frames() % 20 == 0:   # debug (--hitch): where a load-screen frame goes
+			var lvp: RID = get_viewport().get_viewport_rid()
+			print("[loadframe] dt=%d ms  process=%.0f ms  gpu=%.0f ms  render_cpu=%.0f ms  warm_left=%d" % [int(get_process_delta_time() * 1000.0), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, RenderingServer.viewport_get_measured_render_time_gpu(lvp), RenderingServer.viewport_get_measured_render_time_cpu(lvp), warm.size()])
 		if not warm.is_empty() and waited > 0.5:
 			var wt0: int = Time.get_ticks_usec()
 			while not warm.is_empty() and Time.get_ticks_usec() - wt0 < 30000:     # ~30 ms of warming a frame
-				(warm.pop_front() as Callable).call()
+				var wjc: Callable = warm.pop_front()
+				var wj0: int = Time.get_ticks_usec()
+				wjc.call()
+				if _hitch_on and Time.get_ticks_usec() - wj0 > 20000:
+					print("[warmjob] %6d us  %s %s" % [Time.get_ticks_usec() - wj0, wjc.get_method(), str(wjc.get_bound_arguments())])
 		if int(waited) != _last_wait_log:
 			_last_wait_log = int(waited)
 			if _last_wait_log % 3 == 0:
@@ -2836,6 +2845,7 @@ func _update_sim_warp(delta: float) -> void:
 
 
 var _proc_off_done: bool = false
+var _hitch_on: bool = OS.get_cmdline_user_args().has("--hitch")
 var _perf_secs: float = 0.0
 var _perf_settle: float = 10.0
 var _perf_t: float = 0.0
@@ -3196,6 +3206,8 @@ func _inst_probe(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if _hitch_on and delta > 0.040:   # debug (--hitch): every frame over 40 ms, with the game time
+		print("[spike] %5d ms at t=%.1f s (in_game=%s)" % [int(delta * 1000.0), Time.get_ticks_msec() / 1000.0, str(in_game)])
 	if not in_game:
 		if _menu_anchor:
 			_update_menu_cam(delta)
