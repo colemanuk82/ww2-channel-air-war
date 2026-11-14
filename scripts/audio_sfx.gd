@@ -290,7 +290,7 @@ func stop_engine() -> void:
 
 const PREWARM_NAMES := ["gun", "cannon", "hit", "flak", "flak_close", "hit_metal:0", "hit_metal:1", "hit_metal:2",
 	"hit_frag:0", "hit_frag:1", "hit_frag:2", "siren", "whistle_warden", "fire_bell", "thunder", "explosion",
-	"crash", "bomb_whistle", "rocket", "engine", "wind_lo", "wind_hi"]
+	"crash", "bomb_whistle", "rocket", "engine", "wind_lo", "wind_hi", "whiz", "ricochet:0", "ricochet:1"]
 var _pre_queue: Array = []
 
 
@@ -338,6 +338,8 @@ func _synth(n: String) -> AudioStreamWAV:
 		return _hit_metal(int(n.substr(10)))
 	if n.begins_with("hit_frag:"):
 		return _hit_frag(int(n.substr(9)))
+	if n.begins_with("ricochet:"):
+		return _ricochet(int(n.substr(9)))
 	if n.begins_with("engine:"):
 		var parts: PackedStringArray = n.substr(7).split(":")
 		return _engine_loop_p(parts[0], int(parts[1]))
@@ -366,6 +368,8 @@ func _synth(n: String) -> AudioStreamWAV:
 			s = _crash_boom(3.0)
 		"bomb_whistle":
 			s = _whistle(1.6)
+		"whiz":
+			s = _whiz()
 		"rocket":
 			s = _noise_burst(1.0, 0.3, 2.5, 140.0, 0.25)
 		"engine":
@@ -569,6 +573,47 @@ func _crash_boom(dur: float) -> AudioStreamWAV:
 		lo += (f - lo) * 0.02                                   # extra-low rumble rolling on under the blast
 		var sub: float = sin(TAU * (42.0 - 16.0 * t) * t) * 0.9
 		out[i] = clampf(f * 2.0 + lo * 3.0 + sub, -1.0, 1.0) * exp(-1.5 * t) * minf(t * 120.0, 1.0) * 0.95
+	return _wav(out)
+
+
+## A round passing close: a short tearing hiss that swells and falls in pitch as it goes by (the Doppler drop),
+## with a faint supersonic snap on the front.
+func _whiz() -> AudioStreamWAV:
+	var dur: float = 0.26
+	var n: int = int(dur * RATE)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var ph: float = 0.0
+	var lp: float = 0.0
+	for i in n:
+		var t: float = float(i) / RATE
+		var k: float = t / dur
+		var hz: float = lerpf(2900.0, 820.0, k)
+		ph += TAU * hz / RATE
+		var nz: float = randf_range(-1.0, 1.0)
+		lp += (nz - lp) * 0.55
+		var env: float = sin(PI * minf(k * 1.4, 1.0)) * (1.0 - k * 0.5)
+		var snap: float = (randf_range(-1.0, 1.0) * exp(-t * 900.0)) * 0.6
+		out[i] = ((sin(ph) * 0.35 + lp * 0.55) * env + snap) * 0.55
+	return _wav(out)
+
+
+## A bullet glancing off rock or road: a bright ringing whine that drops away (two pitches).
+func _ricochet(variant: int) -> AudioStreamWAV:
+	var dur: float = 0.5 if variant == 0 else 0.38
+	var n: int = int(dur * RATE)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var ph: float = 0.0
+	var f0: float = 3400.0 if variant == 0 else 4100.0
+	var f1: float = 1300.0 if variant == 0 else 1900.0
+	for i in n:
+		var t: float = float(i) / RATE
+		var k: float = t / dur
+		ph += TAU * lerpf(f0, f1, sqrt(k)) / RATE
+		var env: float = exp(-t * (7.0 if variant == 0 else 10.0))
+		var tick: float = randf_range(-1.0, 1.0) * exp(-t * 400.0)
+		out[i] = (sin(ph) * 0.45 + sin(ph * 1.5) * 0.12) * env * 0.6 + tick * 0.5
 	return _wav(out)
 
 

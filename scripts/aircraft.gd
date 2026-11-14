@@ -846,6 +846,7 @@ func _process(delta: float) -> void:
 	if player_controlled:
 		AudioManager.set_engine_state(throttle, speed / stats.max_speed)
 		FX.audio.wind(speed / stats.max_speed, wind.length(), turbulence, _cockpit_view, on_ground)
+		AudioManager.set_cockpit(_cockpit_view, get_process_delta_time())
 
 
 ## ---- far mode (AIPilot decides): an AI aircraft well out of the player's range flies a simple kinematic path

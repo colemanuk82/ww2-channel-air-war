@@ -20,6 +20,14 @@ var _fade: float = 0.0          # 0..1 envelope
 var _stopping: bool = false
 var _duck: float = 1.0          # 1 = full level, lowered while a voiced radio call plays
 const DUCK_LEVEL := 0.3         # music level (x) during radio chatter
+const COMBAT_RANGE := 4500.0    # an enemy aircraft this close (m) puts the music in its combat state
+const CALM_AFTER := 40.0        # seconds without combat before a track that combat started fades out
+var combat: float = 0.0         # 0 calm .. 1 in a fight (eased): read by the HUD / tests
+var _combat_raw: float = 0.0
+var _scan_t: float = 0.0
+var _calm_t: float = 0.0
+var _combat_track: bool = false  # the playing track was brought in by combat (so calm may fade it out)
+var _soft_stop: bool = false     # the current fade-out is the calm one: the player starts again after it
 
 
 func _ready() -> void:
@@ -82,13 +90,45 @@ func fade_out_and_stop() -> void:
 
 
 func _level() -> float:
-	return clampf(AudioManager.music_volume * AudioManager.master_volume, 0.0, 1.0) * 0.75 * _duck
+	return clampf(AudioManager.music_volume * AudioManager.master_volume, 0.0, 1.0) * lerpf(0.68, 0.9, combat) * _duck
+
+
+## How close the fight is: 1 when an enemy aircraft is within COMBAT_RANGE of the player (or the player is
+## shooting), 0 when none is. Scanned twice a second.
+func _scan_combat() -> float:
+	var pl: Node = GroundKit.player_node()
+	if pl == null or not is_instance_valid(pl) or not (pl is Aircraft):
+		return 0.0
+	var pa: Aircraft = pl
+	if pa.cmd_fire:
+		return 1.0
+	var best: float = 1.0e12
+	for n in get_tree().get_nodes_in_group("aircraft"):
+		var a: Aircraft = n as Aircraft
+		if a == null or a == pa or a.state != Aircraft.State.ALIVE or String(a.team) == String(pa.team):
+			continue
+		best = minf(best, a.global_position.distance_squared_to(pa.global_position))
+	return clampf(1.0 - (sqrt(best) - COMBAT_RANGE * 0.5) / (COMBAT_RANGE * 0.5), 0.0, 1.0)
 
 
 func _process(delta: float) -> void:
 	# duck quickly when a voiced call starts, come back up slowly afterwards
 	var want: float = DUCK_LEVEL if Radio.voice_active() else 1.0
 	_duck = move_toward(_duck, want, delta * (6.0 if want < _duck else 0.7))
+	_scan_t -= delta
+	if _scan_t <= 0.0:
+		_scan_t = 0.5
+		_combat_raw = _scan_combat()
+	combat = move_toward(combat, _combat_raw, delta * (0.8 if _combat_raw > combat else 0.08))
+	_calm_t = 0.0 if combat > 0.15 else _calm_t + delta
+	if combat > 0.5 and not playing and not _stopping and _wait > 3.0:
+		_wait = 3.0                 # a fight brings the music in soon
+		_combat_track = true
+	if playing and _combat_track and _calm_t > CALM_AFTER and not _stopping:
+		_combat_track = false
+		_stopping = true            # back to quiet once the fight is well over (a soft stop: music comes back later)
+		_soft_stop = true
+		_wait = _gap_wait()
 	if _tracks.is_empty():
 		return
 	if _stopping:
@@ -96,6 +136,9 @@ func _process(delta: float) -> void:
 		volume_db = linear_to_db(maxf(_level() * _fade, 0.0001))
 		if _fade <= 0.0 and playing:
 			stop()
+			if _soft_stop:
+				_soft_stop = false
+				_stopping = false
 		return
 	if playing:
 		var left: float = stream.get_length() - get_playback_position() if stream != null else 99.0

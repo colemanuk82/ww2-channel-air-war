@@ -74,6 +74,7 @@ func _ready() -> void:
 	_test_harbour_war()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	_test_report_link()
+	_test_combat_audio()
 	_test_controls_ui()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
@@ -119,6 +120,21 @@ func _test_controls_ui() -> void:
 	tm.configure({"mission": "t_first_flight"})
 	_check(not tm.start_airborne and tm.wants_dispersal_start, "the first-flight lesson starts on the ground at the dispersal")
 	tm.free()
+
+
+func _test_combat_audio() -> void:
+	print("-- combat audio: whiz, ricochet, cockpit muffle, dynamic music")
+	var w: AudioStreamWAV = FX.audio._stream("whiz") as AudioStreamWAV
+	var r: AudioStreamWAV = FX.audio._stream("ricochet:1") as AudioStreamWAV
+	_check(w != null and w.get_length() > 0.2 and r != null and r.get_length() > 0.3, "whiz and ricochet sounds are synthesised")
+	AudioManager.set_cockpit(true, 10.0)
+	var si: int = AudioServer.get_bus_index("SFX")
+	var on_ok: bool = AudioServer.is_bus_effect_enabled(si, AudioManager._cockpit_fx)
+	AudioManager.set_cockpit(false, 10.0)
+	_check(on_ok and not AudioServer.is_bus_effect_enabled(si, AudioManager._cockpit_fx), "the cockpit low-pass switches on in the cockpit and off outside")
+	var gm := GameMusic.new()
+	_check("combat" in gm and gm.combat == 0.0, "in-flight music starts calm")
+	gm.free()
 
 
 func _test_report_link() -> void:

@@ -420,6 +420,12 @@ func _physics_process(delta: float) -> void:
 
 func _step_bullets(delta: float) -> void:
 	var hit_t := _hit_t
+	# near misses on the player (the whiz of a round going past) and ricochets close by
+	var pl: Node = GroundKit.player_node()
+	var pl_ok: bool = pl != null and is_instance_valid(pl) and pl is Aircraft and (pl as Aircraft).state == Aircraft.State.ALIVE
+	var pl_pos: Vector3 = (pl as Node3D).global_position if pl_ok else Vector3.ZERO
+	var pl_team: int = team_id(String((pl as Aircraft).team)) if pl_ok else -9
+	_whiz_cd = maxf(_whiz_cd - delta, 0.0)
 	var i: int = 0
 	while i < bullet_count:
 		var p0: Vector3 = _bp[i]
@@ -446,6 +452,13 @@ func _step_bullets(delta: float) -> void:
 				FX.sparks(hp, (p0 - p1).normalized(), 3)
 				FX.sfx("hit", hp, -8.0, 0.08)
 				remove = true
+			elif pl_ok and _bteam[i] != pl_team and _whiz_cd <= 0.0:
+				var seg: Vector3 = p1 - p0
+				var tq: float = clampf((pl_pos - p0).dot(seg) / maxf(seg.length_squared(), 0.0001), 0.0, 1.0)
+				var dq: float = (p0 + seg * tq).distance_to(pl_pos)
+				if dq < WHIZ_RANGE and tq > 0.0 and tq < 1.0:
+					_whiz_cd = 0.06
+					FX.audio.flat("whiz", lerpf(-4.0, -20.0, dq / WHIZ_RANGE), 0.12)
 			elif p1.y < 600.0:
 				var h: float = ground_height(p1)
 				if p1.y <= h:
@@ -455,6 +468,8 @@ func _step_bullets(delta: float) -> void:
 					else:
 						FX.sparks(gp, Vector3.UP, 2)
 						FX.dust(gp, 1.4)
+						if randf() < 0.18:
+							FX.sfx("ricochet:%d" % (randi() % 2), gp, -12.0, 0.12)
 					remove = true
 		if remove:
 			var last: int = bullet_count - 1
@@ -477,6 +492,8 @@ func _step_bullets(delta: float) -> void:
 
 
 var _hit_t := PackedFloat32Array([0.0])
+const WHIZ_RANGE := 22.0      # an enemy round passing closer than this to the player is heard going by
+var _whiz_cd: float = 0.0
 
 
 func _write_bullets() -> void:

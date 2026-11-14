@@ -32,6 +32,31 @@ func _ready() -> void:
 			var i: int = AudioServer.bus_count - 1
 			AudioServer.set_bus_name(i, b)
 			AudioServer.set_bus_send(i, "Master")
+	# cockpit view: the canopy and airframe cut the highs of everything outside (guns, flak, other engines)
+	var si: int = AudioServer.get_bus_index("SFX")
+	_cockpit_lp = AudioEffectLowPassFilter.new()
+	_cockpit_lp.cutoff_hz = 20000.0
+	AudioServer.add_bus_effect(si, _cockpit_lp)
+	_cockpit_fx = AudioServer.get_bus_effect_count(si) - 1
+	AudioServer.set_bus_effect_enabled(si, _cockpit_fx, false)
+
+
+var _cockpit_lp: AudioEffectLowPassFilter
+var _cockpit_fx: int = -1
+var _cockpit_k: float = 0.0
+
+
+## Called every frame for the player with the current view: eases a low-pass over the game sound in the cockpit
+## (about 3.2 kHz) and opens it again outside.
+func set_cockpit(on: bool, delta: float) -> void:
+	_cockpit_k = move_toward(_cockpit_k, 1.0 if on else 0.0, delta * 4.0)
+	if _cockpit_lp == null or _cockpit_fx < 0:
+		return
+	var si: int = AudioServer.get_bus_index("SFX")
+	var active: bool = _cockpit_k > 0.01
+	if AudioServer.is_bus_effect_enabled(si, _cockpit_fx) != active:
+		AudioServer.set_bus_effect_enabled(si, _cockpit_fx, active)
+	_cockpit_lp.cutoff_hz = lerpf(16000.0, 3200.0, _cockpit_k)
 
 
 ## Silence game sound (not the briefing narration), e.g. while the loading screen is up.
