@@ -182,11 +182,140 @@ func build_layout() -> void:
 	var le: float = runway_length * 0.5 - 55.0
 	taxi_entry = Vector3(runway_width * 0.5 - 6.0, 0.0, le)
 	taxi_hold = Vector3(runway_width * 0.5 + 46.0, 0.0, le)
+	_taxi_split_edges()
 	_taxi_connect()
-	# one dispersal spot is kept clear of parked aircraft: the player's taxi start (deterministic, so
-	# the dressing skips the same spot on every machine)
-	if not _dispersal_local.is_empty():
+	_taxi_pick_entry()
+	# the taxi-out flight: the player's dispersal and the wingmen's, kept clear of parked aircraft by the dressing
+	# (deterministic, so every machine skips the same spots)
+	_plan_taxi_flight()
+	# an earth blast wall that ended up beside a taxi-out route (a clover hub next to a runway stub) is left out: 20 m
+	# from its centre clears a Lancaster's wingtip
+	for wall in _blast_walls:
+		for r in taxi_flight_routes:
+			if is_instance_valid(wall) and route_distance(r, (wall as Node3D).position) < 20.0:
+				wall.free()
+	_blast_walls.clear()
+	# nor a boundary tree or marker on a taxi-out route (the grass legs cut across the field)
+	for arr in [trees_local, markers_local]:
+		for i in range((arr as Array).size() - 1, -1, -1):
+			for r in taxi_flight_routes:
+				if route_distance(r, ((arr as Array)[i] as Transform3D).origin) < 16.0:
+					(arr as Array).remove_at(i)
+					break
+	if not taxi_flight.is_empty():
+		keep_clear_i = taxi_flight[0]
+	elif not _dispersal_local.is_empty():
 		keep_clear_i = absi(hash(airfield_name)) % _dispersal_local.size()
+
+
+## The taxi-out flight plan: up to TAXI_FLIGHT_MAX dispersal spots, the player's first, then the wingmen in the order
+## they follow him. The player gets the spot with the shortest route; each further spot must lie clear of every route
+## already chosen (nobody taxis through a parked wingman) and is the shortest such route. Each wingman waits on its
+## spot until the aircraft ahead of it has passed the point where their routes meet (TaxiController.start_after), so
+## the order on the taxiway is the plan's order and no two aircraft ever meet head-on.
+const TAXI_FLIGHT_MAX: int = 4
+const TAXI_SPOT_CLEAR: float = 24.0     # metres between a parked aircraft and any route taxiing past it (clears a bomber's wingtip)
+var _blast_walls: Array = []                            # clover blast walls (build time only)
+var taxi_flight: PackedInt32Array = PackedInt32Array()   # dispersal indices, player first
+var taxi_flight_routes: Array = []                       # PackedVector3Array local routes (no line-up slot offset)
+
+
+func _plan_taxi_flight() -> void:
+	taxi_flight = PackedInt32Array()
+	taxi_flight_routes = []
+	var cand: Array = []        # [length, k, route]
+	for k in _dispersal_local.size():
+		var r: PackedVector3Array = taxi_route(_dispersal_local[k])
+		if r.size() < 3:
+			continue
+		var total: float = 0.0
+		for i in range(1, r.size()):
+			total += (r[i] - r[i - 1]).length()
+		cand.append([total + float(k) * 0.001, k, r])
+	cand.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
+	for c in cand:
+		if taxi_flight.size() >= TAXI_FLIGHT_MAX:
+			break
+		var sp: Vector3 = _dispersal_local[int(c[1])]
+		var ok: bool = true
+		for j in taxi_flight.size():
+			if route_distance(taxi_flight_routes[j], sp) < TAXI_SPOT_CLEAR 					or route_distance(c[2], _dispersal_local[taxi_flight[j]]) < TAXI_SPOT_CLEAR * 0.7:
+				ok = false
+				break
+		if ok:
+			taxi_flight.append(int(c[1]))
+			taxi_flight_routes.append(c[2])
+
+
+## Local route for member `slot` of a taxi-out flight of `n_wing` wingmen (slot 0 = the player): the line-up point is
+## moved down the runway so the player stands at the front and each wingman one `gap` behind the one before him.
+func flight_route(slot: int, n_wing: int, gap: float) -> PackedVector3Array:
+	if slot < 0 or slot >= taxi_flight_routes.size():
+		return PackedVector3Array()
+	var r: PackedVector3Array = (taxi_flight_routes[slot] as PackedVector3Array).duplicate()
+	var room: float = minf(float(n_wing) * gap, runway_length * 0.25)
+	var lu: Vector3 = r[r.size() - 1]
+	lu.z -= room - float(slot) * (room / maxf(float(n_wing), 1.0))
+	r[r.size() - 1] = lu
+	return r
+
+
+## XZ distance from a local point to a local polyline.
+static func route_distance(route: PackedVector3Array, p: Vector3) -> float:
+	var q := Vector2(p.x, p.z)
+	var best: float = 1.0e12
+	for i in range(1, route.size()):
+		var c: Vector2 = Geometry2D.get_closest_point_to_segment(q, Vector2(route[i - 1].x, route[i - 1].z), Vector2(route[i].x, route[i].z))
+		best = minf(best, c.distance_to(q))
+	return best
+
+
+## A long taxiway edge often runs straight past junction nodes that were placed along it (dispersal stubs, bends of
+## the perimeter track) without being joined to it, so a route had to run to the END of the edge and come back: the
+## aircraft taxied the wrong way. Split every edge at the nodes that lie on it (within 7.5 m), so the graph joins up
+## where the pavement does.
+func _taxi_split_edges() -> void:
+	# taxiways that cross without a junction (a clover's link over a runway stub): a node where they cross
+	var m: int = taxi_edges.size()
+	for i in m:
+		for j in range(i + 1, m):
+			var a0: Vector3 = taxi_nodes[int(taxi_edges[i][0])]
+			var a1: Vector3 = taxi_nodes[int(taxi_edges[i][1])]
+			var b0: Vector3 = taxi_nodes[int(taxi_edges[j][0])]
+			var b1: Vector3 = taxi_nodes[int(taxi_edges[j][1])]
+			var x: Variant = Geometry2D.segment_intersects_segment(Vector2(a0.x, a0.z), Vector2(a1.x, a1.z), Vector2(b0.x, b0.z), Vector2(b1.x, b1.z))
+			if x == null:
+				continue
+			var xp := Vector3((x as Vector2).x, 0.0, (x as Vector2).y)
+			var near_end: bool = false
+			for q in [a0, a1, b0, b1]:
+				if (q as Vector3).distance_to(xp) < 8.0:
+					near_end = true
+			if not near_end:
+				_taxi_node(xp)
+	var out: Array = []
+	for e in taxi_edges:
+		var a: int = int(e[0])
+		var b: int = int(e[1])
+		var pa: Vector3 = taxi_nodes[a]
+		var pb: Vector3 = taxi_nodes[b]
+		var ab: Vector3 = pb - pa
+		var l2: float = ab.length_squared()
+		var hits: Array = []      # [t, node]
+		if l2 > 1.0:
+			for i in taxi_nodes.size():
+				if i == a or i == b:
+					continue
+				var t: float = (taxi_nodes[i] - pa).dot(ab) / l2
+				if t > 0.02 and t < 0.98 and (pa + ab * t).distance_to(taxi_nodes[i]) < 7.5:
+					hits.append([t, i])
+		hits.sort_custom(func(x: Array, y: Array) -> bool: return float(x[0]) < float(y[0]))
+		var prev: int = a
+		for h in hits:
+			out.append([prev, int(h[1])])
+			prev = int(h[1])
+		out.append([prev, b])
+	taxi_edges = out
 
 
 ## Join isolated taxi-graph components (dispersal stubs that never met the perimeter track) to the
@@ -890,8 +1019,10 @@ func _runway_seg(from: Vector3, to: Vector3, width: float, mat: Material) -> voi
 func _clover(hub: Vector3, ang: float, mat: Material, earth: Material) -> void:
 	_box(Vector3(10.0, 0.5, 10.0), hub, mat)
 	_paved.append([hub, hub, 7.0])
+	# one lobe points straight out, the other two either side; the taxiway leaves the hub inward (ang + PI), through
+	# the gap between those two, so no blast wall stands across it
 	for j in 3:
-		var a: float = ang + TAU * float(j) / 3.0 + 0.5
+		var a: float = ang + TAU * float(j) / 3.0
 		var lp: Vector3 = hub + Vector3(sin(a), 0, cos(a)) * 22.0
 		var pad := MeshInstance3D.new()
 		var cm := CylinderMesh.new()
@@ -907,7 +1038,9 @@ func _clover(hub: Vector3, ang: float, mat: Material, earth: Material) -> void:
 		_paved.append([lp, lp, 12.0])
 		_link(hub, lp, 7.0, mat)
 		_dispersal_local.append(Vector3(lp.x, 0.0, lp.z))
-		_add_box(self, Vector3(3.5, 3.2, 8.0), hub + Vector3(sin(a + 1.05), 0, cos(a + 1.05)) * 26.0, earth, a + 1.05)
+		if j != 1:
+			_add_box(self, Vector3(3.5, 3.2, 8.0), hub + Vector3(sin(a + PI / 3.0), 0, cos(a + PI / 3.0)) * 26.0, earth, a + PI / 3.0)
+			_blast_walls.append(get_child(get_child_count() - 1))
 
 
 ## Ring-shaped perimeter track (rounded rectangle) around the airfield.
@@ -955,61 +1088,159 @@ func _taxi_edge(i: int, j: int) -> void:
 	taxi_edges.append([i, j])
 
 
-## Shortest taxi route (LOCAL points) from a park spot to line-up on the runway: the dispersal pad ->
-## its nearest taxiway node -> the paved network -> hold-short -> the runway edge -> a lined-up start
-## on the centreline. The park spot, hold-short and entry ride as virtual nodes joined to their nearest
-## graph node (dispersals sit a few metres off the taxiway, on grass or pad), and the route always
-## passes the hold-short. Returns an empty array when the graph cannot reach the runway (the caller
-## falls back to an on-runway start).
+## Shortest taxi route (LOCAL points) from a park spot to line-up on the runway: the dispersal pad -> the taxiway
+## network -> a hold-short -> the runway entry -> a lined-up start on the centreline. The park spot joins its nearest
+## taxiway nodes across the grass (and, on a grass field, can taxi straight across it to a hold). Each hold-short
+## (taxi_holds) stands on a taxiway that leads onto the runway and is joined to that taxiway's outer node, so a route
+## always arrives at a hold FROM the taxiway, never past it. Graph nodes on the runway itself are left out of the
+## search: the route stays off the runway until it lines up, and never runs onto it and back out. Grass legs cost a
+## little more than pavement and a leg across the runway three times as much. The result ends
+## [... hold-short, runway entry, centreline, line-up] (TaxiController relies on that tail). Returns an empty array
+## when the graph cannot reach the runway (the caller falls back to an on-runway start).
+const TAXI_GRASS_COST := 1.3
+const TAXI_RUNWAY_COST := 3.0
+const GRASS_TAXI_STYLES: Array = ["grass", "raf_grass", "lw_field", "raf_satellite", "glider_strip", "forward", "usaf_alg"]
+var taxi_holds: Array = []            # [[hold Vector3, link node (-1: its nearest on the same side), entry Vector3], ...]
+
+
 func taxi_route(park: Vector3) -> PackedVector3Array:
 	var n: int = taxi_nodes.size()
 	if n < 2 or taxi_edges.is_empty() or taxi_entry == Vector3.ZERO:
 		return PackedVector3Array()
+	var holds: Array = taxi_holds if not taxi_holds.is_empty() else [[taxi_hold, -1, taxi_entry]]
+	var nh: int = holds.size()
 	var pts: Array = []
 	for i in n:
 		pts.append(taxi_nodes[i])
 	pts.append(Vector3(park.x, 0.0, park.z))      # n: the park spot
-	pts.append(taxi_hold)                         # n + 1
-	pts.append(taxi_entry)                        # n + 2
+	for h in holds:
+		pts.append(h[0])                          # n + 1 + h: the holds
+	var sink: int = n + 1 + nh                    # n + 1 + nh: past the hold (the entry)
+	pts.append(taxi_entry)
 	var adj: Array = []
-	for i in n + 3:
+	for i in pts.size():
 		adj.append([])
+	var off: Array = []
+	for i in n:
+		off.append(not _on_runway(taxi_nodes[i]))
 	for e in taxi_edges:
-		var a: int = int(e[0])
-		var b: int = int(e[1])
-		var w: float = (pts[a] as Vector3).distance_to(pts[b])
-		(adj[a] as Array).append([b, w])
-		(adj[b] as Array).append([a, w])
-	for v in [n, n + 1, n + 2]:
-		var bj: int = -1
-		var bd: float = 1.0e12
-		for j in n:
-			var d2: float = (pts[j] as Vector3).distance_squared_to(pts[v])
-			if d2 < bd:
-				bd = d2
-				bj = j
-		if bj >= 0:
-			# the virtual hop keeps a 2 m floor: a park spot that sits ON a graph node must still cost
-			# something, or the tie leaves prev unset and the path loses its start
-			var wv: float = maxf(sqrt(bd), 2.0)
-			(adj[v] as Array).append([bj, wv])
-			(adj[bj] as Array).append([v, wv])
-	var we: float = (pts[n + 1] as Vector3).distance_to(pts[n + 2])
-	(adj[n + 1] as Array).append([n + 2, we])
-	(adj[n + 2] as Array).append([n + 1, we])
-	var leg1: PackedInt32Array = _dijkstra(adj, n, n + 1)
-	var leg2: PackedInt32Array = _dijkstra(adj, n + 1, n + 2)
-	if leg1.is_empty() or leg2.is_empty():
+		if off[int(e[0])] and off[int(e[1])]:
+			_taxi_adj(adj, pts, int(e[0]), int(e[1]), 1.0)
+	# the park spot: its nearest taxiway node, and any other within a little more of that distance
+	var near: Array = []
+	for j in n:
+		if off[j]:
+			near.append([(pts[j] as Vector3).distance_to(pts[n]), j])
+	near.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
+	for q in mini(3, near.size()):
+		if q == 0 or float(near[q][0]) < float(near[0][0]) * 1.5 + 10.0:
+			_taxi_adj(adj, pts, n, int(near[q][1]), TAXI_GRASS_COST)
+	var grass: bool = style in GRASS_TAXI_STYLES
+	for h in nh:
+		var hv: int = n + 1 + h
+		var hj: int = int(holds[h][1])
+		if hj < 0 or hj >= n:
+			var bd: float = 1.0e12
+			for j in n:
+				if not off[j]:
+					continue
+				var d2: float = (pts[j] as Vector3).distance_squared_to(pts[hv])
+				if _crosses_runway(pts[j], pts[hv]):
+					d2 *= 9.0
+				if d2 < bd:
+					bd = d2
+					hj = j
+		if hj >= 0:
+			_taxi_adj(adj, pts, hv, hj, TAXI_GRASS_COST)
+		if grass and (pts[n] as Vector3).distance_to(pts[hv]) < 450.0:
+			_taxi_adj(adj, pts, n, hv, TAXI_GRASS_COST * 1.15)     # straight across the grass to the hold
+		# one-way into its entry: the search may finish through any hold, never pass through one
+		(adj[hv] as Array).append([sink, (pts[hv] as Vector3).distance_to(holds[h][2])])
+	var path: PackedInt32Array = _dijkstra(adj, n, sink)
+	if path.size() < 3:
 		return PackedVector3Array()
 	var out := PackedVector3Array()
-	for idx in leg1:
-		out.append(pts[idx])
-	for k in range(1, leg2.size()):
-		out.append(pts[leg2[k]])
+	for q in path.size() - 1:
+		# a park spot ON a graph node (the pad's own stub end) would give a zero-length first leg, and the aircraft
+		# would be spawned facing nowhere in particular
+		if out.is_empty() or (out[out.size() - 1] - (pts[path[q]] as Vector3)).length() > 1.5:
+			out.append(pts[path[q]])
+	out.append(holds[path[path.size() - 2] - n - 1][2])
+	if out.size() < 3:
+		return PackedVector3Array()
 	# line up: a short leg onto the centreline, then one further down the runway - the approach to the
 	# last point points along the take-off direction, so the aircraft stops facing down the runway
 	out.append(Vector3(0.0, 0.0, taxi_entry.z - 18.0))
 	out.append(Vector3(0.0, 0.0, taxi_entry.z - 62.0))
+	return out
+
+
+## Join a and b both ways; the cost is the length times `mult`, times TAXI_RUNWAY_COST if the leg crosses the
+## runway. A 2 m floor: a park spot that sits ON a graph node must still cost something, or the tie leaves prev unset.
+func _taxi_adj(adj: Array, pts: Array, a: int, b: int, mult: float) -> void:
+	var w: float = maxf((pts[a] as Vector3).distance_to(pts[b]) * mult, 2.0)
+	if _crosses_runway(pts[a], pts[b]):
+		w *= TAXI_RUNWAY_COST
+	(adj[a] as Array).append([b, w])
+	(adj[b] as Array).append([a, w])
+
+
+## A local point on the main runway (or on its edge).
+func _on_runway(p: Vector3) -> bool:
+	return absf(p.x) < runway_width * 0.5 + 3.0 and absf(p.z) < runway_length * 0.5 + 3.0
+
+
+## True if the local segment a-b runs across the main runway from one side to the other.
+func _crosses_runway(a: Vector3, b: Vector3) -> bool:
+	var hw: float = runway_width * 0.5 - 2.0
+	var hl: float = runway_length * 0.5 - 2.0
+	if not ((a.x < -hw and b.x > hw) or (a.x > hw and b.x < -hw)):
+		return false
+	var t: float = (0.0 - a.x) / (b.x - a.x)
+	return absf(lerpf(a.z, b.z, t)) < hl
+
+
+## Where the taxiways actually meet the runway: the graph node on (or just off) the runway nearest the take-off end
+## becomes the entry, with a hold-short on every taxiway that leads onto it. A field whose taxiways never touch the
+## runway (a perimeter track round a grass landing ground) keeps the default hold and entry.
+func _taxi_pick_entry() -> void:
+	var hw: float = runway_width * 0.5
+	var hl: float = runway_length * 0.5
+	# the default: a hold-short on each side of the runway near the take-off end, on the grass 46 m off the edge
+	taxi_holds = [[taxi_hold, -1, taxi_entry], [Vector3(-taxi_hold.x, 0.0, taxi_hold.z), -1, Vector3(-taxi_entry.x, 0.0, taxi_entry.z)]]
+	var best: int = -1
+	var best_z: float = hl * 0.15
+	for i in taxi_nodes.size():
+		var p: Vector3 = taxi_nodes[i]
+		if _on_runway(p) and p.z > best_z and not _taxi_leads(i).is_empty():
+			best = i
+			best_z = p.z
+	if best < 0:
+		return
+	var pe: Vector3 = taxi_nodes[best]
+	taxi_holds = []
+	if absf(pe.x) < hw - 3.0:
+		taxi_entry = Vector3(pe.x * 0.5, 0.0, minf(pe.z, hl - 10.0))             # the runway end: enter on its head
+	else:
+		taxi_entry = Vector3(signf(pe.x) * (hw - 6.0), 0.0, pe.z)                  # a side link: just inside the edge
+	for j in _taxi_leads(best):
+		var v: Vector3 = taxi_nodes[j] - pe
+		var ln: float = v.length()
+		var h: Vector3 = pe + v / maxf(ln, 0.01) * clampf(ln * 0.6, minf(12.0, ln * 0.8), 40.0)
+		if _on_runway(h):
+			continue
+		taxi_holds.append([h, j, taxi_entry])
+	if not taxi_holds.is_empty():
+		taxi_hold = taxi_holds[0][0]
+
+
+## The off-runway neighbours of graph node i (the taxiways that lead onto the runway there).
+func _taxi_leads(i: int) -> Array:
+	var out: Array = []
+	for e in taxi_edges:
+		var j: int = int(e[1]) if int(e[0]) == i else (int(e[0]) if int(e[1]) == i else -1)
+		if j >= 0 and not _on_runway(taxi_nodes[j]) and (taxi_nodes[j] - taxi_nodes[i]).length() > 6.0:
+			out.append(j)
 	return out
 
 
@@ -1113,13 +1344,15 @@ func _dispersal(pos: Vector3, ang: float, mat: Material, earth: Material) -> voi
 		_add_box(pivot, Vector3(4.0, 6.0, 9.0), Vector3(bx, 3.0, bz), earth, -a)
 
 
-## World positions of the dispersal pens (for parking aircraft off the pavement).
+## World positions of the dispersal pens for the dressing (parked aircraft, crews): every pen but the taxi-out flight's.
 func dispersal_world_points() -> Array:
 	# works before the field is in the scene tree too (its parent container sits at the world origin)
 	var xf: Transform3D = global_transform if is_inside_tree() else transform
 	var out: Array = []
-	for p in _dispersal_local:
-		out.append(xf * p)
+	for i in _dispersal_local.size():
+		if i in taxi_flight:
+			continue             # the taxi-out flight's own spots stay empty for it
+		out.append(xf * (_dispersal_local[i] as Vector3))
 	return out
 
 

@@ -5,8 +5,8 @@ extends Node
 ## exactly as ModeBase / Main do (the wingman scheduling below mirrors ModeBase._taxi_wingmen_tick - keep in sync).
 ## All coordinates in the log are in the airfield's LOCAL frame: x right, z along the runway, take-off toward -Z;
 ## yaw is degrees clockwise from the take-off direction.
-## Args: --style= --wingmen= --secs= --out= --heading= --aircraft= --hz= --spot= (player dispersal index, default
-## the field's keep_clear_i) --player-hold (the player holds short until --release-after seconds) --props=0/1
+## Args: --style= --wingmen= --secs= --out= --heading= --aircraft= --hz= --player-hold (the player waits at the hold
+## until --release-after seconds before the tower clears him) --props=0/1. The flight is the field's Airfield.taxi_flight plan.
 
 var _a: Dictionary = {}
 var _af: Airfield = null
@@ -19,9 +19,8 @@ var _tick: int = 0
 var _secs: float = 150.0
 var _hz: float = 10.0
 var _want: int = 0
-var _scan: int = 0
+var _gap: float = 26.0
 var _spawned: int = 0
-var _player_spot: Vector3 = Vector3.INF
 var _stopped_after: float = -1.0
 var _aircraft_id: String = "spitfire"
 var _hold_player: bool = false
@@ -62,15 +61,17 @@ func _ready() -> void:
 	if spots.is_empty():
 		_finish("no dispersal spots on this style")
 		return
-	var pk: int = int(_a.get("spot", _af.keep_clear_i if _af.keep_clear_i >= 0 else 0)) % spots.size()
-	var route: PackedVector3Array = _af.taxi_route(spots[pk])
-	if route.size() < 3:
-		_finish("no taxi route from dispersal %d" % pk)
+	if _af.taxi_flight.is_empty():
+		_finish("no taxi-out flight plan (no dispersal reaches the runway)")
 		return
-	_player_spot = _af.global_transform * (spots[pk] as Vector3)
-	_spawn("player", pk, route)
-	(_agents[0]["ctrl"] as TaxiController).cleared = not _hold_player
-	_log_event("start", "player taxis from dispersal %d, %d legs" % [pk, route.size()])
+	var st: AircraftStats = AircraftCatalog.load_stats(_aircraft_id)
+	_gap = ModeBase.runway_slot_gap(st.radius)
+	_want = mini(_want, _af.taxi_flight.size() - 1)
+	var route: PackedVector3Array = _af.flight_route(0, _want, _gap)
+	_spawn("player", _af.taxi_flight[0], route)
+	var pc: TaxiController = _agents[0]["ctrl"]
+	pc.auto_clear = not _hold_player
+	_log_event("start", "player taxis from dispersal %d, %d legs; plan %s" % [_af.taxi_flight[0], route.size(), str(_af.taxi_flight)])
 
 
 func _spawn(role: String, k: int, route: PackedVector3Array) -> void:
@@ -96,18 +97,23 @@ func _spawn(role: String, k: int, route: PackedVector3Array) -> void:
 	add_child(ctrl)
 	ctrl.setup(ac, world, _af.heading_deg, null, true)
 	if not _agents.is_empty():
-		ctrl.ahead_ac = _agents[_agents.size() - 1]["ac"]
+		var prev: Dictionary = _agents[_agents.size() - 1]
+		ctrl.follow(prev["ac"], prev["ctrl"])
 	var rl: Array = []
 	for lp in route:
 		rl.append([snappedf((lp as Vector3).x, 0.01), snappedf((lp as Vector3).z, 0.01)])
 	var ag: Dictionary = {"id": role, "role": role, "ac": ac, "ctrl": ctrl, "spot": k, "route": rl, "done": false, "t_done": -1.0,
-		"radius": ac.stats.radius, "model": _aircraft_id, "spawn_t": _t}
+		"radius": ac.stats.radius, "model": _aircraft_id, "spawn_t": _t, "start_after": ctrl.start_after}
+	if _a.has("log"):
+		ctrl.set("_log_t", 0.01)        # TaxiController prints its state every 2 s
 	var idx: int = _agents.size()
 	ctrl.lined_up.connect(func() -> void: _on_lined_up(idx))
 	_agents.append(ag)
-	_log_event("spawn", "%s parked on dispersal %d" % [role, k])
+	_log_event("spawn", "%s parked on dispersal %d (joins the route ahead at leg %d)" % [role, k, ctrl.start_after])
 
 
+## Mirrors Main._on_taxi_done -> ModeBase.player_lined_up and ModeBase._taxi_wing_lined_up: each aircraft that lines
+## up clears the next one through the hold.
 func _on_lined_up(i: int) -> void:
 	_agents[i]["done"] = true
 	_agents[i]["t_done"] = _t
@@ -116,29 +122,13 @@ func _on_lined_up(i: int) -> void:
 		(_agents[i + 1]["ctrl"] as TaxiController).cleared = true
 
 
-## Mirrors ModeBase._taxi_wingmen_tick: one wingman per tick, on the dispersals after the reserved one.
+## Mirrors ModeBase._taxi_wingmen_tick: one wingman per tick, from the field's taxi-out plan in order.
 func _wingmen_tick() -> void:
 	if _spawned >= _want:
 		return
-	var spots: Array = _af._dispersal_local
-	var n: int = spots.size()
-	for _try in 6:
-		if _spawned >= _want or _scan >= n:
-			return
-		var ki: int = _af.keep_clear_i
-		var k: int = (ki + 1 + _scan) % n if ki >= 0 else _scan % n
-		_scan += 1
-		if k == ki:
-			continue
-		var route: PackedVector3Array = _af.taxi_route(spots[k])
-		if route.size() < 3:
-			continue
-		var wp: Vector3 = _af.global_transform * (spots[k] as Vector3)
-		if Vector2(wp.x, wp.z).distance_to(Vector2(_player_spot.x, _player_spot.z)) < 30.0:
-			continue
-		_spawn("wing%d" % (_spawned + 1), k, route)
-		_spawned += 1
-		return
+	var slot: int = _spawned + 1
+	_spawn("wing%d" % slot, _af.taxi_flight[slot], _af.flight_route(slot, _want, _gap))
+	_spawned += 1
 
 
 func _physics_process(delta: float) -> void:
@@ -147,14 +137,14 @@ func _physics_process(delta: float) -> void:
 	_t += delta
 	_tick += 1
 	if _hold_player and _t >= _release_after:
-		(_agents[0]["ctrl"] as TaxiController).cleared = true
+		(_agents[0]["ctrl"] as TaxiController).auto_clear = true
 	_wingmen_tick()
 	for ag in _agents:
 		(ag["ctrl"] as TaxiController).tick(delta)
 	var every: int = maxi(1, int(round(60.0 / _hz)))
 	if _tick % every == 0:
 		_frames.append(_frame())
-	var all_done: bool = _spawned >= _want or _scan >= _af._dispersal_local.size()
+	var all_done: bool = _spawned >= _want
 	for ag in _agents:
 		all_done = all_done and bool(ag["done"])
 	if all_done and _stopped_after < 0.0:
@@ -168,8 +158,12 @@ func _state_of(ag: Dictionary) -> String:
 	var ac: Aircraft = ag["ac"]
 	if bool(ag["done"]):
 		return "lined_up"
+	if ctrl.waiting:
+		return "waiting"
 	if ctrl.holding:
 		return "holding"
+	if ctrl.queued and ac.speed < 0.3:
+		return "queued"
 	if ac.speed < 0.3:
 		return "stopped" if ctrl.wp_i > 1 or _t - float(ag["spawn_t"]) > 2.0 else "parked"
 	return "taxiing"
@@ -217,7 +211,8 @@ func _layout() -> Dictionary:
 		"style": af.style, "name": af.airfield_name, "heading_deg": af.heading_deg,
 		"runway": {"length": af.runway_length, "width": af.runway_width},
 		"taxi_nodes": nodes, "taxi_edges": af.taxi_edges,
-		"hold": _v2(af.taxi_hold), "entry": _v2(af.taxi_entry),
+		"hold": _v2(af.taxi_hold), "entry": _v2(af.taxi_entry), "flight": Array(af.taxi_flight),
+		"holds": af.taxi_holds.map(func(h: Array) -> Array: return _v2(h[0])),
 		"paved": paved, "dispersals": disp, "keep_clear": af.keep_clear_i, "props": props,
 	}
 

@@ -2414,6 +2414,11 @@ func _taxi_route_for(af: Airfield) -> Dictionary:
 	var spots: Array = af._dispersal_local
 	if spots.is_empty():
 		return {}
+	# the field's taxi-out flight plan: the player leads from its first spot, lined up far enough down the runway
+	# for the wingmen who line up behind him (ModeBase.begin_taxi_flight uses the same plan)
+	if not af.taxi_flight.is_empty():
+		var n_wing: int = mini(clampi(int(config.get("wingmen", 0)), 0, 3), af.taxi_flight.size() - 1)
+		return _taxi_route_world(af, af.flight_route(0, n_wing, ModeBase.runway_slot_gap(player.stats.radius)), Vector3.ZERO)
 	var seed_v: int = hash(String(config.get("mission", config.get("mode", "free"))) + GameState.start_airfield)
 	var best: Dictionary = {}
 	var best_score: float = 1.0e12
@@ -2483,7 +2488,9 @@ func _dispersal_start(af: Airfield, route: PackedVector3Array, yaw0: float) -> v
 	Radio.say("Tower", "Taxi to runway %03d, hold short." % int(wrapf(af.heading_deg, 0.0, 360.0)), Radio.Kind.CONTROL, 1.5)
 	# the wingmen taxi too: parked on the dispersals behind the player, waiting when he waits
 	if mode != null and is_instance_valid(mode) and mode.has_method("begin_taxi_flight"):
-		mode.call("begin_taxi_flight", af, int(config.get("wingmen", 0)))
+		mode.call("begin_taxi_flight", af, int(config.get("wingmen", 0)), _taxi)
+	# nobody is ahead of the player: the tower clears him onto the runway once he has stopped at the hold
+	_taxi.auto_clear = true
 	if _args.has("--taxi-test"):
 		_taxi.set("_log_t", 0.01)
 		_taxi.cleared = true       # the test drives through the hold-short

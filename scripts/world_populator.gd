@@ -3050,22 +3050,22 @@ func _build_airfield(s: Dictionary) -> Node3D:
 	# taxi routes: no prop (tent, tank, hut, lorry) or building may stand on the line a taxiing aircraft takes
 	# from a dispersal to the hold-short - the grass legs between a pad and the taxiway are not paved, so
 	# near_paved misses them
-	var routes: Array = []
-	for sp in af._dispersal_local:
-		var rt: PackedVector3Array = af.taxi_route(sp)
-		if rt.size() >= 3:
-			routes.append(rt)
+	# (the taxi-out flight's routes, Airfield.taxi_flight: parked aircraft on other pads are cleared off them too)
+	var routes: Array = af.taxi_flight_routes
 	if not routes.is_empty():
 		var inv: Transform3D = axf.affine_inverse()
 		for c in container.get_children():
 			if not (c is AirfieldProp or c is GroundStructure):
 				continue
-			if c is AirfieldProp and (c as AirfieldProp).pkind == "parked":
-				continue
+			var parked: bool = c is AirfieldProp and (c as AirfieldProp).pkind == "parked"
 			var cw: Vector3 = (c as Node3D).position
 			var lp: Vector3 = inv * cw
-			var margin: float = 14.0 if c is GroundStructure else 10.0
+			var margin: float = Airfield.TAXI_SPOT_CLEAR if parked else (14.0 if c is GroundStructure else 10.0)
 			if _near_route(routes, lp, margin):
+				if parked:
+					for i in range(af.parked_spots.size() - 1, -1, -1):
+						if Vector2(cw.x - af.parked_spots[i].x, cw.z - af.parked_spots[i].z).length() < 2.0:
+							af.parked_spots.remove_at(i)
 				c.free()
 	return container
 
@@ -3298,12 +3298,7 @@ func _dress_grass_station(container: Node3D, af: Airfield, axf: Transform3D, y: 
 	var L: float = af.runway_length
 	var lw: bool = af.style == "lw_field"
 	var xf: Array = []
-	var di: int = 0
-	for pad in af.dispersal_world_points():
-		var reserved: bool = di == af.keep_clear_i
-		di += 1
-		if reserved:
-			continue                      # the player's taxi start: kept clear
+	for pad in af.dispersal_world_points():       # (the taxi-out flight's own pads are left out: kept clear)
 		if rng.randf() < 0.22:
 			continue
 		var to_c: Vector3 = af.position - (pad as Vector3)

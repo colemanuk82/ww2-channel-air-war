@@ -59,6 +59,21 @@ def route_dist(route, x, z):
     return min((_seg_dist(x, z, route[i], route[i + 1]) for i in range(len(route) - 1)), default=1e9)
 
 
+def prop_route_dist(pr, route):
+    """Clearance (m) between a prop footprint [cx, cz, half_x, half_z, yaw, h, name] and a route: the distance from
+    the route to the box's long axis, less the box's short half-width."""
+    cx, cz, hx, hz, yaw = pr[0], pr[1], pr[2], pr[3], math.radians(-pr[4])
+    ux, uz = math.cos(yaw), -math.sin(yaw)        # the box's local x axis in the airfield frame (Godot Y rotation)
+    vx, vz = math.sin(yaw), math.cos(yaw)         # its local z axis
+    (ax, az, long_h, short_h) = (ux, uz, hx, hz) if hx >= hz else (vx, vz, hz, hx)
+    n = max(2, int(long_h / 1.5) + 1)
+    best = 1e9
+    for i in range(n + 1):
+        t = -long_h + 2 * long_h * i / n
+        best = min(best, route_dist(route, cx + ax * t, cz + az * t))
+    return best - short_h
+
+
 def series(d):
     """{agent_id: [(t, x, z, yaw, speed, state, wp)]} (frames only list spawned aircraft)."""
     out = {a["id"]: [] for a in d["agents"]}
@@ -69,7 +84,9 @@ def series(d):
 
 
 def analyse(d, off_route=25.0, stuck_secs=20.0, overlap=0.6, reverse_m=15.0):
-    """Findings: dicts {kind, t, agents, msg}. Kinds: overlap, off_route, stuck, reversing, no_line_up, wp_regress."""
+    """Findings: dicts {kind, t, agents, msg}. Kinds: overlap, off_route, stuck, wp_stall, wrong_way, spot_on_route,
+    prop_on_route, deadlock, no_line_up. States: parked, waiting (on its spot for the aircraft ahead), taxiing, queued
+    (stopped behind the aircraft ahead), holding, stopped (for no reason: counts toward stuck), lined_up."""
     f = []
     ser = series(d)
     ag = {a["id"]: a for a in d["agents"]}
@@ -119,9 +136,70 @@ def analyse(d, off_route=25.0, stuck_secs=20.0, overlap=0.6, reverse_m=15.0):
             if plen > leg * 1.6 + 60 and not flagged and s[k][5] != "holding":
                 f.append({"kind": "wp_stall", "t": s[k][0], "agents": [aid], "msg": "%s travelled %.0f m since t=%.0f without reaching waypoint %d (overshoot / circling)" % (aid, plen, t0, wp0)})
                 flagged = True
-        # heading flip: speed>3 and travelling AWAY from the current waypoint for a sustained spell
+        # wrong way (route): a leg that doubles back on the one before it (the route overshoots a junction and returns)
+        for i in range(1, len(route) - 1):
+            ax, az = route[i][0] - route[i - 1][0], route[i][1] - route[i - 1][1]
+            bx, bz = route[i + 1][0] - route[i][0], route[i + 1][1] - route[i][1]
+            la, lb = math.hypot(ax, az), math.hypot(bx, bz)
+            if la > 5 and lb > 5 and (ax * bx + az * bz) / (la * lb) < math.cos(math.radians(135)):
+                f.append({"kind": "wrong_way", "t": 0.0, "agents": [aid], "msg": "%s's route doubles back at waypoint %d (%.0f,%.0f): turn of %.0f deg" % (
+                    aid, i, route[i][0], route[i][1], math.degrees(math.acos(max(-1, min(1, (ax * bx + az * bz) / (la * lb))))))})
+        # spawned facing away from its first leg (it has to turn on the spot - a wide circle for a bomber)
+        if s and len(route) > 1:
+            fb = math.degrees(math.atan2(route[1][0] - route[0][0], -(route[1][1] - route[0][1])))
+            dy = abs((s[0][3] - fb + 180) % 360 - 180)
+            if dy > 45:
+                f.append({"kind": "wrong_way", "t": s[0][0], "agents": [aid], "msg": "%s was parked facing %.0f deg away from its first leg" % (aid, dy)})
+        # wrong way (driving): moving at speed against the direction of the leg it is on, for 3 s+
+        run_start = None
+        for k in range(1, len(s)):
+            t, x, z, yaw, sp, st, wp = s[k]
+            if wp < 1 or wp >= len(route):
+                continue
+            lx, lz = route[wp][0] - route[wp - 1][0], route[wp][1] - route[wp - 1][1]
+            vx, vz = x - s[k - 1][1], z - s[k - 1][2]
+            ll, vl = math.hypot(lx, lz), math.hypot(vx, vz)
+            against = sp > 2.5 and ll > 5 and vl > 0.05 and (lx * vx + lz * vz) / (ll * vl) < -0.5
+            if against:
+                run_start = run_start if run_start is not None else t
+                if t - run_start >= 3.0 and not any(e["kind"] == "wrong_way" and e["agents"] == [aid] and e["t"] >= run_start for e in f):
+                    f.append({"kind": "wrong_way", "t": run_start, "agents": [aid], "msg": "%s drove against its route on leg %d for 3 s+ from t=%.0f" % (aid, wp, run_start)})
+            else:
+                run_start = None
         if s and ag[aid]["t_done"] < 0:
             f.append({"kind": "no_line_up", "t": s[-1][0], "agents": [aid], "msg": "%s never lined up (last state %s, wp%d)" % (aid, s[-1][5], s[-1][6])})
+    # the flight plan: no member's route may pass another member's parked spot, and no tall prop may stand on a route
+    for a in d["agents"]:
+        for b in d["agents"]:
+            if a is b:
+                continue
+            sp = d["layout"]["dispersals"][b["spot"]]
+            dd = route_dist(a["route"], sp[0], sp[1])
+            if dd < 12.0:
+                f.append({"kind": "spot_on_route", "t": 0.0, "agents": [a["id"], b["id"]], "msg": "%s's route passes %.0f m from %s's spot %d" % (a["id"], dd, b["id"], b["spot"])})
+        # (from 12 m past its parking spot - the aircraft is parked there by design - and with the half-span taken as
+        # 0.8 x the collision radius, which is a sphere round the whole aircraft)
+        rt = a["route"]
+        k0 = 1
+        while k0 < len(rt) - 1 and math.hypot(rt[k0][0] - rt[0][0], rt[k0][1] - rt[0][1]) < 12.0:
+            k0 += 1
+        lx, lz = rt[k0][0] - rt[0][0], rt[k0][1] - rt[0][1]
+        ll = math.hypot(lx, lz) or 1.0
+        start = [rt[0][0] + lx / ll * min(12.0, ll), rt[0][1] + lz / ll * min(12.0, ll)]
+        tail = [start] + rt[k0:]
+        for pr in d["layout"].get("props", []):
+            if prop_route_dist(pr, tail) < a["radius"] * 0.8 + 0.5:
+                f.append({"kind": "prop_on_route", "t": 0.0, "agents": [a["id"]], "msg": "%s's route runs through %s at (%.0f,%.0f)" % (a["id"], pr[6], pr[0], pr[1])})
+    # deadlock: nobody still taxiing has moved for 30 s
+    still = None
+    for t, rows in d["frames"]:
+        live = [r for r in rows if r[5] not in ("lined_up",)]
+        if live and all(r[4] < 0.3 for r in live) and not any(r[5] == "holding" for r in live):   # (a hold is the tower's)
+            still = still if still is not None else t
+            if t - still >= 30.0 and not any(e["kind"] == "deadlock" for e in f):
+                f.append({"kind": "deadlock", "t": still, "agents": [r[0] for r in live], "msg": "nobody moved for 30 s from t=%.0f: %s" % (still, ", ".join("%s %s wp%d" % (r[0], r[5], r[6]) for r in live))})
+        else:
+            still = None
     f.sort(key=lambda e: e["t"])
     return f
 

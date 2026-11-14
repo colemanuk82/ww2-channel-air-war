@@ -1712,8 +1712,9 @@ func _test_taxi_graph() -> void:
 			if not route.is_empty():
 				routed += 1
 				var on_hold: bool = false
-				for p in route:
-					if (p as Vector3).distance_to(af.taxi_hold) < 2.0:
+				var hp: Vector3 = route[maxi(route.size() - 4, 0)]
+				for h in (af.taxi_holds if not af.taxi_holds.is_empty() else [[af.taxi_hold]]):
+					if hp.distance_to(h[0]) < 2.0:
 						on_hold = true
 				if want_route.has(st) and not _check(on_hold and route.size() >= 4, "%s: the taxi route runs pad -> hold-short -> runway (%d legs)" % [st, route.size()]):
 					fails.append(st)
@@ -1722,6 +1723,31 @@ func _test_taxi_graph() -> void:
 			elif want_route.has(st):
 				if not _check(false, "%s: a dispersal spot taxis to the runway (no route)" % st):
 					fails.append(st)
+		# the taxi-out flight plan: the player and three wingmen on their own spots, no route passing a parked member's
+		# spot, no route doubling back on itself, and the dressing leaves the flight's pads empty
+		var fl: PackedInt32Array = af.taxi_flight
+		if want_route.has(st) and not _check(fl.size() >= 4, "%s: the taxi-out flight has %d spots (player + 3 wingmen)" % [st, fl.size()]):
+			fails.append(st)
+		for a in fl.size():
+			var r: PackedVector3Array = af.taxi_flight_routes[a]
+			for b in fl.size():
+				# (full clearance past the spots of those still parked behind; members ahead have left theirs)
+				var need: float = Airfield.TAXI_SPOT_CLEAR if b > a else Airfield.TAXI_SPOT_CLEAR * 0.7
+				if a != b and Airfield.route_distance(r, af._dispersal_local[fl[b]]) < need - 0.01:
+					_check(false, "%s: flight route %d passes member %d's spot" % [st, a, b])
+					fails.append(st)
+			for i in range(1, r.size() - 1):
+				var u := Vector2(r[i].x - r[i - 1].x, r[i].z - r[i - 1].z)
+				var v := Vector2(r[i + 1].x - r[i].x, r[i + 1].z - r[i].z)
+				if u.length() > 5.0 and v.length() > 5.0 and u.normalized().dot(v.normalized()) < -0.7:
+					_check(false, "%s: flight route %d doubles back at its point %d" % [st, a, i])
+					fails.append(st)
+			var lu: Vector3 = af.flight_route(a, fl.size() - 1, 30.0)[r.size() - 1]
+			if a > 0 and not _check(absf(lu.z - af.flight_route(a - 1, fl.size() - 1, 30.0)[af.taxi_flight_routes[a - 1].size() - 1].z - 30.0) < 0.5,
+					"%s: wingman %d lines up one slot behind the aircraft ahead" % [st, a]):
+				fails.append(st)
+		if not fl.is_empty() and not _check(af.dispersal_world_points().size() == af._dispersal_local.size() - fl.size(), "%s: the dressing skips the flight's pads" % st):
+			fails.append(st)
 		remove_child(af)
 		af.free()
 	_check(routed >= 8, "%d airfield styles route a dispersal spot to the runway" % routed)

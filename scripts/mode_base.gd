@@ -321,33 +321,36 @@ func _rw_tick() -> void:
 
 
 # ------------------------------------------------------------------ taxi-out flight (P: taxi to runway)
-## The player starts at a dispersal: the flight taxis with him. One wingman per clear dispersal spot is
-## parked and given a TaxiController; each holds short until the aircraft ahead of it is on the runway,
-## keeps a gap behind it (and stops to wait if the player stops), and joins the runway take-off queue
-## as it lines up.
+## The player starts at a dispersal: the flight taxis with him. The airfield's taxi-out plan (Airfield.taxi_flight)
+## gives each wingman his own clear spot, on a route that passes no other member's spot. Each wingman waits on his
+## spot until the aircraft ahead of him in the plan has gone past the point where their routes meet, then trails it
+## (keeping a gap, stopping when it stops); he holds short until it is lined up, then lines up one slot behind it on
+## the centreline and joins the runway take-off queue. tools/dbg/scenario.gd mirrors this - keep the two in sync.
 var taxi_af: Airfield = null       # set by main._dispersal_start
 var _taxi_wing: Array = []         # [{"ac", "ctrl"}] in trail order behind the player
 var _taxi_want: int = 0
 var _taxi_i: int = 0               # wingmen spawned so far
-var _taxi_scan: int = 0            # dispersal candidates scanned
+var _taxi_lead: TaxiController = null   # the player's own controller (main._taxi)
 
 
-## main._dispersal_start: the player taxis out of `af` with `want` wingmen trailing.
-func begin_taxi_flight(af: Airfield, want: int) -> void:
+## main._dispersal_start: the player taxis out of `af` (from its plan's first spot) with `want` wingmen trailing.
+func begin_taxi_flight(af: Airfield, want: int, lead: TaxiController = null) -> void:
 	taxi_af = af
-	_taxi_want = clampi(want, 0, 3)
+	_taxi_want = mini(clampi(want, 0, 3), maxi(af.taxi_flight.size() - 1, 0))
 	_taxi_i = 0
-	_taxi_scan = 0
+	_taxi_lead = lead
 	_taxi_wing.clear()
 
 
 ## main._on_taxi_done: the player is lined up - open the hold for the first wingman and arm the runway
 ## take-off queue behind him.
 func player_lined_up(lineup: Vector3) -> void:
-	if taxi_af == null:
+	if taxi_af == null and _taxi_wing.is_empty():
 		return
-	_rw_af = taxi_af
-	_rw_fwd = WorldCoords.heading_to_dir(taxi_af.heading_deg)
+	var af: Airfield = taxi_af if taxi_af != null else _rw_af
+	if af != null:
+		_rw_af = af
+		_rw_fwd = WorldCoords.heading_to_dir(af.heading_deg)
 	_rw_start = lineup
 	_rw_active = true
 	if _rw_timer == null:
@@ -361,56 +364,45 @@ func player_lined_up(lineup: Vector3) -> void:
 
 
 func _taxi_wingmen_tick() -> void:
-	if taxi_af == null or _taxi_i >= _taxi_want or player == null or not is_instance_valid(player):
+	if taxi_af == null or player == null or not is_instance_valid(player):
+		return
+	if _taxi_i >= _taxi_want:
+		_rw_af = taxi_af
+		taxi_af = null          # the flight is formed: done
 		return
 	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
 	if pl == null or pl.state != Aircraft.State.ALIVE or not pl.on_ground:
 		return
-	var spots: Array = taxi_af._dispersal_local
-	var n: int = spots.size()
-	for _try in 6:
-		if _taxi_i >= _taxi_want or _taxi_scan >= n:
-			taxi_af = null          # the flight is formed (or nothing clear is left): done
-			return
-		var ki: int = taxi_af.keep_clear_i
-		var k: int = (ki + 1 + _taxi_scan) % n if ki >= 0 else _taxi_scan % n
-		_taxi_scan += 1
-		if k == ki:
-			continue
-		var route: PackedVector3Array = taxi_af.taxi_route(spots[k])
-		if route.size() < 3:
-			continue
-		var wp: Vector3 = taxi_af.global_transform * (spots[k] as Vector3)
-		var blocked: bool = false
-		for ps in taxi_af.parked_spots:
-			if Vector2(wp.x, wp.z).distance_to(Vector2((ps as Vector3).x, (ps as Vector3).z)) < 15.0:
-				blocked = true
-				break
-		if blocked:
-			continue
-		var wd: Vector3 = taxi_af.global_transform.basis * ((route[1] as Vector3) - (route[0] as Vector3))
-		wd.y = 0.0
-		var yaw: float = rad_to_deg(atan2(wd.x, -wd.z))
-		var w: Aircraft = _rw_park(pl.stats.id, Vector3(wp.x, taxi_af.surface_y + pl.stats.gear_height + 0.35, wp.z), yaw, _taxi_i, _taxi_want)
-		var ctrl := TaxiController.new()
-		add_child(ctrl)
-		var world := PackedVector3Array()
-		for lp in route:
-			var t: Vector3 = taxi_af.global_transform * (lp as Vector3)
-			t.y = taxi_af.surface_y + w.stats.gear_height + 0.35
-			world.append(t)
-		ctrl.setup(w, world, taxi_af.heading_deg, hud, true)
-		ctrl.ahead_ac = pl if _taxi_wing.is_empty() else (_taxi_wing[_taxi_wing.size() - 1]["ac"] as Aircraft)
-		if _taxi_debug:
-			ctrl.set("_log_t", 0.01)
-		var j: int = _taxi_wing.size()
-		var w_ref: Aircraft = w
-		ctrl.lined_up.connect(func() -> void:
-			_taxi_wing_lined_up(w_ref, j))
-		_taxi_wing.append({"ac": w, "ctrl": ctrl})
-		_taxi_i += 1
-		print("[taxi] wingman %d taxiing from dispersal %d" % [_taxi_i, k])
-		return     # one parked spawn per tick (each build is a noticeable hitch)
+	var slot: int = _taxi_i + 1
+	var k: int = taxi_af.taxi_flight[slot]
+	var route: PackedVector3Array = taxi_af.flight_route(slot, _taxi_want, runway_slot_gap(pl.stats.radius))
+	var wp: Vector3 = taxi_af.global_transform * (taxi_af._dispersal_local[k] as Vector3)
+	var wd: Vector3 = taxi_af.global_transform.basis * ((route[1] as Vector3) - (route[0] as Vector3))
+	wd.y = 0.0
+	var yaw: float = rad_to_deg(atan2(wd.x, -wd.z))
+	var w: Aircraft = _rw_park(pl.stats.id, Vector3(wp.x, taxi_af.surface_y + pl.stats.gear_height + 0.35, wp.z), yaw, _taxi_i, _taxi_want)
+	var ctrl := TaxiController.new()
+	add_child(ctrl)
+	var world := PackedVector3Array()
+	for lp in route:
+		var t: Vector3 = taxi_af.global_transform * (lp as Vector3)
+		t.y = taxi_af.surface_y + w.stats.gear_height + 0.35
+		world.append(t)
+	ctrl.setup(w, world, taxi_af.heading_deg, hud, true)
+	if _taxi_wing.is_empty():
+		ctrl.follow(pl, _taxi_lead if _taxi_lead != null and is_instance_valid(_taxi_lead) else null)
+	else:
+		var prev: Dictionary = _taxi_wing[_taxi_wing.size() - 1]
+		ctrl.follow(prev["ac"], prev["ctrl"])
+	if _taxi_debug:
+		ctrl.set("_log_t", 0.01)
+	var j: int = _taxi_wing.size()
+	var w_ref: Aircraft = w
+	ctrl.lined_up.connect(func() -> void:
+		_taxi_wing_lined_up(w_ref, j))
+	_taxi_wing.append({"ac": w, "ctrl": ctrl})
+	_taxi_i += 1
+	print("[taxi] wingman %d parked on dispersal %d, joins the route ahead at leg %d" % [_taxi_i, k, ctrl.start_after])
 
 
 func _taxi_wing_lined_up(w: Aircraft, j: int) -> void:
