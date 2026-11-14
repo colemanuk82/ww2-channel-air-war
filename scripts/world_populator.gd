@@ -135,6 +135,7 @@ func _ready() -> void:
 	_register_camps()
 	_register_pow_camps()
 	_register_mulberries()
+	_register_harbour_war()
 	_register_war_ground()
 	_register_buildup()
 	_register_kammhuber()
@@ -793,6 +794,13 @@ func _register_camps() -> void:
 func _register_mulberries() -> void:
 	for hid in MulberryKit.HARBOURS.keys():
 		_add_site("mulberry_" + str(hid), MulberryKit.centre(str(hid)), 22000.0, func(s: Dictionary) -> Node3D: return MulberryKit.build(str(s["hid"])), {"hid": str(hid)})
+
+
+## Dated war damage to the big ports (HarbourWar): Dunkirk wrecks, Zeebrugge blockships, the Cherbourg
+## and Le Havre demolitions, the IJmuiden S-boat pens. Always registered; each builder checks the date.
+func _register_harbour_war() -> void:
+	for hid in HarbourWar.SITES.keys():
+		_add_site("harbourwar_" + str(hid), HarbourWar.centre(str(hid)), 15000.0, func(s: Dictionary) -> Node3D: return HarbourWar.build(str(s["hid"])), {"hid": str(hid)})
 
 
 ## Battlefields, invasion beaches and airborne landing zones. Always registered (cheap); each builder checks the date.

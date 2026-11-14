@@ -70,6 +70,7 @@ func _ready() -> void:
 	_test_legal_docs()
 	_test_era_damage()
 	_test_terraces_war_damage()
+	_test_harbour_war()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
@@ -301,6 +302,33 @@ func _test_terraces_war_damage() -> void:
 			_check(int(cct["row_units"]) == 6 and (clean_m["lists"][0] as Array).is_empty(), "the undamaged run merges into party-wall rows (%d units)" % int(cct["row_units"]))
 	EraClock.set_date("" if keep == EraClock.DEFAULT else keep)
 	WarDamage.refresh()
+
+
+## The dated port damage (HarbourWar): data sane, meshes build, and each window opens and closes with the date.
+func _test_harbour_war() -> void:
+	print("-- dated harbour war damage")
+	_check(HarbourWar.SITES.size() == 5, "HarbourWar carries %d dated port sites" % HarbourWar.SITES.size())
+	for hid in HarbourWar.SITES.keys():
+		var st: Dictionary = HarbourWar.SITES[hid]
+		_check(str(st.get("source", "")) != "" and str(st["from"]) <= (str(st["to"]) if str(st["to"]) != "" else "9999"), "harbour site %s has a source and a sane window" % str(hid))
+	_check(HarbourWar.wreck_mesh(false).get_surface_count() > 0 and HarbourWar.wreck_mesh(true).get_surface_count() > 0, "wreck hull meshes build")
+	_check(HarbourWar.toppled_crane_mesh().get_surface_count() > 0 and HarbourWar.rubble_heap_mesh().get_surface_count() > 0, "demolition meshes build")
+	_check(HarbourWar.eboat_pen_mesh().get_surface_count() > 0, "the S-boat pen mesh builds")
+	var keep2: String = EraClock.current()
+	EraClock.set_date("1940-05-20")
+	_check(not HarbourWar.active("dunkirk_wrecks") and HarbourWar.build("dunkirk_wrecks").get_child_count() == 0, "no Dunkirk wrecks during the evacuation itself")
+	_check(HarbourWar.active("zeebrugge_blockships"), "the Zeebrugge blockships are there the whole war")
+	EraClock.set_date("1940-07-01")
+	_check(HarbourWar.active("dunkirk_wrecks") and HarbourWar.build("dunkirk_wrecks").get_child_count() >= 2, "the Dunkirk wrecks lie there from July 1940")
+	EraClock.set_date("1941-06-01")
+	_check(not HarbourWar.active("ijmuiden_pens") and HarbourWar.build("ijmuiden_pens").get_child_count() == 0, "no S-boat pens at IJmuiden in 1941")
+	EraClock.set_date("1943-06-01")
+	_check(HarbourWar.active("ijmuiden_pens") and HarbourWar.build("ijmuiden_pens").get_child_count() >= 1, "the IJmuiden S-boat bunker stands in 1943")
+	EraClock.set_date("1944-06-20")
+	_check(not HarbourWar.active("cherbourg_demolitions"), "Cherbourg is intact before the demolitions")
+	EraClock.set_date("1944-10-01")
+	_check(HarbourWar.active("cherbourg_demolitions") and HarbourWar.active("lehavre_demolitions"), "Cherbourg and Le Havre are wrecked from autumn 1944")
+	EraClock.set_date("" if keep2 == EraClock.DEFAULT else keep2)
 
 
 func _test_interior_cockpit() -> void:
