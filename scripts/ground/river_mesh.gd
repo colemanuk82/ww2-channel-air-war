@@ -82,6 +82,10 @@ static func clear_block() -> void:
 static func prepare_block(origin: Vector2, size: float) -> void:
 	var blk: Dictionary = {}
 	var rect := Rect2(origin - Vector2(40, 40), Vector2(size + 80.0, size + 80.0))
+	var cx_min: int = floori(rect.position.x / RIVER_CELL) - 1
+	var cx_max: int = floori(rect.end.x / RIVER_CELL) + 1
+	var cz_min: int = floori(rect.position.y / RIVER_CELL) - 1
+	var cz_max: int = floori(rect.end.y / RIVER_CELL) + 1
 	var cx0: int = floori(origin.x / CELL)
 	var cz0: int = floori(origin.y / CELL)
 	var ranges: Dictionary = {}
@@ -106,16 +110,28 @@ static func prepare_block(origin: Vector2, size: float) -> void:
 			var b: Vector2 = pts[i + 1]
 			if not rect.has_point(a) and not rect.has_point(b) and not rect.has_point((a + b) * 0.5):
 				continue
-			var steps: int = maxi(int(a.distance_to(b) / (RIVER_CELL * 0.5)), 1)
-			for st in steps + 1:
-				var q: Vector2 = a.lerp(b, float(st) / float(steps))
-				var cx: int = floori(q.x / RIVER_CELL)
-				var cz: int = floori(q.y / RIVER_CELL)
-				for dz2 in range(-rc, rc + 1):
-					for dx2 in range(-rc, rc + 1):
-						if rc > 3 and dx2 * dx2 + dz2 * dz2 > rc * rc:
-							continue
-						blk[Vector2i(cx + dx2, cz + dz2)] = true
+			# every cell within rc cells of the segment, as row spans and only inside the tile (+ margin). Stamping a
+			# disc of up to 140 cells' radius at every half-cell step along a wide river (the Medway at Maidstone,
+			# the Thames) was seconds of every tile job, nearly all of it for cells far outside the tile.
+			var pad: float = float(rc) * RIVER_CELL
+			var dy: float = b.y - a.y
+			var cz_lo: int = maxi(floori((minf(a.y, b.y) - pad) / RIVER_CELL), cz_min)
+			var cz_hi: int = mini(floori((maxf(a.y, b.y) + pad) / RIVER_CELL), cz_max)
+			for cz in range(cz_lo, cz_hi + 1):
+				var y0: float = float(cz) * RIVER_CELL - pad
+				var y1: float = float(cz + 1) * RIVER_CELL + pad
+				var xa: float
+				var xb: float
+				if absf(dy) < 0.001:
+					xa = minf(a.x, b.x)
+					xb = maxf(a.x, b.x)
+				else:
+					var t0: float = clampf((y0 - a.y) / dy, 0.0, 1.0)
+					var t1: float = clampf((y1 - a.y) / dy, 0.0, 1.0)
+					xa = minf(a.x + (b.x - a.x) * t0, a.x + (b.x - a.x) * t1)
+					xb = maxf(a.x + (b.x - a.x) * t0, a.x + (b.x - a.x) * t1)
+				for cx in range(maxi(floori((xa - pad) / RIVER_CELL), cx_min), mini(floori((xb + pad) / RIVER_CELL), cx_max) + 1):
+					blk[Vector2i(cx, cz)] = true
 	_blocks_mutex.lock()
 	_blocks[OS.get_thread_caller_id()] = blk
 	_blocks_mutex.unlock()

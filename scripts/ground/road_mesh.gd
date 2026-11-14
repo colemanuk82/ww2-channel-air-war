@@ -127,6 +127,10 @@ static func clear_block() -> void:
 static func prepare_block(origin: Vector2, size: float) -> void:
 	var blk: Dictionary = {}
 	var rect := Rect2(origin - Vector2(40, 40), Vector2(size + 80.0, size + 80.0))
+	var cx_min: int = floori(rect.position.x / ROAD_CELL) - 1
+	var cx_max: int = floori(rect.end.x / ROAD_CELL) + 1
+	var cz_min: int = floori(rect.position.y / ROAD_CELL) - 1
+	var cz_max: int = floori(rect.end.y / ROAD_CELL) + 1
 	var cx0: int = floori((origin.x + size * 0.5) / CELL)
 	var cz0: int = floori((origin.y + size * 0.5) / CELL)
 	var reach: int = int(ceil(size * 0.5 / CELL)) + 1
@@ -159,8 +163,30 @@ static func prepare_block(origin: Vector2, size: float) -> void:
 			if not rect.intersects(Rect2(lo, hi - lo)):
 				continue
 			var item: Array = [a, b, half]
-			for cz in range(floori(lo.y / ROAD_CELL), floori(hi.y / ROAD_CELL) + 1):
-				for cx in range(floori(lo.x / ROAD_CELL), floori(hi.x / ROAD_CELL) + 1):
+			# Only the cells the segment's padded band actually crosses, and only inside the area being laid out
+			# (near_road() is asked about points in the tile): filling the whole bounding box of every long diagonal
+			# segment, far beyond the tile, made this ~1.7 s of every tile job.
+			var cz_lo: int = maxi(floori(lo.y / ROAD_CELL), cz_min)
+			var cz_hi: int = mini(floori(hi.y / ROAD_CELL), cz_max)
+			var dy: float = b.y - a.y
+			for cz in range(cz_lo, cz_hi + 1):
+				var y0: float = float(cz) * ROAD_CELL - pad
+				var y1: float = float(cz + 1) * ROAD_CELL + pad
+				var xa: float
+				var xb: float
+				if absf(dy) < 0.001:
+					xa = minf(a.x, b.x)
+					xb = maxf(a.x, b.x)
+				else:
+					var t0: float = clampf((y0 - a.y) / dy, 0.0, 1.0)
+					var t1: float = clampf((y1 - a.y) / dy, 0.0, 1.0)
+					var p0x: float = a.x + (b.x - a.x) * t0
+					var p1x: float = a.x + (b.x - a.x) * t1
+					xa = minf(p0x, p1x)
+					xb = maxf(p0x, p1x)
+				var cx_lo: int = maxi(floori((xa - pad) / ROAD_CELL), cx_min)
+				var cx_hi: int = mini(floori((xb + pad) / ROAD_CELL), cx_max)
+				for cx in range(cx_lo, cx_hi + 1):
 					var ck := Vector2i(cx, cz)
 					var arr: Variant = blk.get(ck)
 					if arr == null:

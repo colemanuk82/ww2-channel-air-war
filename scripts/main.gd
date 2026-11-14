@@ -3207,7 +3207,8 @@ func _inst_probe(delta: float) -> void:
 
 func _process(delta: float) -> void:
 	if _hitch_on and delta > 0.040:   # debug (--hitch): every frame over 40 ms, with the game time
-		print("[spike] %5d ms at t=%.1f s (in_game=%s)" % [int(delta * 1000.0), Time.get_ticks_msec() / 1000.0, str(in_game)])
+		var svp: RID = get_viewport().get_viewport_rid()
+		print("[spike] %5d ms at t=%.1f s (in_game=%s)  gpu=%.0f ms render_cpu=%.0f ms draws=%d prims=%dk objs=%d" % [int(delta * 1000.0), Time.get_ticks_msec() / 1000.0, str(in_game), RenderingServer.viewport_get_measured_render_time_gpu(svp), RenderingServer.viewport_get_measured_render_time_cpu(svp), int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), int(Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)) / 1000, int(Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME))])
 	if not in_game:
 		if _menu_anchor:
 			_update_menu_cam(delta)

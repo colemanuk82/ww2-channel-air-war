@@ -2171,6 +2171,7 @@ func _build_site(s: Dictionary) -> Node3D:
 	return n
 
 
+var _lstat: Array = [0, 0, 0]      # --loadnotes: tiles collected, their summed worker wall time (us), last print (ms)
 var _load_notes: bool = OS.get_cmdline_user_args().has("--loadnotes")   # debug: name the work in long frames of the load screen too
 var _last_frame_us: int = 0          # debug hitch log (see _process)
 var _frame_notes: PackedStringArray = []
@@ -2410,6 +2411,12 @@ func _stream_tiles() -> void:
 			continue
 		WorkerThreadPool.wait_for_task_completion(int(jb["task"]))
 		_tile_jobs.remove_at(ji)
+		if _load_notes:
+			_lstat[0] += 1
+			_lstat[1] += Time.get_ticks_usec() - int(jb.get("t0", 0))
+			var ptv: PackedInt64Array = (jb["res"] as Dictionary).get("pt", PackedInt64Array())
+			if ptv.size() == 6:
+				print("[tilejob] prep %d scatter %d roads %d rivers %d rail %d ms" % [(ptv[1] - ptv[0]) / 1000, (ptv[2] - ptv[1]) / 1000, (ptv[3] - ptv[2]) / 1000, (ptv[4] - ptv[3]) / 1000, (ptv[5] - ptv[4]) / 1000])
 		var jk: Vector2i = jb["k"]
 		var res: Dictionary = jb["res"]
 		var jc := Vector2((float(jk.x) + 0.5) * TILE, (float(jk.y) + 0.5) * TILE)
@@ -2470,6 +2477,9 @@ func _stream_tiles() -> void:
 		near_left = maxi(near_left - built, 0)
 	_pend_tiles = near_left if boost else maxi(cand.size() - built, 0)
 	pending = _pend_sites + _pend_tiles
+	if _load_notes and boost and Time.get_ticks_msec() - int(_lstat[2]) > 3000:
+		_lstat[2] = Time.get_ticks_msec()
+		print("[loadnotes] sites_left=%d tiles_left=%d jobs=%d/%d tiles_done=%d avg_job=%.0f ms staged=%d" % [_pend_sites, _pend_tiles, _tile_jobs.size(), _max_tile_jobs(), _lstat[0], float(_lstat[1]) / maxf(float(_lstat[0]), 1.0) / 1000.0, _staged.size()])
 	for k3 in _tiles.keys():
 		var c3 := Vector2((float(k3.x) + 0.5) * TILE, (float(k3.y) + 0.5) * TILE)
 		if c3.distance_to(Vector2(fp.x, fp.z)) > TILE_RADIUS + TILE * 1.5:
@@ -2490,6 +2500,8 @@ func _job_has(k: Vector2i) -> bool:
 ## Tiles scattered at once: all spare cores on the load screen, a couple while flying (keeps the frame rate steady).
 func _max_tile_jobs() -> int:
 	var cores: int = maxi(OS.get_processor_count() / 2, 2)
+	if OS.get_environment("WW2_TILE_JOBS").is_valid_int():
+		return int(OS.get_environment("WW2_TILE_JOBS"))
 	return mini(maxi(OS.get_processor_count() - 4, 2), 12) if boost else 2
 
 
@@ -2502,16 +2514,23 @@ func _start_tile_job(k: Vector2i) -> void:
 	var seed_v: int = k.x * 73856093 ^ k.y * 19349663
 	GroundKit.terrain()          # resolve the cached terrain node here, not from the worker
 	var task: int = WorkerThreadPool.add_task(func() -> void:
+		var pt: PackedInt64Array = [Time.get_ticks_usec()]
 		RoadMesh.prepare_block(org, TILE)
 		RiverMesh.prepare_block(org, TILE)
+		pt.append(Time.get_ticks_usec())
 		res["data"] = Scatter.tile_landcover_data(org, TILE, seed_v, ex)
+		pt.append(Time.get_ticks_usec())
 		RiverMesh.clear_block()
 		RoadMesh.clear_block()
 		# the road and river ribbons are pure geometry: built here too, only the mesh upload is left for the main thread
 		res["roads"] = RoadMesh.tile_arrays(org, TILE) if RoadMesh.has_roads() else []
+		pt.append(Time.get_ticks_usec())
 		res["rivers"] = RiverMesh.tile_arrays(org, TILE) if RiverMesh.has_rivers() else []
-		res["rail_plan"] = RailKit.tile_plan(org, TILE) if RailKit.rail_count() > 0 else [])
-	_tile_jobs.append({"k": k, "task": task, "res": res, "gen": _tile_gen})
+		pt.append(Time.get_ticks_usec())
+		res["rail_plan"] = RailKit.tile_plan(org, TILE) if RailKit.rail_count() > 0 else []
+		pt.append(Time.get_ticks_usec())
+		res["pt"] = pt)
+	_tile_jobs.append({"k": k, "task": task, "res": res, "gen": _tile_gen, "t0": Time.get_ticks_usec()})
 
 
 const FINISH_STAGES: int = 6
