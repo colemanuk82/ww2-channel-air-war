@@ -41,7 +41,19 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "props":
+	if view == "mills":
+		var wm: Node3D = Landmarks.windmill()
+		wm.position = Vector3(-16.0, 0.0, 0.0)
+		wm.rotation.y = PI + 0.5
+		add_child(wm)
+		var lh: Node3D = Landmarks.lighthouse(40.0)
+		lh.position = Vector3(18.0, 0.0, 0.0)
+		lh.rotation.y = PI + 0.3
+		add_child(lh)
+		cam.position = Vector3(0.0, 30.0, 75.0)
+		cam.look_at(Vector3(0.0, 18.0, 0.0))
+		cam.fov = 45.0
+	elif view == "props":
 		gm.albedo_color = Color(0.36, 0.40, 0.28)
 		var pmeshes: Array = [AirfieldAssets.nissen("Allies"), AirfieldAssets.tent("Allies"), AirfieldAssets.fuel_tank()]
 		for pi in 3:

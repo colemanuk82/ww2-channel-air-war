@@ -1548,3 +1548,106 @@ static func fuel_tank_model() -> ArrayMesh:
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache[key] = m
 	return m
+
+
+# ------------------------------------------------------------------ windmill and lighthouse (Landmarks)
+
+## Tower mill body: tapering tarred brick tower on a plinth with a door, a stage (gallery) on brackets, small
+## windows up the tower, and a boat-shaped cap with a fantail frame at the back. The sails turn separately; the
+## windshaft is at (0, 15, -3.6), as in the old model.
+static func windmill_body() -> ArrayMesh:
+	if _cache.has("windmill_body"):
+		return _cache["windmill_body"]
+	var b := MB.new()
+	var tower := Color(0.66, 0.62, 0.53)
+	var tar := Color(0.20, 0.18, 0.16)
+	var wood := Color(0.35, 0.25, 0.18)
+	var white := Color(0.80, 0.77, 0.68)
+	b.prism(0.0, 0.0, 0.0, 1.2, 5.3, 5.3, 5.2, 5.2, 12, tower.darkened(0.25), false)
+	b.prism(0.0, 0.0, 1.2, 16.0, 5.0, 5.0, 3.0, 3.0, 12, tower, true)
+	b.prism(0.0, 0.0, 12.6, 13.0, 3.6, 3.6, 3.5, 3.5, 12, tar, true)
+	# the stage: a plank gallery ring with a rail, on raking brackets
+	b.prism(0.0, 0.0, 5.6, 5.85, 6.4, 6.4, 6.4, 6.4, 12, wood, true)
+	for i in 12:
+		var a: float = TAU * float(i) / 12.0
+		var px: float = cos(a) * 6.25
+		var pz: float = sin(a) * 6.25
+		b.box(px - 0.08, px + 0.08, 5.85, 6.9, pz - 0.08, pz + 0.08, white, false)
+		b.beam(Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.0, 0.0), 0.1, 0.1, wood)
+	b.prism(0.0, 0.0, 6.85, 6.97, 6.35, 6.35, 6.35, 6.35, 12, white, false)
+	b.prism(0.0, 0.0, 6.85, 6.97, 6.15, 6.15, 6.15, 6.15, 12, white, false)
+	# door and windows facing the sails, and one each side
+	b.box(-0.7, 0.7, 0.0, 2.4, -5.25, -4.75, tar, false)
+	for wy in [8.0, 11.0, 13.6]:
+		var rr: float = lerpf(5.0, 3.0, (wy - 1.2) / 14.8)
+		b.box(-0.35, 0.35, wy, wy + 0.9, -rr - 0.08, -rr + 0.3, tar, false)
+		b.box(-rr - 0.08, -rr + 0.3, wy - 1.2, wy - 0.3, -0.35, 0.35, tar, false)
+	# boat-shaped cap, windshaft boss, and the fantail frame behind
+	b.prism(0.0, 0.0, 16.0, 16.4, 3.3, 3.3, 3.3, 3.3, 12, wood.darkened(0.2), true)
+	b.gable_z(-3.1, 3.1, -3.4, 3.6, 16.4, 3.0, 0.2, white, white.darkened(0.08), 0.0)
+	b.box(-0.35, 0.35, 14.65, 15.35, -3.9, -3.2, tar, true)
+	b.box(-0.08, 0.08, 16.4, 20.4, 3.6, 3.76, wood, false)
+	b.box(-1.6, 1.6, 18.3, 18.46, 3.6, 3.76, wood, false)
+	for k in 6:
+		var fa: float = TAU * float(k) / 6.0
+		b.box(cos(fa) * 1.0 - 0.3, cos(fa) * 1.0 + 0.3, 19.2 + sin(fa) * 1.0 - 0.3, 19.2 + sin(fa) * 1.0 + 0.3, 3.8, 3.86, white, false)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache["windmill_body"] = m
+	return m
+
+
+## One windmill sail (arm along +Y from the shaft): the stock, a lattice of sail bars and the hemlath edge.
+static func windmill_sail() -> ArrayMesh:
+	if _cache.has("windmill_sail"):
+		return _cache["windmill_sail"]
+	var b := MB.new()
+	var wood := Color(0.78, 0.74, 0.64)
+	b.box(-0.14, 0.14, 0.0, 15.5, -0.12, 0.12, wood.darkened(0.25), true)
+	b.box(0.14, 2.0, 3.0, 3.12, -0.06, 0.06, wood, false)
+	for i in 14:
+		var y: float = 3.0 + float(i) * 0.95
+		b.box(0.14, 2.0, y, y + 0.1, -0.05, 0.05, wood, false)
+	for xx in [0.75, 1.4, 2.0]:
+		b.box(xx - 0.05, xx + 0.05, 3.0, 15.4, -0.05, 0.05, wood, false)
+	b.box(-0.6, -0.14, 3.0, 15.4, -0.04, 0.04, wood.darkened(0.1), false)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache["windmill_sail"] = m
+	return m
+
+
+## Lighthouse of height h: stepped stone base, tapering white tower with a red band and window slits, gallery with
+## a railing, glazed lantern room with its lamp, and a domed roof with a vent ball. (No outbuildings: most stand on rocks and pier heads.)
+static func lighthouse(h: float) -> ArrayMesh:
+	var key: String = "lighthouse_%d" % int(h)
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var white := Color(0.88, 0.86, 0.82)
+	var red := Color(0.70, 0.15, 0.12)
+	var dark := Color(0.16, 0.16, 0.18)
+	b.prism(0.0, 0.0, 0.0, 1.0, 6.2, 6.2, 6.0, 6.0, 14, Color(0.50, 0.48, 0.44), true)
+	b.prism(0.0, 0.0, 1.0, h * 0.30, 5.0, 5.0, 4.4, 4.4, 14, white, false)
+	b.prism(0.0, 0.0, h * 0.30, h * 0.42, 4.4, 4.4, 4.15, 4.15, 14, red, false)
+	b.prism(0.0, 0.0, h * 0.42, h, 4.15, 4.15, 3.0, 3.0, 14, white, true)
+	b.box(-0.7, 0.7, 1.0, 3.4, -5.05, -4.6, dark, false)
+	for wy in [0.2, 0.55, 0.8]:
+		var rr: float = lerpf(5.0, 3.0, wy)
+		b.box(-0.3, 0.3, h * wy, h * wy + 1.4, -rr - 0.06, -rr + 0.4, dark, false)
+	# gallery, railing, lantern room (glazing bars over a bright lamp), dome and vent
+	b.prism(0.0, 0.0, h, h + 0.4, 4.0, 4.0, 4.0, 4.0, 14, dark, true)
+	for i in 14:
+		var a: float = TAU * float(i) / 14.0
+		b.box(cos(a) * 3.85 - 0.06, cos(a) * 3.85 + 0.06, h + 0.4, h + 1.5, sin(a) * 3.85 - 0.06, sin(a) * 3.85 + 0.06, dark, false)
+	b.prism(0.0, 0.0, h + 1.42, h + 1.54, 3.92, 3.92, 3.92, 3.92, 14, dark, false)
+	b.prism(0.0, 0.0, h + 0.4, h + 1.2, 2.7, 2.7, 2.7, 2.7, 10, white, false)
+	b.prism(0.0, 0.0, h + 1.2, h + 4.2, 2.5, 2.5, 2.5, 2.5, 10, Color(0.92, 0.88, 0.55), false)
+	for i in 10:
+		var a2: float = TAU * float(i) / 10.0
+		b.box(cos(a2) * 2.55 - 0.07, cos(a2) * 2.55 + 0.07, h + 1.2, h + 4.2, sin(a2) * 2.55 - 0.07, sin(a2) * 2.55 + 0.07, dark, false)
+	b.prism(0.0, 0.0, h + 4.2, h + 4.5, 2.9, 2.9, 2.9, 2.9, 10, dark, true)
+	b.prism(0.0, 0.0, h + 4.5, h + 5.8, 2.7, 2.7, 1.5, 1.5, 10, dark.lightened(0.06), false)
+	b.prism(0.0, 0.0, h + 5.8, h + 6.6, 1.5, 1.5, 0.0, 0.0, 10, dark.lightened(0.1), false)
+	b.prism(0.0, 0.0, h + 6.4, h + 7.1, 0.3, 0.3, 0.3, 0.3, 6, dark, true)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m

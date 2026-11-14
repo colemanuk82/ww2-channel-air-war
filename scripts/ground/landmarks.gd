@@ -34,6 +34,21 @@ static func church(s: float = 1.0) -> Node3D:
 
 static func windmill() -> Node3D:
 	var root := Node3D.new()
+	if TownModels.enabled():
+		var body := MeshInstance3D.new()
+		body.mesh = TownModels.windmill_body()
+		root.add_child(body)
+		var sl := Node3D.new()
+		sl.position = Vector3(0, 15.0, -3.9)
+		sl.name = "Sails"
+		root.add_child(sl)
+		for si in 4:
+			var arm_mi := MeshInstance3D.new()
+			arm_mi.mesh = TownModels.windmill_sail()
+			arm_mi.rotation.z = float(si) * PI * 0.5
+			sl.add_child(arm_mi)
+		sl.rotation.z = randf() * TAU
+		return root
 	GroundKit.cyl(root, 3.0, 5.0, 16.0, Vector3(0, 8, 0), Color(0.72, 0.68, 0.58), Vector3.ZERO, 8)
 	GroundKit.cyl(root, 0.0, 4.0, 4.5, Vector3(0, 18.2, 0), Color(0.35, 0.25, 0.18), Vector3.ZERO, 8)
 	var sails := Node3D.new()
@@ -51,6 +66,11 @@ static func windmill() -> Node3D:
 
 static func lighthouse(h: float = 40.0) -> Node3D:
 	var root := Node3D.new()
+	if TownModels.enabled():
+		var lmi := MeshInstance3D.new()
+		lmi.mesh = TownModels.lighthouse(h)
+		root.add_child(lmi)
+		return root
 	GroundKit.cyl(root, 3.0, 5.0, h, Vector3(0, h * 0.5, 0), Color(0.88, 0.86, 0.82), Vector3.ZERO, 10)
 	GroundKit.cyl(root, 3.2, 3.2, 3.0, Vector3(0, h * 0.35, 0), Color(0.7, 0.15, 0.12), Vector3.ZERO, 10)
 	GroundKit.cyl(root, 2.6, 2.6, 4.0, Vector3(0, h + 2.0, 0), Color(0.9, 0.85, 0.5), Vector3.ZERO, 8, false)
