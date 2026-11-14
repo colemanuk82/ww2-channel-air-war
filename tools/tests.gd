@@ -1633,6 +1633,22 @@ func _test_airfield_styles() -> void:
 		remove_child(af)
 		af.free()
 	_check(fails.is_empty(), "every new airfield style dresses; fail: %s" % ", ".join(PackedStringArray(fails)))
+	# raf_grass P5 follow-ups: a boundary tree line in the layout, a straight hangar row on a gravel apron
+	var gaf: Airfield = Airfield.create("Grass Test", Vector3.ZERO, 90.0, 0.0)
+	gaf.style = "raf_grass"
+	add_child(gaf)
+	_check(gaf.trees_local.size() >= 40, "the grass station lays a boundary tree line (%d trees)" % gaf.trees_local.size())
+	var gcont := Node3D.new()
+	add_child(gcont)
+	var grng := RandomNumberGenerator.new()
+	grng.seed = 77
+	wp._dress_grass_station(gcont, gaf, Transform3D(Basis(Vector3.UP, gaf.rotation.y), gaf.position), 0.0, "Allies", grng)
+	var gmm: int = gcont.find_children("*", "MultiMeshInstance3D", true, false).size()
+	_check(gmm >= 4 and gcont.find_children("*", "GroundStructure", true, false).size() >= 6, "the grass station dresses trees, markers and its hangar row (multimeshes=%d)" % gmm)
+	remove_child(gcont)
+	gcont.free()
+	remove_child(gaf)
+	gaf.free()
 	wp.free()
 
 
