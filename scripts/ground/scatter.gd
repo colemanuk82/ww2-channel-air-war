@@ -2093,10 +2093,26 @@ static func _add_lod_pair(root: Node, near_mesh: Mesh, far: Mesh, d: Dictionary,
 	a.visibility_range_end_margin = 150.0
 	a.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	root.add_child(a)
-	var b: MultiMeshInstance3D = multi_from_data(far, d, vis_end, false, colors)     # same instances as `a`: solid once
+	# realistic trees get a third, cheapest tier past TREE_VFAR: the lumpy four-clump stand-ins drawn out to 8 km were
+	# ~70% of the triangles in view over a big town (30 M of ~42 M at Maidstone), for trees a pixel or two across
+	var vf: Mesh = _vfar.get(far.get_instance_id()) as Mesh
+	var vfb: float = TREE_VFAR * vis_scale
+	var split: bool = vf != null and vis_end > vfb + 300.0 and vfb > ne + 300.0
+	var b: MultiMeshInstance3D = multi_from_data(far, d, vfb if split else vis_end, false, colors)     # same instances as `a`: solid once
 	b.visibility_range_begin = ne
 	b.visibility_range_begin_margin = 150.0
 	root.add_child(b)
+	if split:
+		b.visibility_range_end_margin = 150.0
+		var c: MultiMeshInstance3D = multi_from_data(vf, d, vis_end, false, colors)
+		c.visibility_range_begin = vfb
+		c.visibility_range_begin_margin = 150.0
+		c.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF     # far past every shadow cascade anyway
+		root.add_child(c)
+
+
+const TREE_VFAR: float = 2500.0
+static var _vfar: Dictionary = {}     # far tree mesh instance id -> its single-ball very-far mesh (realistic scenery)
 
 
 const TREE_NEAR: float = 2200.0
@@ -2201,6 +2217,13 @@ static func far_mesh(kind: String) -> ArrayMesh:
 				var lm: ArrayMesh = _lumpy_sphere(snappedf(rx * 0.62, 0.1), snappedf(ry * 1.25, 0.1), 6, 3, float(i + 2))
 				parts.append([lm, Transform3D(Basis.IDENTITY, c0 + Vector3(o.x * rx, o.y * ry, o.z * rx)), _dmat(_calm(spec[4]) * (0.92 + 0.06 * i), 3, 0.1, false)])
 			var mr: ArrayMesh = _merge(parts)
+			# very-far tier: one low ball (about a fifth of the clumps' triangles), same size and tone
+			var vsm := SphereMesh.new()
+			vsm.radius = rx
+			vsm.height = ry * 2.0
+			vsm.radial_segments = 5
+			vsm.rings = 2
+			_vfar[mr.get_instance_id()] = _merge([[vsm, Transform3D(Basis.IDENTITY, c0), _dmat(_calm(spec[4]) * 0.95, 3, 0.1, false)]])
 			_meshes[key] = mr
 			return mr
 		else:

@@ -3529,6 +3529,12 @@ func _parse_debug_args() -> void:
 			get_tree().create_timer(asecs).timeout.connect(func() -> void:
 				_audit_floating()
 				get_tree().quit())
+		elif a.begins_with("--prim-audit="):   # debug: every N s list what draws the most triangles from the camera
+			var pa_t := Timer.new()
+			pa_t.wait_time = float(a.substr(13))
+			pa_t.autostart = true
+			add_child(pa_t)
+			pa_t.timeout.connect(_prim_audit)
 		elif a.begins_with("--quit-after="):
 			var secs: float = float(a.substr(13))
 			get_tree().create_timer(secs).timeout.connect(func() -> void:
@@ -3966,6 +3972,61 @@ func _debug_break(how: String) -> void:
 
 
 ## Debug (--audit-float=SECS): scenery whose origin sits far above the terrain under it, grouped by where it lives.
+## Debug (--prim-audit=N): estimated triangles each visible mesh / multimesh draws from the current camera
+## (instances x index count / 3, inside its visibility range), summed per mesh (Scatter's cache keys), top 15.
+func _prim_audit() -> void:
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var cp: Vector3 = cam.global_position
+	var names: Dictionary = {}
+	for mk in Scatter._meshes.keys():
+		if Scatter._meshes[mk] is Mesh:
+			names[(Scatter._meshes[mk] as Mesh).get_instance_id()] = "scatter:" + str(mk)
+	var sums: Dictionary = {}
+	var total: float = 0.0
+	var stack: Array = [self]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		for c in n.get_children():
+			stack.append(c)
+		if not (n is GeometryInstance3D) or not (n as GeometryInstance3D).is_visible_in_tree():
+			continue
+		var gi: GeometryInstance3D = n
+		var d: float = gi.global_position.distance_to(cp)
+		if (gi.visibility_range_end > 0.0 and d > gi.visibility_range_end) or d < gi.visibility_range_begin:
+			continue
+		var mesh: Mesh = null
+		var count: int = 1
+		if gi is MultiMeshInstance3D:
+			var mm: MultiMesh = (gi as MultiMeshInstance3D).multimesh
+			if mm == null:
+				continue
+			mesh = mm.mesh
+			count = mm.visible_instance_count if mm.visible_instance_count >= 0 else mm.instance_count
+		elif gi is MeshInstance3D:
+			mesh = (gi as MeshInstance3D).mesh
+		if mesh == null or not (mesh is ArrayMesh):
+			continue
+		var tris: float = 0.0
+		for s in mesh.get_surface_count():
+			var arr: Array = mesh.surface_get_arrays(s)
+			if arr.is_empty():
+				continue
+			var idx: Variant = arr[Mesh.ARRAY_INDEX]
+			tris += float((idx as PackedInt32Array).size() if idx != null else (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()) / 3.0
+		var key: String = String(names[mesh.get_instance_id()]) if names.has(mesh.get_instance_id()) else (String(gi.get_parent().name).get_slice("_", 0) + "/mesh" + str(mesh.get_instance_id() % 100000))
+		if gi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+			key += " (shadow)"
+		sums[key] = float(sums.get(key, 0.0)) + tris * float(count)
+		total += tris * float(count)
+	var keys: Array = sums.keys()
+	keys.sort_custom(func(x: String, y: String) -> bool: return float(sums[x]) > float(sums[y]))
+	print("[prims] total %.1fM in range at %s" % [total / 1.0e6, str(cp.round())])
+	for i in mini(15, keys.size()):
+		print("[prims]   %6.2fM  %s" % [float(sums[keys[i]]) / 1.0e6, keys[i]])
+
+
 func _audit_floating() -> void:
 	var terrain: Node = get_tree().get_first_node_in_group("terrain")
 	if terrain == null:

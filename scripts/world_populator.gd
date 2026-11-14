@@ -2463,7 +2463,7 @@ func _stream_tiles() -> void:
 			built += 1
 			if Time.get_ticks_msec() - tt0 > 100:
 				print("[slow] tile %s built in %d ms" % [str(k2), Time.get_ticks_msec() - tt0])
-		elif boost and float(e[0]) >= BOOST_RADIUS:
+		elif boost and float(e[0]) >= _boost_radius():
 			break          # load screen: only the preload area; the rest waits so the terrain workers are not starved
 		elif _tile_jobs.size() < _max_tile_jobs():
 			_start_tile_job(k2)
@@ -2472,7 +2472,7 @@ func _stream_tiles() -> void:
 	var near_left: int = 0
 	if boost:
 		for e2 in cand:
-			if float(e2[0]) < BOOST_RADIUS:
+			if float(e2[0]) < _boost_radius():
 				near_left += 1
 		near_left = maxi(near_left - built, 0)
 	_pend_tiles = near_left if boost else maxi(cand.size() - built, 0)
@@ -2485,6 +2485,12 @@ func _stream_tiles() -> void:
 		if c3.distance_to(Vector2(fp.x, fp.z)) > TILE_RADIUS + TILE * 1.5:
 			(_tiles[k3] as Node).queue_free()
 			_tiles.erase(k3)
+
+
+## Load-screen preload radius: BOOST_RADIUS, smaller on the Low view distance (its scenery ends sooner too), so a
+## Low / Medium machine also gets the shorter load. Never larger than BOOST_RADIUS (High keeps the same load).
+func _boost_radius() -> float:
+	return BOOST_RADIUS * minf(Scatter.vis_scale, 1.0)
 
 
 var _tile_jobs: Array = []   # [{"k": Vector2i, "task": int, "res": Dictionary}] tiles being scattered on workers
