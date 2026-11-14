@@ -310,6 +310,28 @@
    "era_note": "The 1883 Palais de Justice (Poelaert) was the largest building in Europe and dominated Brussels through the occupation."
   },
   {
+   "id": "amsterdam_westerkerk",
+   "name": "Westerkerk, Amsterdam",
+   "lat": 52.3745,
+   "lon": 4.8835,
+   "city": "amsterdam",
+   "kind": "church",
+   "scale": "large",
+   "from_air": "A brick renaissance hall church on the Prinsengracht with a big slated roof, and the 85 m west tower: a square shaft, an open lantern of three crowned ribs and the blue crown of Maximilian of Austria with its gilded orb.",
+   "era_note": "Hendrick de Keyser's 1631 Westerkerk carried the tallest church tower in Amsterdam and rang over the occupied canal belt through the war."
+  },
+  {
+   "id": "amsterdam_royal_palace",
+   "name": "Royal Palace, Amsterdam",
+   "lat": 52.3731,
+   "lon": 4.8913,
+   "city": "amsterdam",
+   "kind": "palace",
+   "scale": "large",
+   "from_air": "Jacob van Campen's 1655 town hall on the Dam: a vast pale sandstone classical block, a pedimented central portico of columns, and a low lantern with a green cupola on the flat roof.",
+   "era_note": "The former town hall in the Dam served as the German Kommandatur and the setting for the 1940 public rallies."
+  },
+  {
    "id": "brussels_hotel_de_ville",
    "name": "Brussels Town Hall",
    "lat": 50.8466,

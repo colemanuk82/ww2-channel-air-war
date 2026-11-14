@@ -604,6 +604,40 @@ static func build(id: String) -> Node3D:
 			_b(root, Vector3(16, 70, 16), Vector3(30.0, 65, 0), Color(0.7, 0.64, 0.54))
 			_b(root, Vector3(20, 10, 20), Vector3(30.0, 103, 0), Color(0.72, 0.66, 0.56))
 			GroundKit.cyl(root, 0.0, 7.0, 26.0, Vector3(30.0, 121, 0), dark, Vector3.ZERO, 4)
+		"amsterdam_westerkerk":
+			# Hendrick de Keyser's 1631 church: brick hall with high round windows and the 85 m tower on the
+			# crossing, its open lantern carried on the blue crown of Maximilian of Austria
+			var brick := Color(0.52, 0.40, 0.34)
+			_b(root, Vector3(42, 16, 58), Vector3(0, 8, 6), brick)
+			var roof := MeshInstance3D.new()
+			roof.mesh = GroundKit.prism_mesh(44.0, 60.0, 7.0)
+			roof.material_override = GroundKit.mat(Color(0.34, 0.36, 0.40), true)
+			roof.position = Vector3(0, 16, 6)
+			root.add_child(roof)
+			_b(root, Vector3(14, 34, 14), Vector3(0, 25, -22), brick)
+			_b(root, Vector3(10, 22, 10), Vector3(0, 53, -22), Color(0.62, 0.60, 0.54))
+			_b(root, Vector3(13, 4, 13), Vector3(0, 66, -22), Color(0.66, 0.64, 0.58))
+			for i in 3:                                                                                   # open lantern
+				GroundKit.cyl(root, 0.0, 5.6, 14.0, Vector3(0, 75, -22), Color(0.68, 0.66, 0.60), Vector3.ZERO, 6)
+			var crown := Color(0.30, 0.40, 0.58)                                                          # the blue crown
+			for i in 3:
+				var ca: float = -PI * 0.5 + (float(i) - 1.0) * PI * 0.42
+				_b(root, Vector3(1.2, 9.0, 1.2), Vector3(sin(ca) * 4.4, 84.5, -22.0 + cos(ca) * 4.4), crown, Vector3(0, 0, -rad_to_deg(ca)), false)
+			GroundKit.sphere(root, 2.0, Vector3(0, 90.5, -22), Color(0.82, 0.78, 0.62), Vector3(1, 1.25, 1))
+		"amsterdam_royal_palace":
+			# Jacob van Campen's 1655 town hall in the Dam: a vast pale sandstone classical block with a
+			# central pedimented portico and a low lantern on the flat roof
+			var sand := Color(0.72, 0.68, 0.58)
+			_b(root, Vector3(96, 22, 58), Vector3(0, 11, 0), sand)
+			_b(root, Vector3(104, 2.5, 64), Vector3(0, 23.2, 0), Color(0.66, 0.62, 0.52))
+			_b(root, Vector3(26, 20, 3.0), Vector3(0, 11, 30.5), Color(0.76, 0.72, 0.62))
+			var ped := MeshInstance3D.new()
+			ped.mesh = GroundKit.prism_mesh(28.0, 4.0, 5.0)
+			ped.material_override = GroundKit.mat(Color(0.7, 0.66, 0.56), true)
+			ped.position = Vector3(0, 24.5, 30.8)
+			root.add_child(ped)
+			GroundKit.cyl(root, 4.5, 4.5, 7.0, Vector3(0, 26.0, 0), Color(0.68, 0.64, 0.54), Vector3.ZERO, 10)
+			GroundKit.sphere(root, 4.2, Vector3(0, 31.5, 0), Color(0.5, 0.55, 0.52), Vector3(1, 0.7, 1))
 		"antwerp_docks":
 			for r in 4:
 				for c in 4:

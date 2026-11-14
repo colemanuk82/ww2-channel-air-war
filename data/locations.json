@@ -1666,7 +1666,7 @@
    "lat": 52.3676,
    "lon": 4.9041,
    "size": 5,
-   "landmark": "Canal belt",
+   "landmark": "Westerkerk",
    "in_bounds": true
   },
   {
@@ -2622,6 +2622,24 @@
    "lat": 50.8396,
    "lon": 4.3525,
    "radius_m": 800,
+   "in_bounds": true
+  },
+  {
+   "id": "amsterdam_westerkerk",
+   "name": "Westerkerk, Amsterdam",
+   "type": "landmark",
+   "lat": 52.3745,
+   "lon": 4.8835,
+   "radius_m": 600,
+   "in_bounds": true
+  },
+  {
+   "id": "amsterdam_royal_palace",
+   "name": "Royal Palace, Amsterdam",
+   "type": "landmark",
+   "lat": 52.3731,
+   "lon": 4.8913,
+   "radius_m": 600,
    "in_bounds": true
   },
   {
