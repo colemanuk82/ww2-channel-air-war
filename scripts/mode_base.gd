@@ -401,6 +401,8 @@ func _taxi_wingmen_tick() -> void:
 			world.append(t)
 		ctrl.setup(w, world, taxi_af.heading_deg, hud, true)
 		ctrl.ahead_ac = pl if _taxi_wing.is_empty() else (_taxi_wing[_taxi_wing.size() - 1]["ac"] as Aircraft)
+		if _taxi_debug:
+			ctrl.set("_log_t", 0.01)
 		var j: int = _taxi_wing.size()
 		var w_ref: Aircraft = w
 		ctrl.lined_up.connect(func() -> void:
@@ -429,6 +431,8 @@ func _taxi_wing_lined_up(w: Aircraft, j: int) -> void:
 
 ## Debug (--rw-test): the player's aircraft takes off by itself after 12 s; positions are logged every 2 s.
 var _rw_debug: bool = OS.get_cmdline_user_args().has("--rw-test")
+## Debug (--taxi-test): the taxiing wingmen log their legs every 2 s as well.
+var _taxi_debug: bool = OS.get_cmdline_user_args().has("--taxi-test")
 
 
 func _rw_debug_tick(pl: Aircraft, pl_along: float) -> void:
@@ -769,6 +773,16 @@ var _spotter: TargetSpotter = null
 func _process(delta: float) -> void:
 	if running:
 		elapsed += delta
+		# drive the taxiing wingmen (the player's own controller is ticked from main)
+		for e in _taxi_wing:
+			var c: TaxiController = e["ctrl"]
+			if c == null or not is_instance_valid(c):
+				continue
+			if c.active:
+				c.tick(delta)
+			else:
+				e["ctrl"] = null
+				c.queue_free()
 		if _spotter == null:
 			_spotter = TargetSpotter.new()
 			_spotter.mode = self

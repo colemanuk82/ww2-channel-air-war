@@ -3047,7 +3047,40 @@ func _build_airfield(s: Dictionary) -> Node3D:
 		var pw: Vector3 = prop.position if prop.get_parent() == container else (axf * prop.position)
 		if af.near_paved(pw, 6.0):
 			prop.free()
+	# taxi routes: no prop (tent, tank, hut, lorry) or building may stand on the line a taxiing aircraft takes
+	# from a dispersal to the hold-short - the grass legs between a pad and the taxiway are not paved, so
+	# near_paved misses them
+	var routes: Array = []
+	for sp in af._dispersal_local:
+		var rt: PackedVector3Array = af.taxi_route(sp)
+		if rt.size() >= 3:
+			routes.append(rt)
+	if not routes.is_empty():
+		var inv: Transform3D = axf.affine_inverse()
+		for c in container.get_children():
+			if not (c is AirfieldProp or c is GroundStructure):
+				continue
+			if c is AirfieldProp and (c as AirfieldProp).pkind == "parked":
+				continue
+			var cw: Vector3 = (c as Node3D).position
+			var lp: Vector3 = inv * cw
+			var margin: float = 14.0 if c is GroundStructure else 10.0
+			if _near_route(routes, lp, margin):
+				c.free()
 	return container
+
+
+## True when a local point lies within `margin` m (XZ) of any taxi route polyline.
+func _near_route(routes: Array, p: Vector3, margin: float) -> bool:
+	var q := Vector2(p.x, p.z)
+	for rt in routes:
+		for i in range(1, (rt as PackedVector3Array).size()):
+			var a := Vector2(rt[i - 1].x, rt[i - 1].z)
+			var b := Vector2(rt[i].x, rt[i].z)
+			var closest: Vector2 = Geometry2D.get_closest_point_to_segment(q, a, b)
+			if closest.distance_to(q) < margin:
+				return true
+	return false
 
 
 ## Dressing for the paved triangle layouts (plain "triangle", "raf_bomber", "raf_fighter", "night_fighter").
