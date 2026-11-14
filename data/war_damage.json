@@ -68,6 +68,61 @@
    "source": "Wikipedia: The Blitz"
   },
   {
+   "id": "croydon_v1",
+   "name": "Croydon under the flying bombs",
+   "lat": 51.372,
+   "lon": -0.105,
+   "radius_m": 1500,
+   "level": 0.4,
+   "from": "1944-06-16",
+   "full": "1944-09-30",
+   "source": "Wikipedia: V-1 flying bomb - the June 1944 to March 1945 bombardment, Croydon the worst-hit borough"
+  },
+  {
+   "id": "wandsworth_v1",
+   "name": "Wandsworth and Battersea",
+   "lat": 51.455,
+   "lon": -0.185,
+   "radius_m": 1300,
+   "level": 0.32,
+   "from": "1944-06-16",
+   "full": "1944-09-30",
+   "source": "Wikipedia: V-1 flying bomb - the bombardment of south London, June 1944 to March 1945"
+  },
+  {
+   "id": "lewisham_v2",
+   "name": "Lewisham and New Cross",
+   "lat": 51.465,
+   "lon": -0.02,
+   "radius_m": 1200,
+   "level": 0.3,
+   "from": "1944-07-01",
+   "full": "1945-01-31",
+   "source": "Wikipedia: V-2 rocket - New Cross (Woolworths, 25 November 1944) and the Lewisham strikes"
+  },
+  {
+   "id": "london_smithfield_v2",
+   "name": "City of London, the last V-2s",
+   "lat": 51.519,
+   "lon": -0.1,
+   "radius_m": 700,
+   "level": 0.22,
+   "from": "1945-01-08",
+   "full": "1945-03-31",
+   "source": "Wikipedia: V-2 rocket - Smithfield Market, 8 March 1945"
+  },
+  {
+   "id": "antwerp_v",
+   "name": "Antwerp under the V-weapons",
+   "lat": 51.219,
+   "lon": 4.402,
+   "radius_m": 1600,
+   "level": 0.35,
+   "from": "1944-10-07",
+   "full": "1945-01-31",
+   "source": "Wikipedia: V-2 rocket - the bombardment of Antwerp, October 1944 to March 1945 (Rex cinema, 5 December 1944)"
+  },
+  {
    "id": "coventry",
    "name": "Coventry city centre",
    "lat": 52.408,
