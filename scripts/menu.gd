@@ -40,6 +40,7 @@ var _plan_hint: Label
 var _ambient: CheckBox
 var _taskings: CheckBox
 var _wingmen: OptionButton
+var _parking: OptionButton
 var _passing: CheckBox
 # Loadout: what the sortie carries. Values are the aircraft type's own limits, rebuilt when the aircraft changes.
 var _bombs: OptionButton
@@ -211,6 +212,8 @@ void fragment() {
 	startpage.add_child(_taskings)
 	_wingmen = UIKit.option_field(startpage, "Wingmen", ["None", "1", "2", "3"], 70, 18)
 	_wingmen.select(2)
+	_parking = UIKit.option_field(startpage, "Parking", ["Dispersal - taxi out", "Runway"], 150, 18)
+	_parking.select(0 if GameState.start_parking != "runway" else 1)
 	_passing = CheckBox.new()
 	_passing.text = "Friendly flights you can join"
 	_passing.button_pressed = true
@@ -1017,6 +1020,10 @@ func _on_start() -> void:
 			cfg["spawn"] = String(_spawn_entries[_spawn.selected]["id"])
 		cfg["wingmen"] = _wingmen.selected
 		cfg["passing_flights"] = _passing.button_pressed
+		# where the sortie starts on the ground: the dispersal (taxi to the runway) or straight on it
+		GameState.start_parking = "runway" if _parking.selected == 1 else "dispersal"
+		GameState.save_settings()
+		cfg["start_parking"] = GameState.start_parking
 		if not _plan.is_empty():
 			cfg.merge(_plan, true)      # map planner overrides spawn, scenario (mode), targets, enemy strength
 	cfg["cockpit_style"] = "interior" if _cockpit != null and _cockpit.selected == 1 and _cockpit_row.visible else "standard"
@@ -1028,7 +1035,7 @@ func _on_start() -> void:
 ## start point (spawn list or planner coordinates) and the mission where applicable.
 func _remember_sortie(cfg: Dictionary) -> void:
 	var rec: Dictionary = {}
-	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style", "season"]:
+	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "start_parking", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style", "season"]:
 		if cfg.has(k):
 			rec[k] = cfg[k]
 	GameState.last_sortie = rec
@@ -1078,6 +1085,8 @@ func _restore_last_sortie() -> void:
 			break
 	if c.has("wingmen"):
 		_wingmen.select(clampi(int(c["wingmen"]), 0, 3))
+	if c.has("start_parking"):
+		_parking.select(1 if str(c["start_parking"]) == "runway" else 0)
 	if c.has("cockpit_style") and _cockpit != null:
 		_cockpit.select(1 if String(c["cockpit_style"]) in ["spitfire", "interior"] else 0)
 	if c.has("passing_flights"):

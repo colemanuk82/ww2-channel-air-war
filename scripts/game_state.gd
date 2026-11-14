@@ -49,6 +49,8 @@ var music_known: Dictionary = {"menu": [], "ingame": []}   # shipped tracks a sa
 var music_recent: Dictionary = {"menu": [], "ingame": []}  # last tracks played (across launches): a new shuffle plays them last
 var music_gap: float = 60.0                 # silence between in-flight tracks, seconds (Options > Music)
 var show_hints: bool = true    # control hints panel on the right of the HUD (Options > Control hints)
+var start_parking: String = "dispersal"   # where a ground sortie starts: "dispersal" (taxi to the runway) or "runway"
+var taxi_active: bool = false   # the player is taxiing (the R key then skips to the line-up, it does not toggle assist)
 var first_sortie_done: bool = false   # the one-off controls / bail-out hints have been shown
 var engine_heat_on: bool = true   # Options > Realism: engine overheating (player and AI)
 var g_effects_on: bool = true     # Options > Realism: G grey-out, blackout and G-LOC (player and AI)
@@ -235,6 +237,7 @@ func _load_settings() -> void:
 	fps_cap = clampi(int(cf.get_value("gfx", "fps_cap", fps_cap)), 0, 1000)
 	show_hints = bool(cf.get_value("ui", "show_hints", show_hints))
 	first_sortie_done = bool(cf.get_value("gameplay", "first_sortie_done", first_sortie_done))
+	start_parking = "runway" if str(cf.get_value("gameplay", "start_parking", start_parking)) == "runway" else "dispersal"
 	player_heal = bool(cf.get_value("gameplay", "player_heal", player_heal))
 	heat_level = clampi(int(cf.get_value("realism", "heat_level", (2 if bool(cf.get_value("realism", "engine_heat", true)) else 0))), 0, 3)
 	g_level = clampi(int(cf.get_value("realism", "g_level", (2 if bool(cf.get_value("realism", "g_effects", true)) else 0))), 0, 3)
@@ -337,6 +340,7 @@ func mission_label(id: String, mission_name: String) -> String:
 
 func save_settings() -> void:
 	var cf := ConfigFile.new()
+	cf.set_value("gameplay", "start_parking", start_parking)
 	cf.set_value("gfx", "outlines", outlines_enabled)
 	cf.set_value("gfx", "shadows", shadows_enabled)
 	cf.set_value("gfx", "realistic_scenery", realistic_scenery)

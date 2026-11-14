@@ -55,6 +55,9 @@ var _wingmen_done: bool = false
 
 
 func _wingmen_tick() -> void:
+	if taxi_af != null:
+		_taxi_wingmen_tick()
+		return              # the taxi flight IS the flight: no airborne top-up while it forms
 	if _wingmen_done or not running or player == null or not is_instance_valid(player):
 		return
 	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
@@ -315,6 +318,113 @@ func _rw_tick() -> void:
 		_rw_active = false
 		_rw_before.clear()
 		_rw_after.clear()
+
+
+# ------------------------------------------------------------------ taxi-out flight (P: taxi to runway)
+## The player starts at a dispersal: the flight taxis with him. One wingman per clear dispersal spot is
+## parked and given a TaxiController; each holds short until the aircraft ahead of it is on the runway,
+## keeps a gap behind it (and stops to wait if the player stops), and joins the runway take-off queue
+## as it lines up.
+var taxi_af: Airfield = null       # set by main._dispersal_start
+var _taxi_wing: Array = []         # [{"ac", "ctrl"}] in trail order behind the player
+var _taxi_want: int = 0
+var _taxi_i: int = 0               # wingmen spawned so far
+var _taxi_scan: int = 0            # dispersal candidates scanned
+
+
+## main._dispersal_start: the player taxis out of `af` with `want` wingmen trailing.
+func begin_taxi_flight(af: Airfield, want: int) -> void:
+	taxi_af = af
+	_taxi_want = clampi(want, 0, 3)
+	_taxi_i = 0
+	_taxi_scan = 0
+	_taxi_wing.clear()
+
+
+## main._on_taxi_done: the player is lined up - open the hold for the first wingman and arm the runway
+## take-off queue behind him.
+func player_lined_up(lineup: Vector3) -> void:
+	if taxi_af == null:
+		return
+	_rw_af = taxi_af
+	_rw_fwd = WorldCoords.heading_to_dir(taxi_af.heading_deg)
+	_rw_start = lineup
+	_rw_active = true
+	if _rw_timer == null:
+		_rw_timer = Timer.new()
+		_rw_timer.wait_time = 0.25
+		_rw_timer.autostart = true
+		_rw_timer.timeout.connect(_rw_tick)
+		add_child(_rw_timer)
+	if not _taxi_wing.is_empty():
+		(_taxi_wing[0]["ctrl"] as TaxiController).cleared = true
+
+
+func _taxi_wingmen_tick() -> void:
+	if taxi_af == null or _taxi_i >= _taxi_want or player == null or not is_instance_valid(player):
+		return
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
+	if pl == null or pl.state != Aircraft.State.ALIVE or not pl.on_ground:
+		return
+	var spots: Array = taxi_af._dispersal_local
+	var n: int = spots.size()
+	for _try in 6:
+		if _taxi_i >= _taxi_want or _taxi_scan >= n:
+			taxi_af = null          # the flight is formed (or nothing clear is left): done
+			return
+		var ki: int = taxi_af.keep_clear_i
+		var k: int = (ki + 1 + _taxi_scan) % n if ki >= 0 else _taxi_scan % n
+		_taxi_scan += 1
+		if k == ki:
+			continue
+		var route: PackedVector3Array = taxi_af.taxi_route(spots[k])
+		if route.size() < 3:
+			continue
+		var wp: Vector3 = taxi_af.global_transform * (spots[k] as Vector3)
+		var blocked: bool = false
+		for ps in taxi_af.parked_spots:
+			if Vector2(wp.x, wp.z).distance_to(Vector2((ps as Vector3).x, (ps as Vector3).z)) < 15.0:
+				blocked = true
+				break
+		if blocked:
+			continue
+		var wd: Vector3 = taxi_af.global_transform.basis * ((route[1] as Vector3) - (route[0] as Vector3))
+		wd.y = 0.0
+		var yaw: float = rad_to_deg(atan2(wd.x, -wd.z))
+		var w: Aircraft = _rw_park(pl.stats.id, Vector3(wp.x, taxi_af.surface_y + pl.stats.gear_height + 0.35, wp.z), yaw, _taxi_i, _taxi_want)
+		var ctrl := TaxiController.new()
+		add_child(ctrl)
+		var world := PackedVector3Array()
+		for lp in route:
+			var t: Vector3 = taxi_af.global_transform * (lp as Vector3)
+			t.y = taxi_af.surface_y + w.stats.gear_height + 0.35
+			world.append(t)
+		ctrl.setup(w, world, taxi_af.heading_deg, hud, true)
+		ctrl.ahead_ac = pl if _taxi_wing.is_empty() else (_taxi_wing[_taxi_wing.size() - 1]["ac"] as Aircraft)
+		var j: int = _taxi_wing.size()
+		var w_ref: Aircraft = w
+		ctrl.lined_up.connect(func() -> void:
+			_taxi_wing_lined_up(w_ref, j))
+		_taxi_wing.append({"ac": w, "ctrl": ctrl})
+		_taxi_i += 1
+		print("[taxi] wingman %d taxiing from dispersal %d" % [_taxi_i, k])
+		return     # one parked spawn per tick (each build is a noticeable hitch)
+
+
+func _taxi_wing_lined_up(w: Aircraft, j: int) -> void:
+	if not is_instance_valid(w):
+		return
+	_rw_after.append({"ac": w, "start": w.global_position, "rolled": false, "t": _rw_t})
+	_rw_active = true
+	if _rw_timer == null:
+		_rw_timer = Timer.new()
+		_rw_timer.wait_time = 0.25
+		_rw_timer.autostart = true
+		_rw_timer.timeout.connect(_rw_tick)
+		add_child(_rw_timer)
+	if j + 1 < _taxi_wing.size():
+		(_taxi_wing[j + 1]["ctrl"] as TaxiController).cleared = true
+		Radio.say(Radio.callsign_of(w), "Holding short. Waiting for you to get clear.", Radio.Kind.FRIENDLY, 0.4)
 
 
 ## Debug (--rw-test): the player's aircraft takes off by itself after 12 s; positions are logged every 2 s.

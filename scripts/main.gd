@@ -100,6 +100,8 @@ var _ov_t: float = 0.0
 
 var _respawn_timer: float = -1.0
 var _bail: BailOut     # bail-out (J held): the pilot on his parachute; see scripts/bail_out.gd
+var _taxi: TaxiController = null   # taxi to the runway: guidance for the player, driving for AI / --taxi-test
+var _dispersal_done: bool = false  # the sortie's first spawn already used the dispersal (respawns start on the runway)
 var _menu: StartMenu
 var _pause: PauseMenu
 var _results: ResultsScreen
@@ -1699,6 +1701,7 @@ var _resume_t: float = RESUME_INTERVAL
 
 func start_game(cfg: Dictionary) -> void:
 	GroundKit.lp("start_game begin")
+	_dispersal_done = false     # a fresh sortie may use its dispersal start again
 	BlackBox.note("sortie start: mode %s aircraft %s side %s weather %s time %s season %s date %s cockpit %s" % [cfg.get("mode", "?"), cfg.get("aircraft", "?"), cfg.get("side", "?"), cfg.get("weather", "?"), cfg.get("time", "?"), cfg.get("season", "?"), cfg.get("era_date", ""), cfg.get("cockpit_style", "")])
 	_reset_sim_warp()      # every sortie starts at 1x: a warp never carries in from the menu, a replay or the results screen
 	config = cfg.duplicate()
@@ -2366,6 +2369,22 @@ func _spawn_player_inner() -> void:
 			heading = float(config["spawn_heading"])
 		player.reset_pose(pos, heading, true)
 	else:
+		# where the sortie starts on the ground: the dispersal (taxi to the runway) or straight on it.
+		# Fast-start modes and respawns stay on the runway; no route also falls back.
+		var parking: String = String(config.get("start_parking", GameState.start_parking))
+		if String(config.get("mode", "")) in ["training", "dogfight", "defend"] or _dispersal_done or _manages_respawn():
+			parking = "runway"
+		if _args.has("--taxi-test"):
+			parking = "dispersal"
+		var taxi: Dictionary = _taxi_route_for(af) if parking != "runway" else {}
+		if not taxi.is_empty():
+			_dispersal_start(af, taxi["route"], float(taxi["yaw"]))
+			camera_rig.bind(player)
+			terrain.set_focus(player)
+			terrain.set_pin(player.global_position, 9000.0)
+			if hud and not _manages_respawn():
+				hud.show_message("%s - taxi to the runway, hold short (hold R to skip)" % af.airfield_name, 5.0)
+			return
 		var pos2: Vector3 = af.get_threshold_position()
 		# room behind for the wingmen who take off after the player (ModeBase.runway_queue_length)
 		if mode != null and is_instance_valid(mode) and mode.has_method("runway_queue_length"):
@@ -2384,6 +2403,101 @@ func _spawn_player_inner() -> void:
 
 
 var _ceremony_t: float = 0.0
+
+
+## A world-space taxi route for the field: the SHORTEST route among the dispersal spots the dressing
+## left clear (the reserved spot competes on length like the rest), with a deterministic tie-break.
+## If no clear spot has a route, the shortest routable spot is used with the spawn nudged 12 m toward
+## the taxiway so a parked prop at the pad centre cannot jam the player. Returns {} for no route at
+## all (the spawn falls back to the runway).
+func _taxi_route_for(af: Airfield) -> Dictionary:
+	var spots: Array = af._dispersal_local
+	if spots.is_empty():
+		return {}
+	var seed_v: int = hash(String(config.get("mission", config.get("mode", "free"))) + GameState.start_airfield)
+	var best: Dictionary = {}
+	var best_score: float = 1.0e12
+	var fallback: Dictionary = {}
+	var fallback_len: float = 1.0e12
+	for k in spots.size():
+		var route: PackedVector3Array = af.taxi_route(spots[k])
+		if route.size() < 3:
+			continue
+		var total: float = 0.0
+		for i in range(1, route.size()):
+			total += ((route[i] as Vector3) - (route[i - 1] as Vector3)).length()
+		var wp3: Vector3 = af.global_transform * (spots[k] as Vector3)
+		var blocked: bool = false
+		for ps in af.parked_spots:
+			if Vector2(wp3.x, wp3.z).distance_to(Vector2((ps as Vector3).x, (ps as Vector3).z)) < 15.0:
+				blocked = true        # the dressing parked an aircraft here: the player would spawn inside it
+				break
+		var score: float = total + float(hash(seed_v + int(k) * 7919) % 97) * 0.01   # stable tie-break
+		if blocked:
+			if total < fallback_len:
+				fallback_len = total
+				var ldir: Vector3 = (route[1] as Vector3) - (route[0] as Vector3)
+				ldir.y = 0.0
+				ldir = ldir.normalized() if ldir.length() > 0.01 else Vector3.ZERO
+				fallback = {"route": route, "nudge": ldir * 12.0}
+		elif score < best_score:
+			best_score = score
+			best = {"route": route, "nudge": Vector3.ZERO}
+	if not best.is_empty():
+		return _taxi_route_world(af, best["route"], best["nudge"])
+	if not fallback.is_empty():
+		return _taxi_route_world(af, fallback["route"], fallback["nudge"])
+	return {}
+
+
+func _taxi_route_world(af: Airfield, route: PackedVector3Array, nudge: Vector3) -> Dictionary:
+	var yaw: float = 0.0
+	var world := PackedVector3Array()
+	for i in route.size():
+		var lp: Vector3 = route[i]
+		if i == 0:
+			lp += nudge
+			var wd: Vector3 = af.global_transform.basis * ((route[1] as Vector3) - lp)
+			wd.y = 0.0
+			# the heading convention is compass-style: north is -Z (WorldCoords.heading_to_dir), so the
+			# yaw of a direction is atan2(x, -z)
+			yaw = rad_to_deg(atan2(wd.x, -wd.z))
+		var wp2: Vector3 = af.global_transform * lp
+		wp2.y = af.surface_y + player.stats.gear_height + 0.35
+		world.append(wp2)
+	return {"route": world, "yaw": yaw}
+
+
+## The dispersal start: parked on a dispersal spot facing the taxiway, the tower calls the taxi, and a
+## TaxiController guides (or drives, for --taxi-test) the run to the hold-short and the line-up.
+func _dispersal_start(af: Airfield, route: PackedVector3Array, yaw0: float) -> void:
+	_dispersal_done = true
+	var p0: Vector3 = route[0]
+	player.reset_pose(p0, yaw0, false)
+	if _taxi != null and is_instance_valid(_taxi):
+		_taxi.queue_free()
+	_taxi = TaxiController.new()
+	add_child(_taxi)
+	_taxi.setup(player, route, af.heading_deg, hud, _args.has("--taxi-test"))
+	_taxi.lined_up.connect(_on_taxi_done)
+	Radio.say("Tower", "Taxi to runway %03d, hold short." % int(wrapf(af.heading_deg, 0.0, 360.0)), Radio.Kind.CONTROL, 1.5)
+	# the wingmen taxi too: parked on the dispersals behind the player, waiting when he waits
+	if mode != null and is_instance_valid(mode) and mode.has_method("begin_taxi_flight"):
+		mode.call("begin_taxi_flight", af, int(config.get("wingmen", 0)))
+	if _args.has("--taxi-test"):
+		_taxi.set("_log_t", 0.01)
+		_taxi.cleared = true       # the test drives through the hold-short
+		print("[taxi-test] driving the player from the dispersal, %d legs" % route.size())
+
+
+func _on_taxi_done() -> void:
+	var af: Airfield = airfields.get(GameState.start_airfield)
+	if af != null:
+		print("[taxi] lined up, heading %03.0f (runway %03.0f)" % [player.get_heading_deg(), wrapf(af.heading_deg, 0.0, 360.0)])
+	if hud != null:
+		hud.show_message("Lined up - hold Shift for throttle, S to rotate", 4.0)
+	if mode != null and is_instance_valid(mode) and mode.has_method("player_lined_up"):
+		mode.call("player_lined_up", player.global_position)
 
 
 ## A decoration earned in the air is presented once the aircraft is down and stopped.
@@ -3101,6 +3215,14 @@ func _process(delta: float) -> void:
 		_respawn_player_with_support()
 	if _bail != null and (player != null or _bail.active):
 		_bail.tick(delta, player)
+	if _taxi != null:
+		if _taxi.active:
+			_taxi.tick(delta)
+			GameState.taxi_active = _taxi.active and not _taxi.ai
+		else:
+			_taxi.queue_free()
+			_taxi = null
+			GameState.taxi_active = false
 	_respawn_watchdog(delta)
 	if Input.is_action_just_pressed("next_music"):
 		for gm in get_tree().get_nodes_in_group("game_music"):

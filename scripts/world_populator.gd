@@ -3037,6 +3037,16 @@ func _build_airfield(s: Dictionary) -> Node3D:
 	if af.get_parent() == container:
 		airfields[id] = af
 	s["main"] = af
+	# keep the paved surfaces clear: any prop cluster (supply crates, dumps, clutter) that ended up on a
+	# runway or taxiway is dropped - the dressing places them on the grass, but fixed offsets can land
+	# short on a style whose layout runs wider. Parked aircraft keep their dispersal spots.
+	for c in container.find_children("*", "AirfieldProp", true, false):
+		var prop: AirfieldProp = c
+		if prop.pkind == "parked":
+			continue
+		var pw: Vector3 = prop.position if prop.get_parent() == container else (axf * prop.position)
+		if af.near_paved(pw, 6.0):
+			prop.free()
 	return container
 
 
@@ -3255,7 +3265,12 @@ func _dress_grass_station(container: Node3D, af: Airfield, axf: Transform3D, y: 
 	var L: float = af.runway_length
 	var lw: bool = af.style == "lw_field"
 	var xf: Array = []
+	var di: int = 0
 	for pad in af.dispersal_world_points():
+		var reserved: bool = di == af.keep_clear_i
+		di += 1
+		if reserved:
+			continue                      # the player's taxi start: kept clear
 		if rng.randf() < 0.22:
 			continue
 		var to_c: Vector3 = af.position - (pad as Vector3)

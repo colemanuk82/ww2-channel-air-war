@@ -190,6 +190,8 @@ static func place(container: Node3D, xforms: Array, team: String, af: Airfield) 
 		var tt: Transform3D = t
 		tt.basis = tt.basis.orthonormalized()
 		tt.origin.y -= 0.35
+		if af != null:
+			af.parked_spots.append(Vector3(tt.origin.x, 0.0, tt.origin.z))   # the player's taxi spawn keeps clear of these
 		var prop: AirfieldProp = AirfieldProp.create("parked", team, mesh, [tt])
 		var bb: AABB = mesh.get_aabb()
 		var span: float = maxf(bb.size.x, bb.size.z)

@@ -1200,7 +1200,7 @@ func _read_input() -> void:
 		cycle_flaps()
 	if Input.is_action_just_pressed("gear") and not pad_sight:
 		set_gear(not gear_down)
-	if Input.is_action_just_pressed("assist_toggle") and not pad_sight:
+	if Input.is_action_just_pressed("assist_toggle") and not pad_sight and not GameState.taxi_active:
 		auto_level = not auto_level
 		GameState.auto_level = auto_level
 	if sight_hold and not on_ground:
@@ -1632,9 +1632,10 @@ func _move_and_ground(delta: float) -> void:
 			return
 
 	if on_ground:
-		# Ground steering
+		# Ground steering: tail-wheel sharp - full authority by ~7 m/s (a taxiing aircraft turns in
+		# little more than its own wingspan), none at a standstill
 		var steer: float = clampf(cmd_yaw + cmd_roll * 0.8, -1.0, 1.0)
-		rotate(Vector3.UP, -steer * deg_to_rad(stats.ground_turn_rate_deg) * clampf(speed / 18.0, 0.0, 1.0) * delta)
+		rotate(Vector3.UP, -steer * deg_to_rad(stats.ground_turn_rate_deg) * clampf(speed / 7.0, 0.0, 1.0) * delta)
 		# keep wings level, drop the nose back down unless we are flying fast enough to rotate
 		rotate_object_local(Vector3.BACK, _bank_angle() * clampf(8.0 * delta, 0.0, 1.0))
 		var pit: float = _pitch_angle()

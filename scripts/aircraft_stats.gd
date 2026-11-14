@@ -54,7 +54,7 @@ extends Resource
 @export_group("Ground")
 @export var gear_height: float = 1.6
 @export var crash_vspeed: float = 38.0
-@export var ground_turn_rate_deg: float = 45.0
+@export var ground_turn_rate_deg: float = 62.0
 @export var radius: float = 8.0
 
 @export_group("Sound")

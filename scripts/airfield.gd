@@ -90,6 +90,8 @@ var markers_local: Array = []         # Transform3D: grass-field boundary marker
 var pens_local: Array = []            # Transform3D: E-type blast pens (raf_grass)
 var nets_local: Array = []            # Transform3D: camouflage nets over dispersed aircraft (lw_field)
 var trees_local: Array = []           # Transform3D: boundary tree line round the landing ground (raf_grass)
+var parked_spots: Array = []          # Vector3 (world XZ): where the dressing parked aircraft - the player's taxi spawn keeps clear
+var keep_clear_i: int = -1            # the dispersal index the dressing leaves empty for the player's taxi start
 
 
 static func create(p_name: String, world_pos: Vector3, p_heading_deg: float, ground_y: float) -> Airfield:
@@ -181,6 +183,10 @@ func build_layout() -> void:
 	taxi_entry = Vector3(runway_width * 0.5 - 6.0, 0.0, le)
 	taxi_hold = Vector3(runway_width * 0.5 + 46.0, 0.0, le)
 	_taxi_connect()
+	# one dispersal spot is kept clear of parked aircraft: the player's taxi start (deterministic, so
+	# the dressing skips the same spot on every machine)
+	if not _dispersal_local.is_empty():
+		keep_clear_i = absi(hash(airfield_name)) % _dispersal_local.size()
 
 
 ## Join isolated taxi-graph components (dispersal stubs that never met the perimeter track) to the
@@ -1000,7 +1006,10 @@ func taxi_route(park: Vector3) -> PackedVector3Array:
 		out.append(pts[idx])
 	for k in range(1, leg2.size()):
 		out.append(pts[leg2[k]])
-	out.append(Vector3(0.0, 0.0, taxi_entry.z - 16.0))    # lined up on the centreline
+	# line up: a short leg onto the centreline, then one further down the runway - the approach to the
+	# last point points along the take-off direction, so the aircraft stops facing down the runway
+	out.append(Vector3(0.0, 0.0, taxi_entry.z - 18.0))
+	out.append(Vector3(0.0, 0.0, taxi_entry.z - 62.0))
 	return out
 
 

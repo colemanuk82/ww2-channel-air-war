@@ -518,21 +518,23 @@ void fragment() {
 	// crop rows and meadow tufts. Fades out with distance (the imagery/field colours carry the far view).
 	float dist_v = length(VERTEX);
 	float near_k = 1.0 - smoothstep(600.0, 4200.0, dist_v);
+	// the high-frequency bands (tufts, stalk streaks, speckle) alias much closer, so they die first
+	float near_hi = 1.0 - smoothstep(140.0, 900.0, dist_v);
 	if (near_k > 0.0 && h > 1.5 && urban < 0.5) {
 		float g1 = t_vnoise2(xz * 0.55);
 		float g2 = t_vnoise2(xz * 2.3);
 		float g3 = t_vnoise2(xz * 0.11 + 9.0);
-		float grain = (g1 * 0.45 + g2 * 0.35 + g3 * 0.55) - 0.67;
+		float grain = (g1 * 0.45 + g2 * 0.35 * near_hi + g3 * 0.55) - 0.67;
 		vec2 fdir = normalize(vec2(t_hash12(cell_id + 3.1) - 0.5, t_hash12(cell_id + 8.7) - 0.5) + vec2(0.001));
 		float rows = smoothstep(0.35, 0.65, abs(fract(dot(xz, fdir) / 2.6) - 0.5) * 2.0);
 		float crop = is_crop;
 		float tuft = smoothstep(0.55, 0.9, t_vnoise2(xz * 1.3 + 31.0));
-		float detail = grain * 0.45 + crop * (rows - 0.5) * 0.16 * lowland + (1.0 - crop) * (tuft - 0.4) * 0.10 * lowland;
+		float detail = grain * 0.45 + crop * (rows - 0.5) * 0.16 * lowland + (1.0 - crop) * (tuft - 0.4) * 0.10 * lowland * near_hi;
 		// blade/stalk streaks and clods: stretched noise along the field direction plus fine speckle
 		float streak = t_vnoise2(vec2(dot(xz, fdir) * 0.9, dot(xz, vec2(-fdir.y, fdir.x)) * 5.0)) - 0.5;
 		float speck = t_hash12(floor(xz * 3.0)) - 0.5;
 		// (streaks halved: under a low sun the stretched noise read as a motion-blur smear across the fields)
-		detail += streak * 0.15 * lowland + speck * 0.12 + (t_vnoise2(xz * 6.0) - 0.5) * 0.14;
+		detail += streak * 0.15 * lowland * near_hi + speck * 0.12 * near_hi + (t_vnoise2(xz * 6.0) - 0.5) * 0.14 * near_hi;
 		col *= 1.0 + detail * near_k * 1.5 * (0.6 + 0.4 * detail_strength);
 		// Texture micro detail (P2): the detail texture carries turf/soil grain finer than the value noise
 		// can resolve, sampled at two world scales (1.2 m and 4.9 m per tile) so no single repeat reads as a

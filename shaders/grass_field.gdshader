@@ -55,8 +55,7 @@ void fragment() {
 	float z = lp.y;
 	float sd = seed * 0.013;
 	float dist = length(wp - CAMERA_POSITION_WORLD);
-	// fine detail fades with distance (and with pixel footprint) so it never shimmers
-	float near_k = 1.0 - smoothstep(250.0, 1400.0, dist);
+	// (the fine detail bands each carry their own distance fade below, so nothing shimmers far off)
 
 	// mown bands along the strip: irregular widths, a slight swing
 	float swing = (vnoise(vec2(z * 0.004, sd)) - 0.5) * 0.7;
@@ -92,18 +91,27 @@ void fragment() {
 	float worn = smoothstep(0.66 - ends * 0.18, 0.80 - ends * 0.18, fbm(lp * 0.045 + sd * 2.0)) * (1.0 - outer * 0.6);
 	c = mix(c, col_bare, clamp(ruts * 0.6 + worn * 0.4, 0.0, 0.7));
 
-	// grass mottling and blade texture
+	// grass mottling and blade texture: each frequency band fades out well inside its own aliasing
+	// range (a 14-cycles-per-metre stripe shimmers from 30 m up, the fine mottle from a few hundred),
+	// and there is no floor at distance - far off, the surface keeps only its mown bands and patches
 	float fine = vnoise(lp * 2.3 + sd) * 0.6 + vnoise(lp * 0.55) * 0.4;
-	float blades = vnoise(vec2(lp.x * 14.0, lp.y * 3.0)) ;
-	c *= 1.0 + ((fine - 0.5) * 0.22 + (blades - 0.5) * 0.10 * near_k) * mix(0.4, 1.0, near_k);
+	float blades = vnoise(vec2(lp.x * 14.0, lp.y * 3.0));
+	float fine_k = 1.0 - smoothstep(120.0, 420.0, dist);
+	float blade_k = 1.0 - smoothstep(12.0, 55.0, dist);
+	c *= 1.0 + (fine - 0.5) * 0.22 * fine_k + (blades - 0.5) * 0.10 * blade_k;
 
 	c *= mix(1.0, 0.72, clamp(wetness, 0.0, 1.0));
 	ALBEDO = c;
 	ROUGHNESS = mix(1.0, 0.6, clamp(wetness, 0.0, 1.0));
 
-	// fade the border into the terrain (hashed alpha: opaque pass, no sorting; temporal AA smooths it)
+	// fade the border into the terrain: the colour itself goes to the dark mown-airfield tone first
+	// and only a thin fringe dissolves with hashed alpha - a wide dither band read as flickering black
+	// dots on the grass ring (the dark ground showing through every discarded fragment)
 	float bx = half_w * 0.94 + en * half_w * 0.05;
 	float bz = half_l * 0.97 + (vnoise(vec2(x * 0.05, sd)) - 0.5) * 18.0;
-	ALPHA = (1.0 - smoothstep(bx - 26.0, bx, abs(x))) * (1.0 - smoothstep(bz - 40.0, bz, abs(z)));
+	vec3 col_out = mix(col_edge, col_a * 0.55, 0.65);
+	float bfade = clamp(smoothstep(bx - 26.0, bx - 5.0, abs(x)) + smoothstep(bz - 40.0, bz - 8.0, abs(z)), 0.0, 1.0);
+	c = mix(c, col_out, bfade);
+	ALPHA = (1.0 - smoothstep(bx - 6.0, bx - 1.0, abs(x))) * (1.0 - smoothstep(bz - 10.0, bz - 2.0, abs(z)));
 	ALPHA_HASH_SCALE = 1.0;
 }

@@ -29,6 +29,7 @@ const HUD_FADE: float = 0.62
 const CARD_BG := Color(0.05, 0.055, 0.05, 0.72 * 0.62)
 
 var aircraft: Aircraft
+var taxi_wp: Vector3 = Vector3(INF, INF, INF)   # the taxi route's next waypoint while a TaxiController guides
 var camera: Camera3D
 var terrain: Node
 
@@ -1462,6 +1463,9 @@ func _draw_nav_marker(hdg: float, w: float, base_y: float, px_per_deg: float) ->
 		var mode_node: Node = get_tree().get_first_node_in_group("game_mode")
 		if mode_node != null and mode_node.has_method("nav_point"):
 			np = mode_node.call("nav_point")
+	if np == null and taxi_wp.x != INF:
+		np = taxi_wp                      # the taxi route's next waypoint (amber, see TaxiController)
+		col = Color(0.95, 0.8, 0.35)
 	if np == null:
 		return
 	var d: Vector3 = (np as Vector3) - aircraft.global_position
