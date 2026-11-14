@@ -13,12 +13,18 @@ const CONFIG := {
 	"ammo": {"hp": 80.0, "pts": 120, "mult": 0.3, "expl": 3.4, "pad": 6.0},
 	"tank": {"hp": 90.0, "pts": 120, "mult": 0.35, "expl": 1.5, "pad": 3.5},
 	"gun": {"hp": 40.0, "pts": 60, "mult": 0.7, "expl": 1.0, "pad": 3.0},
+	"crates": {"hp": 40.0, "pts": 50, "mult": 0.6, "expl": 2.2, "pad": 3.0},
+	"drums": {"hp": 30.0, "pts": 40, "mult": 0.8, "expl": 1.8, "pad": 3.0},
 }
 
 var pkind: String = "hut"
 var _mesh: Mesh
 var _xf: Array = []          # Transform3D relative to this node
 var _wreck_size: Vector3 = Vector3(4.0, 0.6, 4.0)
+## Optional distance LOD: when set, the full mesh draws only out to near_end and this cheap stand-in from there to
+## the kind's VIS_RANGE (parked aircraft: ParkedAircraft.far_mesh_for). Set before the prop enters the tree.
+var far_mesh: Mesh = null
+var near_end: float = 0.0
 
 
 static func create(p_kind: String, p_team: String, p_mesh: Mesh, world_xforms: Array) -> AirfieldProp:
@@ -83,7 +89,7 @@ func _engine_start_tick(tm: Timer) -> void:
 				FX.engine_start_puff(nose, 1.2))
 
 
-const VIS_RANGE := {"tank": 3500.0, "gun": 2600.0, "parked": 4200.0, "truck": 2600.0, "tent": 3200.0, "hut": 6000.0, "ammo": 4500.0, "blister": 7000.0}
+const VIS_RANGE := {"tank": 3500.0, "gun": 2600.0, "parked": 4200.0, "truck": 2600.0, "tent": 3200.0, "hut": 6000.0, "ammo": 4500.0, "blister": 7000.0, "crates": 2200.0, "drums": 2200.0}
 
 
 func _build_intact(root: Node3D) -> void:
@@ -99,6 +105,19 @@ func _build_intact(root: Node3D) -> void:
 		mi.visibility_range_end_margin = vr * 0.12
 		mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED   # (FADE_SELF draws it after the clouds: seen through cloud)
 		root.add_child(mi)
+		if far_mesh != null and near_end > 0.0 and near_end < vr:
+			mi.visibility_range_end = near_end
+			mi.visibility_range_end_margin = 40.0
+			var fm := MeshInstance3D.new()
+			fm.mesh = far_mesh
+			fm.transform = t
+			fm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			fm.visibility_range_begin = near_end
+			fm.visibility_range_begin_margin = 40.0
+			fm.visibility_range_end = vr
+			fm.visibility_range_end_margin = vr * 0.12
+			fm.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+			root.add_child(fm)
 
 
 func _build_wreck(root: Node3D) -> void:
@@ -111,7 +130,7 @@ func _build_wreck(root: Node3D) -> void:
 
 
 func _on_destroyed(_killer: Node) -> void:
-	if pkind == "ammo" and is_inside_tree():
+	if pkind in ["ammo", "crates"] and is_inside_tree():
 		# bomb dump cooks off: a few delayed secondary blasts across the site
 		for i in 3:
 			var p: Vector3 = global_position + Vector3(randf_range(-1.0, 1.0), 2.0, randf_range(-1.0, 1.0)) * hit_radius * 0.8

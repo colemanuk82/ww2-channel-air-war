@@ -28,6 +28,13 @@ const LW_FLIEGERHORST_EARLY := ["bf109", "ju87", "he111"]
 const LW_FLIEGERHORST_LATE := ["fw190", "bf109", "ju88"]
 
 static var _cache: Dictionary = {}
+static var _far_cache: Dictionary = {}
+
+## Distance LOD: the full baked model (itself carrying engine mesh-LODs, LodCull.with_lods) is drawn only this close;
+## beyond it a ~200-triangle stand-in built from the type's ModelSpecs dimensions and colours takes over, out to
+## AirfieldProp.VIS_RANGE["parked"]. A baked parked model is 24k-50k triangles, so a field of twenty in view cost
+## more than the rest of the scenery around it.
+const NEAR_END: float = 700.0
 static var _static_shader: Shader
 static var _static_mats: Dictionary = {}
 
@@ -61,7 +68,7 @@ static func warm_jobs() -> Array:
 		for id in lst:
 			if not seen.has(id):
 				seen[id] = true
-				out.append(Callable(ParkedAircraft, "mesh_for").bind(String(id)))
+				out.append(Callable(ParkedAircraft, "far_mesh_for").bind(String(id)))    # bakes mesh_for(id) too
 	return out
 
 
@@ -104,8 +111,141 @@ static func mesh_for(model_id: String) -> ArrayMesh:
 	for k in by_mat:
 		(by_mat[k] as SurfaceTool).commit(out)
 	root.free()
+	out = LodCull.with_lods(out)
 	_cache[model_id] = out
 	return out
+
+
+## The far stand-in for one type (cached): fuselage, wings, tailplane, fin(s), engine nacelles and gear legs from the
+## type's ModelSpecs, in its camouflage top / underside colours, scaled to the baked model's span and seated on the
+## same ground line (wheels at y = 0, nose at -Z), so the swap at NEAR_END does not jump. No outline pass.
+static func far_mesh_for(model_id: String) -> ArrayMesh:
+	if _far_cache.has(model_id):
+		return _far_cache[model_id]
+	var near: ArrayMesh = mesh_for(model_id)
+	if near == null:
+		return null
+	var nb: AABB = near.get_aabb()
+	var spec: Dictionary = ModelSpecs.get_spec(model_id)
+	var top: Color = ModelSpecs.RAF_TOP
+	var under: Color = ModelSpecs.RAF_UNDER
+	var parts: Array = []
+	if spec.has("fus") and spec.has("wing"):
+		var cols: Dictionary = spec.get("colors", {})
+		top = cols.get("top", top)
+		under = cols.get("under", under)
+		_spec_parts(spec, top, under, parts)
+	else:
+		_generic_parts(nb, top, under, parts)
+	var raw: ArrayMesh = GroundKit.combine(parts)
+	var rb: AABB = raw.get_aabb()
+	# uniform fit on the span, centred on the baked model in x / z, fin tops level (the baked model's lowest point
+	# is its wheels, which the spec shapes leave out: the legs are added below, after the fit)
+	var k: float = nb.size.x / maxf(rb.size.x, 0.1)
+	var c_n := Vector3(nb.position.x + nb.size.x * 0.5, 0.0, nb.position.z + nb.size.z * 0.5)
+	var c_r := Vector3(rb.position.x + rb.size.x * 0.5, 0.0, rb.position.z + rb.size.z * 0.5) * k
+	var dy: float = (nb.position.y + nb.size.y) - (rb.position.y + rb.size.y) * k
+	if rb.position.y * k + dy < 0.0:
+		dy = -rb.position.y * k            # never below the ground
+	var fit := Transform3D(Basis.from_scale(Vector3.ONE * k), Vector3(c_n.x - c_r.x, dy, c_n.z - c_r.z))
+	var fitted: Array = []
+	for i in raw.get_surface_count():
+		fitted.append([raw, i, fit, raw.surface_get_material(i)])
+	# gear legs from the fitted belly down to the ground, under the wing a little ahead of the centre of mass
+	var belly: float = maxf(rb.position.y * k + dy, 0.4)
+	var gx: float = nb.size.x * 0.12
+	var gz: float = nb.position.z + nb.size.z * 0.38
+	var legs: Array = []
+	for sx in [-1.0, 1.0]:
+		legs.append(GroundKit.box_part(Vector3(0.35 * maxf(k, 1.0), belly, 0.35 * maxf(k, 1.0)), Vector3(c_n.x + sx * gx, belly * 0.5, gz), Color(0.12, 0.12, 0.12), Vector3.ZERO, false))
+	var leg_mesh: ArrayMesh = GroundKit.combine(legs)
+	for i2 in leg_mesh.get_surface_count():
+		fitted.append([leg_mesh, i2, Transform3D.IDENTITY, leg_mesh.surface_get_material(i2)])
+	var by_mat: Dictionary = {}
+	for f in fitted:
+		var mat: Material = f[3]
+		var key: int = mat.get_instance_id() if mat != null else 0
+		if not by_mat.has(key):
+			var st := SurfaceTool.new()
+			st.begin(Mesh.PRIMITIVE_TRIANGLES)
+			st.set_material(mat)
+			by_mat[key] = st
+		(by_mat[key] as SurfaceTool).append_from(f[0], int(f[1]), f[2])
+	var out := ArrayMesh.new()
+	for key2 in by_mat:
+		(by_mat[key2] as SurfaceTool).commit(out)
+	_far_cache[model_id] = out
+	return out
+
+
+static func _tube(r_front: float, r_back: float, length: float) -> CylinderMesh:
+	var c := CylinderMesh.new()
+	c.top_radius = r_back
+	c.bottom_radius = r_front
+	c.height = length
+	c.radial_segments = 6
+	c.rings = 1
+	return c
+
+
+## Low-poly airframe from a PlaneBuilder spec (metres, nose -Z): one piece per feature, camouflage on top.
+static func _spec_parts(spec: Dictionary, top: Color, under: Color, parts: Array) -> void:
+	var fus: Dictionary = spec["fus"]
+	var z0: float = float(fus.get("z0", -4.0))
+	var z1: float = float(fus.get("z1", 5.0))
+	var hw: float = float(fus.get("hw", 0.6))
+	var hh: float = float(fus.get("hh", 0.8))
+	var cy: float = float(fus.get("cy", 0.0))
+	var flen: float = z1 - z0
+	# a cylinder's axis is +Y: rotated +90 deg about X its bottom (front radius) faces -Z, the nose
+	var along := Basis.from_euler(Vector3(deg_to_rad(90.0), 0.0, 0.0))
+	var oval := Basis.from_scale(Vector3(1.0, hh / maxf(hw, 0.05), 1.0))
+	var body: Material = GroundKit.mat(top, false)
+	parts.append([_tube(hw, hw * 0.3, flen * 0.8), Transform3D(oval * along, Vector3(0.0, cy, z0 + flen * 0.6)), body])
+	parts.append([_tube(hw * 0.5, hw, flen * 0.2), Transform3D(oval * along, Vector3(0.0, cy, z0 + flen * 0.1)), body])
+	# wings: camouflage on top, a thin pale underside slab
+	var w: Dictionary = spec["wing"]
+	var half: float = float(w.get("half", 5.0))
+	var chord: float = (float(w.get("cr", 2.0)) + float(w.get("ct", 1.0))) * 0.5
+	var wy: float = float(w.get("y", 0.0))
+	var wz: float = float(w.get("le_z", -1.0)) + float(w.get("cr", 2.0)) * 0.5 + float(w.get("sweep", 0.0)) * 0.5
+	var th: float = maxf(float(w.get("thick", 0.14)) * chord * 0.6, 0.12)
+	parts.append(GroundKit.box_part(Vector3(half * 2.0, th, chord), Vector3(0.0, wy + th * 0.5, wz), top, Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(half * 2.0, 0.04, chord * 0.98), Vector3(0.0, wy - 0.02, wz), under, Vector3.ZERO, false))
+	if spec.has("tail"):
+		var t: Dictionary = spec["tail"]
+		var tc: float = (float(t.get("cr", 1.4)) + float(t.get("ct", 0.8))) * 0.5
+		parts.append(GroundKit.box_part(Vector3(float(t.get("span", 3.0)), 0.12, tc), Vector3(0.0, float(t.get("y", 0.2)), float(t.get("z", z1 - 1.0)) + tc * 0.3), top, Vector3.ZERO, false))
+	if spec.has("fin"):
+		var f: Dictionary = spec["fin"]
+		var fc: float = (float(f.get("cr", 1.6)) + float(f.get("ct", 0.9))) * 0.5
+		var fh: float = float(f.get("h", 1.8))
+		var xs: Array = [0.0]
+		if bool(f.get("twin", false)):
+			xs = [-float(f.get("x", 1.5)), float(f.get("x", 1.5))]
+		for fx in xs:
+			parts.append(GroundKit.box_part(Vector3(0.14, fh, fc), Vector3(float(fx), float(f.get("y", 0.3)) + fh * 0.5, float(f.get("z", z1 - 1.0)) + fc * 0.3), top, Vector3.ZERO, false))
+	var nac_mat: Material = GroundKit.mat(top.darkened(0.08), false)
+	for e in spec.get("engines", []):
+		var ed: Dictionary = e
+		var r: float = float(ed.get("r", 0.6))
+		var ez0: float = float(ed.get("z0", -2.0))
+		var ez1: float = float(ed.get("z1", 1.0))
+		parts.append([_tube(r, r * 0.6, ez1 - ez0), Transform3D(along, Vector3(float(ed.get("x", 0.0)), float(ed.get("y", 0.0)), (ez0 + ez1) * 0.5)), nac_mat])
+
+
+## No spec (the Spitfire is a glb only): a generic single-engined fighter shape in the baked model's box.
+static func _generic_parts(nb: AABB, top: Color, under: Color, parts: Array) -> void:
+	var span: float = nb.size.x
+	var ln: float = nb.size.z
+	var zc: float = nb.position.z + ln * 0.5
+	var r: float = ln * 0.055
+	var along := Basis.from_euler(Vector3(deg_to_rad(90.0), 0.0, 0.0))
+	parts.append([_tube(r, r * 0.3, ln * 0.95), Transform3D(along, Vector3(0.0, 0.0, zc)), GroundKit.mat(top, false)])
+	parts.append(GroundKit.box_part(Vector3(span, 0.16, ln * 0.2), Vector3(0.0, -r * 0.4, zc - ln * 0.12), top, Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(span, 0.04, ln * 0.19), Vector3(0.0, -r * 0.4 - 0.1, zc - ln * 0.12), under, Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(span * 0.32, 0.1, ln * 0.12), Vector3(0.0, 0.0, zc + ln * 0.4), top, Vector3.ZERO, false))
+	parts.append(GroundKit.box_part(Vector3(0.14, nb.size.y * 0.45, ln * 0.13), Vector3(0.0, nb.size.y * 0.2, zc + ln * 0.4), top, Vector3.ZERO, false))
 
 
 static func _collect(n: Node3D, parent_xf: Transform3D, out: Array) -> void:
@@ -193,6 +333,8 @@ static func place(container: Node3D, xforms: Array, team: String, af: Airfield) 
 		if af != null:
 			af.parked_spots.append(Vector3(tt.origin.x, 0.0, tt.origin.z))   # the player's taxi spawn keeps clear of these
 		var prop: AirfieldProp = AirfieldProp.create("parked", team, mesh, [tt])
+		prop.far_mesh = far_mesh_for(id)
+		prop.near_end = NEAR_END
 		var bb: AABB = mesh.get_aabb()
 		var span: float = maxf(bb.size.x, bb.size.z)
 		prop.hit_radius = maxf(prop.hit_radius, span * 0.5 + 1.5)

@@ -33,7 +33,7 @@ static func warm_jobs() -> Array:
 	for f0 in ["fuel_tank", "bomb_bank", "chance_light", "e_pen", "boundary_marker", "landing_t", "lw_watch_office"]:
 		out.append(Callable(AirfieldAssets, f0))
 	for team in ["Allies", "Axis"]:
-		for f in ["truck", "blister", "nissen", "tent", "t2_hangar", "t1_hangar", "revetment", "dummy_aircraft", "camo_net", "tank", "halftrack", "field_gun", "marquee", "lw_hangar"]:
+		for f in ["crate_stack", "drum_stack", "truck", "blister", "nissen", "tent", "t2_hangar", "t1_hangar", "revetment", "dummy_aircraft", "camo_net", "tank", "halftrack", "field_gun", "marquee", "lw_hangar"]:
 			out.append(Callable(AirfieldAssets, f).bind(team))
 	return out
 
@@ -503,6 +503,60 @@ static func marquee(team: String) -> ArrayMesh:
 	var parts: Array = []
 	parts.append(GroundKit.box_part(Vector3(16.0, 2.2, 8.0), Vector3(0, 1.1, 0), canvas))
 	parts.append([GroundKit.prism_mesh(8.6, 16.4, 2.6), Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0, 2.2, 0)), GroundKit.mat(canvas.darkened(0.08), true)])
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes[key] = m
+	return m
+
+
+## Ammunition crates on a pallet: a 3 x 3 layer, a 3 x 2 layer, two on top, in two shades of the side's paint, rope
+## handles picked out dark. About 3.2 x 2.3 m, 2 m high, base y = 0. ~250 triangles.
+static func crate_stack(team: String) -> ArrayMesh:
+	var key: String = "crate_stack_" + team
+	if _cached(key) != null:
+		return _cached(key)
+	var a: Color = Color(0.31, 0.33, 0.19) if team == "Allies" else Color(0.38, 0.36, 0.27)
+	var b: Color = a.darkened(0.14)
+	var wood := Color(0.36, 0.28, 0.18)
+	var parts: Array = []
+	parts.append(GroundKit.box_part(Vector3(3.3, 0.16, 2.4), Vector3(0, 0.08, 0), wood, Vector3.ZERO, false))
+	var cw: float = 1.02
+	var cd: float = 0.74
+	var ch: float = 0.58
+	for i in 3:
+		for j in 3:
+			parts.append(GroundKit.box_part(Vector3(cw - 0.04, ch, cd - 0.04), Vector3(-cw + float(i) * cw, 0.16 + ch * 0.5, -cd + float(j) * cd), a if (i + j) % 2 == 0 else b))
+	for i in 3:
+		for j in 2:
+			parts.append(GroundKit.box_part(Vector3(cw - 0.04, ch, cd - 0.04), Vector3(-cw + float(i) * cw, 0.16 + ch * 1.5, -cd * 0.5 + float(j) * cd), b if (i + j) % 2 == 0 else a))
+	for i in 2:
+		parts.append(GroundKit.box_part(Vector3(cw - 0.04, ch, cd - 0.04), Vector3(-cw * 0.5 + float(i) * cw, 0.16 + ch * 2.5, 0.1), a))
+	# a stencilled band round the lower layer
+	parts.append(GroundKit.box_part(Vector3(3.08, 0.07, 2.24), Vector3(0, 0.16 + ch * 0.75, 0), Color(0.12, 0.12, 0.1), Vector3.ZERO, false))
+	var m: ArrayMesh = _build(parts)
+	Scatter._meshes[key] = m
+	return m
+
+
+## 200-litre fuel and oil drums: a block of twelve standing, and a pyramid of five on their sides chocked with a
+## plank. About 4.6 x 2.6 m, 1.1 m high, base y = 0. ~420 triangles.
+static func drum_stack(team: String) -> ArrayMesh:
+	var key: String = "drum_stack_" + team
+	if _cached(key) != null:
+		return _cached(key)
+	var green: Color = Color(0.22, 0.27, 0.19) if team == "Allies" else Color(0.27, 0.29, 0.27)
+	var red := Color(0.40, 0.19, 0.12)
+	var r: float = 0.29
+	var h: float = 0.88
+	var parts: Array = []
+	for i in 4:
+		for j in 3:
+			var c: Color = red if (i * 3 + j) % 5 == 2 else green
+			parts.append(GroundKit.cyl_part(r, r, h, Vector3(-1.9 + float(i) * 0.62, h * 0.5, -0.62 + float(j) * 0.62), c, Vector3.ZERO, 6))
+	for k in 3:
+		parts.append(GroundKit.cyl_part(r, r, h, Vector3(0.95 + float(k) * 0.6, r, 0.2), green, Vector3(90, 0, 0), 6))
+	for k2 in 2:
+		parts.append(GroundKit.cyl_part(r, r, h, Vector3(1.25 + float(k2) * 0.6, r * 2.7, 0.2), red if k2 == 0 else green, Vector3(90, 0, 0), 6))
+	parts.append(GroundKit.box_part(Vector3(2.2, 0.12, 0.25), Vector3(1.55, 0.06, -0.45), Color(0.36, 0.28, 0.18), Vector3.ZERO, false))
 	var m: ArrayMesh = _build(parts)
 	Scatter._meshes[key] = m
 	return m
