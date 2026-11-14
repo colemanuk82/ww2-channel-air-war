@@ -1645,6 +1645,14 @@ static func _build_civic(root: Node3D, c: Dictionary) -> void:
 			GroundKit.box(holder, Vector3(96.0, 0.6, 9.0) * sc, Vector3(0.0, 0.3 * sc, -16.0 * sc), Color(0.6, 0.58, 0.55), Vector3.ZERO, false)
 		"quay":
 			GroundKit.box(holder, Vector3(60.0, 2.2, 8.0), Vector3(0.0, 1.1, 0.0), Color(0.5, 0.5, 0.47), Vector3.ZERO, false)
+		"gasworks" when TownModels.enabled():
+			var gwm := MeshInstance3D.new()
+			gwm.mesh = TownModels.gasworks()
+			holder.add_child(gwm)
+		"railyard" when TownModels.enabled():
+			var rym := MeshInstance3D.new()
+			rym.mesh = TownModels.goods_yard()
+			holder.add_child(rym)
 		"gasworks":
 			# A town gas works on the railway: a pair of gasholder drums in their guide frames, a retort house
 			# and a tall works chimney (existing greys / soot brick and slate only).

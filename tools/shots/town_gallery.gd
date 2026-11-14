@@ -41,7 +41,21 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "belfry":
+	if view == "london" or view == "yard":
+		var lm: Array = [TownModels.big_ben(), TownModels.tower_bridge()] if view == "london" else [TownModels.gasworks(), TownModels.goods_yard()]
+		for li in 2:
+			var lmi2 := MeshInstance3D.new()
+			lmi2.mesh = lm[li]
+			if view == "london":
+				lmi2.position = Vector3(40.0, 0.0, -120.0) if li == 0 else Vector3(0.0, 0.0, 60.0)
+			else:
+				lmi2.position = Vector3(-10.0, 0.0, -90.0) if li == 0 else Vector3(0.0, 0.0, 40.0)
+			add_child(lmi2)
+		sun.directional_shadow_max_distance = 900.0
+		cam.position = Vector3(-90.0, 130.0, 300.0) if view == "london" else Vector3(-70.0, 110.0, 190.0)
+		cam.look_at(Vector3(0.0, 30.0, -20.0) if view == "london" else Vector3(0.0, 5.0, -20.0))
+		cam.fov = 45.0
+	elif view == "belfry":
 		var bf := MeshInstance3D.new()
 		bf.mesh = TownModels.calais_belfry()
 		bf.position = Vector3(10.0, 0.0, 0.0)

@@ -1876,3 +1876,272 @@ static func blister_hangar(skin: Color) -> ArrayMesh:
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache[key] = m
 	return m
+
+
+# ------------------------------------------------------------------ town gasworks and goods yard (Scatter._build_civic)
+
+## Town gas works in the old layout: two telescopic gasholders (x = -26 and +26) inside lattice guide frames with
+## ring girders, one holder part-lowered; a retort house with a louvred ridge at z = +30, a tall round chimney, a
+## purifier shed, coal heaps and a boundary wall.
+static func gasworks() -> ArrayMesh:
+	if _cache.has("gasworks"):
+		return _cache["gasworks"]
+	var b := MB.new()
+	var drum := Color(0.42, 0.44, 0.46)
+	var frame := Color(0.28, 0.28, 0.30)
+	var soot := Color(0.35, 0.23, 0.18)
+	var slate := Color(0.27, 0.28, 0.31)
+	var coal := Color(0.09, 0.09, 0.10)
+	for gi in 2:
+		var gx: float = -26.0 + float(gi) * 52.0
+		var lift: float = 26.0 if gi == 0 else 15.0            # the second holder is part empty
+		b.prism(gx, 0.0, 0.0, 3.0, 21.0, 21.0, 21.0, 21.0, 20, soot.darkened(0.2), true)
+		b.prism(gx, 0.0, 3.0, lift * 0.55, 20.0, 20.0, 20.0, 20.0, 20, drum.darkened(0.08), false)
+		b.prism(gx, 0.0, lift * 0.55, lift, 19.0, 19.0, 19.0, 19.0, 20, drum, false)
+		b.prism(gx, 0.0, lift, lift + 2.4, 19.0, 19.0, 4.0, 4.0, 20, drum.lightened(0.08), true)
+		b.prism(gx, 0.0, lift * 0.55 - 0.4, lift * 0.55 + 0.4, 20.3, 20.3, 20.3, 20.3, 20, frame, false)
+		# guide frame: columns, three ring girders and diagonal bracing between columns
+		var cols: int = 10
+		for fi in cols:
+			var fa: float = TAU * float(fi) / float(cols)
+			var fb: float = TAU * float(fi + 1) / float(cols)
+			var p0 := Vector3(gx + cos(fa) * 21.6, 0.0, sin(fa) * 21.6)
+			var p1 := Vector3(gx + cos(fb) * 21.6, 0.0, sin(fb) * 21.6)
+			b.box(p0.x - 0.4, p0.x + 0.4, 0.0, 29.0, p0.z - 0.4, p0.z + 0.4, frame, true)
+			for ry in [10.0, 19.5, 28.6]:
+				_bar_xz(b, Vector3(p0.x, ry, p0.z), Vector3(p1.x, ry, p1.z), 0.35, 0.5, frame)
+	# retort house with a raised louvred ridge, chimney, purifier shed, coal heaps, boundary wall
+	b.box(-22.0, 22.0, 0.0, 12.0, 20.0, 40.0, soot, false)
+	b.gable_x(-22.0, 22.0, 20.0, 40.0, 12.0, 4.5, 0.4, slate, soot, 0.0)
+	b.box(-18.0, 18.0, 15.6, 17.4, 28.5, 31.5, soot.darkened(0.2), false)
+	b.gable_x(-18.0, 18.0, 28.2, 31.8, 17.4, 0.9, 0.2, slate.lightened(0.05), soot.darkened(0.2), 0.0)
+	for d in 5:
+		b.box(-18.0 + float(d) * 8.0, -15.0 + float(d) * 8.0, 0.0, 5.0, 19.9, 20.0, Color(0.10, 0.09, 0.09), false)
+	b.prism(-30.0, 30.0, 0.0, 5.0, 3.4, 3.4, 3.0, 3.0, 10, soot.darkened(0.1), false)
+	b.prism(-30.0, 30.0, 5.0, 46.0, 2.6, 2.6, 1.7, 1.7, 10, soot.darkened(0.15), true)
+	b.prism(-30.0, 30.0, 45.0, 46.6, 2.0, 2.0, 2.0, 2.0, 10, soot.darkened(0.35), true)
+	b.box(28.0, 46.0, 0.0, 6.0, 24.0, 36.0, soot.lightened(0.06), false)
+	b.gable_x(28.0, 46.0, 24.0, 36.0, 6.0, 2.6, 0.3, slate, soot.lightened(0.06), 0.0)
+	for h in 3:
+		b.prism(-8.0 + float(h) * 9.0, 47.0, 0.0, 3.2 - float(h) * 0.5, 4.5, 3.6, 0.6, 0.5, 8, coal, true)
+	b.box(-50.0, 50.0, 0.0, 2.2, -24.6, -24.0, soot.lightened(0.04))
+	b.box(-50.6, -50.0, 0.0, 2.2, -24.6, 52.0, soot.lightened(0.04))
+	b.box(50.0, 50.6, 0.0, 2.2, -24.6, 52.0, soot.lightened(0.04))
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache["gasworks"] = m
+	return m
+
+
+## Goods yard in the old layout (sidings along X): ballast bed, four sidings with rails and sleepers, covered vans,
+## open coal wagons and tank wagons, a brick goods shed with a loading canopy at z = +34, a water tank on a brick
+## tower, a coal stage, a yard crane and stacked sleepers.
+static func goods_yard() -> ArrayMesh:
+	if _cache.has("goods_yard"):
+		return _cache["goods_yard"]
+	var b := MB.new()
+	var ballast := Color(0.34, 0.32, 0.29)
+	var rail := Color(0.34, 0.30, 0.27)
+	var sleeper := Color(0.20, 0.16, 0.12)
+	var brick := Color(0.46, 0.28, 0.21)
+	var slate := Color(0.27, 0.28, 0.31)
+	var iron := Color(0.12, 0.12, 0.13)
+	b.box(-105.0, 105.0, 0.0, 0.3, -22.0, 22.0, ballast, true)
+	var wagon_cols: Array = [Color(0.32, 0.28, 0.22), Color(0.40, 0.22, 0.17), Color(0.30, 0.31, 0.32), Color(0.22, 0.24, 0.20)]
+	for ti in 4:
+		var tz: float = -15.0 + float(ti) * 10.0
+		b.box(-100.0, 100.0, 0.3, 0.38, tz - 1.3, tz + 1.3, sleeper, true)
+		for rz in [-0.72, 0.72]:
+			b.box(-100.0, 100.0, 0.38, 0.56, tz + rz - 0.07, tz + rz + 0.07, rail, true)
+		b.box(100.0, 101.2, 0.3, 1.6, tz - 1.2, tz + 1.2, sleeper.lightened(0.1), true)          # buffer stop
+		for wi in 4:
+			var wx: float = -72.0 + float(wi) * 44.0 + float((ti + wi) % 2) * 12.0
+			var wc: Color = wagon_cols[(ti * 3 + wi) % 4]
+			var kind: int = (ti + wi * 2) % 3
+			b.box(wx - 4.6, wx + 4.6, 1.0, 1.3, tz - 1.25, tz + 1.25, iron, true)                 # underframe
+			for ax in [-2.8, 2.8]:
+				for sz in [-0.72, 0.72]:
+					b.wheel(wx + ax, 0.95, tz + sz, 0.46, 0.14, 8, iron)
+			if kind == 0:                                                                         # covered van
+				b.box(wx - 4.4, wx + 4.4, 1.3, 3.6, tz - 1.3, tz + 1.3, wc, false)
+				b.gable_x(wx - 4.4, wx + 4.4, tz - 1.3, tz + 1.3, 3.6, 0.45, 0.08, Color(0.18, 0.17, 0.16), wc, 0.1)
+				b.box(wx - 0.9, wx + 0.9, 1.4, 3.4, tz + 1.3, tz + 1.36, wc.darkened(0.2), false)
+			elif kind == 1:                                                                       # open coal wagon
+				b.box(wx - 4.4, wx + 4.4, 1.3, 2.6, tz - 1.3, tz + 1.3, wc, false)
+				b.prism(wx, tz, 2.3, 3.1, 4.0, 1.1, 1.6, 0.4, 8, Color(0.08, 0.08, 0.09), true)
+			else:                                                                                 # tank wagon
+				for s in 8:
+					var a0: float = TAU * float(s) / 8.0
+					var a1: float = TAU * float(s + 1) / 8.0
+					var am: float = (a0 + a1) * 0.5
+					b.face([Vector3(wx - 4.0, 2.45 + sin(a0) * 1.15, tz + cos(a0) * 1.15), Vector3(wx + 4.0, 2.45 + sin(a0) * 1.15, tz + cos(a0) * 1.15), Vector3(wx + 4.0, 2.45 + sin(a1) * 1.15, tz + cos(a1) * 1.15), Vector3(wx - 4.0, 2.45 + sin(a1) * 1.15, tz + cos(a1) * 1.15)], Color(0.14, 0.14, 0.15), Vector3(0.0, sin(am), cos(am)))
+				b.wheel(wx - 4.0, 2.45, tz, 1.15, 0.05, 8, Color(0.14, 0.14, 0.15))
+				b.wheel(wx + 4.0, 2.45, tz, 1.15, 0.05, 8, Color(0.14, 0.14, 0.15))
+				b.box(wx - 0.4, wx + 0.4, 3.6, 4.0, tz - 0.4, tz + 0.4, iron, true)
+	# goods shed with a loading canopy and platform, facing the yard
+	b.box(-12.0, 52.0, 0.0, 9.0, 24.0, 44.0, brick, false)
+	b.gable_x(-12.0, 52.0, 24.0, 44.0, 9.0, 5.0, 0.6, slate, brick, 0.5)
+	b.box(-12.0, 52.0, 0.0, 1.3, 20.5, 24.0, Color(0.50, 0.48, 0.44), true)
+	b.face([Vector3(-12.0, 6.4, 24.0), Vector3(52.0, 6.4, 24.0), Vector3(52.0, 5.6, 19.8), Vector3(-12.0, 5.6, 19.8)], slate.lightened(0.06), Vector3.UP)
+	b.face([Vector3(-12.0, 6.3, 24.0), Vector3(52.0, 6.3, 24.0), Vector3(52.0, 5.5, 19.8), Vector3(-12.0, 5.5, 19.8)], Color(0.20, 0.18, 0.16), Vector3.DOWN)
+	for d in 5:
+		var dx: float = -6.0 + float(d) * 13.0
+		b.box(dx - 2.2, dx + 2.2, 1.3, 5.2, 23.9, 24.0, Color(0.14, 0.12, 0.10), false)
+		b.box(dx + 6.3, dx + 6.6, 1.3, 5.6, 20.0, 20.3, iron, false)
+	# water tank on a brick tower, coal stage, yard crane, sleeper stacks
+	b.box(-76.0, -64.0, 0.0, 6.0, 26.0, 34.0, brick, true)
+	b.box(-76.6, -63.4, 6.0, 9.4, 25.4, 34.6, Color(0.26, 0.27, 0.29), true, Color(0.16, 0.20, 0.24))
+	b.box(-58.0, -40.0, 0.0, 3.0, 25.0, 33.0, brick.darkened(0.15), true, Color(0.08, 0.08, 0.09))
+	b.prism(-28.0, 30.0, 0.0, 5.5, 0.9, 0.9, 0.7, 0.7, 8, iron, true)
+	b.beam(Vector3(-28.0, 5.2, 30.0), Vector3(-21.0, 9.5, 30.0), 0.3, 0.3, iron)
+	for sk in 3:
+		b.box(66.0 + float(sk) * 5.0, 69.6 + float(sk) * 5.0, 0.3, 1.6 + float(sk % 2) * 0.6, 27.0, 29.6, sleeper.lightened(0.05), true)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache["goods_yard"] = m
+	return m
+
+
+# ------------------------------------------------------------------ London: Big Ben and Tower Bridge
+
+## The clock tower (at the origin) with the Houses of Parliament running off toward -X, in the old model's exaggerated
+## scale: ribbed stone shaft, clock stage with four white dials, belfry, a two-stage slate spire with gilt finial;
+## the palace as a long pinnacled range with a central spire and the square Victoria Tower at the far end.
+static func big_ben() -> ArrayMesh:
+	if _cache.has("big_ben"):
+		return _cache["big_ben"]
+	var b := MB.new()
+	var stone := Color(0.68, 0.62, 0.48)
+	var dress: Color = stone.lightened(0.10)
+	var slate := Color(0.24, 0.25, 0.28)
+	var dark := Color(0.13, 0.12, 0.12)
+	var gold := Color(0.72, 0.60, 0.24)
+	b.box(-7.0, 7.0, 0.0, 10.0, -7.0, 7.0, stone.darkened(0.06), true, slate)
+	b.box(-5.5, 5.5, 10.0, 68.0, -5.5, 5.5, stone, false)
+	# vertical ribs up each face and corner piers
+	for f in 4:
+		var ang: float = float(f) * PI * 0.5
+		var dx: float = cos(ang)
+		var dz: float = sin(ang)
+		for off in [-3.0, -1.0, 1.0, 3.0]:
+			if absf(dx) > 0.5:
+				b.box(dx * 5.5 - 0.25, dx * 5.5 + 0.25, 10.0, 68.0, off - 0.3, off + 0.3, dress, false)
+			else:
+				b.box(off - 0.3, off + 0.3, 10.0, 68.0, dz * 5.5 - 0.25, dz * 5.5 + 0.25, dress, false)
+	for cx in [-1.0, 1.0]:
+		for cz in [-1.0, 1.0]:
+			b.box(cx * 5.5 - 0.7, cx * 5.5 + 0.7, 0.0, 84.0, cz * 5.5 - 0.7, cz * 5.5 + 0.7, dress.darkened(0.04), false)
+			b.prism(cx * 5.5, cz * 5.5, 84.0, 89.0, 0.9, 0.9, 0.0, 0.0, 4, gold.darkened(0.2), false, PI * 0.25)
+	# clock stage: wider, with a dial on each face inside a dark surround
+	b.box(-6.6, 6.6, 68.0, 82.0, -6.6, 6.6, stone.lightened(0.04), true, slate)
+	b.box(-7.0, 7.0, 67.4, 68.0, -7.0, 7.0, dress)
+	b.box(-7.0, 7.0, 82.0, 82.8, -7.0, 7.0, dress)
+	for f2 in 4:
+		var a2: float = float(f2) * PI * 0.5
+		var ex: float = cos(a2)
+		var ez: float = sin(a2)
+		var ring: Array = []
+		var ring2: Array = []
+		for s in 12:
+			var sa: float = TAU * float(s) / 12.0
+			var u: float = cos(sa)
+			var v: float = sin(sa)
+			if absf(ex) > 0.5:
+				ring.append(Vector3(ex * 6.72, 75.0 + v * 5.2, u * 5.2))
+				ring2.append(Vector3(ex * 6.8, 75.0 + v * 4.5, u * 4.5))
+			else:
+				ring.append(Vector3(u * 5.2, 75.0 + v * 5.2, ez * 6.72))
+				ring2.append(Vector3(u * 4.5, 75.0 + v * 4.5, ez * 6.8))
+		b.face(ring, dark, Vector3(ex, 0.0, ez))
+		b.face(ring2, Color(0.93, 0.91, 0.80), Vector3(ex, 0.0, ez))
+	# belfry and the spire: lower pyramid, lantern with dormer lights, upper spire, finial
+	b.box(-5.6, 5.6, 82.8, 87.0, -5.6, 5.6, stone, true, slate)
+	b.hip_x(-6.0, 6.0, -6.0, 6.0, 87.0, 7.0, 3.0, 0.0, slate)
+	b.box(-3.0, 3.0, 94.0, 97.5, -3.0, 3.0, slate.lightened(0.08), true)
+	for f3 in 4:
+		var a3: float = float(f3) * PI * 0.5
+		b.box(cos(a3) * 3.0 - 0.6, cos(a3) * 3.0 + 0.6, 94.4, 96.8, sin(a3) * 3.0 - 0.6, sin(a3) * 3.0 + 0.6, gold.darkened(0.1), false)
+	b.prism(0.0, 0.0, 97.5, 107.0, 3.4, 3.4, 0.0, 0.0, 4, slate, false, PI * 0.25)
+	b.prism(0.0, 0.0, 106.4, 110.0, 0.22, 0.22, 0.06, 0.06, 4, gold, false)
+	# the palace: river-front range with a pinnacled parapet, roof, central spire and the Victoria Tower
+	b.box(-96.0, -8.0, 0.0, 16.0, -11.0, 11.0, stone, false)
+	b.gable_x(-96.0, -8.0, -9.0, 9.0, 16.0, 6.0, 0.0, slate, stone, 0.0)
+	b.box(-96.0, -8.0, 16.0, 17.2, -11.3, 11.3, dress, false)
+	for i in 15:
+		var px: float = -92.0 + float(i) * 5.9
+		for sz in [-1.0, 1.0]:
+			b.box(px - 0.5, px + 0.5, 0.0, 19.0, sz * 11.0 - 0.5, sz * 11.0 + 0.5, dress.darkened(0.03), false)
+			b.prism(px, sz * 11.0, 19.0, 23.0, 0.7, 0.7, 0.0, 0.0, 4, slate, false, PI * 0.25)
+	b.prism(-50.0, 0.0, 20.0, 34.0, 4.5, 4.5, 4.0, 4.0, 8, stone, false, PI / 8.0)
+	b.prism(-50.0, 0.0, 34.0, 58.0, 4.4, 4.4, 0.0, 0.0, 8, slate, false, PI / 8.0)
+	b.box(-112.0, -96.0, 0.0, 62.0, -8.0, 8.0, stone, true, slate)
+	for sy in [20.0, 40.0, 58.0]:
+		b.box(-112.4, -95.6, sy, sy + 0.8, -8.4, 8.4, dress)
+	for cx2 in [-112.0, -96.0]:
+		for cz2 in [-8.0, 8.0]:
+			b.prism(cx2, cz2, 0.0, 66.0, 1.6, 1.6, 1.5, 1.5, 8, dress.darkened(0.04), false)
+			b.prism(cx2, cz2, 66.0, 74.0, 1.8, 1.8, 0.0, 0.0, 8, slate, false)
+	b.box(-104.1, -103.9, 62.0, 76.0, -0.1, 0.1, dark, false)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache["big_ben"] = m
+	return m
+
+
+## Tower Bridge in the old model's layout (towers at x = +/-40, deck at y = 28, river along Z): two stone towers on
+## piers with corner turrets and slate roofs, twin high-level walkways, the bascule span with its two leaves a
+## little raised, and suspension side spans on chains down to abutment towers.
+static func tower_bridge() -> ArrayMesh:
+	if _cache.has("tower_bridge"):
+		return _cache["tower_bridge"]
+	var b := MB.new()
+	var stone := Color(0.58, 0.58, 0.56)
+	var dress: Color = stone.lightened(0.10)
+	var slate := Color(0.24, 0.25, 0.28)
+	var steel := Color(0.30, 0.45, 0.62)
+	var road := Color(0.22, 0.22, 0.24)
+	var dark := Color(0.13, 0.12, 0.12)
+	var deck: float = 28.0
+	for sx in [-1.0, 1.0]:
+		var tx: float = sx * 40.0
+		# pier with cutwaters, tower shaft, bands, arch over the roadway, corner turrets and the roofs
+		b.prism(tx, 0.0, -6.0, deck - 2.0, 11.0, 15.0, 10.0, 13.0, 12, stone.darkened(0.12), true)
+		b.box(tx - 7.0, tx + 7.0, deck - 2.0, 60.0, -7.0, 7.0, stone, true, slate)
+		for sy in [38.0, 48.0, 58.0]:
+			b.box(tx - 7.3, tx + 7.3, sy, sy + 0.9, -7.3, 7.3, dress)
+		b.box(tx - 7.1, tx + 7.1, deck + 0.6, deck + 9.0, -3.2, 3.2, dark, false)
+		for cx in [-1.0, 1.0]:
+			for cz in [-1.0, 1.0]:
+				b.prism(tx + cx * 7.0, cz * 7.0, deck - 2.0, 64.0, 2.0, 2.0, 1.9, 1.9, 8, dress.darkened(0.03), false)
+				b.prism(tx + cx * 7.0, cz * 7.0, 64.0, 71.0, 2.2, 2.2, 0.0, 0.0, 8, slate, false)
+		b.hip_x(tx - 6.6, tx + 6.6, -6.6, 6.6, 60.0, 11.0, 5.2, 0.0, slate)
+		b.box(tx - 0.12, tx + 0.12, 71.0, 76.0, -0.12, 0.12, Color(0.72, 0.60, 0.24), false)
+		# one bascule leaf, lifted a little toward mid-river, and the side span with its chain and hangers
+		var x_in: float = sx * 33.0
+		for sz in [-1.0, 1.0]:
+			b.beam(Vector3(x_in, deck, sz * 5.6), Vector3(sx * 1.0, deck + 2.6, sz * 5.6), 0.9, 0.4, steel)
+		b.face([Vector3(x_in, deck + 0.4, -5.2), Vector3(x_in, deck + 0.4, 5.2), Vector3(sx * 1.0, deck + 3.0, 5.2), Vector3(sx * 1.0, deck + 3.0, -5.2)], road, Vector3.UP)
+		b.face([Vector3(x_in, deck - 0.4, -5.2), Vector3(x_in, deck - 0.4, 5.2), Vector3(sx * 1.0, deck + 2.2, 5.2), Vector3(sx * 1.0, deck + 2.2, -5.2)], steel.darkened(0.3), Vector3.DOWN)
+		var x_out: float = sx * 47.0
+		var x_ab: float = sx * 112.0
+		b.box(minf(x_out, x_ab), maxf(x_out, x_ab), deck - 1.6, deck + 0.4, -6.0, 6.0, steel.darkened(0.2), true, road)
+		var seg: int = 10
+		for sz2 in [-6.0, 6.0]:
+			var prev := Vector3(x_out, 56.0, sz2)
+			for i in range(1, seg + 1):
+				var t: float = float(i) / float(seg)
+				var cur := Vector3(lerpf(x_out, x_ab, t), lerpf(56.0, deck + 9.0, t) - 9.0 * sin(PI * t), sz2)
+				b.beam(prev, cur, 0.7, 0.35, steel)
+				if i < seg:
+					b.beam(Vector3(cur.x, deck + 0.4, sz2), cur, 0.12, 0.12, steel.darkened(0.15))
+				prev = cur
+		# abutment tower and its landward approach
+		b.box(minf(x_ab, x_ab + sx * 10.0), maxf(x_ab, x_ab + sx * 10.0), -4.0, deck + 14.0, -8.0, 8.0, stone, true, slate)
+		b.box(minf(x_ab, x_ab + sx * 10.0) - 0.2, maxf(x_ab, x_ab + sx * 10.0) + 0.2, deck + 0.6, deck + 8.0, -3.2, 3.2, dark, false)
+		b.hip_x(minf(x_ab, x_ab + sx * 10.0), maxf(x_ab, x_ab + sx * 10.0), -8.0, 8.0, deck + 14.0, 5.0, 4.0, 0.0, slate)
+	# the two high-level walkways
+	for wz in [-4.6, 4.6]:
+		b.box(-33.0, 33.0, 45.0, 49.0, wz - 1.6, wz + 1.6, steel, true, steel.darkened(0.2))
+		for k in 12:
+			var kx: float = -30.0 + float(k) * 5.45
+			b.box(kx - 0.2, kx + 0.2, 45.0, 49.0, wz - 1.7, wz + 1.7, steel.lightened(0.15), false)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache["tower_bridge"] = m
+	return m

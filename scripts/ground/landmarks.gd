@@ -293,6 +293,14 @@ static func build(id: String) -> Node3D:
 	var stone := Color(0.64, 0.6, 0.52)
 	var dark := Color(0.3, 0.3, 0.34)
 	match id:
+		"big_ben" when TownModels.enabled():
+			var bbm := MeshInstance3D.new()
+			bbm.mesh = TownModels.big_ben()
+			root.add_child(bbm)
+		"tower_bridge" when TownModels.enabled():
+			var tbm := MeshInstance3D.new()
+			tbm.mesh = TownModels.tower_bridge()
+			root.add_child(tbm)
 		"big_ben":
 			_b(root, Vector3(14, 10, 14), Vector3(0, 5, 0), stone)
 			_b(root, Vector3(11, 60, 11), Vector3(0, 40, 0), stone)
