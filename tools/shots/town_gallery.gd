@@ -41,7 +41,20 @@ func _ready() -> void:
 	var cam := Camera3D.new()
 	cam.fov = 40.0
 	add_child(cam)
-	if view == "mills":
+	if view == "cath":
+		var cspecs: Array = [[150.0, 46.0, 157.0, 2, 28.0, Color(0.34, 0.33, 0.32), false, false], [100.0, 34.0, 60.0, 1, 14.0, Color(0.66, 0.62, 0.54), true, false], [130.0, 34.0, 68.0, 2, 48.0, Color(0.78, 0.74, 0.64), false, false]]
+		for ci2 in 3:
+			var cs: Array = cspecs[ci2]
+			var cm2 := MeshInstance3D.new()
+			cm2.mesh = TownModels.cathedral(cs[0], cs[1], cs[2], cs[3], cs[4], cs[5], cs[6], cs[7])
+			cm2.position = Vector3(-130.0 + float(ci2) * 130.0, 0.0, 0.0)
+			cm2.rotation.y = 0.6
+			add_child(cm2)
+		sun.directional_shadow_max_distance = 900.0
+		cam.position = Vector3(40.0, 150.0, 360.0)
+		cam.look_at(Vector3(0.0, 55.0, 0.0))
+		cam.fov = 45.0
+	elif view == "mills":
 		var wm: Node3D = Landmarks.windmill()
 		wm.position = Vector3(-16.0, 0.0, 0.0)
 		wm.rotation.y = PI + 0.5

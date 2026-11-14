@@ -1651,3 +1651,109 @@ static func lighthouse(h: float) -> ArrayMesh:
 	var m: ArrayMesh = b.commit(paint_material())
 	_cache[key] = m
 	return m
+
+
+# ------------------------------------------------------------------ cathedral (Landmarks._cathedral)
+
+## Great church in the old generic layout (nave along Z, west towers at +Z, apse at -Z): a tall clerestoried nave
+## over lean-to aisles, buttresses with pinnacles, a gabled transept, a polygonal apse with an ambulatory, a west
+## front with a portal and rose window between one or two staged towers (with octagonal spires when spire_h > 0),
+## and either a dome on a drum or a slender fleche over the crossing. `ruin` leaves it roofless and scorched.
+static func cathedral(nave_len: float, nave_w: float, tower_h: float, towers: int, spire_h: float, col: Color, dome: bool, ruin: bool) -> ArrayMesh:
+	var key: String = "cath_%d_%d_%d_%d_%d_%s_%s_%s" % [int(nave_len), int(nave_w), int(tower_h), towers, int(spire_h), col.to_html(false), str(dome), str(ruin)]
+	if _cache.has(key):
+		return _cache[key]
+	var b := MB.new()
+	var roof := Color(0.28, 0.29, 0.33)
+	var dark := Color(0.13, 0.12, 0.12)
+	var dress: Color = col.lightened(0.10)
+	var wall_h: float = tower_h * 0.28
+	var hl: float = nave_len * 0.5
+	var hw: float = nave_w * 0.5
+	var cw: float = hw * 0.52                      # half-width of the central vessel
+	var aisle_h: float = wall_h * 0.58
+	var rise: float = tower_h * 0.13
+	var z_tw: float = hl - nave_w * 0.18           # tower centre line
+	var z_w: float = hl - nave_w * 0.36            # nave stops at the tower block
+	var tx: float = nave_len * 0.05                # transept centre
+	var thw: float = nave_len * 0.08
+	# nave, aisles and their roofs
+	b.box(-cw, cw, 0.0, wall_h, -hl, z_w, col, ruin, col.darkened(0.5))
+	if not ruin:
+		b.gable_z(-cw, cw, -hl, z_w, wall_h, rise, cw * 0.06, roof, col, 0.0)
+	for sx in [-1.0, 1.0]:
+		var x0: float = minf(sx * cw, sx * hw)
+		var x1: float = maxf(sx * cw, sx * hw)
+		b.box(x0, x1, 0.0, aisle_h, -hl * 0.92, z_w, col.darkened(0.04), ruin, col.darkened(0.5))
+		if not ruin:
+			b.mono(x0, x1, -hl * 0.92, z_w, aisle_h, aisle_h + wall_h * 0.16, "x1" if sx < 0.0 else "x0", roof.lightened(0.06), col.darkened(0.04), hw * 0.03)
+		# clerestory window slots and aisle buttresses with pinnacles
+		var bays: int = 9
+		for i in bays:
+			var bz: float = lerpf(-hl * 0.86, z_w - nave_w * 0.12, float(i) / float(bays - 1))
+			if absf(bz - tx) < thw * 1.2:
+				continue
+			var bx0: float = minf(sx * hw, sx * (hw + nave_w * 0.05))
+			var bx1: float = maxf(sx * hw, sx * (hw + nave_w * 0.05))
+			var bt: float = nave_w * 0.03
+			b.box(bx0, bx1, 0.0, aisle_h * 0.92, bz - bt, bz + bt, dress.darkened(0.06), false)
+			b.prism((bx0 + bx1) * 0.5, bz, aisle_h * 0.92, aisle_h * 0.92 + wall_h * 0.22, nave_w * 0.03, nave_w * 0.03, 0.0, 0.0, 4, dress, false, PI * 0.25)
+			b.box(minf(sx * cw, sx * (cw + 0.3)), maxf(sx * cw, sx * (cw + 0.3)), aisle_h + wall_h * 0.2, wall_h * 0.92, bz + bt * 2.0, bz + bt * 2.0 + nave_w * 0.07, dark, false)
+	# transept with gable ends and a big window each end
+	b.box(-hw * 1.5, hw * 1.5, 0.0, wall_h, tx - thw, tx + thw, col, ruin, col.darkened(0.5))
+	if not ruin:
+		b.gable_x(-hw * 1.5, hw * 1.5, tx - thw, tx + thw, wall_h, rise * 0.9, thw * 0.06, roof, col, 0.0)
+	for sx2 in [-1.0, 1.0]:
+		b.box(minf(sx2 * hw * 1.5, sx2 * (hw * 1.5 + 0.4)), maxf(sx2 * hw * 1.5, sx2 * (hw * 1.5 + 0.4)), wall_h * 0.3, wall_h * 0.85, tx - thw * 0.4, tx + thw * 0.4, dark, false)
+	# apse: a polygonal east end with a lower ambulatory and conical roofs
+	b.prism(0.0, -hl, 0.0, aisle_h, hw * 0.95, hw * 0.95, hw * 0.95, hw * 0.95, 10, col.darkened(0.04), ruin)
+	b.prism(0.0, -hl, aisle_h, wall_h, cw, cw, cw, cw, 10, col, ruin)
+	if not ruin:
+		b.prism(0.0, -hl, aisle_h, aisle_h + wall_h * 0.14, hw, hw, cw, cw, 10, roof.lightened(0.06), false)
+		b.prism(0.0, -hl, wall_h, wall_h + rise, cw * 1.05, cw * 1.05, 0.0, 0.0, 10, roof, false)
+	# west front: tower block, portal and rose window, gable between the towers
+	var tw: float = nave_w * 0.34
+	var th2: float = tw * 0.5
+	b.box(-hw, hw, 0.0, wall_h, z_w, hl, col, true, roof)
+	b.box(-cw * 0.45, cw * 0.45, 0.0, wall_h * 0.42, hl, hl + 0.5, dark, false)
+	b.prism(0.0, hl + 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 3, dark, false)
+	b.box(-cw * 0.42, cw * 0.42, wall_h * 0.52, wall_h * 0.88, hl, hl + 0.4, Color(0.16, 0.18, 0.24), false)
+	if not ruin:
+		b.gable_z(-cw, cw, z_w, hl, wall_h, rise, 0.0, roof, dress, 0.0)
+	for i in towers:
+		var x: float = 0.0 if towers == 1 else (-nave_w * 0.3 if i == 0 else nave_w * 0.3)
+		b.box(x - th2, x + th2, 0.0, tower_h, z_tw - th2, z_tw + th2, col, true, roof)
+		for st in [0.34, 0.58, 0.80]:
+			b.box(x - th2 * 1.06, x + th2 * 1.06, tower_h * st, tower_h * st + tower_h * 0.012, z_tw - th2 * 1.06, z_tw + th2 * 1.06, dress)
+		# paired belfry openings on each face
+		for f in 4:
+			var ang: float = float(f) * PI * 0.5
+			var dx: float = cos(ang)
+			var dz: float = sin(ang)
+			for off in [-0.22, 0.22]:
+				if absf(dx) > 0.5:
+					b.box(x + dx * th2 - 0.3, x + dx * th2 + 0.3, tower_h * 0.83, tower_h * 0.96, z_tw + off * tw - tw * 0.09, z_tw + off * tw + tw * 0.09, dark, false)
+				else:
+					b.box(x + off * tw - tw * 0.09, x + off * tw + tw * 0.09, tower_h * 0.83, tower_h * 0.96, z_tw + dz * th2 - 0.3, z_tw + dz * th2 + 0.3, dark, false)
+		# parapet and corner pinnacles, then the spire
+		b.box(x - th2 * 1.05, x + th2 * 1.05, tower_h, tower_h + tower_h * 0.02, z_tw - th2 * 1.05, z_tw + th2 * 1.05, dress, true, roof)
+		for cx in [-1.0, 1.0]:
+			for cz in [-1.0, 1.0]:
+				b.prism(x + cx * th2 * 0.9, z_tw + cz * th2 * 0.9, tower_h, tower_h + maxf(spire_h * 0.28, tower_h * 0.07), tw * 0.10, tw * 0.10, 0.0, 0.0, 6, dress, false)
+		if spire_h > 0.0:
+			b.prism(x, z_tw, tower_h + tower_h * 0.02, tower_h + spire_h, tw * 0.46, tw * 0.46, 0.0, 0.0, 8, col.darkened(0.14), false, PI / 8.0)
+	# crossing: dome on a drum, or a fleche
+	if dome:
+		var dr: float = nave_w * 0.42
+		var copper := Color(0.42, 0.56, 0.52)
+		b.prism(0.0, tx, wall_h, wall_h + dr * 0.55, dr, dr, dr, dr, 12, dress, false)
+		b.prism(0.0, tx, wall_h + dr * 0.55, wall_h + dr * 0.95, dr * 1.02, dr * 1.02, dr * 0.78, dr * 0.78, 12, copper, false)
+		b.prism(0.0, tx, wall_h + dr * 0.95, wall_h + dr * 1.25, dr * 0.78, dr * 0.78, dr * 0.40, dr * 0.40, 12, copper.lightened(0.04), false)
+		b.prism(0.0, tx, wall_h + dr * 1.25, wall_h + dr * 1.38, dr * 0.40, dr * 0.40, 0.0, 0.0, 12, copper.lightened(0.08), false)
+		b.prism(0.0, tx, wall_h + dr * 1.36, wall_h + dr * 1.70, dr * 0.10, dr * 0.10, dr * 0.08, dr * 0.08, 8, dress, true)
+		b.prism(0.0, tx, wall_h + dr * 1.70, wall_h + dr * 1.90, dr * 0.10, dr * 0.10, 0.0, 0.0, 8, Color(0.62, 0.52, 0.22), false)
+	elif not ruin:
+		b.prism(0.0, tx, wall_h + rise * 0.8, wall_h + rise + tower_h * 0.24, nave_w * 0.05, nave_w * 0.05, 0.0, 0.0, 8, roof.lightened(0.08), false)
+	var m: ArrayMesh = b.commit(paint_material())
+	_cache[key] = m
+	return m

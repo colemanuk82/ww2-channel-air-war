@@ -80,6 +80,11 @@ static func lighthouse(h: float = 40.0) -> Node3D:
 
 ## Generic cathedral: nave with a pitched roof, transept, one or two west towers (optionally with spires) and an optional dome.
 static func _cathedral(root: Node3D, nave_len: float, nave_w: float, tower_h: float, towers: int, spire_h: float, col: Color, dome: bool = false, ruin: bool = false) -> void:
+	if TownModels.enabled():
+		var cmi := MeshInstance3D.new()
+		cmi.mesh = TownModels.cathedral(nave_len, nave_w, tower_h, towers, spire_h, col, dome, ruin)
+		root.add_child(cmi)
+		return
 	var dark := Color(0.3, 0.3, 0.34)
 	var wall_h: float = tower_h * 0.28
 	_b(root, Vector3(nave_w, wall_h, nave_len), Vector3(0, wall_h * 0.5, 0), col)
