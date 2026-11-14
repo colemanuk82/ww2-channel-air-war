@@ -2,6 +2,8 @@ class_name Parachute
 extends Node3D
 ## Pooled parachuting pilot. FX.parachute(pos) launches one; it drifts down and hides itself after landing.
 
+const RISER_Y := 1.15          # riser tops above the harness
+const CANOPY_Y := 7.0          # canopy height once fully open
 const FALL_SPEED := 5.6        # metres a second under a fully open canopy (a wartime 24-ft chute)
 
 var active: bool = false
@@ -19,7 +21,7 @@ const POINTS := 100
 func _ready() -> void:
 	visible = false
 	_canopy = ToonUtil.make_mesh(_canopy_mesh(), Color(0.9, 0.88, 0.75), {"outline_thickness": 0.04, "underside": Color(0.68, 0.66, 0.56)})
-	_canopy.position = Vector3(0, 7.0, 0)
+	_canopy.position = Vector3(0, CANOPY_Y, 0)
 	var cmat := _canopy.material_override as ShaderMaterial
 	if cmat == null:
 		cmat = _canopy.get_active_material(0) as ShaderMaterial
@@ -123,6 +125,7 @@ static func _canopy_mesh() -> ArrayMesh:
 
 # ---------------------------------------------------------------- the pilot figure
 
+var _rim_lines: MeshInstance3D   # canopy rim -> riser lines, stretched with the canopy as it opens
 var _rig: Node3D                # suspension lines + the pilot, rebuilt when the side changes
 var _look: String = ""
 var _pilot: Node3D              # whole pilot, hangs from the harness and swings
@@ -191,14 +194,17 @@ func _build_pilot(side: String) -> void:
 	var boots: Color = Color(0.1, 0.09, 0.08) if axis else Color(0.16, 0.11, 0.07)
 	var strap: Color = Color(0.1, 0.1, 0.08)
 	# suspension lines: canopy rim -> two riser tops above the shoulders, risers -> harness
-	var lines := ImmediateMesh.new()
-	lines.surface_begin(Mesh.PRIMITIVE_LINES)
+	# The rim lines are built unit-height about the riser tops and scaled each frame to follow the canopy
+	# (see _sync_lines), so they start gathered at the pilot and stretch out as the canopy opens.
+	var rim_lines := ImmediateMesh.new()
+	rim_lines.surface_begin(Mesh.PRIMITIVE_LINES)
 	for i in 24:
 		var a: float = TAU * float(i) / 24.0
-		var rim := Vector3(cos(a) * 3.92, 7.0, sin(a) * 3.92)
-		var top := Vector3(0.26 if cos(a) > 0.0 else -0.26, 1.15, 0.0)
-		lines.surface_add_vertex(rim)
-		lines.surface_add_vertex(top)
+		rim_lines.surface_add_vertex(Vector3(cos(a) * 3.92, 1.0, sin(a) * 3.92))
+		rim_lines.surface_add_vertex(Vector3(0.26 if cos(a) > 0.0 else -0.26, 0.0, 0.0))
+	rim_lines.surface_end()
+	var lines := ImmediateMesh.new()
+	lines.surface_begin(Mesh.PRIMITIVE_LINES)
 	for sx in [-1.0, 1.0]:
 		lines.surface_add_vertex(Vector3(sx * 0.26, 1.15, 0.0))
 		lines.surface_add_vertex(Vector3(sx * 0.27, 0.62, 0.05))
@@ -211,6 +217,13 @@ func _build_pilot(side: String) -> void:
 	li.material_override = lm
 	li.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_rig.add_child(li)
+	_rim_lines = MeshInstance3D.new()
+	_rim_lines.mesh = rim_lines
+	_rim_lines.material_override = lm
+	_rim_lines.position = Vector3(0, RISER_Y, 0)
+	_rim_lines.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_rig.add_child(_rim_lines)
+	_sync_lines()
 	# the pilot, hanging in the harness (origin = middle of the body)
 	_pilot = Node3D.new()
 	_rig.add_child(_pilot)
@@ -262,7 +275,9 @@ func launch(pos: Vector3, p_team: String = "", p_look: String = "") -> void:
 	rotation = Vector3.ZERO
 	if _canopy:
 		_canopy.scale = Vector3(0.18, 0.06, 0.18)
+		_canopy.position.y = RISER_Y + 0.6        # still bundled up at the pilot's shoulders
 		_canopy.rotation = Vector3.ZERO
+		_sync_lines()
 	_land_pose = 0.0
 	for l in _limbs:
 		l["ang"] = l["base"] + Vector2(randf_range(-0.8, 0.8), randf_range(-0.4, 0.4))
@@ -291,6 +306,7 @@ func _process(delta: float) -> void:
 		elif _canopy:
 			_canopy.scale = _canopy.scale.lerp(Vector3(0.88, 0.07, 0.88), minf(delta * 2.0, 1.0))
 			_canopy.rotation.z = lerpf(_canopy.rotation.z, 0.22, minf(delta * 1.5, 1.0))
+			_sync_lines()
 		return
 	# a real opening: a second of free fall, then the canopy streams and inflates over about two seconds
 	var open: float = clampf((_t - 0.5) / 1.8, 0.0, 1.0)
@@ -300,6 +316,9 @@ func _process(delta: float) -> void:
 		_canopy.scale = Vector3(lerpf(0.18, 1.0, open) * breathe, lerpf(0.06, 1.0, open), lerpf(0.18, 1.0, open) * breathe)
 		# lean the canopy into the drift, the way a parachute flies with the wind
 		_canopy.rotation = Vector3(_drift.z * 0.02, 0.0, -_drift.x * 0.02) * open
+		# the canopy streams up and away from the pilot as the lines pay out
+		_canopy.position.y = lerpf(RISER_Y + 0.6, CANOPY_Y, smoothstep(0.0, 1.0, open))
+		_sync_lines()
 	# hang and swing like a pendulum under the canopy, carried by the air mass
 	var swing := Vector3(sin(_t * 1.1 + _sway), 0.0, cos(_t * 0.85 + _sway * 1.3)) * 1.45 * open
 	var p: Vector3 = global_position + (Vector3.DOWN * fall + _drift * open + swing) * delta
@@ -355,6 +374,15 @@ func _wind_at(p: Vector3) -> Vector3:
 		var w: Vector3 = wm.call("get_wind", p)
 		return Vector3(w.x, 0.0, w.z).limit_length(6.0)
 	return Vector3.ZERO
+
+
+## Stretch the rim lines between the riser tops and the canopy hem: radius follows the canopy's scale and
+## length follows its height above the harness, so unopened lines are gathered at the pilot.
+func _sync_lines() -> void:
+	if _rim_lines == null or _canopy == null:
+		return
+	var h: float = maxf(_canopy.position.y - RISER_Y, 0.01)
+	_rim_lines.scale = Vector3(_canopy.scale.x, h, _canopy.scale.z)
 
 
 func _canopy_col(look: String) -> void:
