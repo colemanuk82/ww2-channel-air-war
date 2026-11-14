@@ -2714,6 +2714,7 @@ func _update_sim_warp(delta: float) -> void:
 			return
 
 
+var _proc_off_done: bool = false
 var _perf_secs: float = 0.0
 var _perf_settle: float = 10.0
 var _perf_t: float = 0.0
@@ -2744,6 +2745,16 @@ func _perf_step(delta: float) -> void:
 	_perf_t += delta
 	if _perf_t < _perf_settle:
 		return
+	if not _proc_off_done:       # debug (--proc-off=a.gd,b.gd): stop those scripts' _process to see what they cost
+		_proc_off_done = true
+		for a in _args:
+			if String(a).begins_with("--proc-off="):
+				var names: PackedStringArray = String(a).substr(11).split(",")
+				for n in get_tree().root.find_children("*", "", true, false):
+					var sc: Script = n.get_script()
+					if sc != null and names.has(sc.resource_path.get_file()):
+						n.set_process(false)
+						n.set_physics_process(false)
 	var vp: RID = get_viewport().get_viewport_rid()
 	_perf_dt.append(delta)
 	var vals := {
@@ -2797,6 +2808,16 @@ func _perf_node_census() -> void:
 			up = up.get_parent()
 		var key: String = String(up.name).rstrip("0123456789_-@").left(24) if up != null else "?"
 		by_owner[key] = int(by_owner.get(key, 0)) + 1
+	# nodes that run script every frame, by script: the CPU side of a town
+	var proc: Dictionary = {}
+	for n2 in get_tree().root.find_children("*", "", true, false):
+		if n2.get_script() != null and (n2.is_processing() or n2.is_physics_processing()):
+			var sk: String = (n2.get_script() as Script).resource_path.get_file() + (" [phys]" if n2.is_physics_processing() else "")
+			proc[sk] = int(proc.get(sk, 0)) + 1
+	var pk: Array = proc.keys()
+	pk.sort_custom(func(a, b) -> bool: return proc[a] > proc[b])
+	for i in mini(20, pk.size()):
+		print("CENSUS proc %-34s nodes=%d" % [pk[i], proc[pk[i]]])
 	var ck: Array = by_class.keys()
 	ck.sort_custom(func(a, b) -> bool: return by_class[a] > by_class[b])
 	var line: String = "CENSUS nodes=%d orphans=%d classes:" % [total, int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))]

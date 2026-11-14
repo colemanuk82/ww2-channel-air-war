@@ -27,6 +27,8 @@ var _flash: MeshInstance3D
 var _flash_t: float = 0.0
 var _target: Node3D
 var _scan_t: float = 0.0
+var _cam_far: bool = false          # camera further than IDLE_FAR (refreshed with the scan): idle guns then skip tracking
+const IDLE_FAR: float = 5000.0
 var _cool: float = 1.0
 var _burst_left: int = 0
 var _burst_gap: float = 0.0
@@ -249,8 +251,12 @@ func _process(delta: float) -> void:
 		_scan_t = 0.3
 		if randf() < 0.45:
 			_acquire()
+		var cam: Camera3D = get_viewport().get_camera_3d()
+		_cam_far = cam != null and cam.global_position.distance_to(global_position) > IDLE_FAR
 	if _target != null and (not GroundKit.aircraft_alive(_target) or _target.global_position.distance_to(global_position) > _eff_range() * 1.05):
 		_target = null
+	if _target == null and _cam_far:
+		return          # an idle gun far from the camera: its slow idle sweep is invisible, so skip the tracking maths
 	var aim: Vector3 = Vector3.ZERO
 	var has_aim: bool = false
 	if _target != null:

@@ -1145,7 +1145,7 @@ func _update_escort() -> void:
 		for i in 7:
 			var q: Vector3 = tgt + Vector3(_rng.randf_range(-350, 350), 0.0, _rng.randf_range(-350, 350))
 			q.y = maxf(GroundKit.ground_y(q.x, q.z), 0.0)
-			FX.explosion(q, 14.0)
+			FX.smoke_column(q, 7.0, 60.0)      # scripted bomb result: smoke only, no ground burst (bursts come from real drops)
 		var tn: Variant = active.get("target_node")
 		if tn != null and is_instance_valid(tn) and tn.has_method("take_damage"):
 			tn.call("take_damage", 99999.0, null)
@@ -1566,7 +1566,7 @@ func _update_raid() -> void:
 			if q.y <= 0.5:
 				FX.water_plume(q, 10.0)
 			else:
-				FX.explosion(q, 14.0)
+				FX.smoke_column(q, 7.0, 60.0)      # scripted bomb result: smoke only, no ground burst
 		var prot: Variant = active.get("protect")
 		if prot != null and is_instance_valid(prot) and prot is Convoy:
 			var cv: Convoy = prot

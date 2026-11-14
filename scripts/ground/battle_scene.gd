@@ -549,4 +549,7 @@ func _stuka_stick(b: Dictionary) -> void:
 			if wet:
 				GroundKit.fx_call("water_splash", [p, 9.0])
 			else:
-				GroundKit.explosion(p + Vector3(0, 2.0, 0), 1.6))
+				# no scripted bomb burst: only a drifting smudge of dust and smoke where the "stick" fell
+				GroundKit.fx_call("dust", [p, 4.0])
+				if i == 3:
+					GroundKit.fx_call("smoke_column", [p, 6.0, 30.0]))

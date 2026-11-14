@@ -73,27 +73,49 @@ func _build_wreck(root: Node3D) -> void:
 func _process(delta: float) -> void:
 	if is_dead:
 		return
-	_sway_t += delta
-	if _balloon:
-		_balloon.rotation.z = sin(_sway_t * 0.6) * 0.05
 	_cable_cd -= delta
-	_check_cables(delta)
 	_check_t -= delta
-	if _check_t > 0.0:
-		return
-	_check_t = 0.15
+	# Every balloon in a city (London has ~130) used to sway and sweep the aircraft list every frame. Now a cheap scan
+	# every 0.15 s decides whether any aircraft is close enough to matter; the cable test and the sway only run then.
+	if _check_t <= 0.0:
+		_check_t = 0.15
+		_scan()
+		if is_dead:
+			return
+	if _view_near:
+		_sway_t += delta
+		if _balloon:
+			_balloon.rotation.z = sin(_sway_t * 0.6) * 0.05
+	if _aircraft_near:
+		_check_cables(delta)
+
+
+var _aircraft_near: bool = true      # any aircraft within CABLE_NEAR of the balloon (cable test only runs then)
+var _view_near: bool = true          # the camera is within SWAY_NEAR (the sway is invisible further off)
+const CABLE_NEAR: float = 900.0      # a fast aircraft covers ~15 m per 0.15 s scan: ample margin
+const SWAY_NEAR: float = 4000.0
+
+
+func _scan() -> void:
 	var top: Vector3 = global_position
+	_aircraft_near = false
 	for a in get_tree().get_nodes_in_group("aircraft"):
 		if not GroundKit.aircraft_alive(a):
 			continue
+		var p: Vector3 = (a as Node3D).global_position
+		var d: float = p.distance_to(top)
+		if d > CABLE_NEAR:
+			continue
+		_aircraft_near = true
 		var tm: String = str(a.get("team"))
 		if tm == team or tm == "Neutral":
 			continue
-		var p: Vector3 = (a as Node3D).global_position
-		if p.distance_to(top) < 16.0:
+		if d < 16.0:
 			a.call("take_damage", 55.0, self)
 			die(a)
 			return
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	_view_near = cam == null or cam.global_position.distance_to(top) < SWAY_NEAR
 
 
 ## Cable strikes run every frame (the wire is thin and a fast aircraft covers many units per 0.15 s check).

@@ -386,13 +386,10 @@ func _tick_raid(delta: float, night: float) -> void:
 			p.y = GroundKit.ground_y(p.x, p.z)
 			if FX.is_water(p):
 				continue
-			var te0: int = Time.get_ticks_usec()
-			FX.explosion(p + Vector3(0, 2, 0), _rng.randf_range(12.0, 20.0))
-			var te1: int = Time.get_ticks_usec()
-			if _rng.randf() < 0.45:
+			# An ambient raid no longer shows bomb bursts: bombs only go off where an aircraft actually dropped one.
+			# The raided town keeps its war atmosphere as fire and smoke (pooled and capped by CityFires).
+			if _rng.randf() < 0.6:
 				CityFires.ignite(p, _rng.randf_range(0.8, 1.6))
-			if Time.get_ticks_usec() - te0 > 15000:
-				print("[slow] raid bomb: explosion %d ms, fire %d ms" % [(te1 - te0) / 1000, (Time.get_ticks_usec() - te1) / 1000])
 
 
 # ------------------------------------------------------------------ V-weapons

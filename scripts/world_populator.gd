@@ -3253,6 +3253,8 @@ func _dress_grass_station(container: Node3D, af: Airfield, axf: Transform3D, y: 
 		container.add_child(Scatter.multi(AirfieldAssets.camo_net(team), _to_world(axf, af.nets_local), 3500.0))
 	if not af.markers_local.is_empty():
 		container.add_child(Scatter.multi(AirfieldAssets.boundary_marker(), _to_world(axf, af.markers_local), 2200.0))
+	if not af.trees_local.is_empty():
+		container.add_child(Scatter.multi(Scatter.tree_variant(4), _to_world(axf, af.trees_local), 6500.0))
 	if lw:
 		# tents and lorries in the tree line beyond each row of nets, a fuel-drum dump, an ops tent with the T
 		var ex: float = L * 0.34
@@ -3273,10 +3275,11 @@ func _dress_grass_station(container: Node3D, af: Airfield, axf: Transform3D, y: 
 		var tcorner: Vector3 = axf * Vector3(-ex - 30.0, 0.0, -L * 0.2)
 		container.add_child(Scatter.multi(AirfieldAssets.landing_t(), [Transform3D(Basis(Vector3.UP, af.rotation.y), Vector3(tcorner.x, y + 0.05, tcorner.z))], 3000.0))
 		return
-	# RAF grass station: hangar arc behind the apron, watch office + landing T, huts, fuel, lorries
+	# RAF grass station: hangar row behind the apron (doors onto the gravel forecourt, facing the park),
+	# watch office + landing T, huts, fuel, lorries
 	var rx: float = L * 0.38
 	for i in 4:
-		var hp: Vector3 = axf * Vector3(-rx - 175.0 - absf(float(i) - 1.5) * 18.0, 0, -165.0 + float(i) * 105.0)
+		var hp: Vector3 = axf * Vector3(-rx - 185.0, 0, -165.0 + float(i) * 105.0)
 		var h: GroundStructure = GroundStructure.create("hangar", team, hp, af.heading_deg + 90.0)
 		h.is_mission_target = false
 		container.add_child(h)

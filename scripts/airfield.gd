@@ -89,6 +89,7 @@ var _dispersal_local: Array = []      # Vector3 local positions of the dispersal
 var markers_local: Array = []         # Transform3D: grass-field boundary markers (dressed by the populator)
 var pens_local: Array = []            # Transform3D: E-type blast pens (raf_grass)
 var nets_local: Array = []            # Transform3D: camouflage nets over dispersed aircraft (lw_field)
+var trees_local: Array = []           # Transform3D: boundary tree line round the landing ground (raf_grass)
 
 
 static func create(p_name: String, world_pos: Vector3, p_heading_deg: float, ground_y: float) -> Airfield:
@@ -609,12 +610,16 @@ func _build_raf_grass(earth: Material) -> void:
 		var a: float = TAU * float(i) / 24.0
 		loop.append(Vector3(sin(a) * rx, 0.0, cos(a) * rz))
 	_track_loop(loop, 11.0, _asphalt2)
-	# concrete apron in front of the hangar arc (west)
-	var pan: Material = ToonUtil.make_toon(Color(0.42, 0.42, 0.40), {"outline": false, "rim": 0.0, "detail": 4})
-	_box(Vector3(110.0, 0.5, 400.0), Vector3(-rx - 60.0, 0.0, -40.0), pan)
+	# concrete apron in front of the hangar row (west) - on a grass station the aprons and hangar
+	# forecourt are rolled gravel rather than poured concrete (the owner's reference photos)
+	var gravel: Material = ToonUtil.make_toon(Color(0.47, 0.44, 0.36), {"outline": false, "tex": "gravel"})
+	_box(Vector3(230.0, 0.5, 420.0), Vector3(-rx - 125.0, 0.0, -40.0), gravel)
 	_link(Vector3(-rx, 0, -40.0), Vector3(-rx - 10.0, 0, -40.0), 40.0, _asphalt2)
 	for i in 6:
 		_dispersal_local.append(Vector3(-rx - 45.0 - float(i % 2) * 36.0, 0.0, -200.0 + float(i) * 68.0))
+	# short gravel spurs from the apron back to each hangar's doors
+	for s in 4:
+		_link(Vector3(-rx - 120.0, 0, -165.0 + float(s) * 105.0), Vector3(-rx - 190.0, 0, -165.0 + float(s) * 105.0), 12.0, gravel)
 	# E-type pens round the north, east and south of the track, opening onto it
 	for i in 24:
 		if i % 2 == 1:
@@ -634,6 +639,18 @@ func _build_raf_grass(earth: Material) -> void:
 	for j in 28:
 		var a3: float = TAU * float(j) / 28.0
 		markers_local.append(Transform3D(Basis(Vector3.UP, a3), Vector3(sin(a3) * (rx - 30.0), 0.0, cos(a3) * (rz - 30.0))))
+	# boundary tree line: the belt of trees stations planted along their perimeter (camouflage and windbreak),
+	# north / east / south outside the track - the west side is the technical site and its huts
+	for j in 26:
+		var a4: float = TAU * (float(j) + 0.5) / 26.0
+		var tp := Vector3(sin(a4) * (rx + 55.0), 0.0, cos(a4) * (rz + 55.0))
+		if tp.x < -rx * 0.35:
+			continue
+		var inner := Vector3(sin(a4) * (rx + 20.0), 0.0, cos(a4) * (rz + 20.0))
+		var outward := (tp - inner).normalized()
+		for k in 3:
+			var q: Vector3 = tp + outward * (float(k) - 1.0) * 14.0 + Vector3(cos(a4), 0.0, -sin(a4)) * ((float(j % 3) - 1.0) * 9.0)
+			trees_local.append(Transform3D(Basis(Vector3.UP, a4 + float((j * 7 + k) % 5) * 0.13), q))
 
 
 ## Luftwaffe forward grass field (Pas-de-Calais / Normandy, 1940-41): a rolled grass strip with worn wheel tracks,
