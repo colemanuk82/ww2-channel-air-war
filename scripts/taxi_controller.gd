@@ -124,8 +124,8 @@ func _drive(tgt: Vector3, d: float, at_end: bool) -> void:
 		sp_target = TURN_SPEED
 	if ahead_ac != null and is_instance_valid(ahead_ac) and ahead_ac.state == Aircraft.State.ALIVE:
 		var da: float = _plane.global_position.distance_to(ahead_ac.global_position)
-		var gap: float = maxf(_plane.stats.radius + ahead_ac.stats.radius, 12.0) * 2.2
-		if da < gap * 0.62:
+		var gap: float = maxf(_plane.stats.radius + ahead_ac.stats.radius, 12.0) * 3.4
+		if da < gap * 0.7:
 			sp_target = 0.0                              # too close: stop and wait for it to move off
 		elif da < gap:
 			sp_target = minf(sp_target, ahead_ac.speed)  # match its speed, never overtake
