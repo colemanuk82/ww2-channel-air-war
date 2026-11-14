@@ -49,6 +49,7 @@ func _ready() -> void:
 	_test_rail_drama()
 	_test_airfield_furniture()
 	_test_airfield_styles()
+	_test_taxi_graph()
 	_test_oil_fuel()
 	_test_aircraft_industry()
 	_test_v_weapons()
@@ -1690,6 +1691,41 @@ func _test_airfield_styles() -> void:
 	remove_child(gaf)
 	gaf.free()
 	wp.free()
+
+
+## P: taxi to runway. Every layout that lays taxiways routes a dispersal spot to the runway through the
+## hold-short; on paved styles the entry point sits on the runway pavement.
+func _test_taxi_graph() -> void:
+	print("-- taxi graph")
+	var want_route: Array = ["raf_grass", "raf_bomber", "raf_fighter", "grass", "cross", "parallel", "night_fighter", "lw_fliegerhorst"]
+	var paved_styles: Array = ["raf_bomber", "raf_fighter", "cross", "parallel", "night_fighter", "lw_fliegerhorst"]
+	var fails: Array = []
+	var routed: int = 0
+	for st in ["raf_grass", "raf_bomber", "raf_fighter", "raf_satellite", "grass", "cross", "parallel", "forward", "usaf_alg", "lw_field", "night_fighter", "lw_fliegerhorst", "glider_strip"]:
+		var af: Airfield = Airfield.create("Taxi " + st, Vector3.ZERO, 90.0, 0.0)
+		af.style = st
+		add_child(af)
+		af.build_layout()
+		var spots: Array = af._dispersal_local
+		if not spots.is_empty():
+			var route: PackedVector3Array = af.taxi_route(spots[0])
+			if not route.is_empty():
+				routed += 1
+				var on_hold: bool = false
+				for p in route:
+					if (p as Vector3).distance_to(af.taxi_hold) < 2.0:
+						on_hold = true
+				if want_route.has(st) and not _check(on_hold and route.size() >= 4, "%s: the taxi route runs pad -> hold-short -> runway (%d legs)" % [st, route.size()]):
+					fails.append(st)
+				if paved_styles.has(st) and route.size() >= 4 and not _check(af.near_paved(af.transform * af.taxi_entry, 45.0), "%s: the taxi entry is on the runway pavement" % st):
+					fails.append(st)
+			elif want_route.has(st):
+				if not _check(false, "%s: a dispersal spot taxis to the runway (no route)" % st):
+					fails.append(st)
+		remove_child(af)
+		af.free()
+	_check(routed >= 8, "%d airfield styles route a dispersal spot to the runway" % routed)
+	_check(fails.is_empty(), "taxi graph check; fail: %s" % ", ".join(PackedStringArray(fails)))
 
 
 ## P9: oil_fuel_1940.json parses, every site builds scenery + a destructible structure, and every kind builds.

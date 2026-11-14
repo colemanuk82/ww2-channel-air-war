@@ -174,6 +174,70 @@ func build_layout() -> void:
 	add_child(sock)
 	_build_night_lights()
 	_build_puddles()
+	# taxi-to-runway defaults: the runway runs along local Z with the take-off roll toward -Z (the world
+	# heading maps to local -Z and the threshold is the +Z end), so the entry sits at the +Z end, just
+	# inside the pavement edge, and the hold-short a little further out. Per-style layouts can move them.
+	var le: float = runway_length * 0.5 - 55.0
+	taxi_entry = Vector3(runway_width * 0.5 - 6.0, 0.0, le)
+	taxi_hold = Vector3(runway_width * 0.5 + 46.0, 0.0, le)
+	_taxi_connect()
+
+
+## Join isolated taxi-graph components (dispersal stubs that never met the perimeter track) to the
+## biggest component with one link each, closest pair first. The aircraft crosses grass or pad for
+## those metres - exactly what a dispersal taxi did - so no new pavement is drawn.
+func _taxi_connect() -> void:
+	var n: int = taxi_nodes.size()
+	if n < 2 or taxi_edges.is_empty():
+		return
+	var comp: PackedInt32Array = PackedInt32Array()
+	comp.resize(n)
+	comp.fill(-1)
+	var n_comp: int = 0
+	for s in n:
+		if comp[s] >= 0:
+			continue
+		var stack: Array = [s]
+		comp[s] = n_comp
+		while not stack.is_empty():
+			var u: int = stack.pop_back()
+			for e in taxi_edges:
+				var v: int = int(e[0]) if int(e[1]) == u else (int(e[1]) if int(e[0]) == u else -1)
+				if v >= 0 and comp[v] < 0:
+					comp[v] = n_comp
+					stack.append(v)
+		n_comp += 1
+	if n_comp < 2:
+		return
+	# sizes + a representative scan: join every smaller component's closest node to the biggest one's
+	var sizes: PackedInt32Array = PackedInt32Array()
+	sizes.resize(n_comp)
+	sizes.fill(0)
+	for c in comp:
+		sizes[c] += 1
+	var big: int = 0
+	for c in n_comp:
+		if sizes[c] > sizes[big]:
+			big = c
+	for c in n_comp:
+		if c == big:
+			continue
+		var ba: int = -1
+		var bb: int = -1
+		var bd: float = 1.0e12
+		for a in n:
+			if comp[a] != c:
+				continue
+			for b in n:
+				if comp[b] != big:
+					continue
+				var d2: float = (taxi_nodes[a] as Vector3).distance_squared_to(taxi_nodes[b])
+				if d2 < bd:
+					bd = d2
+					ba = a
+					bb = b
+		if ba >= 0:
+			_taxi_edge(ba, bb)
 
 
 ## Mid-session era change: tear the old layout down (runways, lights, markers, trees...) and build the
@@ -186,9 +250,11 @@ func restyle(new_style: String) -> void:
 	_built = false
 	_night_lights = null
 	_paved.clear()
+	_link_n = 0
+	taxi_nodes.clear()
+	taxi_edges.clear()
 	_extent = Vector2.ZERO
 	_puddles.clear()
-	_link_n = 0
 	_dispersal_local.clear()
 	markers_local.clear()
 	pens_local.clear()
@@ -857,6 +923,132 @@ func _perimeter_track(mat: Material) -> void:
 var _link_n: int = 0
 var _paved: Array = []     # [from, to, half_width] local segments / discs of everything paved (taxiways, pads, runways)
 
+# --- taxi graph (P: taxi to runway), in the layout's local frame -----------------------------------
+var taxi_nodes: PackedVector3Array = PackedVector3Array()   # junctions: taxiway ends, bends, pad stubs
+var taxi_edges: Array = []            # [i, j] undirected node pairs, one per taxiway link
+var taxi_hold: Vector3 = Vector3.ZERO # local: hold-short point just off the runway edge
+var taxi_entry: Vector3 = Vector3.ZERO  # local: where the taxiway meets the runway edge
+
+
+## Find-or-add a graph node within 8 m of p (taxiway pieces that share an end join up).
+func _taxi_node(p: Vector3) -> int:
+	var q := Vector3(p.x, 0.0, p.z)
+	for i in taxi_nodes.size():
+		if (taxi_nodes[i] as Vector3).distance_to(q) < 8.0:
+			return i
+	taxi_nodes.append(q)
+	return taxi_nodes.size() - 1
+
+
+func _taxi_edge(i: int, j: int) -> void:
+	if i == j:
+		return
+	for e in taxi_edges:
+		if (int(e[0]) == i and int(e[1]) == j) or (int(e[0]) == j and int(e[1]) == i):
+			return
+	taxi_edges.append([i, j])
+
+
+## Shortest taxi route (LOCAL points) from a park spot to line-up on the runway: the dispersal pad ->
+## its nearest taxiway node -> the paved network -> hold-short -> the runway edge -> a lined-up start
+## on the centreline. The park spot, hold-short and entry ride as virtual nodes joined to their nearest
+## graph node (dispersals sit a few metres off the taxiway, on grass or pad), and the route always
+## passes the hold-short. Returns an empty array when the graph cannot reach the runway (the caller
+## falls back to an on-runway start).
+func taxi_route(park: Vector3) -> PackedVector3Array:
+	var n: int = taxi_nodes.size()
+	if n < 2 or taxi_edges.is_empty() or taxi_entry == Vector3.ZERO:
+		return PackedVector3Array()
+	var pts: Array = []
+	for i in n:
+		pts.append(taxi_nodes[i])
+	pts.append(Vector3(park.x, 0.0, park.z))      # n: the park spot
+	pts.append(taxi_hold)                         # n + 1
+	pts.append(taxi_entry)                        # n + 2
+	var adj: Array = []
+	for i in n + 3:
+		adj.append([])
+	for e in taxi_edges:
+		var a: int = int(e[0])
+		var b: int = int(e[1])
+		var w: float = (pts[a] as Vector3).distance_to(pts[b])
+		(adj[a] as Array).append([b, w])
+		(adj[b] as Array).append([a, w])
+	for v in [n, n + 1, n + 2]:
+		var bj: int = -1
+		var bd: float = 1.0e12
+		for j in n:
+			var d2: float = (pts[j] as Vector3).distance_squared_to(pts[v])
+			if d2 < bd:
+				bd = d2
+				bj = j
+		if bj >= 0:
+			# the virtual hop keeps a 2 m floor: a park spot that sits ON a graph node must still cost
+			# something, or the tie leaves prev unset and the path loses its start
+			var wv: float = maxf(sqrt(bd), 2.0)
+			(adj[v] as Array).append([bj, wv])
+			(adj[bj] as Array).append([v, wv])
+	var we: float = (pts[n + 1] as Vector3).distance_to(pts[n + 2])
+	(adj[n + 1] as Array).append([n + 2, we])
+	(adj[n + 2] as Array).append([n + 1, we])
+	var leg1: PackedInt32Array = _dijkstra(adj, n, n + 1)
+	var leg2: PackedInt32Array = _dijkstra(adj, n + 1, n + 2)
+	if leg1.is_empty() or leg2.is_empty():
+		return PackedVector3Array()
+	var out := PackedVector3Array()
+	for idx in leg1:
+		out.append(pts[idx])
+	for k in range(1, leg2.size()):
+		out.append(pts[leg2[k]])
+	out.append(Vector3(0.0, 0.0, taxi_entry.z - 16.0))    # lined up on the centreline
+	return out
+
+
+## Dijkstra over the tiny taxi adjacency; returns the node indices of the path (empty when unreachable).
+static func _dijkstra(adj: Array, from: int, to: int) -> PackedInt32Array:
+	var n: int = adj.size()
+	# the "infinity" must survive the float32 PackedFloat32Array: 1e15 rounds DOWN below the float64
+	# literal used in comparisons, which made unreachable nodes look reached; 1e30 rounds up
+	_dj_dist.resize(n)
+	_dj_dist.fill(1.0e30)
+	_dj_prev.resize(n)
+	_dj_prev.fill(-1)
+	_dj_done.resize(n)
+	_dj_done.fill(0)
+	_dj_dist[from] = 0.0
+	for _i in n:
+		var u: int = -1
+		var ud: float = 1.0e30
+		for j in n:
+			if _dj_done[j] == 0 and _dj_dist[j] < ud:
+				ud = _dj_dist[j]
+				u = j
+		if u < 0:
+			break
+		if u == to:
+			break
+		_dj_done[u] = 1
+		for e in adj[u]:
+			var v: int = int(e[0])
+			var nd: float = ud + float(e[1])
+			if nd < _dj_dist[v]:
+				_dj_dist[v] = nd
+				_dj_prev[v] = u
+	if to != from and (_dj_dist[to] >= 1.0e29 or _dj_prev[to] == -1):
+		return PackedInt32Array()
+	var path := PackedInt32Array()
+	var cur: int = to
+	while cur >= 0:
+		path.insert(0, cur)
+		cur = _dj_prev[cur]
+	return path
+
+
+# scratch buffers for _dijkstra (static, reused call to call; refilled every run)
+static var _dj_dist: PackedFloat32Array = PackedFloat32Array()
+static var _dj_prev: PackedInt32Array = PackedInt32Array()
+static var _dj_done: PackedByteArray = PackedByteArray()
+
 
 ## True if a world point lies within `margin` m of any paved surface of this field (used to keep earth banks,
 ## props and parked clutter off the taxiways and pads).
@@ -881,6 +1073,7 @@ func _link(from: Vector3, to: Vector3, width: float, mat: Material) -> void:
 	var d := to - from
 	_link_n += 1
 	_paved.append([from, to, width * 0.5])
+	_taxi_edge(_taxi_node(from), _taxi_node(to))
 	# each taxiway sits a hair below the runways and at its own height, so overlaps never shimmer
 	_box(Vector3(width, 0.5, d.length()), Vector3(mid.x, -0.04 - 0.03 * float(_link_n % 3), mid.z), mat, atan2(d.x, d.z))
 
