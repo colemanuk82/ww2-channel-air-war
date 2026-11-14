@@ -7,7 +7,9 @@
   python tools/dbg/dbg.py summary x          # JSON summary (agents, events, findings)
   python tools/dbg/dbg.py serve [--port 8765]   # viewer + JSON API, http://127.0.0.1:8765/
 
-API (serve): GET /api/runs | /api/run?name= | /api/summary?name= | /api/at?name=&t= |
+  python tools/dbg/dbg.py models [id] | textures | check-models     # asset queries / glb contract check
+Viewer pages: / (taxi playback) and /assets.html (3D models, liveries, texture-at-distance).
+API (serve): GET /api/models | /api/model?id= | /api/glb?id= | /api/textures | /api/tex?path= | /api/check_models ; GET /api/runs | /api/run?name= | /api/summary?name= | /api/at?name=&t= |
              POST/GET /api/sim?style=&wingmen=&secs=&name=&extra=   (runs the headless sim, returns the summary)
 A run log is build/dbg/<name>.json; coordinates are in the airfield's local frame (x right, z along the
 runway, take-off toward -Z, yaw clockwise from the take-off direction). See tools/dbg/README.md.
@@ -142,6 +144,78 @@ def at(d, t):
     return {"t": best[0], "aircraft": [{"id": r[0], "x": r[1], "z": r[2], "yaw": r[3], "speed": r[4], "state": r[5], "wp": r[6], "throttle": r[7], "brake": r[8]} for r in best[1]]}
 
 
+
+# ------------------------------------------------------------------ models and textures
+ASSETS = os.path.join(ROOT, "assets")
+REQUIRED_NODES = ["CockpitEye", "GearL", "GearR", "MuzzleL", "MuzzleR"]   # AircraftModels contract (Propeller/Canopy: most types)
+
+
+def glb_json(path):
+    import struct
+    with open(path, "rb") as f:
+        d = f.read(20)
+        n = struct.unpack("<I", d[12:16])[0]
+        return json.loads(f.read(n))
+
+
+def model_info(mid):
+    path = os.path.join(ASSETS, "models", mid + ".glb")
+    j = glb_json(path)
+    tris = verts = 0
+    lo, hi = [1e9] * 3, [-1e9] * 3
+    for m in j.get("meshes", []):
+        for pr in m["primitives"]:
+            pa = j["accessors"][pr["attributes"]["POSITION"]]
+            verts += pa["count"]
+            tris += (j["accessors"][pr["indices"]]["count"] if "indices" in pr else pa["count"]) // 3
+            lo = [min(a, b) for a, b in zip(lo, pa.get("min", lo))]
+            hi = [max(a, b) for a, b in zip(hi, pa.get("max", hi))]
+    names = [n.get("name", "") for n in j.get("nodes", [])]
+    lv = sorted(n[:-4] for n in os.listdir(os.path.join(ASSETS, "liveries")) if n.startswith(mid + "_") and n.endswith(".png"))
+    return {"id": mid, "bytes": os.path.getsize(path), "tris": tris, "verts": verts, "meshes": len(j.get("meshes", [])),
+            "materials": len(j.get("materials", [])), "has_uv": any("TEXCOORD_0" in pr["attributes"] for m in j.get("meshes", []) for pr in m["primitives"]),
+            "bbox_min": lo, "bbox_max": hi, "size": [round(b - a, 2) for a, b in zip(lo, hi)], "nodes": names,
+            "missing_nodes": [n for n in REQUIRED_NODES if n not in names], "liveries": lv}
+
+
+def model_ids():
+    return sorted(n[:-4] for n in os.listdir(os.path.join(ASSETS, "models")) if n.endswith(".glb"))
+
+
+def png_size(path):
+    import struct
+    with open(path, "rb") as f:
+        h = f.read(24)
+    return list(struct.unpack(">II", h[16:24])) if h[1:4] == b"PNG" else [0, 0]
+
+
+def textures():
+    out = []
+    for base, _, fs in os.walk(ASSETS):
+        for n in fs:
+            if n.lower().endswith((".png", ".jpg", ".jpeg")):
+                p = os.path.join(base, n)
+                rel = os.path.relpath(p, ASSETS).replace(os.sep, "/")
+                out.append({"path": rel, "bytes": os.path.getsize(p), "size": png_size(p) if n.lower().endswith(".png") else None})
+    return sorted(out, key=lambda t: t["path"])
+
+
+def check_models():
+    """Contract findings for every aircraft glb."""
+    f = []
+    for mid in model_ids():
+        i = model_info(mid)
+        if i["tris"] < 200:
+            f.append({"id": mid, "msg": "only %d triangles" % i["tris"]})
+        if not (3 < max(i["size"]) < 60):
+            f.append({"id": mid, "msg": "implausible size %s m" % i["size"]})
+        if i["missing_nodes"]:
+            f.append({"id": mid, "msg": "missing nodes: %s" % ", ".join(i["missing_nodes"])})
+        if not i["liveries"]:
+            f.append({"id": mid, "msg": "no painted livery in assets/liveries"})
+    return f
+
+
 # ------------------------------------------------------------------ server
 class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
@@ -173,6 +247,21 @@ class H(BaseHTTPRequestHandler):
                 return self._send(200, json.dumps(summary(load(q["name"])), indent=1))
             if u.path == "/api/at":
                 return self._send(200, json.dumps(at(load(q["name"]), float(q["t"]))))
+            if u.path == "/api/models":
+                return self._send(200, json.dumps([model_info(m) for m in model_ids()]))
+            if u.path == "/api/model":
+                return self._send(200, json.dumps(model_info(q["id"])))
+            if u.path == "/api/glb":
+                return self._send(200, open(os.path.join(ASSETS, "models", os.path.basename(q["id"]) + ".glb"), "rb").read(), "model/gltf-binary")
+            if u.path == "/api/textures":
+                return self._send(200, json.dumps(textures()))
+            if u.path == "/api/tex":
+                fp = os.path.normpath(os.path.join(ASSETS, q["path"]))
+                if not fp.startswith(ASSETS) or not fp.lower().endswith((".png", ".jpg", ".jpeg")):
+                    return self._send(403, '{"error":"forbidden"}')
+                return self._send(200, open(fp, "rb").read(), "image/png" if fp.lower().endswith(".png") else "image/jpeg")
+            if u.path == "/api/check_models":
+                return self._send(200, json.dumps(check_models(), indent=1))
             if u.path == "/api/sim":
                 name, secs_taken, _ = run_sim(q.get("style", "raf_bomber"), int(q.get("wingmen", 2)), q.get("secs", "150"), q.get("name", ""), q.get("extra", ""), q.get("aircraft", "spitfire"))
                 s = summary(load(name)); s["run"] = name; s["wall_secs"] = secs_taken
@@ -195,6 +284,8 @@ def main():
     for n in ("check", "summary"):
         c = sub.add_parser(n); c.add_argument("name")
     a_ = sub.add_parser("at"); a_.add_argument("name"); a_.add_argument("t", type=float)
+    m_ = sub.add_parser("models"); m_.add_argument("id", nargs="?")
+    sub.add_parser("textures"); sub.add_parser("check-models")
     s = sub.add_parser("serve"); s.add_argument("--port", type=int, default=8765)
     args = ap.parse_args()
     if args.cmd == "run":
@@ -215,6 +306,21 @@ def main():
         print(json.dumps(summary(load(args.name)), indent=1))
     elif args.cmd == "at":
         print(json.dumps(at(load(args.name), args.t), indent=1))
+    elif args.cmd == "models":
+        if args.id:
+            print(json.dumps(model_info(args.id), indent=1))
+        else:
+            for i in map(model_info, model_ids()):
+                print("%-10s %6d tris  %5.1f x %4.1f x %5.1f m  uv=%s  liveries=%d  missing=%s" % (i["id"], i["tris"], i["size"][0], i["size"][1], i["size"][2], i["has_uv"], len(i["liveries"]), i["missing_nodes"] or "-"))
+    elif args.cmd == "textures":
+        for t in textures():
+            print("%-60s %s %d KB" % (t["path"], "x".join(map(str, t["size"] or [])), t["bytes"] // 1024))
+    elif args.cmd == "check-models":
+        fs = check_models()
+        for x in fs:
+            print("%-10s %s" % (x["id"], x["msg"]))
+        print("%d finding(s)" % len(fs))
+        sys.exit(1 if fs else 0)
     elif args.cmd == "serve":
         print("viewer: http://127.0.0.1:%d/" % args.port)
         ThreadingHTTPServer(("127.0.0.1", args.port), H).serve_forever()

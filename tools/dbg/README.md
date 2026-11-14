@@ -44,7 +44,16 @@ States: `parked`, `taxiing`, `holding`, `stopped`, `lined_up`.
 `scenario.gd` mirrors `ModeBase._taxi_wingmen_tick` (wingman spawning) and the release chain in
 `Main`/`ModeBase` (each aircraft clears the next when it lines up). If that logic changes, update the runner.
 
-## Planned (phase 2)
+## Model and asset viewer
 
-Model/asset viewer in the same page: glTF export of the procedural aircraft/props, three.js viewer, texture and
-material pattern previews at several distances.
+`http://127.0.0.1:8765/assets.html` (three.js from unpkg, needs internet in the browser):
+
+* **Models** - every `assets/models/*.glb`: orbit view, wireframe/flat toggles, side/top/front, a distance slider with the
+  on-screen pixel width at that distance, node toggles (hide decals, gear...) and the painted livery sheet. The glbs have no
+  UVs (the game maps skins in a shader), so the viewer tints by nation rather than showing the livery on the mesh.
+* **Textures** - every png/jpg under `assets/`: original plus the same texture tiled 4x4 at 1/2, 1/4, 1/8, 1/16 scale, to spot
+  patterns and moire at distance. Deep links: `?model=spitfire`, `?tex=textures/world/asphalt.png`.
+
+CLI/API for scripts: `dbg.py models [id]` (tris, size, nodes, missing contract nodes, liveries), `dbg.py textures`,
+`dbg.py check-models` (exit 1 on a bad glb: too few tris, implausible size, missing `CockpitEye`/`GearL`/`GearR`/`Muzzle*`,
+no livery), and `GET /api/models`, `/api/model?id=`, `/api/glb?id=`, `/api/textures`, `/api/tex?path=`, `/api/check_models`.
