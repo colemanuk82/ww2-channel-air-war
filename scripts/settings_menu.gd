@@ -50,6 +50,12 @@ var _ctl_pages: Dictionary = {}
 var _ctl_btns: Dictionary = {}
 var _binding_buttons: Dictionary = {}
 var _binding_glyphs: Dictionary = {}
+var _key_buttons: Dictionary = {}       # action -> Button showing / rebinding its keyboard key
+var _listen_kind: String = "pad"        # what _input is waiting for: "pad" or "key"
+var _profile_pick: OptionButton
+## Rows whose keyboard column is a pair of actions (the flight axes): one key button for each direction.
+const AXIS_KEY_ROWS := {"Pitch": ["pitch_up", "pitch_down"], "Roll": ["roll_left", "roll_right"], "Yaw (rudder)": ["yaw_left", "yaw_right"], "Throttle": ["throttle_up", "throttle_down"]}
+const KEY_FIXED := ["ui_cancel", "center_view"]   # Esc stays the menu key; centre view is a mouse button
 var _ctl_hint: Label
 var _listening_action: String = ""
 var _diagram: ControllerDiagram
@@ -382,6 +388,9 @@ func _build_gameplay_page() -> VBoxContainer:
 		GameState.set_graphic("colorblind", i == 1))
 	_row(page, "Radio subtitles", ["Off", "On"], 1 if GameState.radio_subtitles else 0, func(i: int) -> void:
 		GameState.set_graphic("radio_subtitles", i == 1))
+	var fa_row := _row(page, "Flight assists", ["Off", "Auto-rudder", "Auto-rudder + stall guard"], GameState.flight_assists, func(i: int) -> void:
+		GameState.set_graphic("flight_assists", i))
+	fa_row.tooltip_text = "Auto-rudder: the rudder follows the stick in turns (unless you use Q / E).\nStall guard: the pull eases off as the airspeed nears the stall."
 	var upd_row := _row(page, "Check for updates at start", ["Off", "Once a day"], 1 if GameState.auto_update_check else 0, func(i: int) -> void:
 		GameState.set_graphic("auto_update_check", i == 1))
 	upd_row.tooltip_text = "Optional. When on, the start menu asks GitHub (at most once a day) whether a newer release exists. Nothing else is sent."
@@ -438,7 +447,7 @@ func _build_controls_page() -> VBoxContainer:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nav.add_child(b)
 		_ctl_btns[String(spec[0])] = b
-	_ctl_hint = UIKit.label("Click a gamepad binding, then press the new button.  Esc cancels,  Delete unbinds.", 13, UIKit.TEXT_DIM)
+	_ctl_hint = UIKit.label("Click a key or gamepad binding, then press the new key / button.  Esc cancels,  Delete unbinds.", 13, UIKit.TEXT_DIM)
 	page.add_child(_ctl_hint)
 	var host := VBoxContainer.new()
 	host.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -461,6 +470,37 @@ func _build_controls_page() -> VBoxContainer:
 	var reset: Button = UIKit.button("Reset pad", func() -> void: _reset_bindings(), 14)
 	reset.tooltip_text = "Put every gamepad button back to its default"
 	nav.add_child(reset)
+	var reset_k: Button = UIKit.button("Reset keys", func() -> void:
+		GameState.reset_key_bindings()
+		_refresh_bindings(), 14)
+	reset_k.tooltip_text = "Put every keyboard key back to its default"
+	nav.add_child(reset_k)
+	# control profiles: save the current keys + pad buttons in a slot, load a slot back
+	var prof := HBoxContainer.new()
+	prof.alignment = BoxContainer.ALIGNMENT_CENTER
+	prof.add_theme_constant_override("separation", 8)
+	page.add_child(prof)
+	prof.add_child(UIKit.label("Control profile", 14, UIKit.TEXT_DIM))
+	_profile_pick = OptionButton.new()
+	for s in range(1, GameState.PROFILE_SLOTS + 1):
+		_profile_pick.add_item("Profile %d%s" % [s, "" if GameState.has_profile(s) else " (empty)"], s)
+	prof.add_child(_profile_pick)
+	var save_b: Button = UIKit.button("Save", func() -> void:
+		var sl: int = _profile_pick.get_selected_id()
+		GameState.save_profile(sl)
+		_profile_pick.set_item_text(_profile_pick.selected, "Profile %d" % sl)
+		_ctl_hint.text = "Saved your keys and gamepad buttons as Profile %d." % sl, 14)
+	save_b.tooltip_text = "Store the current keyboard and gamepad bindings in this slot"
+	prof.add_child(save_b)
+	var load_b: Button = UIKit.button("Load", func() -> void:
+		var sl2: int = _profile_pick.get_selected_id()
+		if GameState.load_profile(sl2):
+			_ctl_hint.text = "Loaded Profile %d." % sl2
+		else:
+			_ctl_hint.text = "Profile %d is empty - set up your controls and press Save first." % sl2
+		_refresh_bindings(), 14)
+	load_b.tooltip_text = "Switch to the bindings saved in this slot"
+	prof.add_child(load_b)
 	_show_ctl("pad" if OS.get_environment("WW2_CONTROLS_SUB") == "" else OS.get_environment("WW2_CONTROLS_SUB"))   # env: capture runs
 	return page
 
@@ -551,8 +591,25 @@ func _build_controls_sub(from_i: int, to_i: int) -> VBoxContainer:
 		var name_l: Label = UIKit.label(String(row[0]), sz, col)
 		name_l.custom_minimum_size = Vector2(250, 0)
 		gr.add_child(name_l)
-		gr.add_child(UIKit.label(String(row[1]), sz, col if head else Color(0.8, 0.9, 1.0)))
 		var action: String = String(row[2])
+		var key_acts: Array = []
+		if AXIS_KEY_ROWS.has(String(row[0])):
+			key_acts = AXIS_KEY_ROWS[String(row[0])]
+		elif action != "" and not (action in KEY_FIXED):
+			key_acts = [action]
+		if key_acts.is_empty():
+			gr.add_child(UIKit.label(String(row[1]), sz, col if head else Color(0.8, 0.9, 1.0)))
+		else:
+			var kcell := HBoxContainer.new()
+			kcell.add_theme_constant_override("separation", 6)
+			gr.add_child(kcell)
+			for ka in key_acts:
+				var kact: String = String(ka)
+				var kb: Button = UIKit.button(GameState.key_label(kact), func() -> void: _start_listening_key(kact), 13)
+				kb.custom_minimum_size = Vector2(84 if key_acts.size() > 1 else 120, 24)
+				kb.tooltip_text = "Click, then press the new key for %s" % kact.replace("_", " ")
+				_key_buttons[kact] = kb
+				kcell.add_child(kb)
 		var cell := HBoxContainer.new()
 		cell.add_theme_constant_override("separation", 10)
 		gr.add_child(cell)
@@ -1027,8 +1084,17 @@ const JOY_AXIS_NAMES := {
 }
 
 
+func _start_listening_key(action: String) -> void:
+	_listening_action = action
+	_listen_kind = "key"
+	(_key_buttons[action] as Button).text = "Press a key..."
+	_ctl_hint.visible = true
+	_ctl_hint.text = "Listening for %s - press a key (Esc cancels, Delete unbinds)." % action.replace("_", " ")
+
+
 func _start_listening(action: String, btn: Button) -> void:
 	_listening_action = action
+	_listen_kind = "pad"
 	btn.text = "Press a button..."
 	_ctl_hint.visible = true
 	_ctl_hint.text = "Listening for %s - press a gamepad button or move a stick/trigger (Esc cancels, Delete unbinds)." % action
@@ -1036,7 +1102,8 @@ func _start_listening(action: String, btn: Button) -> void:
 
 func _stop_listening() -> void:
 	_listening_action = ""
-	_ctl_hint.text = "Click a gamepad binding, then press the new button.  Esc cancels,  Delete unbinds."
+	_ctl_hint.text = "Click a key or gamepad binding, then press the new key / button.  Esc cancels,  Delete unbinds."
+	_listen_kind = "pad"
 	_refresh_bindings()
 
 
@@ -1051,6 +1118,8 @@ func _text_glyphs(txt: String) -> Array:
 
 
 func _refresh_bindings() -> void:
+	for ka in _key_buttons.keys():
+		(_key_buttons[ka] as Button).text = GameState.key_label(String(ka))
 	for action in _binding_buttons.keys():
 		(_binding_buttons[action] as Button).text = _pad_label(action)
 		if _binding_glyphs.has(action):
@@ -1099,9 +1168,24 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_DELETE:
-		GameState.clear_pad(_listening_action)     # leave the action with no gamepad button
+		if _listen_kind == "key":
+			GameState.clear_key(_listening_action)
+		else:
+			GameState.clear_pad(_listening_action)     # leave the action with no gamepad button
 		_stop_listening()
 		get_viewport().set_input_as_handled()
+		return
+	if _listen_kind == "key":
+		if event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo:
+			var ke: InputEventKey = event
+			var act: String = _listening_action
+			var code: int = int(ke.physical_keycode) if ke.physical_keycode != KEY_NONE else int(ke.keycode)
+			var clash: PackedStringArray = GameState.key_clashes(act, code)
+			GameState.rebind_key(act, ke)
+			_stop_listening()
+			if not clash.is_empty():
+				_ctl_hint.text = "%s is also used by: %s" % [OS.get_keycode_string(code as Key), ", ".join(clash).replace("_", " ")]
+			get_viewport().set_input_as_handled()
 		return
 	if event is InputEventJoypadButton and (event as InputEventJoypadButton).pressed:
 		GameState.rebind_pad(_listening_action, event)

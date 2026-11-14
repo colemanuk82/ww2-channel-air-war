@@ -2381,7 +2381,8 @@ func _spawn_player_inner() -> void:
 		# where the sortie starts on the ground: the dispersal (taxi to the runway) or straight on it.
 		# Fast-start modes and respawns stay on the runway; no route also falls back.
 		var parking: String = String(config.get("start_parking", GameState.start_parking))
-		if String(config.get("mode", "")) in ["training", "dogfight", "defend"] or _dispersal_done or _manages_respawn():
+		var mode_taxis: bool = mode != null and is_instance_valid(mode) and "wants_dispersal_start" in mode and bool(mode.get("wants_dispersal_start"))   # the first-flight lesson
+		if not mode_taxis and (String(config.get("mode", "")) in ["training", "dogfight", "defend"] or _dispersal_done or _manages_respawn()):
 			parking = "runway"
 		if _args.has("--taxi-test"):
 			parking = "dispersal"

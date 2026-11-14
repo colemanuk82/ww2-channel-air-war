@@ -49,6 +49,7 @@ var music_known: Dictionary = {"menu": [], "ingame": []}   # shipped tracks a sa
 var music_recent: Dictionary = {"menu": [], "ingame": []}  # last tracks played (across launches): a new shuffle plays them last
 var music_gap: float = 60.0                 # silence between in-flight tracks, seconds (Options > Music)
 var show_hints: bool = true    # control hints panel on the right of the HUD (Options > Control hints)
+var flight_assists: int = 0          # Options > Gameplay: 0 off, 1 auto-rudder, 2 auto-rudder + stall guard
 var auto_update_check: bool = false   # opt-in: ask GitHub for a newer release when the menu opens (once a day at most)
 var last_update_check: int = 0        # unix time of the last automatic check
 var start_parking: String = "dispersal"   # where a ground sortie starts: "dispersal" (taxi to the runway) or "runway"
@@ -129,6 +130,9 @@ const FPS_CAPS := [0, 30, 60, 120, 144, 165, 240]    # Options > Render "Frame r
 const UNBOUND := "unbound"        # pad_bindings value for an action deliberately left with no pad button
 var _pad_defaults: Dictionary = {}
 var pad_bindings: Dictionary = {}
+var _key_defaults: Dictionary = {}    # action -> [InputEventKey] as set up in _setup_input
+var key_bindings: Dictionary = {}     # action -> physical keycode the player chose (or UNBOUND) - Options > Controls
+const PROFILE_SLOTS := 3              # saved control profiles (keyboard + gamepad), user://input_profile_<n>.cfg
 var sight_dials: bool = false     # the bombsight is up: the D-pad sets its dials, not gear / flaps / auto-level / bail
 
 
@@ -238,6 +242,7 @@ func _load_settings() -> void:
 	vsync_on = bool(cf.get_value("gfx", "vsync", vsync_on))
 	fps_cap = clampi(int(cf.get_value("gfx", "fps_cap", fps_cap)), 0, 1000)
 	show_hints = bool(cf.get_value("ui", "show_hints", show_hints))
+	flight_assists = clampi(int(cf.get_value("gameplay", "flight_assists", flight_assists)), 0, 2)
 	auto_update_check = bool(cf.get_value("ui", "auto_update_check", auto_update_check))
 	last_update_check = int(cf.get_value("ui", "last_update_check", last_update_check))
 	first_sortie_done = bool(cf.get_value("gameplay", "first_sortie_done", first_sortie_done))
@@ -294,6 +299,10 @@ func _load_settings() -> void:
 		for k in cf.get_section_keys("input"):
 			pad_bindings[k] = cf.get_value("input", k)
 		_apply_pad_bindings()
+	if cf.has_section("keys"):
+		for k2 in cf.get_section_keys("keys"):
+			key_bindings[k2] = cf.get_value("keys", k2)
+		_apply_key_bindings()
 	if playlists_pruned:
 		save_settings()     # write the cleaned list back so the dead entries do not linger in settings.cfg
 
@@ -363,6 +372,7 @@ func save_settings() -> void:
 	cf.set_value("gfx", "vsync", vsync_on)
 	cf.set_value("gfx", "fps_cap", fps_cap)
 	cf.set_value("ui", "show_hints", show_hints)
+	cf.set_value("gameplay", "flight_assists", flight_assists)
 	cf.set_value("ui", "auto_update_check", auto_update_check)
 	cf.set_value("ui", "last_update_check", last_update_check)
 	cf.set_value("gameplay", "first_sortie_done", first_sortie_done)
@@ -404,6 +414,8 @@ func save_settings() -> void:
 	cf.set_value("music", "ingame_recent", music_recent["ingame"])
 	for a in pad_bindings.keys():
 		cf.set_value("input", a, pad_bindings[a])
+	for ka in key_bindings.keys():
+		cf.set_value("keys", ka, key_bindings[ka])
 	cf.save(SETTINGS_PATH)
 
 
@@ -613,6 +625,8 @@ func set_graphic(key: String, value: Variant) -> void:
 			fps_cap = clampi(int(value), 0, 1000)
 		"show_hints":
 			show_hints = bool(value)
+		"flight_assists":
+			flight_assists = clampi(int(value), 0, 2)
 		"auto_update_check":
 			auto_update_check = bool(value)
 		"time_speed":
@@ -735,7 +749,11 @@ func toggle_outlines() -> void:
 
 
 func _key(action: String, keycode: Key) -> void:
-	_add_event(action, _make_key(keycode))
+	var e: InputEventKey = _make_key(keycode)
+	_add_event(action, e)
+	if not _key_defaults.has(action):
+		_key_defaults[action] = []
+	(_key_defaults[action] as Array).append(e)
 
 
 func _make_key(keycode: Key) -> InputEventKey:
@@ -918,6 +936,113 @@ func clear_pad(action: String) -> void:
 			InputMap.action_erase_event(action, e)
 	pad_bindings[action] = UNBOUND
 	save_settings()
+
+
+# ---------------------------------------------------------------- keyboard rebinding and control profiles
+## Bind an action to one key (replacing its keyboard keys; gamepad and mouse bindings are left alone).
+func rebind_key(action: String, ev: InputEventKey) -> void:
+	if not InputMap.has_action(action):
+		return
+	var code: int = int(ev.physical_keycode) if ev.physical_keycode != KEY_NONE else int(ev.keycode)
+	_set_keys(action, [_make_key(code as Key)])
+	key_bindings[action] = code
+	save_settings()
+
+
+## Leave an action with no keyboard key.
+func clear_key(action: String) -> void:
+	if not InputMap.has_action(action):
+		return
+	_set_keys(action, [])
+	key_bindings[action] = UNBOUND
+	save_settings()
+
+
+func reset_key_bindings() -> void:
+	key_bindings.clear()
+	for a in _key_defaults.keys():
+		_set_keys(a, (_key_defaults[a] as Array))
+	save_settings()
+
+
+func _set_keys(action: String, keys: Array) -> void:
+	for e in InputMap.action_get_events(action):
+		if e is InputEventKey:
+			InputMap.action_erase_event(action, e)
+	for k in keys:
+		InputMap.action_add_event(action, k)
+
+
+func _apply_key_bindings() -> void:
+	for a in key_bindings.keys():
+		if not InputMap.has_action(a):
+			continue
+		if str(key_bindings[a]) == UNBOUND:
+			_set_keys(a, [])
+		else:
+			_set_keys(a, [_make_key(int(key_bindings[a]) as Key)])
+
+
+## Readable name of the keys bound to an action ("W", "X or B", "Unbound").
+func key_label(action: String) -> String:
+	var names: PackedStringArray = []
+	if InputMap.has_action(action):
+		for e in InputMap.action_get_events(action):
+			if e is InputEventKey:
+				var ke: InputEventKey = e
+				var code: Key = ke.physical_keycode if ke.physical_keycode != KEY_NONE else ke.keycode
+				names.append(OS.get_keycode_string(code))
+	return " or ".join(names) if not names.is_empty() else "Unbound"
+
+
+## Other actions that already use this key (for the clash warning in Options > Controls).
+func key_clashes(action: String, code: int) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for a in InputMap.get_actions():
+		if String(a) == action or String(a).begins_with("ui_"):
+			continue
+		for e in InputMap.action_get_events(a):
+			if e is InputEventKey and int((e as InputEventKey).physical_keycode) == code:
+				out.append(String(a))
+	return out
+
+
+static func profile_path(slot: int) -> String:
+	return "user://input_profile_%d.cfg" % slot
+
+
+func has_profile(slot: int) -> bool:
+	return FileAccess.file_exists(profile_path(slot))
+
+
+## Save the current keyboard and gamepad bindings as profile `slot` (1..PROFILE_SLOTS).
+func save_profile(slot: int, label: String = "") -> void:
+	var cf := ConfigFile.new()
+	cf.set_value("profile", "name", label if label != "" else "Profile %d" % slot)
+	for a in pad_bindings.keys():
+		cf.set_value("input", a, pad_bindings[a])
+	for ka in key_bindings.keys():
+		cf.set_value("keys", ka, key_bindings[ka])
+	cf.save(profile_path(slot))
+
+
+## Load profile `slot`: the bindings revert to the defaults first, then take the profile's changes.
+func load_profile(slot: int) -> bool:
+	var cf := ConfigFile.new()
+	if cf.load(profile_path(slot)) != OK:
+		return false
+	reset_pad_bindings()
+	reset_key_bindings()
+	if cf.has_section("input"):
+		for k in cf.get_section_keys("input"):
+			pad_bindings[k] = cf.get_value("input", k)
+	if cf.has_section("keys"):
+		for k2 in cf.get_section_keys("keys"):
+			key_bindings[k2] = cf.get_value("keys", k2)
+	_apply_pad_bindings()
+	_apply_key_bindings()
+	save_settings()
+	return true
 
 
 static func _is_joypad(e: InputEvent) -> bool:

@@ -74,8 +74,51 @@ func _ready() -> void:
 	_test_harbour_war()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	_test_report_link()
+	_test_controls_ui()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
+
+
+func _test_controls_ui() -> void:
+	print("-- key rebinding, control profiles, first-flight lesson, assists")
+	var keep_keys: Dictionary = GameState.key_bindings.duplicate()
+	var kev := InputEventKey.new()
+	kev.physical_keycode = KEY_U
+	GameState.rebind_key("gear", kev)
+	var has_u: bool = false
+	var has_g: bool = false
+	for e in InputMap.action_get_events("gear"):
+		if e is InputEventKey:
+			has_u = has_u or (e as InputEventKey).physical_keycode == KEY_U
+			has_g = has_g or (e as InputEventKey).physical_keycode == KEY_G
+	_check(has_u and not has_g and GameState.key_label("gear") == "U", "a key rebinding replaces the action's key (%s)" % GameState.key_label("gear"))
+	_check(GameState.key_clashes("flaps", KEY_U).has("gear"), "key clash check finds the other action on the key")
+	GameState.clear_key("gear")
+	_check(GameState.key_label("gear") == "Unbound", "Delete leaves an action with no key")
+	GameState.reset_key_bindings()
+	_check(GameState.key_label("gear") == "G", "Reset keys restores the default key")
+	var slot: int = GameState.PROFILE_SLOTS
+	var had: bool = GameState.has_profile(slot)
+	var backup: String = FileAccess.get_file_as_string(GameState.profile_path(slot)) if had else ""
+	GameState.rebind_key("flaps", kev)
+	GameState.save_profile(slot)
+	GameState.reset_key_bindings()
+	_check(GameState.load_profile(slot) and GameState.key_label("flaps") == "U", "a control profile saves and loads the key bindings")
+	GameState.reset_key_bindings()
+	if had:
+		var bf := FileAccess.open(GameState.profile_path(slot), FileAccess.WRITE)
+		bf.store_string(backup)
+		bf.close()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(GameState.profile_path(slot)))
+	GameState.key_bindings = keep_keys
+	GameState._apply_key_bindings()
+	GameState.save_settings()
+	_check(TrainingMode.lesson_ids().has("t_first_flight"), "the first-flight lesson is listed in Training")
+	var tm := TrainingMode.new()
+	tm.configure({"mission": "t_first_flight"})
+	_check(not tm.start_airborne and tm.wants_dispersal_start, "the first-flight lesson starts on the ground at the dispersal")
+	tm.free()
 
 
 func _test_report_link() -> void:

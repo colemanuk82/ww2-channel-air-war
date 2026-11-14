@@ -16,6 +16,7 @@ extends ModeBase
 
 const LESSONS := [
 	{"id": "t_first_sortie", "name": "First Sortie (start here)", "brief": "Start here. Take off, shoot down four drones at the practice range, then fly back and land gently."},
+	{"id": "t_first_flight", "name": "First flight: taxi, take-off and landing", "brief": "Your first flight, step by step (a Spitfire is the easiest to learn on): taxi from the dispersal to the runway, take off, fly one circuit and land."},
 	{"id": "t_basic", "name": "1. Basic flying", "brief": "Level flight, climbs and turns. Fly through the glowing rings."},
 	{"id": "t_takeoff", "name": "2. Take-off", "brief": "Line up on the runway, full throttle, rotate and climb away."},
 	{"id": "t_landing", "name": "3. Landing", "brief": "Join the approach, lower the gear and flaps and put it down on the runway."},
@@ -58,6 +59,8 @@ var _dead_t: float = -1.0
 var _stall_alt: float = 0.0
 var _done: bool = false
 var _landed_t: float = -1.0
+var wants_dispersal_start: bool = false   # main.gd: start at the dispersal (the first-flight lesson taxis out)
+var _ff_ring: Vector3 = Vector3.ZERO
 
 
 static func lesson_ids() -> Array:
@@ -90,7 +93,8 @@ func configure(cfg: Dictionary) -> void:
 			lesson = a.substr(10)
 	if not (lesson in lesson_ids()):
 		lesson = String(LESSONS[0]["id"])    # unknown / empty: fall back to the lesson listed first
-	start_airborne = not (lesson == "t_takeoff" or lesson == "t_first_sortie")
+	start_airborne = not (lesson == "t_takeoff" or lesson == "t_first_sortie" or lesson == "t_first_flight")
+	wants_dispersal_start = lesson == "t_first_flight"
 	print("[training] lesson: %s (%s)" % [lesson, "airborne" if start_airborne else "on the ground"])
 
 
@@ -301,6 +305,11 @@ func _setup_lesson() -> void:
 				_pose(thr + Vector3(0, 1.5, 0), af.heading_deg, false)
 				_set_obj("Full throttle (Shift) and roll down the runway")
 				_say("Welcome to flying school. This is your first sortie: take off, shoot down four drones at the range, then fly back and land.")
+		"t_first_flight":
+			# main.gd has parked us on a dispersal; a crash puts us back on the runway threshold
+			_store_pose(thr + Vector3(0, 1.5, 0), af.heading_deg, false)
+			_set_obj("Open the throttle a little (Shift) to start rolling")
+			_say("Your first flight. We start on the dispersal: open the throttle a little, steer with the rudder (Q / E), and keep it slow.")
 		"t_basic":
 			var p0 := Vector3(thr.x, af.surface_y + 900.0, thr.z)
 			_pose(p0, af.heading_deg, true, 90.0)
@@ -604,6 +613,8 @@ func _process(delta: float) -> void:
 				_detail = _dist_label(_ring_target)
 		"t_takeoff":
 			_step_takeoff(p)
+		"t_first_flight":
+			_step_first_flight(p)
 		"t_landing":
 			_step_landing(p)
 		"t_formation":
@@ -762,6 +773,93 @@ func _step_takeoff(p: Aircraft) -> void:
 					_set_obj("Take-off complete")
 					_say("Clean take-off. Well done.")
 					_finish_lesson(true)
+
+
+## First flight, one step at a time: taxi out, line up, take off, gear up, climb, a circuit through a ring on the
+## final approach, gear and flaps down, land, stop. Each step waits for the aircraft to do it, so nothing is timed.
+func _step_first_flight(p: Aircraft) -> void:
+	var af: Airfield = _af()
+	if af == null:
+		return
+	var loc: Vector3 = af.to_local(p.global_position)
+	var on_runway: bool = absf(loc.x) < af.runway_width * 0.7 and absf(loc.z) < af.runway_length * 0.5
+	var kmh: int = int(p.speed * 3.6)
+	var rot: int = int(p.stats.stall_speed * 3.6 * 1.15)
+	match _step:
+		0:
+			_detail = "Speed %d km/h" % kmh
+			if p.speed > 2.0:
+				_step = 1
+				_set_obj("Taxi to the runway along the taxiway - keep under 30 km/h (hold R to skip the taxi)")
+				_say("Good. Follow the taxiway to the runway. Throttle back (Ctrl) to slow down, brake with V.")
+		1:
+			_detail = "Speed %d km/h%s" % [kmh, "   - slow down!" if kmh > 35 else ""]
+			if on_runway:
+				_step = 2
+				_set_obj("Line up on the centreline, then full throttle (Shift)")
+				_say("You are on the runway. Line up with the centreline, then open the throttle all the way.")
+		2:
+			_detail = "Throttle %d%%" % int(p.throttle * 100.0)
+			if p.throttle > 0.85 and p.speed > 8.0:
+				_step = 3
+				_set_obj("Keep straight with Q / E; ease back (S) at %d km/h" % rot)
+				_say("Rolling. Keep her straight with the rudder and ease the stick back at about %d km/h." % rot)
+		3:
+			_detail = "Speed %d km/h  (rotate at %d)" % [kmh, rot]
+			if not p.on_ground and p.get_altitude_m() > 8.0:
+				_step = 4
+				_set_obj("Gear up (G)")
+				_say("Airborne. Raise the undercarriage.")
+		4:
+			if not p.gear_down:
+				_step = 5
+				_set_obj("Climb to 300 m")
+				_say("Gear up. Climb straight ahead to 300 metres.")
+		5:
+			_detail = "Altitude %d m" % int(p.get_altitude_m())
+			if p.get_altitude_m() > 280.0:
+				_step = 6
+				var dir: Vector3 = _fwd_flat(af.heading_deg)
+				_ff_ring = af.get_threshold_position() - dir * 3200.0
+				_ff_ring.y = af.surface_y + 320.0
+				_make_ring(_ff_ring, dir, 70.0, Color(0.4, 1.0, 0.5))
+				_set_obj("Turn back and fly through the green ring on the final approach")
+				_say("Now a circuit. Turn round, fly back past the field, and come in through the green ring lined up with the runway.")
+		6:
+			_detail = _dist_label(_ff_ring)
+			if p.global_position.distance_to(_ff_ring) < 110.0:
+				_step = 7
+				_clear_rings()
+				_set_obj("Gear down (G), flaps (F), throttle back to about a third")
+				_say("On final. Gear down, flaps down and throttle back.")
+		7:
+			_detail = "Gear %s   flaps %s   throttle %d%%" % ["DOWN" if p.gear_down else "up", Aircraft.FLAP_NAMES[clampi(p.flap_setting, 0, 2)], int(p.throttle * 100.0)]
+			if p.gear_down:
+				_step = 8
+				_set_obj("Hold the centreline, descend gently and touch down past the threshold")
+				_say("Gear down. Hold the centreline and let her settle onto the runway.")
+		8:
+			_detail = "%d m above the runway   speed %d km/h" % [int((p.global_position.y - af.surface_y) * 0.5), kmh]
+			if p.on_ground:
+				if on_runway:
+					_step = 9
+					_landed_t = 0.0
+					_set_obj("Throttle closed (Ctrl), brake (V) to a stop")
+					_say("Nice landing. Close the throttle and brake to a stop.")
+				else:
+					_step = 6
+					_ff_ring = af.get_threshold_position() - _fwd_flat(af.heading_deg) * 3200.0
+					_ff_ring.y = af.surface_y + 320.0
+					_make_ring(_ff_ring, _fwd_flat(af.heading_deg), 70.0, Color(0.4, 1.0, 0.5))
+					_set_obj("That was off the runway - take off and come round through the ring again")
+					_say("That was off the runway. Take off again and fly another circuit.")
+		9:
+			_detail = "Speed %d km/h" % kmh
+			_landed_t += get_process_delta_time()
+			if p.speed < 3.0 and _landed_t > 1.5:
+				_set_obj("First flight complete")
+				_say("Well flown. That is your first flight complete.")
+				_finish_lesson(true)
 
 
 func _step_landing(p: Aircraft) -> void:

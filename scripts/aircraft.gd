@@ -1152,6 +1152,20 @@ func _update_flaps(delta: float) -> void:
 		_flap_r.rotation.x = deg_to_rad(deg)
 
 
+## Options > Gameplay > Flight assists (player only): 1 = auto-rudder (the rudder follows the stick in a turn
+## when the rudder keys are left alone), 2 = also a stall guard (the pull is eased off as the airspeed nears the
+## stall). Off by default: realism players fly the aircraft as it is.
+func _flight_assists() -> void:
+	var lvl: int = GameState.flight_assists
+	if lvl <= 0 or on_ground or state != State.ALIVE or stats == null:
+		return
+	if absf(Input.get_axis("yaw_left", "yaw_right")) < 0.05:
+		cmd_yaw = clampf(cmd_roll * 0.35, -0.35, 0.35)
+	if lvl >= 2 and cmd_pitch > 0.0:
+		var margin: float = (speed - stats.stall_speed) / maxf(stats.stall_speed * 0.35, 1.0)
+		cmd_pitch *= clampf(margin, 0.25, 1.0)
+
+
 ## Airspeed the wings actually feel while rolling on the ground: ground speed plus the headwind.
 func ground_airspeed() -> float:
 	return maxf(speed + headwind, 0.0)
@@ -1163,6 +1177,7 @@ func _read_input() -> void:
 	cmd_pitch = _stick(cmd_pitch, Input.get_axis("pitch_down", "pitch_up") * inv, dt)
 	cmd_roll = _stick(cmd_roll, Input.get_axis("roll_left", "roll_right"), dt)
 	cmd_yaw = _stick(cmd_yaw, Input.get_axis("yaw_left", "yaw_right"), dt)
+	_flight_assists()
 	# Throttle: a tap moves it 1% (fine setting, e.g. to find the level-flight throttle); held, it starts to run
 	# after a quarter second, slowly at first, then at the full 0.6 per second.
 	var td: float = Input.get_axis("throttle_down", "throttle_up")
