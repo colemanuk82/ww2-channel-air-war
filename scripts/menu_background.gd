@@ -33,12 +33,17 @@ func _ready() -> void:
 		visible = false
 		set_process(false)
 		return
-	_i = randi() % _imgs.size()
+	# WW2_SHOTCHECK (tools/shotcheck): always the first painting, held still, so screenshot comparisons are stable
+	var still: bool = OS.get_environment("WW2_SHOTCHECK") != ""
+	_i = 0 if still else randi() % _imgs.size()
+	if still:
+		animate = false
 	_a.texture = load(_imgs[_i])
-	_request_next()
+	if not still:
+		_request_next()
 	_a.modulate.a = 1.0
 	_b.modulate.a = 0.0
-	_motion_a = _rand_dir()
+	_motion_a = Vector2.ZERO if still else _rand_dir()
 	resized.connect(func() -> void:
 		_fit(_a)
 		_fit(_b)

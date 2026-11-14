@@ -17,3 +17,5 @@
   their own copies through **Options > Music** at run time. `python tools/check_audio_licences.py`, the
   `TESTS OK` gate and the `Audio licences` workflow all enforce this; if a check fails, delete the file
   rather than widening the allowlist.
+* **Current state** of the project (engine, checks, safety features, rules) is in `docs/STATUS.md`; keep it current.
+  Screenshot regressions: `tools/shotcheck/shotcheck.ps1` (hidden desktop, compares with committed baselines).

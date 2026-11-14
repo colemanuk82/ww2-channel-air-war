@@ -49,6 +49,8 @@ var music_known: Dictionary = {"menu": [], "ingame": []}   # shipped tracks a sa
 var music_recent: Dictionary = {"menu": [], "ingame": []}  # last tracks played (across launches): a new shuffle plays them last
 var music_gap: float = 60.0                 # silence between in-flight tracks, seconds (Options > Music)
 var show_hints: bool = true    # control hints panel on the right of the HUD (Options > Control hints)
+var auto_update_check: bool = false   # opt-in: ask GitHub for a newer release when the menu opens (once a day at most)
+var last_update_check: int = 0        # unix time of the last automatic check
 var start_parking: String = "dispersal"   # where a ground sortie starts: "dispersal" (taxi to the runway) or "runway"
 var taxi_active: bool = false   # the player is taxiing (the R key then skips to the line-up, it does not toggle assist)
 var first_sortie_done: bool = false   # the one-off controls / bail-out hints have been shown
@@ -236,6 +238,8 @@ func _load_settings() -> void:
 	vsync_on = bool(cf.get_value("gfx", "vsync", vsync_on))
 	fps_cap = clampi(int(cf.get_value("gfx", "fps_cap", fps_cap)), 0, 1000)
 	show_hints = bool(cf.get_value("ui", "show_hints", show_hints))
+	auto_update_check = bool(cf.get_value("ui", "auto_update_check", auto_update_check))
+	last_update_check = int(cf.get_value("ui", "last_update_check", last_update_check))
 	first_sortie_done = bool(cf.get_value("gameplay", "first_sortie_done", first_sortie_done))
 	start_parking = "runway" if str(cf.get_value("gameplay", "start_parking", start_parking)) == "runway" else "dispersal"
 	player_heal = bool(cf.get_value("gameplay", "player_heal", player_heal))
@@ -359,6 +363,8 @@ func save_settings() -> void:
 	cf.set_value("gfx", "vsync", vsync_on)
 	cf.set_value("gfx", "fps_cap", fps_cap)
 	cf.set_value("ui", "show_hints", show_hints)
+	cf.set_value("ui", "auto_update_check", auto_update_check)
+	cf.set_value("ui", "last_update_check", last_update_check)
 	cf.set_value("gameplay", "first_sortie_done", first_sortie_done)
 	cf.set_value("gameplay", "player_heal", player_heal)
 	cf.set_value("realism", "engine_heat", engine_heat_on)
@@ -607,6 +613,8 @@ func set_graphic(key: String, value: Variant) -> void:
 			fps_cap = clampi(int(value), 0, 1000)
 		"show_hints":
 			show_hints = bool(value)
+		"auto_update_check":
+			auto_update_check = bool(value)
 		"time_speed":
 			time_speed = clampi(int(value), 0, TIME_SPEEDS.size() - 1)
 		"radio_static":

@@ -330,21 +330,45 @@ void fragment() {
 	ver_box.offset_right = -22.0
 	ver_box.offset_top = 28.0
 	root.add_child(ver_box)
+	# feedback: opens a pre-filled GitHub issue in the browser; nothing is sent unless the player submits it there
+	var fb := UIKit.button("Send feedback", func() -> void: ReportLink.open_feedback(), 14)
+	fb.tooltip_text = "Optional. Opens a pre-filled feedback form on the game's GitHub page in your browser.\nNothing is sent unless you press Submit there."
+	fb.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	fb.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	fb.offset_right = -22.0
+	fb.offset_top = 58.0
+	root.add_child(fb)
 	if BlackBox.crashed_last_time != "":
+		var crash_box := VBoxContainer.new()
+		crash_box.alignment = BoxContainer.ALIGNMENT_END
 		var cn := UIKit.label("The game closed unexpectedly last time. A crash report was saved (Open logs folder).", 15, Color(1.0, 0.75, 0.4), true)
 		cn.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
 		cn.add_theme_constant_override("outline_size", 4)
-		cn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		cn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-		cn.offset_right = -22.0
-		cn.offset_top = 70.0
-		root.add_child(cn)
+		crash_box.add_child(cn)
+		var crash_path: String = BlackBox.crashed_last_time
+		var rep := UIKit.button("Report this crash...", func() -> void: ReportLink.open_crash_report(crash_path), 14)
+		rep.tooltip_text = "Optional. Opens a pre-filled bug report on GitHub with the last lines of the crash log\n(your user name and folders removed). You can read and edit it; nothing is sent unless you press Submit."
+		rep.size_flags_horizontal = Control.SIZE_SHRINK_END
+		crash_box.add_child(rep)
+		crash_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		crash_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		crash_box.offset_right = -22.0
+		crash_box.offset_top = 100.0
+		root.add_child(crash_box)
 	var checker := UpdateCheck.new()
 	root.add_child(checker)
 	checker.result.connect(func(text: String, newer: bool) -> void:
 		upd.text = text
 		upd.disabled = false
 		upd_newer[0] = newer)
+	# opt-in automatic check (Options > Gameplay > Check for updates at start), at most once a day
+	var now_s: int = int(Time.get_unix_time_from_system())
+	if GameState.auto_update_check and now_s - GameState.last_update_check > 86400 and not OS.has_feature("headless") and DisplayServer.get_name() != "headless":
+		GameState.last_update_check = now_s
+		GameState.save_settings()
+		upd.text = "Checking..."
+		upd.disabled = true
+		checker.check()
 	upd.pressed.connect(func() -> void:
 		if upd_newer[0]:
 			OS.shell_open(UpdateCheck.PAGE_URL)

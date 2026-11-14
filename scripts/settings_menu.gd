@@ -382,6 +382,9 @@ func _build_gameplay_page() -> VBoxContainer:
 		GameState.set_graphic("colorblind", i == 1))
 	_row(page, "Radio subtitles", ["Off", "On"], 1 if GameState.radio_subtitles else 0, func(i: int) -> void:
 		GameState.set_graphic("radio_subtitles", i == 1))
+	var upd_row := _row(page, "Check for updates at start", ["Off", "Once a day"], 1 if GameState.auto_update_check else 0, func(i: int) -> void:
+		GameState.set_graphic("auto_update_check", i == 1))
+	upd_row.tooltip_text = "Optional. When on, the start menu asks GitHub (at most once a day) whether a newer release exists. Nothing else is sent."
 	_row(page, "Radio static", ["Off", "On"], 1 if GameState.radio_static else 0, func(i: int) -> void:
 		GameState.set_graphic("radio_static", i == 1))
 	_row(page, "Radio voice", ["Off", "On"], 1 if GameState.radio_voice else 0, func(i: int) -> void:

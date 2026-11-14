@@ -73,8 +73,21 @@ func _ready() -> void:
 	_test_terraces_war_damage()
 	_test_harbour_war()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
+	_test_report_link()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
+
+
+func _test_report_link() -> void:
+	print("-- crash report / feedback links")
+	var home: String = OS.get_environment("USERPROFILE")
+	if home != "":
+		var s: String = ReportLink.scrub("log at %s\\AppData\\x.txt" % home)
+		_check(not s.contains(home) and s.contains("~"), "crash report scrubs the home folder")
+	var u: String = ReportLink.issue_url("Crash report", "a b&c\n```x```", "crash")
+	_check(u.begins_with(ReportLink.ISSUES_URL + "?title=") and not u.contains(" ") and not u.contains("\n") and u.ends_with("&labels=crash"), "issue link is URL-encoded")
+	_check(ReportLink.crash_body("user://no_such_file.txt").contains("(no log found)"), "crash report without a log still builds")
+	_check(ReportLink.feedback_body().contains("Game v"), "feedback form carries the game version")
 
 
 func _test_moon_weather() -> void:

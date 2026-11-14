@@ -1,0 +1,71 @@
+name: Tests
+
+# Runs the headless test suite (scenes/tests.tscn, expects "TESTS OK") on every push and pull request.
+# The game uses a double-precision Godot 4.7.2 build, which Godot does not ship, so the first run builds the
+# editor from the 4.7.2-stable source (about 40 minutes) and caches it; later runs reuse the cached binary.
+# Windows is used on purpose: the game is Windows-only and res:// paths behave the same as on the dev PC.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_TAG: 4.7.2-stable
+  GODOT_EXE: godot.windows.editor.double.x86_64.console.exe
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Audio licence check
+        run: python tools/check_audio_licences.py
+
+      - name: Cached Godot build
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: godot-bin
+          key: godot-${{ env.GODOT_TAG }}-double-editor-win64-v1
+
+      - name: Build Godot ${{ env.GODOT_TAG }} (double precision)
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          pip install scons
+          git clone --depth 1 --branch $env:GODOT_TAG https://github.com/godotengine/godot.git godot-src
+          cd godot-src
+          scons platform=windows target=editor precision=double optimize=speed use_static_cpp=yes angle=no tests=no debug_symbols=no -j4
+          New-Item -ItemType Directory -Force ../godot-bin | Out-Null
+          Copy-Item bin/godot.windows.editor.double.x86_64*.exe ../godot-bin/
+
+      - name: Import project
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          & "godot-bin/$env:GODOT_EXE" --headless --path . --import *> build/import.log
+          Select-String -Path build/import.log -Pattern 'SCRIPT ERROR|Parse Error' -Context 0,2 | ForEach-Object { $_.ToString() }
+          exit 0
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          & "godot-bin/$env:GODOT_EXE" --headless --path . scenes/tests.tscn *> build/tests.log
+          $code = $LASTEXITCODE
+          Select-String -Path build/tests.log -Pattern 'FAIL|SCRIPT ERROR|Parse Error|TESTS ' | Select-Object -Last 60 | ForEach-Object { $_.Line }
+          if (-not (Select-String -Path build/tests.log -Pattern 'TESTS OK' -Quiet)) { Write-Error "Tests did not report TESTS OK (exit $code)"; exit 1 }
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: build/*.log

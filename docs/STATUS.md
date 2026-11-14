@@ -1,0 +1,48 @@
+# Current state
+
+The one page that says how the project stands today. Keep it short and current: when something here changes,
+edit this page in the same commit. History belongs in `HANDOFF.md`; finished plans live in `docs/archive/`.
+
+## What it is
+
+WW2 Channel Air War: a Godot 4 flight game over southern England, the Channel, northern France and Belgium at
+real scale (1 unit = 1 m). Allied and Axis sides, dogfight / bombing / ground attack / historical missions /
+free flight, a campaign, Pilot's Life career, logbook, mission editor, Dam Busters (work in progress) and a
+training film. The game design and data contracts are in `SPEC.md`.
+
+## Engine and build
+
+* Godot **4.7.2-stable, double precision**, built from source in `F:\godot-std`
+  (`platform=windows precision=double optimize=speed use_static_cpp=yes angle=no`) with the camera-origin patch
+  described in `HANDOFF.md` (2026-10-24). The patch only matters for rendering, not for the headless tests.
+* Release: `tools/cache/ship.ps1 -msg "..."` bumps the version, builds, runs the tests, commits, pushes and makes
+  the GitHub release (zip + Inno Setup installer). Only release when the owner asks.
+
+## Checks
+
+| check | how | when |
+|---|---|---|
+| Unit / data tests | `tools/hidden/test.ps1` (headless, expects `TESTS OK`) | every change |
+| Same tests in CI | `.github/workflows/tests.yml` (Windows runner; builds Godot 4.7.2 double once, then cached) | every push / PR |
+| Audio licences | `python tools/check_audio_licences.py`, `.github/workflows/audio-licences.yml` | every push; also inside `TESTS OK` |
+| Screenshot comparison | `tools/shotcheck/shotcheck.ps1` (hidden desktop) against `tools/shotcheck/baselines/` | after UI / rendering changes; `-Update` after an intended change |
+| Taxi and airfield dressing | `tools/dbg` `regress_taxi`, `dress_check` (see `tools/dbg/README.md`) | after airfield changes |
+| Load profiling | `--hitch`, `--loadnotes` game args | after loading / streaming changes |
+
+Never open a visible game window on the developer's PC: everything with pictures runs on the hidden desktop
+(`tools/hidden/README.md`).
+
+## Player-facing safety features
+
+* **Black box** (`scripts/black_box.gd`): a crash recorder flushed line by line to `user://logs/blackbox_*.txt`.
+  A session without `CLEAN EXIT` is kept as `blackbox_CRASH_*.txt` and the start menu says so.
+* **Crash report / feedback** (`scripts/report_link.gd`): opt-in. Buttons open a pre-filled GitHub issue in the
+  browser (crash log tail with the user's folders and name removed); nothing is sent unless the player submits it.
+* **Update check** (`scripts/update_check.gd`): the menu button asks GitHub's releases API on demand; Options >
+  Gameplay > *Check for updates at start* makes it automatic, at most once a day. Off by default.
+
+## Rules that must not be broken
+
+* No commercial audio in the repo (see `CLAUDE.md`).
+* Liveries are our own painted textures (`tools/liveries/README.md`); never copy from other games.
+* The developer edits `README.md` on GitHub: merge before pushing README changes.

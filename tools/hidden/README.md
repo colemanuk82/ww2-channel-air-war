@@ -28,6 +28,7 @@ console exe for picture runs: all of them still flash a window or take focus.
 | `uishots.ps1 menu controls controls-flight ...` | start menu / Options pages (`WW2_SETTINGS_PAGE`, `WW2_CONTROLS_SUB`) |
 | `filmshots.ps1 chapter,seconds ...` | Training Film frames (`--film=`) |
 | `test.ps1` | headless import + test suite (expects `TESTS OK`) |
+| `../shotcheck/shotcheck.ps1 [-Update] [-Only menu]` | screenshot comparison against `tools/shotcheck/baselines/` |
 
 Notes: the first second after launch runs slowly while shaders compile, so real-time captures need about
 15-20 s extra `--shot-delay`. Results land in `build/mis/` (git-ignored).
