@@ -18,7 +18,6 @@ Any suggestions or feedback? Let me know!
 > **How:** start the game, open **Options > Music** (or **Music** in the pause menu), pick **MENU MUSIC** (start screen) or **IN-GAME MUSIC** (flying), then **Import...** for chosen files or **Import folder...** to bring in a whole folder of MP3, OGG or WAV tracks in one go. **Pause between tracks** sets how much quiet you want between in-flight tracks. Keep **Shuffle: On** to mix them, or turn it off to play in order. Use **Delete** to remove tracks you no longer want.
 > Your files are copied into the game's own music folder, so the originals stay where they are. The game does not include any commercial soundtrack: bring your own. The repo only ever ships royalty-free tracks, and a licence check in the build and CI refuses to release anything else.
 
-
 </div>
 
 ---
@@ -27,25 +26,23 @@ Any suggestions or feedback? Let me know!
 
 |  |  |
 |---|---|
-| 🌍 **Real-scale Europe** | England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports.|
+| 🌍 **Real-scale Europe** | England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports. |
 | ✈️ **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
-| ⚔️ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and dynamic missions in free flight.  |
-| 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds, rain squalls, searchlights and flak at night.|
-| 🧑‍✈️ **Bail out and live** |  Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
+| ⚔️ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and dynamic missions in free flight. |
+| 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds, rain squalls, searchlights and flak at night. |
+| 🧑‍✈️ **Bail out and live** | Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
 | 🌡️ **Realism options** | Engine overheating with its own HEAT gauge, and G-forces that grey out your vision and can knock you out. Enemy pilots suffer too. On by default, switch off any time in Options > Realism. |
 | 🛠️ **Build your own missions** | A built-in Mission Editor: place flights, convoys, ships, flak and real targets on the map, draw their routes, set objectives and script what happens with triggers, then fly it. [More below](#%EF%B8%8F-mission-editor). |
 | 🗓️ **The map follows the war** | Choose your sortie date and the ground changes with it: bomb damage that builds up through the Blitz and the bombing of Germany, the 1944 invasion build-up, Normandy after D-Day, flooded valleys, the Westwall, and bridges that fall on the day they did. Bocage, open fields, polders and the Weald, with the seasons on the farmland. |
-| 🏕️ **A living wartime map** | 116 real airfields in RAF and Luftwaffe styles, with gun pits, blast pens and dispersals. Wired army camps packed with tanks under camouflage nets, tent lines, ammo bays and fuel dumps.|
+| 🏕️ **A living wartime map** | 116 real airfields in RAF and Luftwaffe styles, with gun pits, blast pens and dispersals. Wired army camps packed with tanks under camouflage nets, tent lines, ammo bays and fuel dumps. |
 | 🎵 **Soundtrack** | 25 royalty-free orchestral and big-band tracks, separate Allied and Axis victory music, or import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
-| 💸 **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, [there's a tip jar](#-support). |
-
+| 💸 **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, tell me what you think. |
 
 ## 🎮 Play it in 3 steps
 
 1. Download **`WW2ChannelAirWar_Setup_v4.7.exe`** from [Releases](../../releases/latest) (or the zip if you like things portable).
-
 2. Run it. It installs just for you, with no admin rights needed.
-
+3. Start the game, pick your aircraft and a sortie date, and fly.
 
 **Upscaling:** the game uses AMD FSR 2 (Options > Render) to render at a lower resolution and sharpen it back up, which works on any modern graphics card. Turn it off for native resolution.
 
