@@ -69,6 +69,7 @@ func _ready() -> void:
 	_test_awards()
 	_test_legal_docs()
 	_test_era_damage()
+	_test_terraces_war_damage()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
@@ -216,6 +217,88 @@ func _test_era_damage() -> void:
 	for row in WarGround.data().get("floods", []) + WarGround.data().get("battlefields", []) + WarGround.data().get("beaches", []) + GliderKit.rows():
 		var rr: Dictionary = row
 		_check(str(rr.get("source", "")) != "" and str(rr["from"]) <= str(rr["to"]), "dated war-ground row %s has a source and a sane window" % str(rr["id"]))
+	EraClock.set_date("" if keep == EraClock.DEFAULT else keep)
+	WarDamage.refresh()
+
+
+## A six-slot terrace run for the row-merge war-damage test: the slot records _merge_terraces consumes
+## (one street, one side, consecutive k), with the laid transforms also sitting in lists[0] the way
+## _lay_side leaves them.
+func _row_merge_ctx(px: float, pz: float) -> Dictionary:
+	var recs: Array = []
+	var lists: Array = [[], []]
+	for k in 6:
+		var xf: Transform3D = Scatter._xf(Vector3(px + float(k) * 26.0, 0.0, pz), 0.0, Vector3(26.0, 7.0, 8.0))
+		recs.append({"si": 3, "k": k, "sgn": 1.0, "vi": 0, "band": 0, "xf": xf, "yaw": 0.0,
+			"dir": Vector2(1.0, 0.0), "half": 6.0, "fr": 6.0, "w": 26.0, "depth": 8.0})
+		(lists[0] as Array).append(xf)
+	return {"ctx": {"ct": {}, "slotrec": recs, "seed": 12345}, "lists": lists}
+
+
+func _test_terraces_war_damage() -> void:
+	print("-- terrace rows, street trees and bomb damage")
+	var keep: String = EraClock.current()
+	EraClock.set_date("1940-10-15")
+	WarDamage.refresh()
+	var docks: Vector3 = WorldCoords.latlon_to_world(51.497, -0.043)
+	# house_doomed must agree with apply_to_houses on every house of a burnt dock street
+	var fate_ok: bool = true
+	var n_doomed: int = 0
+	for i in 300:
+		var px: float = docks.x + float(i % 20) * 9.0 - 90.0
+		var pz: float = docks.z + float(i / 20) * 11.0 - 80.0
+		var one: Array = [[Transform3D(Basis.IDENTITY.scaled(Vector3(8, 7, 9)), Vector3(px, 3.0, pz))]]
+		var rr: Array = [[], []]
+		WarDamage.apply_to_houses(one, rr, WarDamage.areas_near(Vector2(docks.x, docks.z) - Vector2(900.0, 900.0), 1800.0))
+		var kept: bool = not (one[0] as Array).is_empty()
+		if kept == WarDamage.house_doomed(px, pz):
+			fate_ok = false
+		if WarDamage.house_doomed(px, pz):
+			n_doomed += 1
+	_check(fate_ok, "house_doomed agrees with apply_to_houses on every house of the burnt street")
+	_check(n_doomed > 60, "%d of 300 dock houses are gutted or cleared" % n_doomed)
+	# a six-slot terrace run laid wholly inside the burnt area must not join into an intact row
+	var run_x: float = docks.x
+	var run_z: float = docks.z
+	var found_run: bool = false
+	for t in 800:
+		var all_doomed: bool = true
+		for s in 6:
+			if not WarDamage.house_doomed(docks.x + float(t) * 0.37 + float(s) * 26.0, docks.z + float(t) * 0.11):
+				all_doomed = false
+				break
+		if all_doomed:
+			run_x = docks.x + float(t) * 0.37
+			run_z = docks.z + float(t) * 0.11
+			found_run = true
+			break
+	_check(found_run, "a six-slot terrace run wholly inside the burnt docks exists")
+	if found_run and TownModels.enabled():
+		var doomed_m: Dictionary = _row_merge_ctx(run_x, run_z)
+		Scatter._merge_terraces(doomed_m["ctx"], doomed_m["lists"])
+		var dct: Dictionary = doomed_m["ctx"]["ct"]
+		_check(int(dct["rows"]) == 0 and (doomed_m["lists"][0] as Array).size() == 6, "the doomed run stays six singles, no party-wall row (%d rows)" % int(dct["rows"]))
+		# the same six slots laid where no damage area reaches still merge
+		var clean_x: float = docks.x
+		var clean_z: float = docks.z
+		var found_clean: bool = false
+		for t2 in 1200:
+			var clear_all: bool = true
+			for s2 in 6:
+				if WarDamage.level_at(docks.x + float(t2) * 371.0 + float(s2) * 26.0, docks.z - float(t2) * 233.0) > 0.0:
+					clear_all = false
+					break
+			if clear_all:
+				clean_x = docks.x + float(t2) * 371.0
+				clean_z = docks.z - float(t2) * 233.0
+				found_clean = true
+				break
+		_check(found_clean, "a terrace run outside every damage area exists")
+		if found_clean:
+			var clean_m: Dictionary = _row_merge_ctx(clean_x, clean_z)
+			Scatter._merge_terraces(clean_m["ctx"], clean_m["lists"])
+			var cct: Dictionary = clean_m["ctx"]["ct"]
+			_check(int(cct["row_units"]) == 6 and (clean_m["lists"][0] as Array).is_empty(), "the undamaged run merges into party-wall rows (%d units)" % int(cct["row_units"]))
 	EraClock.set_date("" if keep == EraClock.DEFAULT else keep)
 	WarDamage.refresh()
 

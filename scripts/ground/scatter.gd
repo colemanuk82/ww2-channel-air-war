@@ -1275,8 +1275,9 @@ static func _lay_side(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: float, run
 		ctx["slotrec"].append({"si": int(ctx.get("si", 0)), "k": int(ctx.get("k", 0)), "sgn": sgn,
 			"vi": vi, "band": band, "xf": xf_laid, "yaw": yaw, "dir": dir, "half": float(ctx.get("half", 6.0)),
 			"fr": off - depth * 0.5, "w": w, "depth": depth})
-	# P3: named-town street / garden trees for this slot (hash-keyed, capped per town)
-	_town_slot_trees(ctx, p, dir, sgn, depth, off - depth * 0.5)
+	# P3: named-town street / garden trees for this slot (hash-keyed, capped per town); none where the
+	# bomb damage takes the slot itself (the row merge keeps those houses out of its runs too)
+	_town_slot_trees(ctx, p, dir, sgn, depth, off - depth * 0.5, WarDamage.house_doomed(hp.x, hp.y))
 	run += 1
 	if run > int(ct["longest"]):
 		ct["longest"] = run
@@ -1400,7 +1401,9 @@ static func _ok_town_tree(p: Vector2, exclude: Array, road_clear: float) -> bool
 ## the house fronts, clear of the carriageway, three streets in five tree-lined); garden trees stand behind
 ## the row's back walls. Keyed on the town seed + street + slot and capped per town, so rebuilds agree and
 ## the shared layout rng stream is never touched. Runs on the layout worker: pure data.
-static func _town_slot_trees(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: float, depth: float, fr: float) -> void:
+static func _town_slot_trees(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: float, depth: float, fr: float, doomed: bool) -> void:
+	if doomed:
+		return                     # the slot is a ruin or a cleared site: no street or garden tree
 	var seed_v: int = int(ctx["seed"])
 	var size: int = int(ctx["size"])
 	var nst_cap: int = clampi(30 + size * 10, 40, 80)      # street trees per town (scales with size)
@@ -1439,6 +1442,14 @@ static func _town_slot_trees(ctx: Dictionary, p: Vector2, dir: Vector2, sgn: flo
 				ctx["ngt"] = ngt + 1
 
 
+## True when the slot's house would be gutted or cleared by the bomb damage (WarDamage.house_doomed,
+## the same test apply_to_houses uses): such a slot never joins a party-wall row, so a bombed core
+## reads as ruins and cleared gaps instead of intact terraces. Worker-safe (reads the live area list).
+static func _slot_doomed(r: Dictionary) -> bool:
+	var o: Vector3 = (r["xf"] as Transform3D).origin
+	return WarDamage.house_doomed(o.x, o.z)
+
+
 ## Sort key for the terrace-row merge: street, then side, then slot, so consecutive slots group up.
 static func _slot_before(a: Dictionary, b: Dictionary) -> bool:
 	if int(a["si"]) != int(b["si"]):
@@ -1470,7 +1481,7 @@ static func _merge_terraces(ctx: Dictionary, lists: Array) -> void:
 			while j < recs.size():
 				var pr: Dictionary = recs[j - 1]
 				var nx: Dictionary = recs[j]
-				if int(nx["si"]) == int(pr["si"]) and int(nx["sgn"]) == int(pr["sgn"]) and int(nx["k"]) == int(pr["k"]) + 1:
+				if int(nx["si"]) == int(pr["si"]) and int(nx["sgn"]) == int(pr["sgn"]) and int(nx["k"]) == int(pr["k"]) + 1 and not _slot_doomed(nx):
 					grp.append(nx)
 					j += 1
 				else:
@@ -1480,6 +1491,9 @@ static func _merge_terraces(ctx: Dictionary, lists: Array) -> void:
 			var gi: int = 0
 			while left - gi >= 3:
 				var r0: Dictionary = grp[gi]
+				if _slot_doomed(r0):
+					gi += 1                     # bombed out: stays a single, apply_to_houses makes the ruin
+					continue
 				var hx: int = seed_v + int(r0["si"]) * 7919
 				var hy: int = int(r0["k"]) * 17 + (1 if float(r0["sgn"]) > 0.0 else 0)
 				var hv: int = int(_ih(hx, hy, 71) * 47.0)                    # row scheme (TownModels cache key)

@@ -90,6 +90,16 @@ static func level_at(x: float, z: float) -> float:
 	return level_in(_live, x, z)
 
 
+## True when apply_to_houses would gut or clear the house at (x, z) (the same level + hash test): the
+## scatter's terrace-row merge and street-tree pass keep such slots out, so a bombed core keeps no intact
+## party-wall rows or street trees. Worker-safe (reads the live area list, like the tile jobs do).
+static func house_doomed(x: float, z: float) -> bool:
+	var lvl: float = level_at(x, z)
+	if lvl <= 0.0:
+		return false
+	return _hash01(x, z) < lvl * 0.86
+
+
 ## Swap damaged houses in-place: `lists` is the scatter's per-variant transform lists; gutted shells are appended to
 ## ruins[0] / ruins[1]; cleared sites are dropped. Deterministic per house position (no rng consumed), so the same
 ## street is wrecked the same way every time it streams in.
