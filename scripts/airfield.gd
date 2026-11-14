@@ -176,6 +176,27 @@ func build_layout() -> void:
 	_build_puddles()
 
 
+## Mid-session era change: tear the old layout down (runways, lights, markers, trees...) and build the
+## new era's style. The streamed site drops its old dressing with the rebuild, so the field is
+## re-dressed around the new layout by _build_airfield (WorldPopulator).
+func restyle(new_style: String) -> void:
+	style = new_style
+	for c in get_children():
+		(c as Node).free()
+	_built = false
+	_night_lights = null
+	_paved.clear()
+	_extent = Vector2.ZERO
+	_puddles.clear()
+	_link_n = 0
+	_dispersal_local.clear()
+	markers_local.clear()
+	pens_local.clear()
+	nets_local.clear()
+	trees_local.clear()
+	build_layout()
+
+
 ## One paved runway with centre dashes and threshold bars, built on a pivot rotated by angle_deg.
 func _runway_pivot(angle_deg: float, length: float, width: float, slab_mat: Material, at: Vector3 = Vector3.ZERO) -> void:
 	var rw := Node3D.new()

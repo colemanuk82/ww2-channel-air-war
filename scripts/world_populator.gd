@@ -2958,6 +2958,12 @@ func _build_airfield(s: Dictionary) -> Node3D:
 	var af: Airfield = null
 	if s["existing"] != null and is_instance_valid(s["existing"]):
 		af = s["existing"]
+		# mid-session era change: the core field's layout was built for the startup date; if the era
+		# rules now pick a different style (grass 1940 -> paved fighter station 1944), rebuild it
+		var want: String = Airfield.style_for_record(id, d)
+		if want != af.style:
+			af.restyle(want)
+			print("[era] airfield %s restyled to %s" % [id, want])
 	else:
 		var pos: Vector3 = s["pos"]
 		af = Airfield.create(str(d["name"]), pos, float(d["heading_deg"]), float(s["y"]))

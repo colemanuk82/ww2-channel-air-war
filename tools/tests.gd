@@ -1647,6 +1647,9 @@ func _test_airfield_styles() -> void:
 	_check(gmm >= 4 and gcont.find_children("*", "GroundStructure", true, false).size() >= 6, "the grass station dresses trees, markers and its hangar row (multimeshes=%d)" % gmm)
 	remove_child(gcont)
 	gcont.free()
+	# mid-session era change: the layout tears down and rebuilds for the new era's style
+	gaf.restyle("raf_fighter")
+	_check(gaf.style == "raf_fighter" and gaf._built and gaf.trees_local.is_empty() and not gaf._paved.is_empty(), "an airfield restyles to the new era's layout")
 	remove_child(gaf)
 	gaf.free()
 	wp.free()
