@@ -202,7 +202,7 @@ class MB:
 		var m := ArrayMesh.new()
 		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 		m.surface_set_material(0, material)
-		return m
+		return LodCull.with_lods(m)
 
 
 static var _cache: Dictionary = {}

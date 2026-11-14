@@ -618,7 +618,9 @@ static func _clusterize(parts: Array, seed_v: int) -> Array:
 		if rx < 1.2:
 			out.append(p)
 			continue
-		var n: int = clampi(int(rx * 3.2), 6, 15)
+		# perf: ~5 big clumps instead of ~11 small ones, 6x3 spheres (36 tris) instead of 7x4 (56): a crown is
+		# about a quarter of the triangles for the same volume and silhouette (lumps are a little larger)
+		var n: int = clampi(int(rx * 1.6), 4, 8)
 		for i in n:
 			# a point inside the ellipsoid (or cone), biased outward so the surface is covered
 			var u: float = pow(rng.randf(), 0.45)
@@ -628,8 +630,8 @@ static func _clusterize(parts: Array, seed_v: int) -> Array:
 			if cone:
 				rr *= clampf(0.5 - yy * 0.5, 0.15, 1.0)    # narrower toward the tip
 			var off := Vector3(cos(a) * rr * rx * 0.78, yy * ry * 0.78, sin(a) * rr * rx * 0.78)
-			var cr: float = rx * lerpf(0.52, 0.30, u) * rng.randf_range(0.85, 1.15)
-			var lm: ArrayMesh = _lumpy_sphere(snappedf(cr, 0.1), snappedf(cr * rng.randf_range(1.5, 1.9), 0.1), 7, 4, float(rng.randi() % 7))
+			var cr: float = rx * lerpf(0.62, 0.38, u) * rng.randf_range(0.85, 1.15)
+			var lm: ArrayMesh = _lumpy_sphere(snappedf(cr, 0.1), snappedf(cr * rng.randf_range(1.5, 1.9), 0.1), 6, 3, float(rng.randi() % 7))
 			var c2: Color = col * rng.randf_range(0.80, 1.18)
 			c2 = c2.lerp(Color(c2.r * 1.1, c2.g * 1.05, c2.b * 0.8), 0.3 * float(yy > 0.3))    # sunlit top a touch yellower
 			out.append([lm, Transform3D(Basis.IDENTITY, xf.origin + xf.basis * off), _dmat(Color(c2.r, c2.g, c2.b), 3, 0.1)])
@@ -2100,7 +2102,7 @@ static func _add_lod_pair(root: Node, near_mesh: Mesh, far: Mesh, d: Dictionary,
 const TREE_NEAR: float = 2200.0
 # Realistic scenery: the clustered crowns and clump hedges are ~10x the triangles of the toon models (and are drawn
 # again into each shadow cascade), so the full models switch to the stand-ins much sooner.
-const TREE_NEAR_REAL: float = 1100.0
+const TREE_NEAR_REAL: float = 700.0
 const HEDGE_NEAR_REAL: float = 450.0
 
 

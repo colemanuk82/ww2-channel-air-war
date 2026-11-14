@@ -2146,6 +2146,8 @@ func _build_site(s: Dictionary) -> Node3D:
 	# first, then its children in order under a small per-frame budget (see _advance_staged).
 	var staged: bool = not (boost or _sync_build or bool(s.get("pin", false))) and _stage_children(s, n)
 	add_child(n)
+	if not staged:
+		LodCull.apply(n)       # detailed parts cull by size (staged sites do it per child as each goes in)
 	if staged:
 		_advance_staged()
 	if OS.is_debug_build():
@@ -2284,6 +2286,7 @@ func _advance_staged() -> void:
 			(child as Node).free()          # the site was freed before it finished going in
 			continue
 		(parent as Node).add_child(child)
+		LodCull.apply(child)
 		done += 1
 	if done > 0 and OS.is_debug_build():
 		_frame_notes.append("staged:%d/%dus" % [done, Time.get_ticks_usec() - t0])

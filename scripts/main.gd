@@ -2782,6 +2782,33 @@ func _perf_step(delta: float) -> void:
 
 
 
+## Debug (--perf-dump): who owns the scene tree's nodes. Counts every node by class and by the scenery site /
+## tile it hangs under, so a node-heavy town shows up by name (script cost scales with node count).
+func _perf_node_census() -> void:
+	var by_class: Dictionary = {}
+	var by_owner: Dictionary = {}
+	var total: int = 0
+	var wp: Node = get_tree().root.find_child("WorldPopulator", true, false)
+	for n in get_tree().root.find_children("*", "", true, false):
+		total += 1
+		by_class[n.get_class()] = int(by_class.get(n.get_class(), 0)) + 1
+		var up: Node = n
+		while up != null and up.get_parent() != null and up.get_parent() != wp and up.get_parent() != get_tree().root:
+			up = up.get_parent()
+		var key: String = String(up.name).rstrip("0123456789_-@").left(24) if up != null else "?"
+		by_owner[key] = int(by_owner.get(key, 0)) + 1
+	var ck: Array = by_class.keys()
+	ck.sort_custom(func(a, b) -> bool: return by_class[a] > by_class[b])
+	var line: String = "CENSUS nodes=%d orphans=%d classes:" % [total, int(Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT))]
+	for i in mini(10, ck.size()):
+		line += " %s=%d" % [ck[i], by_class[ck[i]]]
+	print(line)
+	var ok: Array = by_owner.keys()
+	ok.sort_custom(func(a, b) -> bool: return by_owner[a] > by_owner[b])
+	for i in mini(25, ok.size()):
+		print("CENSUS owner %-26s nodes=%d" % [ok[i], by_owner[ok[i]]])
+
+
 ## Debug: triangles (x instances) of visible geometry within 6 km of the camera, grouped by owner script / node name.
 var _dump_r: float = 60000.0
 func _perf_dump() -> void:
@@ -2853,6 +2880,7 @@ func _perf_dump() -> void:
 		tot += float(tally[k])
 		totn += int(cnt[k])
 	print("DUMP TOTAL tris=%.0fk nodes=%d" % [tot / 1000.0, totn])
+	_perf_node_census()
 	for k2 in keys:
 		if "barge" in str(k2) or "kammhuber" in str(k2):
 			print("DUMPX %s tris=%.1fk nodes=%d" % [k2, float(tally[k2]) / 1000.0, cnt[k2]])
