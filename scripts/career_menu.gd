@@ -110,11 +110,14 @@ func _build_status(parent: Control) -> void:
 	left.add_child(UIKit.label("%s   Sorties %d   Kills %d   Fatigue %d/10" % [Career.date_text(), int(s["sorties"]), int(s["kills"]), int(s["fatigue"])], 17))
 	left.add_child(UIKit.label("Status: %s%s" % [_status_text(), "   (Ironman)" if bool(s.get("ironman", false)) else ""], 17, UIKit.TEXT_DIM))
 	left.add_child(UIKit.rule(0.4))
-	var mates: Array = s.get("mates", [])
-	left.add_child(UIKit.label("Squadron mates: " + (", ".join(mates) if not mates.is_empty() else "none left"), 16, UIKit.TEXT_DIM))
-	var lost: Array = s.get("lost_mates", [])
-	if not lost.is_empty():
-		left.add_child(UIKit.label("Lost: " + ", ".join(lost), 15, UIKit.TEXT_DIM))
+	left.add_child(UIKit.label("SQUADRON ROSTER", 14, UIKit.TEXT_DIM, true))
+	var rows: PackedStringArray = []
+	for e in Career.roster():
+		var ed: Dictionary = e
+		rows.append("%-16s  %2d sorties  %2d kills   %s" % [str(ed["name"]), int(ed["sorties"]), int(ed["kills"]), {"active": "on ops", "wounded": "wounded", "missing": "missing", "pow": "prisoner", "killed": "killed"}.get(str(ed["status"]), str(ed["status"]))])
+	var rl: Label = UIKit.label("\n".join(rows), 15, Color(0.86, 0.85, 0.78))
+	rl.add_theme_font_override("font", UIKit.body_font())
+	left.add_child(rl)
 	left.add_child(UIKit.rule(0.4))
 	left.add_child(UIKit.label("LOG", 14, UIKit.TEXT_DIM, true))
 	var log: Array = s.get("log", [])

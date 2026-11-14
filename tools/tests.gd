@@ -74,6 +74,7 @@ func _ready() -> void:
 	_test_harbour_war()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	_test_report_link()
+	_test_gameplay_additions()
 	_test_combat_audio()
 	_test_controls_ui()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
@@ -135,6 +136,47 @@ func _test_combat_audio() -> void:
 	var gm := GameMusic.new()
 	_check("combat" in gm and gm.combat == 0.0, "in-flight music starts calm")
 	gm.free()
+
+
+func _test_gameplay_additions() -> void:
+	print("-- patrol missions, career roster and branching, gun jams")
+	var all_ok: bool = true
+	for k in PatrolMode.kind_ids():
+		if not (k in OpsRoom.KINDS):
+			all_ok = false
+	_check(all_ok and PatrolMode.kind_ids().has("rescue") and PatrolMode.kind_ids().has("recce") and PatrolMode.kind_ids().has("shipping") and PatrolMode.kind_ids().has("intercept"), "every patrol mission is an Ops Room tasking kind")
+	_check(ModeRegistry.has_mode("patrol"), "Patrol Missions is a registered mode")
+	# career: never touch the player's real save
+	var had: bool = Career.has_save()
+	var backup: String = FileAccess.get_file_as_string(Career.SAVE_PATH) if had else ""
+	var keep_state: Dictionary = Career.state.duplicate(true)
+	Career.new_pilot("Test", "Allies", "spitfire", false)
+	_check(Career.roster().size() == Career.MATES["Allies"].size(), "a new pilot's squadron roster holds the whole flight")
+	_check(not Career.step_applies({"when": {"min_kills": 3}}) and Career.step_applies({"when": {"max_kills": 0}}), "branch conditions read the pilot's kills")
+	Career.state["last_fate"] = "sea"
+	_check(Career.step_applies({"when": {"after_fate": ["sea", "crashed"]}}) and not Career.step_applies({"when": {"lost_mate": true}}), "branch conditions read the last fate and lost mates")
+	var lost: String = str(Career.state["mates"][0])
+	var joined: String = Career._update_roster(Career.state["mates"].slice(0, 2), 1, lost, "crashed")
+	var st_lost: String = ""
+	for e in Career.roster():
+		if str(e["name"]) == lost:
+			st_lost = str(e["status"])
+	_check(joined != "" and Career.roster().size() == Career.MATES["Allies"].size() + 1 and st_lost in ["killed", "missing"], "a lost mate is posted missing and a replacement joins (%s -> %s)" % [lost, joined])
+	Career.state = keep_state
+	if had:
+		var f := FileAccess.open(Career.SAVE_PATH, FileAccess.WRITE)
+		f.store_string(backup)
+		f.close()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(Career.SAVE_PATH))
+	var ch0: Dictionary = (Career.data()["chapters"] as Array)[0]
+	var ids: Array = []
+	for s in ch0["Allies"]:
+		ids.append(str(s.get("id", "")))
+	_check(ids.has("commendation") and ids.has("shaken") and ids.has("funeral"), "the first chapter carries the branch steps")
+	var ws := WeaponSystem.new()
+	_check(not ws.jammed and ws.JAM_SAFE > 1.0, "guns start clear; short bursts never jam")
+	ws.free()
 
 
 func _test_report_link() -> void:

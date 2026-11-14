@@ -388,6 +388,13 @@ func _build_gameplay_page() -> VBoxContainer:
 		GameState.set_graphic("colorblind", i == 1))
 	_row(page, "Radio subtitles", ["Off", "On"], 1 if GameState.radio_subtitles else 0, func(i: int) -> void:
 		GameState.set_graphic("radio_subtitles", i == 1))
+	var conv_opts: Array = [0, 180, 230, 300, 400]
+	var cv_row := _row(page, "Gun convergence", ["Aircraft default", "180 m", "230 m (RAF 250 yd)", "300 m", "400 m"], maxi(conv_opts.find(GameState.gun_convergence), 0), func(i: int) -> void:
+		GameState.set_graphic("gun_convergence", conv_opts[i]))
+	cv_row.tooltip_text = "Where your wing guns' streams cross. Closer hits harder up close; further suits longer shots."
+	var gj_row := _row(page, "Gun jams", ["Off", "On"], 1 if GameState.gun_jams else 0, func(i: int) -> void:
+		GameState.set_graphic("gun_jams", i == 1))
+	gj_row.tooltip_text = "Long unbroken bursts (over ~3 s) can jam the guns; release the trigger for 2 s to clear them."
 	var fa_row := _row(page, "Flight assists", ["Off", "Auto-rudder", "Auto-rudder + stall guard"], GameState.flight_assists, func(i: int) -> void:
 		GameState.set_graphic("flight_assists", i))
 	fa_row.tooltip_text = "Auto-rudder: the rudder follows the stick in turns (unless you use Q / E).\nStall guard: the pull eases off as the airspeed nears the stall."

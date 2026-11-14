@@ -663,7 +663,7 @@ func _select_count(ob: OptionButton, vals: Array, want: int) -> void:
 
 ## The Mission list holds historical missions or training lessons depending on the mode.
 func _fill_missions(mode_id: String) -> void:
-	var want: String = "training" if mode_id == "training" else ("dambuster" if mode_id == "dambuster" else ("pow_escape" if mode_id == "pow_escape" else ("airborne" if mode_id == "airborne" else "historical")))
+	var want: String = "patrol" if mode_id == "patrol" else ("training" if mode_id == "training" else ("dambuster" if mode_id == "dambuster" else ("pow_escape" if mode_id == "pow_escape" else ("airborne" if mode_id == "airborne" else "historical"))))
 	if want == _mission_kind:
 		return
 	_mission_kind = want
@@ -684,6 +684,10 @@ func _fill_missions(mode_id: String) -> void:
 			_mission_ids.append(str(i))
 			var atag: String = "" if (AirborneCampaign.is_passed(i) or AirborneCampaign.is_open(i)) else "  (locked)"
 			_mission.add_item(str(AirborneCampaign.OPS[i]["title"]) + "  [WIP]" + atag)
+	elif want == "patrol":
+		for pk in PatrolMode.KINDS:
+			_mission_ids.append(String(pk["id"]))
+			_mission.add_item(String(pk["name"]))
 	elif want == "training":
 		for l in TrainingMode.LESSONS:
 			_mission_ids.append(String(l["id"]))
@@ -819,7 +823,7 @@ func _refresh_mode() -> void:
 	_plan_label.visible = free
 	_plan_hint.visible = free
 	_spawn_note.visible = not free
-	_mission_row.visible = id == "historical" or id == "training" or id == "dambuster" or id == "pow_escape" or id == "airborne"
+	_mission_row.visible = id == "historical" or id == "training" or id == "patrol" or id == "dambuster" or id == "pow_escape" or id == "airborne"
 	_fill_missions(id)
 	if id == "dambuster":
 		_desc.text = str(DamCampaign.DAYS[clampi(maxi(_mission.selected, 0), 0, DamCampaign.count() - 1)]["brief"]) + DamCampaign.STEER_NOTE
@@ -827,6 +831,8 @@ func _refresh_mode() -> void:
 		_desc.text = str(PowEscapeCampaign.OPS[clampi(maxi(_mission.selected, 0), 0, PowEscapeCampaign.count() - 1)].get("brief", ModeRegistry.description(id)))
 	elif id == "airborne":
 		_desc.text = str(AirborneCampaign.OPS[clampi(maxi(_mission.selected, 0), 0, AirborneCampaign.count() - 1)].get("brief", ModeRegistry.description(id)))
+	elif id == "patrol":
+		_desc.text = PatrolMode.brief_for(_mission_ids[_mission.selected]) if _mission.selected >= 0 and _mission.selected < _mission_ids.size() else ModeRegistry.description(id)
 	elif id == "training":
 		_desc.text = TrainingMode.brief_for(_mission_ids[_mission.selected]) if _mission.selected >= 0 and _mission.selected < _mission_ids.size() else ""
 	elif id == "historical" and not _mission_ids.is_empty():
@@ -1019,7 +1025,7 @@ func _on_start() -> void:
 		"side": _side.get_item_text(_side.selected),
 		"aircraft": _ids[_aircraft.selected],
 		"mode": mode_id,
-		"mission": _mission_ids[_mission.selected] if ((mode_id == "historical" or mode_id == "training") and not _mission_ids.is_empty()) else "",
+		"mission": _mission_ids[_mission.selected] if ((mode_id == "historical" or mode_id == "training" or mode_id == "patrol") and not _mission_ids.is_empty()) else "",
 		"difficulty": DIFFICULTIES[_diff.get_item_text(_diff.selected)],
 		"weather": _weather_names[_weather.selected] if _weather.selected < _weather_names.size() else MoonWeather.random_weather(),
 		"time": TIMES[_time.selected] if _time.selected < TIMES.size() else TIMES[randi() % TIMES.size()],

@@ -66,6 +66,52 @@
           ]
         },
         {
+          "id": "commendation",
+          "kind": "story",
+          "when": {
+            "min_kills": 3
+          },
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Commendation",
+              "text": "The Station Commander has read the combat reports. {rank} {name}, three enemy aircraft confirmed in your first weeks. The squadron is talking about you, and so is Group. Keep your head, and keep your number two alive."
+            }
+          ]
+        },
+        {
+          "id": "shaken",
+          "kind": "story",
+          "when": {
+            "after_fate": [
+              "sea",
+              "captured",
+              "crashed"
+            ]
+          },
+          "pages": [
+            {
+              "kind": "text",
+              "title": "Forty-eight hours",
+              "text": "The Medical Officer looks at your hands and signs a chit for two days' leave. {mate1} drives you to the station in the squadron van and says nothing about the Channel. You sleep for fourteen hours and come back to the hut feeling almost like yourself."
+            }
+          ]
+        },
+        {
+          "id": "funeral",
+          "kind": "story",
+          "when": {
+            "lost_mate": true
+          },
+          "pages": [
+            {
+              "kind": "text",
+              "title": "An empty chair",
+              "text": "There is a new face in the dispersal hut this morning, and an empty peg where a flying jacket used to hang. Nobody says the name. The new boy asks which chair is free, and somebody tells him, and the cards go round again."
+            }
+          ]
+        },
+        {
           "id": "dunkirk_cover",
           "kind": "mission",
           "mode": "historical",
@@ -198,6 +244,52 @@
               "kind": "letter",
               "title": "Feldpost",
               "text": "Liebe Familie, ich bin unverletzt. Die Luft ist voller Rauch, und die Engländer kämpfen tapfer. Ich denke an euch jeden Abend. - {name}"
+            }
+          ]
+        },
+        {
+          "id": "commendation",
+          "kind": "story",
+          "when": {
+            "min_kills": 3
+          },
+          "pages": [
+            {
+              "kind": "letter",
+              "title": "Anerkennung",
+              "text": "The Kommodore has read your reports. {rank} {name}, three victories confirmed over the Channel. The Staffel is proud of you. Fly with your head, not with your heart, and bring your Rottenflieger home."
+            }
+          ]
+        },
+        {
+          "id": "shaken",
+          "kind": "story",
+          "when": {
+            "after_fate": [
+              "sea",
+              "captured",
+              "crashed"
+            ]
+          },
+          "pages": [
+            {
+              "kind": "text",
+              "title": "Two days in Wissant",
+              "text": "The flight surgeon sends you to the rest house by the sea. {mate1} brings cigarettes and the gossip from the Staffel. You walk on the beach and look across at the white cliffs and come back on the third morning ready to fly."
+            }
+          ]
+        },
+        {
+          "id": "funeral",
+          "kind": "story",
+          "when": {
+            "lost_mate": true
+          },
+          "pages": [
+            {
+              "kind": "text",
+              "title": "A new face",
+              "text": "A young Leutnant straight from the school arrives with his kitbag and asks where to put it. Someone points at the bed by the window. Nobody explains why it is free."
             }
           ]
         },

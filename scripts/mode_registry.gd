@@ -13,6 +13,7 @@ const MODES := {
 	"free": {"name": "Free Flight", "script": "res://scripts/modes/free_flight_mode.gd", "desc": "No objectives. Roam the Channel and Kent, take off and land."},
 	"bombing": {"name": "Bombing Run", "script": "res://scripts/modes/bombing_mode.gd", "desc": "Fly to a real enemy target, bomb it through flak and fighters, then return to base."},
 	"ground": {"name": "Ground Attack", "script": "res://scripts/modes/ground_attack_mode.gd", "desc": "Strafe trains, convoys and tanks behind the lines. Hit the kill quota."},
+	"patrol": {"name": "Patrol Missions", "script": "res://scripts/modes/patrol_mode.gd", "desc": "Pick a job from the Mission list - intercept a raid, photo recce, air-sea rescue, hunt a convoy at sea and more. The Ops Room sends you after a real target and calls again with the same kind of job each time one is done."},
 	"training": {"name": "Training", "script": "res://scripts/modes/training_mode.gd", "desc": "Flying school: basics, take-off, landing, gunnery, rockets and bombs, formation flying, stalls and dogfighting. Pick a lesson from the Mission list."},
 	"defend": {"name": "Defend Targets", "script": "res://scripts/ground/defend_mode.gd", "desc": "Intercept enemy bomber raids before they hit your installations."},
 	"escort": {"name": "Bomber Escort", "script": "res://scripts/modes/escort_mode.gd", "desc": "Escort a bomber formation to a real target and back. Keep the bombers alive through the interceptors."},

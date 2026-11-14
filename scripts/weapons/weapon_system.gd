@@ -16,6 +16,15 @@ var _tracer_i: int = 0
 var _bomb_side: float = 1.0
 var _muzzles: Array[Node3D] = []
 var _mount_i: int = 0
+# gun jams (player, Options > Realism > Gun jams): long unbroken bursts heat the guns and a stoppage can follow; the
+# guns clear after the trigger has been released for JAM_CLEAR seconds (the pilot re-cocking / the armourer's
+# wiring), never mid-burst on their own
+var burst_t: float = 0.0            # seconds the trigger has been held without a break
+var jammed: bool = false
+var _jam_rest: float = 0.0
+const JAM_SAFE := 3.0               # bursts shorter than this never jam
+const JAM_RATE := 0.10              # chance per second of firing past JAM_SAFE
+const JAM_CLEAR := 2.0
 
 ## Player gunnery help. Both values were tuned by ear: `spread *= 0.5` with a 9 deg assist cone was far
 ## too easy, going all the way to 1.0 / 2.5 deg overshot the other way, so the middle ground is the small
@@ -43,6 +52,14 @@ func _process(delta: float) -> void:
 	if aircraft == null or not is_instance_valid(aircraft):
 		return
 	if aircraft.player_controlled:
+		if not aircraft.cmd_fire:
+			burst_t = maxf(burst_t - delta * 2.0, 0.0)
+			if jammed:
+				_jam_rest += delta
+				if _jam_rest >= JAM_CLEAR:
+					jammed = false
+					if hud_overlay != null:
+						hud_overlay.flash("GUNS CLEARED")
 		if aircraft.ammo > _low_threshold():      # restocked (rearm / respawn): arm the warnings again
 			_warned_low = false
 		if aircraft.ammo > 0:
@@ -85,6 +102,8 @@ func rearm() -> void:
 func _on_fire(a: Aircraft) -> void:
 	if _gun_cd > 0.0 or a.ammo <= 0 or a.state != Aircraft.State.ALIVE:
 		return
+	if a.player_controlled and _jam_check(a):
+		return
 	var st: AircraftStats = a.stats
 	if _muzzles.is_empty() or not is_instance_valid(_muzzles[0]):
 		_muzzles = a.get_muzzles()
@@ -92,7 +111,10 @@ func _on_fire(a: Aircraft) -> void:
 			return
 	_gun_cd = 1.0 / maxf(st.fire_rate, 0.5)
 	var fwd: Vector3 = a.get_forward()
-	var aim: Vector3 = a.global_position + fwd * GunLayouts.convergence(st.model_id, st.gun_convergence)
+	var conv: float = GunLayouts.convergence(st.model_id, st.gun_convergence)
+	if a.player_controlled and GameState.gun_convergence > 0:
+		conv = float(GameState.gun_convergence)          # Options > Gameplay > Gun convergence
+	var aim: Vector3 = a.global_position + fwd * conv
 	var spread: float = st.gun_spread
 	if a.player_controlled:
 		aim = _assisted_aim(a, fwd, aim)
@@ -126,6 +148,23 @@ func _on_fire(a: Aircraft) -> void:
 		_check_ammo(a)
 	var shot_sfx: String = ("gun:" + st.gun_sound) if st.gun_sound != "" else ("cannon" if st.gun_damage >= 2.0 else "gun")
 	FX.sfx(shot_sfx, a.global_position, -6.0 if not a.player_controlled else -3.0, 0.06)
+
+
+## True while the player's guns are jammed (and starts a jam now and then on a long burst).
+func _jam_check(a: Aircraft) -> bool:
+	if not GameState.gun_jams:
+		return false
+	if jammed:
+		return true
+	burst_t += 1.0 / maxf(a.stats.fire_rate, 0.5)
+	if burst_t > JAM_SAFE and randf() < JAM_RATE / maxf(a.stats.fire_rate, 0.5):
+		jammed = true
+		_jam_rest = 0.0
+		if hud_overlay != null:
+			hud_overlay.flash("GUNS JAMMED - release the trigger to clear")
+		FX.sfx("hit_metal:1", a.global_position, -10.0)
+		return true
+	return false
 
 
 const AI_BOMB_SCATTER: float = 5.0       # m/s of random release velocity on an AI bomb (tens of metres on the ground)

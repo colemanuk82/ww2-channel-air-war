@@ -18,6 +18,11 @@ const MATES := {
 	"Allies": ["Tom Ashby", "Ginger Mallory", "Dickie Hale", "Bunny Wren", "Sandy Croft"],
 	"Axis": ["Rudi Falkner", "Paul Adler", "Fritz Hagen", "Egon Rapp", "Kurt Lenz"],
 }
+## Replacements posted in when a squadron pilot is lost (the roster never runs dry)
+const REPLACEMENTS := {
+	"Allies": ["Jimmy Pell", "Hugh Barton", "Nobby Clarke", "Pip Somers", "Ken Ashdown", "Chalky White", "Bob Doe", "Tich Harris"],
+	"Axis": ["Hans Brenner", "Willi Stock", "Otto Kemper", "Karl Uhl", "Erich Born", "Heinz Mertens", "Gustav Rau", "Max Seidel"],
+}
 const START_DAY_NAME := "10 July 1940"
 const MONTH_NAMES := ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
@@ -74,8 +79,112 @@ static func new_pilot(pilot_name: String, side: String, aircraft: String, ironma
 		"day": 0, "sorties": 0, "kills": 0, "fatigue": 0, "status": "active", "rest_until": 0,
 		"ended": "", "mates": mates.slice(0, 2), "lost_mates": [], "pending": [],
 		"log": ["Posted to %s on %s." % [SQUADRON[side], START_DAY_NAME]],
+		"last_fate": "", "roster": [],
 	}
+	for m in mates:
+		(state["roster"] as Array).append(_roster_entry(str(m)))
 	save_state()
+
+
+# ---------------------------------------------------------------- squadron roster (persists in career.json)
+static func _roster_entry(pilot: String) -> Dictionary:
+	return {"name": pilot, "sorties": 0, "kills": 0, "status": "active", "joined": int(state.get("day", 0))}
+
+
+## The squadron's pilots (the player's mates and their replacements), each with sorties, kills and status:
+## "active", "wounded" (back after rest), "missing", "pow" or "killed". Older saves get one built from the mates.
+static func roster() -> Array:
+	if not state.has("roster") or not (state["roster"] is Array) or (state["roster"] as Array).is_empty():
+		var r: Array = []
+		var flying: Array = state.get("mates", [])
+		for m in MATES.get(str(state.get("side", "Allies")), []):
+			if str(m) in state.get("lost_mates", []):
+				var e: Dictionary = _roster_entry(str(m))
+				e["status"] = "missing"
+				r.append(e)
+			else:
+				r.append(_roster_entry(str(m)))
+		for m2 in flying:
+			if not (str(m2) in MATES.get(str(state.get("side", "Allies")), [])):
+				r.append(_roster_entry(str(m2)))
+		state["roster"] = r
+	return state["roster"]
+
+
+## After a sortie: the two mates who flew log a sortie and share the kills; a lost mate is posted missing (or
+## killed / taken prisoner) and a replacement joins; wounded pilots come back after a week.
+static func _update_roster(flew: Array, kills: int, lost_mate: String, fate: String) -> String:
+	var r: Array = roster()
+	var day: int = int(state.get("day", 0))
+	for e in r:
+		var ed: Dictionary = e
+		if str(ed["status"]) == "wounded" and day >= int(ed.get("back", 0)):
+			ed["status"] = "active"
+	for e2 in r:
+		var ed2: Dictionary = e2
+		if str(ed2["name"]) in flew and str(ed2["status"]) == "active":
+			ed2["sorties"] = int(ed2["sorties"]) + 1
+			if randf() < 0.18 + 0.1 * float(kills):
+				ed2["kills"] = int(ed2["kills"]) + 1
+	var joined: String = ""
+	if lost_mate != "":
+		for e3 in r:
+			var ed3: Dictionary = e3
+			if str(ed3["name"]) == lost_mate:
+				ed3["status"] = "pow" if fate == "captured" else ("killed" if randf() < 0.5 else "missing")
+		var used: Array = []
+		for e4 in r:
+			used.append(str((e4 as Dictionary)["name"]))
+		for cand in REPLACEMENTS.get(str(state.get("side", "Allies")), []):
+			if not (str(cand) in used):
+				joined = str(cand)
+				break
+		if joined != "":
+			r.append(_roster_entry(joined))
+			(state["mates"] as Array).append(joined)
+	elif randf() < 0.08:
+		# now and then a mate comes home wounded and is off the strength for a week
+		for e5 in r:
+			var ed5: Dictionary = e5
+			if str(ed5["name"]) in flew and str(ed5["status"]) == "active":
+				ed5["status"] = "wounded"
+				ed5["back"] = day + 7
+				break
+	return joined
+
+
+# ---------------------------------------------------------------- branching
+## A step may carry "when": {"min_kills": n, "max_kills": n, "after_fate": ["sea", ...], "lost_mate": true,
+## "min_sorties": n}. A step whose condition does not hold is skipped, so a chapter branches on how the pilot is
+## doing (an ace's commendation, a shaken pilot's leave, a funeral for a lost friend).
+static func step_applies(step: Dictionary) -> bool:
+	var w: Variant = step.get("when", null)
+	if not (w is Dictionary):
+		return true
+	var wd: Dictionary = w
+	if wd.has("min_kills") and int(state.get("kills", 0)) < int(wd["min_kills"]):
+		return false
+	if wd.has("max_kills") and int(state.get("kills", 0)) > int(wd["max_kills"]):
+		return false
+	if wd.has("min_sorties") and int(state.get("sorties", 0)) < int(wd["min_sorties"]):
+		return false
+	if wd.has("after_fate") and not (str(state.get("last_fate", "")) in (wd["after_fate"] as Array)):
+		return false
+	if bool(wd.get("lost_mate", false)) and (state.get("lost_mates", []) as Array).is_empty():
+		return false
+	return true
+
+
+static func _skip_unmet() -> void:
+	var guard: int = 0
+	while guard < 64 and not is_ended():
+		guard += 1
+		var list: Array = steps()
+		var i: int = int(state.get("step", 0))
+		if i >= list.size() or step_applies(list[i]):
+			return
+		state["step"] = i + 1
+		_next_chapter_if_done()
 
 
 static func rank_index() -> int:
@@ -123,6 +232,7 @@ static func steps() -> Array:
 static func next_action() -> Dictionary:
 	if is_ended():
 		return {"kind": "ended"}
+	_skip_unmet()
 	var list: Array = steps()
 	var i: int = int(state.get("step", 0))
 	if i >= list.size():
@@ -240,6 +350,11 @@ static func record_result(success: bool, stats: Dictionary, cfg: Dictionary) -> 
 		state["mates"] = (state["mates"] as Array).slice(1)
 		(state["lost_mates"] as Array).append(lost_mate)
 	state["day"] = int(state.get("day", 0)) + 1 + rest_days
+	state["last_fate"] = fate
+	var flew: Array = (state.get("mates", []) as Array).slice(0, 2)
+	if lost_mate != "":
+		flew.append(lost_mate)
+	var joined: String = _update_roster(flew, kills, lost_mate, fate)
 	if rest_days > 0:
 		state["fatigue"] = 0
 	state["rest_until"] = int(state["day"])
@@ -259,6 +374,8 @@ static func record_result(success: bool, stats: Dictionary, cfg: Dictionary) -> 
 	var line: String = "%s - %s. %d kill%s. %s" % [date_text(), _fate_word(fate), kills, "" if kills == 1 else "s",
 		("Back to flying in %d days." % rest_days) if rest_days > 0 and status == "rest" else ""]
 	(state["log"] as Array).append(line.strip_edges())
+	if joined != "":
+		(state["log"] as Array).append("%s joins the squadron." % joined)
 	save_state()
 	return {"fate": fate, "status": str(state["status"]), "ended": str(state["ended"]), "rest_days": rest_days,
 		"lost_mate": lost_mate}

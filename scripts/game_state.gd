@@ -49,6 +49,8 @@ var music_known: Dictionary = {"menu": [], "ingame": []}   # shipped tracks a sa
 var music_recent: Dictionary = {"menu": [], "ingame": []}  # last tracks played (across launches): a new shuffle plays them last
 var music_gap: float = 60.0                 # silence between in-flight tracks, seconds (Options > Music)
 var show_hints: bool = true    # control hints panel on the right of the HUD (Options > Control hints)
+var gun_jams: bool = true            # Options > Realism: long bursts can jam the player's guns
+var gun_convergence: int = 0         # Options > Gameplay: player gun convergence in m (0 = the aircraft's own setting)
 var flight_assists: int = 0          # Options > Gameplay: 0 off, 1 auto-rudder, 2 auto-rudder + stall guard
 var auto_update_check: bool = false   # opt-in: ask GitHub for a newer release when the menu opens (once a day at most)
 var last_update_check: int = 0        # unix time of the last automatic check
@@ -243,6 +245,8 @@ func _load_settings() -> void:
 	fps_cap = clampi(int(cf.get_value("gfx", "fps_cap", fps_cap)), 0, 1000)
 	show_hints = bool(cf.get_value("ui", "show_hints", show_hints))
 	flight_assists = clampi(int(cf.get_value("gameplay", "flight_assists", flight_assists)), 0, 2)
+	gun_jams = bool(cf.get_value("realism", "gun_jams", gun_jams))
+	gun_convergence = clampi(int(cf.get_value("gameplay", "gun_convergence", gun_convergence)), 0, 600)
 	auto_update_check = bool(cf.get_value("ui", "auto_update_check", auto_update_check))
 	last_update_check = int(cf.get_value("ui", "last_update_check", last_update_check))
 	first_sortie_done = bool(cf.get_value("gameplay", "first_sortie_done", first_sortie_done))
@@ -373,6 +377,8 @@ func save_settings() -> void:
 	cf.set_value("gfx", "fps_cap", fps_cap)
 	cf.set_value("ui", "show_hints", show_hints)
 	cf.set_value("gameplay", "flight_assists", flight_assists)
+	cf.set_value("realism", "gun_jams", gun_jams)
+	cf.set_value("gameplay", "gun_convergence", gun_convergence)
 	cf.set_value("ui", "auto_update_check", auto_update_check)
 	cf.set_value("ui", "last_update_check", last_update_check)
 	cf.set_value("gameplay", "first_sortie_done", first_sortie_done)
@@ -625,6 +631,10 @@ func set_graphic(key: String, value: Variant) -> void:
 			fps_cap = clampi(int(value), 0, 1000)
 		"show_hints":
 			show_hints = bool(value)
+		"gun_jams":
+			gun_jams = bool(value)
+		"gun_convergence":
+			gun_convergence = clampi(int(value), 0, 600)
 		"flight_assists":
 			flight_assists = clampi(int(value), 0, 2)
 		"auto_update_check":
