@@ -1865,6 +1865,7 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 	# field boundaries already traced into continuous hedge rows in this tile (eid -> true), plus the tile rect so
 	# a row stops at the tile edge (the neighbouring tile traces its own part)
 	var traced: Dictionary = {"_rect": Rect2(origin, Vector2(cell, cell))}
+	var streets_s: Array = []           # grid-town street strips in front of the rows (TownModels.street_strip)
 	var street_rows: Dictionary = {}     # realistic towns: street-grid row slots already built in this tile
 	for j in n:
 		for i in n:
@@ -1937,7 +1938,7 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 						var edge_f: float = _built_frac(p)
 						if GameState.realistic_scenery:
 							if rng.randf() < 0.95 * (0.5 + 0.5 * edge_f):
-								_add_street_row(houses, p, rng, house_yaw, street_rows, exclude, trees_r)
+								_add_street_row(houses, p, rng, house_yaw, street_rows, exclude, trees_r, streets_s)
 						elif rng.randf() < 0.88 * (0.45 + 0.55 * edge_f) and _ok(p, exclude, 1.2):
 							# the town's rows bend and merge with the next block instead of running dead straight
 							var yaw_j: float = house_yaw + (_vn(p.x * 0.0035 + 71.0, p.y * 0.0035 + 71.0) - 0.5) * 1.1 + rng.randf_range(-0.05, 0.05)
@@ -1949,6 +1950,8 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 	var ruins: Array = [[], []]
 	WarDamage.apply_to_houses(houses, ruins, dmg_areas)
 	var out: Dictionary = {"multis": [], "church": null}
+	if not streets_s.is_empty():
+		out["multis"].append(["street_strip", multi_data(streets_s), STREET_VIS])
 	# A church at the heart of each village (a cluster of houses in this tile)
 	var n_houses: int = 0
 	var hc := Vector3.ZERO
@@ -2051,6 +2054,12 @@ static func build_tile_nodes(d: Dictionary) -> Node3D:
 				mesh = tree_mesh(false)
 			"tree_r":
 				mesh = tree_mesh(true)
+			"street_strip":
+				# flat, so no obstacle and no shadow; drawn until the shader's painted street grid takes over
+				var sti: MultiMeshInstance3D = multi_from_data(TownModels.street_strip(), m[1], float(m[2]) * vis_scale, false)
+				sti.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				root.add_child(sti)
+				continue
 			_:
 				if kind.begins_with("bk_"):
 					mesh = BeachKit.mesh(kind)
@@ -2380,6 +2389,7 @@ static func _add_terrace(lists: Array, p: Vector2, rng: RandomNumberGenerator, y
 		lst.append(_xf(Vector3(q.x, y, q.y), a, Vector3(unit_w * 1.02, h, depth)))
 
 
+const STREET_VIS: float = 2600.0    # grid-town street strips: the terrain shader's painted grid takes over beyond this
 const STREET_BLOCK: float = 34.0     # street (8 m) + front row + back yards + back row, across the street grid
 const STREET_SEG: float = 26.0       # one terrace slot along the street
 const CROSS_EVERY: float = 130.0     # a cross street every ~130 m
@@ -2389,7 +2399,7 @@ const CROSS_EVERY: float = 130.0     # a cross street every ~130 m
 ## constant inside each ~420 m district (so neighbouring rows line up) and changes between districts; each block
 ## is a street, a row of terraced houses facing it, back yards, and the next row facing the next street. Cross
 ## streets cut the rows every ~130 m, so streets and junctions show from the air. Each slot is built once.
-static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator, base_yaw: float, done: Dictionary, exclude: Array, town_trees: Array = []) -> void:
+static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator, base_yaw: float, done: Dictionary, exclude: Array, town_trees: Array = [], streets: Array = []) -> void:
 	var dc := Vector2i(floori(p.x / 420.0), floori(p.y / 420.0))
 	var a: float = _ih(dc.x, dc.y, 10) * PI     # by district, not by tile, so tiles agree
 	var along := Vector2(cos(a), -sin(a))
@@ -2423,10 +2433,12 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 	var start: Vector2 = c - along * unit_w * float(n - 1) * 0.5
 	var face: float = a + (0.0 if row == 0 else PI)          # each row faces its own street
 	var back: Vector2 = across * (1.0 if row == 0 else -1.0)  # from the row towards its back yards
+	var placed: int = 0
 	for i in n:
 		var q: Vector2 = start + along * unit_w * float(i)
 		if not _land(q.x, q.y, 1.2) or RoadMesh.near_road(q, depth * 0.6):
 			continue
+		placed += 1
 		# mostly one builder's row, but an odd house is rebuilt, taller or lower: a broken, real roof line
 		var hv: float = rng.randf_range(-0.6, 0.6)
 		var r: float = rng.randf()
@@ -2445,6 +2457,16 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 				var eh: float = rng.randf_range(3.0, 4.2)
 				var ey: float = GroundKit.ground_y(eq.x, eq.y) + eh * 0.5 - 0.4
 				(lists[3] as Array).append(_xf(Vector3(eq.x, ey, eq.y), face, Vector3(rng.randf_range(2.8, 4.0), eh, rng.randf_range(3.0, 4.0))))
+	# the street this row faces, laid once per slot (both rows of a street share it), only where houses stand, never
+	# over water or a real road ribbon
+	if placed > 0:
+		var street_i: int = int(bi) + row
+		var skey := Vector4i(dc.x, dc.y, -1000 - street_i, int(si))
+		if not done.has(skey):
+			done[skey] = true
+			var sc: Vector2 = org + along * u_c + across * (float(street_i) * STREET_BLOCK + 4.0)
+			if _land(sc.x, sc.y, 1.0) and not RoadMesh.near_road(sc, 3.0) and not RiverMesh.near_river(sc):
+				streets.append(_xf(Vector3(sc.x, GroundKit.ground_y(sc.x, sc.y), sc.y), a, Vector3(STREET_SEG + 0.4, 1.0, 1.0)))
 
 
 ## Street and garden trees for one terrace slot (realistic towns). Broadleaf only (limes, planes, fruit trees).
