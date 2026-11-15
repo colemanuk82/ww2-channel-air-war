@@ -30,6 +30,10 @@ func _ready() -> void:
 	_test_interior_cockpit()
 	_test_data_files()
 	_test_map_edits()
+	_test_map_editor_transform()
+	_test_edit_history()
+	_test_map_editor_edits()
+	_test_map_editor_multi()
 	_test_map_assets()
 	_test_river_data()
 	_test_landmarks_all()
@@ -1197,7 +1201,7 @@ func _test_map_edits() -> void:
 	var a2: Dictionary = MapEdits.adds()[1]
 	_check(float(a2["yaw"]) == 0.0 and float(a2["scale"]) == 1.0, "a missing yaw and scale default")
 	MapEdits.load()
-	_check(MapEdits.adds().size() == 2 and MapEdits.removes().size() == 1, "the shipped data/map_edits.json has two adds and one remove")
+	_check(MapEdits.adds().is_empty() and MapEdits.removes().is_empty(), "the shipped data/map_edits.json ships empty")
 	var bad: Dictionary = {"version": 1, "edits": [1, {},
 		{"op": "warp", "id": "b1", "lat": 1.0, "lon": 2.0},
 		{"op": "add", "id": "b2", "lat": 1.0, "lon": 2.0},
@@ -2693,3 +2697,436 @@ func _test_realism() -> void:
 	GameState.g_effects_on = true
 	GameState.g_level = 2
 	ac.queue_free()
+
+
+## Map editor tests (tools/map_editor/): the undo stack, the lat/lon <-> screen transform and the
+## edit round trip through MapEdits. Appended to tools/tests.gd by patch2.py.
+func _test_map_editor_transform() -> void:
+	print("-- map editor transform")
+	var MapTransformScript := load("res://tools/map_editor/map_transform.gd")
+	var t = MapTransformScript.new()
+	t.size = Vector2(1280.0, 720.0)
+	var aspect: float = MapTransformScript.map_aspect()
+	_check(aspect > 2.0 and aspect < 2.3, "the map aspect is the game's own projection (%.3f)" % aspect)
+	# The whole map fits the viewport at zoom 1.
+	var ms: Vector2 = t.map_size()
+	_check(ms.x <= 1280.01 and ms.y <= 720.01, "zoom 1 fits the whole map in the viewport")
+	_check(is_equal_approx(ms.x / ms.y, aspect), "the drawn map keeps the map's aspect")
+	# Corners: NW is the top-left, SE the bottom-right.
+	var nw: Vector2 = t.to_screen(WorldCoords.LAT_MAX, WorldCoords.LON_MIN)
+	var se: Vector2 = t.to_screen(WorldCoords.LAT_MIN, WorldCoords.LON_MAX)
+	_check(nw.x < se.x and nw.y < se.y, "north-west is above and left of south-east")
+	_check(nw.distance_to(Vector2(1280.0 - ms.x, 720.0 - ms.y) * 0.5) < 0.5, "the fitted map is centred")
+	# Round trip at a few zooms.
+	var worst: float = 0.0
+	for z in [1.0, 2.5, 9.0, 37.0, 80.0]:
+		t.zoom = float(z)
+		t.center = Vector2(0.5, 0.5)
+		for ll in [Vector2(51.2, 1.4), Vector2(49.0, -3.9), Vector2(52.8, 8.5), Vector2(50.3, 0.0)]:
+			var p: Vector2 = t.to_screen(ll.x, ll.y)
+			var back: Vector2 = t.to_latlon(p)
+			worst = maxf(worst, absf(back.x - ll.x) + absf(back.y - ll.y))
+	_check(worst < 1.0e-6, "lat/lon -> screen -> lat/lon round trips (worst %.2e deg)" % worst)
+	# Zoom about a cursor keeps the point under it fixed.
+	t.zoom = 4.0
+	t.center = Vector2(0.48, 0.45)
+	var cursor := Vector2(940.0, 220.0)
+	var under: Vector2 = t.to_latlon(cursor)
+	for i in 8:
+		t.zoom_at(cursor, 1.25)
+	var after: Vector2 = t.to_screen(under.x, under.y)
+	_check(after.distance_to(cursor) < 0.05, "zooming about the cursor keeps that point in place (%.3f px)" % after.distance_to(cursor))
+	_check(t.zoom > 4.0 and t.zoom <= MapTransformScript.ZOOM_MAX + 0.001, "zoom stays inside its limits (%.2f)" % t.zoom)
+	# Panning moves the map by the drag.
+	t.zoom = 6.0
+	t.center = Vector2(0.5, 0.5)
+	var p0: Vector2 = t.to_screen(51.0, 1.0)
+	t.pan_px(Vector2(40.0, -25.0))
+	var p1: Vector2 = t.to_screen(51.0, 1.0)
+	_check(p1.distance_to(p0 + Vector2(40.0, -25.0)) < 0.05, "a drag pans the map by exactly that many pixels")
+	# The centre never leaves the map once the map is bigger than the viewport.
+	t.zoom = 20.0
+	t.center = Vector2(-5.0, 9.0)
+	t.clamp_center()
+	_check(t.center.x >= 0.0 and t.center.x <= 1.0 and t.center.y >= 0.0 and t.center.y <= 1.0, "the view cannot be panned off the map")
+	# Scale bar: a round number of km, at least ~60 px long, growing as you zoom out.
+	t.zoom = 1.0
+	var far: Vector2 = t.scale_bar(0.0)
+	t.zoom = 40.0
+	var near: Vector2 = t.scale_bar(Vector2.ZERO.x)
+	_check(far.y > near.y, "the scale bar covers more ground zoomed out (%.0f vs %.0f km)" % [far.y, near.y])
+	_check(near.y > 0.0, "the scale bar has a positive length")
+	_check(t.px_per_km() > 0.0 and t.px_per_m() > 0.0, "pixel scale is positive")
+	_check(absf(t.px_per_m() * 1000.0 - t.px_per_km()) < 1.0e-3, "px_per_km and px_per_m agree")
+	var bar_px: float = t.scale_bar(0.0).x - 0.0
+	_check(bar_px >= 60.0, "the scale bar is at least 60 px long (%.1f)" % bar_px)
+
+
+func _test_edit_history() -> void:
+	print("-- map editor undo history")
+	var EditHistoryScript := load("res://tools/map_editor/edit_history.gd")
+	var h = EditHistoryScript.new()
+	var doc: Array = []
+	var a1: Dictionary = {"op": "add", "id": "a1", "asset": "barn", "lat": 51.0, "lon": 1.0, "yaw": 0.0, "scale": 1.0}
+	_check(h.do(doc, EditHistoryScript.cmd_add(a1)), "placing an edit applies")
+	_check(doc.size() == 1 and str(doc[0]["asset"]) == "barn", "the placed row is in the document")
+	_check(h.undo_depth() == 1 and not h.can_redo(), "the place is one undo step")
+	_check(h.undo(doc) and doc.is_empty(), "undo takes the place back out")
+	_check(h.can_redo(), "the undone step can be redone")
+	_check(h.redo(doc) and doc.size() == 1, "redo puts the row back")
+	_check(not h.redo(doc), "redo with nothing left reports false")
+	while h.undo(doc):
+		pass
+	_check(not h.undo(doc), "undo with nothing left reports false")
+	# Branching: a new command after an undo drops the redo branch.
+	h.do(doc, EditHistoryScript.cmd_add(a1))
+	h.undo(doc)
+	h.do(doc, EditHistoryScript.cmd_add({"op": "add", "id": "a2", "asset": "church", "lat": 52.0, "lon": 2.0}))
+	_check(not h.can_redo(), "a new command after an undo drops the redo branch")
+	_check(doc.size() == 1 and str(doc[0]["id"]) == "a2", "the branch replaced the undone row")
+	# Move, rotate and radius are single steps that round trip.
+	doc = []
+	var row: Dictionary = {"op": "add", "id": "m1", "asset": "barn", "lat": 50.0, "lon": 0.5, "yaw": 10.0, "scale": 1.0}
+	h.clear()
+	h.do(doc, EditHistoryScript.cmd_add(row))
+	h.do(doc, EditHistoryScript.cmd_move("m1", 50.0, 0.5, 50.2, 0.75))
+	_check(is_equal_approx(float(doc[0]["lat"]), 50.2) and is_equal_approx(float(doc[0]["lon"]), 0.75), "a move changes the position")
+	h.undo(doc)
+	_check(is_equal_approx(float(doc[0]["lat"]), 50.0) and is_equal_approx(float(doc[0]["lon"]), 0.5), "undoing a move restores the position")
+	h.do(doc, EditHistoryScript.cmd_rotate("m1", 10.0, 55.0))
+	_check(is_equal_approx(float(doc[0]["yaw"]), 55.0), "a rotate changes the yaw")
+	h.undo(doc)
+	_check(is_equal_approx(float(doc[0]["yaw"]), 10.0), "undoing a rotate restores the yaw")
+	doc[0]["op"] = "remove"
+	doc[0]["radius"] = 30.0
+	h.clear()
+	h.do(doc, EditHistoryScript.cmd_radius("m1", 30.0, 60.0))
+	_check(is_equal_approx(float(doc[0]["radius"]), 60.0), "a radius change applies")
+	h.undo(doc)
+	_check(is_equal_approx(float(doc[0]["radius"]), 30.0), "undoing a radius change restores it")
+	# Delete round trips, including the row's other fields.
+	doc[0]["op"] = "add"
+	doc[0]["asset"] = "windmill"
+	doc[0]["scale"] = 1.25
+	h.clear()
+	h.do(doc, EditHistoryScript.cmd_delete(doc[0]))
+	_check(doc.is_empty(), "delete removes the row")
+	h.undo(doc)
+	_check(doc.size() == 1 and str(doc[0]["asset"]) == "windmill" and is_equal_approx(float(doc[0]["scale"]), 1.25),
+		"undoing a delete restores every field")
+	# Commands that cannot apply are refused and leave the stack alone.
+	h.clear()
+	doc = []
+	h.do(doc, EditHistoryScript.cmd_add({"op": "add", "id": "m1", "asset": "barn", "lat": 1.0, "lon": 1.0}))
+	_check(not h.do(doc, EditHistoryScript.cmd_add({"op": "add", "id": "m1", "asset": "barn", "lat": 2.0, "lon": 2.0})),
+		"a duplicate id is refused")
+	_check(h.undo_depth() == 1, "a refused command does not grow the stack")
+	_check(not h.do(doc, EditHistoryScript.cmd_move("nope", 0.0, 0.0, 1.0, 1.0)), "moving a row that is not there is refused")
+	# The stack is bounded.
+	h.clear()
+	for i in EditHistoryScript.LIMIT + 25:
+		var r: Dictionary = {"op": "add", "id": "b%d" % i, "asset": "barn", "lat": 1.0, "lon": 1.0}
+		h.do(doc, EditHistoryScript.cmd_add(r))
+	_check(h.undo_depth() == EditHistoryScript.LIMIT, "the undo stack is capped at %d steps" % EditHistoryScript.LIMIT)
+	_check(EditHistoryScript.has_id(doc, "b%d" % (EditHistoryScript.LIMIT + 24)), "dropping old steps keeps the document intact")
+
+
+func _test_map_editor_edits() -> void:
+	print("-- map editor edit round trip")
+	var p: String = "user://t_map_editor.json"
+	var EditHistoryScript := load("res://tools/map_editor/edit_history.gd")
+	var h = EditHistoryScript.new()
+	# The shipped file ships empty, so seed a starting document the way a first session builds one:
+	# one add and one remove, which is what the rest of this test adds to.
+	MapEdits.load()
+	_check(MapEdits.all().is_empty(), "the shipped edit file starts empty")
+	var seed_doc: Array = [
+		{"op": "add", "id": "s1", "asset": "barn", "lat": 49.10, "lon": -0.30, "yaw": 0.0, "scale": 1.0},
+		{"op": "remove", "id": "s2", "lat": 49.12, "lon": -0.28, "radius": 30.0, "what": "all"}]
+	_check(MapEdits.set_rows(seed_doc) == 2, "set_rows adopts a seed document")
+	var doc: Array = MapEdits.all()
+	var n0: int = doc.size()
+	_check(n0 == 2 and MapEdits.adds().size() == 1 and MapEdits.removes().size() == 1,
+		"the seeded editor document has one add and one remove (%d rows)" % n0)
+	_check(str(MapEdits.last_path()) == MapEdits.PATH, "load() records the file it read")
+	# A fresh id never collides with the rows already in the file.
+	var id_a: String = MapEdits.next_id("a", doc)
+	var id_r: String = MapEdits.next_id("r", doc)
+	_check(not EditHistoryScript.has_id(doc, id_a) and not EditHistoryScript.has_id(doc, id_r),
+		"the editor's next add and remove ids are fresh (%s, %s)" % [id_a, id_r])
+	_check(MapEdits.next_id("a", []) == "a1", "ids start at 1 for an empty document")
+	_check(MapEdits.next_id("a", [{"id": "a7"}, {"id": "a3"}, {"id": "b9"}]) == "a8", "ids follow the highest number in use")
+	# Place, move, rotate, delete through the stack, then save and read it back.
+	var row: Dictionary = {"op": "add", "id": id_a, "asset": "church", "lat": 49.19, "lon": -0.4, "yaw": 0.0, "scale": 1.0}
+	_check(h.do(doc, EditHistoryScript.cmd_add(row)), "a new edit goes into the document")
+	_check(h.do(doc, EditHistoryScript.cmd_move(id_a, 49.19, -0.4, 49.25, -0.31)), "the new edit can be moved")
+	_check(h.do(doc, EditHistoryScript.cmd_rotate(id_a, 0.0, 90.0)), "the new edit can be rotated")
+	var rem: Dictionary = {"op": "remove", "id": id_r, "lat": 49.2, "lon": -0.35, "radius": 40.0, "what": "all"}
+	_check(h.do(doc, EditHistoryScript.cmd_add(rem)), "a remove circle goes into the document")
+	_check(MapEdits.set_rows(doc) == doc.size(), "set_rows accepts every valid row")
+	_check(MapEdits.save(p), "the edited set saves")
+	MapEdits.load(p)
+	_check(MapEdits.adds().size() == 2, "the saved file keeps the seed add and the placed one (%d)" % MapEdits.adds().size())
+	var moved: Dictionary = {}
+	for e in MapEdits.adds():
+		if str((e as Dictionary)["id"]) == id_a:
+			moved = e
+	_check(not moved.is_empty(), "the placed edit is in the saved file")
+	_check(is_equal_approx(float(moved["lat"]), 49.25) and is_equal_approx(float(moved["lon"]), -0.31),
+		"the move was saved")
+	_check(is_equal_approx(float(moved["yaw"]), 90.0), "the rotate was saved")
+	_check(MapEdits.removes().size() == 2, "the new remove circle was saved alongside the old one")
+	# The reloaded remove circle actually cuts the world, which is what the game reads.
+	var inside: Vector3 = WorldCoords.latlon_to_world(49.2, -0.35)
+	_check(MapEdits.is_removed(inside, "houses") and MapEdits.is_removed(inside, "trees"),
+		"the reloaded remove circle applies to houses and trees")
+	_check(not MapEdits.is_removed(WorldCoords.latlon_to_world(49.2, -0.30), "trees"),
+		"a point outside the reloaded circle is untouched")
+	# Delete is one step and undoes cleanly.
+	var before: int = doc.size()
+	var victims: Array = doc.duplicate()
+	h.clear()
+	var target: Dictionary = {}
+	for e in doc:
+		if str((e as Dictionary)["id"]) == id_a:
+			target = e
+	_check(h.do(doc, EditHistoryScript.cmd_delete(target)), "the placed edit can be deleted")
+	_check(doc.size() == before - 1, "delete shrinks the document")
+	h.undo(doc)
+	_check(doc.size() == before, "undoing the delete restores the document")
+	victims = []
+	# Invalid rows never reach the file, however the editor builds them.
+	var dirty: Array = doc.duplicate()
+	dirty.append({"op": "add", "id": "zz", "asset": "", "lat": 1.0, "lon": 1.0})
+	dirty.append({"op": "remove", "id": "zy", "lat": 1.0, "lon": 1.0, "radius": -5.0})
+	dirty.append({"op": "nonsense", "id": "zx", "lat": 1.0, "lon": 1.0})
+	var kept: int = MapEdits.set_rows(dirty)
+	_check(kept == doc.size(), "set_rows drops invalid rows (%d of %d kept)" % [kept, dirty.size()])
+	_check(not EditHistoryScript.has_id(MapEdits.all(), "zz"), "an add with no asset is not kept")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
+	MapEdits.load()
+
+
+func _test_map_editor_multi() -> void:
+	print("-- map editor multi-select, group edits, copy/paste, go to")
+	var EditHistoryScript := load("res://tools/map_editor/edit_history.gd")
+	var s = load("res://tools/map_editor/edit_selection.gd")
+	var MapTransformScript := load("res://tools/map_editor/map_transform.gd")
+	var MapViewScript := load("res://tools/map_editor/map_view.gd")
+	# Three adds in a row along one parallel of latitude, plus a remove circle off to one side: three in
+	# a group is enough to tell a group operation from a single-row one.
+	var make := func() -> Array:
+		return [
+			{"op": "add", "id": "x1", "asset": "church", "lat": 49.10, "lon": -0.30, "yaw": 0.0, "scale": 1.0},
+			{"op": "add", "id": "x2", "asset": "barn", "lat": 49.10, "lon": -0.20, "yaw": 10.0, "scale": 1.0},
+			{"op": "add", "id": "x3", "asset": "barn", "lat": 49.10, "lon": -0.10, "yaw": 20.0, "scale": 1.0},
+			{"op": "remove", "id": "x4", "lat": 49.20, "lon": 0.00, "radius": 40.0, "what": "all"},
+		]
+	var t = MapTransformScript.new()
+	t.size = Vector2(1280.0, 720.0)
+	t.zoom = 10.0
+	t.center = t.uv(49.15, -0.15)
+	t.clamp_center()
+	var h = EditHistoryScript.new()
+	var doc: Array = make.call()
+	_check(doc.size() == 4 and s.rows_of(doc, ["x1", "x2"]).size() == 2, "the multi-select fixture is in place")
+
+	# ---- rubber band: a screen rectangle catches the edits inside it and nothing else.
+	var c1: Vector2 = t.to_screen(49.10, -0.30)
+	var c2: Vector2 = t.to_screen(49.10, -0.20)
+	var band := Rect2(c1 - Vector2(24.0, 24.0), (c2 - c1) + Vector2(48.0, 48.0))
+	var got: Array = s.inside(doc, band, t)
+	_check(got == ["x1", "x2"], "a rubber band selects the edits inside it only (%s)" % str(got))
+	_check(s.inside(doc, Rect2(c1 - Vector2(6.0, 6.0), Vector2(12.0, 12.0)), t) == ["x1"],
+		"a band round one icon selects just that edit")
+	_check(s.inside(doc, Rect2(Vector2(2.0, 2.0), Vector2(1.0, 1.0)), t).is_empty(),
+		"a band round nothing selects nothing")
+	_check(s.inside(doc, Rect2(c2 + Vector2(24.0, 24.0), -(c2 - c1) - Vector2(48.0, 48.0)), t) == ["x1", "x2"],
+		"a band dragged bottom-right to top-left is normalised")
+	_check(s.inside(doc, Rect2(Vector2.ZERO, Vector2(1280.0, 720.0)), t) == ["x1", "x2", "x3", "x4"],
+		"a band over the whole view selects every edit")
+
+	# ---- Shift+click toggles in and out, and the last id picked is the primary.
+	var sel: Array = ["x1"]
+	sel = s.toggle(sel, "x2")
+	_check(sel == ["x1", "x2"], "shift-click adds to the selection (%s)" % str(sel))
+	sel = s.toggle(sel, "x1")
+	_check(sel == ["x2"], "shift-click on a selected edit takes it back out (%s)" % str(sel))
+	sel = s.toggle(sel, "x2")
+	_check(sel.is_empty(), "shift-click can empty the selection")
+	_check(s.toggle(["x1", "x2", "x3"], "x2") == ["x1", "x3"], "toggling out of the middle keeps the order")
+	_check(s.prune(doc, ["x1", "nope", "x3", "x1"]) == ["x1", "x3"],
+		"prune drops ids that are not in the document, and duplicates")
+
+	# ---- Group move: ONE undo step for the whole group, with the offsets preserved.
+	h.clear()
+	_check(not h.do(doc, EditHistoryScript.cmd_group([])), "an empty group command is refused")
+	_check(h.undo_depth() == 0, "a refused group does not grow the stack")
+	_check(h.do(doc, s.move_cmd(doc, ["x1", "x2", "x3"], 0.05, 0.10)), "a group move applies")
+	_check(h.undo_depth() == 1, "the whole group move is ONE undo step")
+	_check(is_equal_approx(float(s.row_of(doc, "x1")["lat"]), 49.15)
+		and is_equal_approx(float(s.row_of(doc, "x1")["lon"]), -0.20), "the group move moved every row by the offset")
+	_check(is_equal_approx(float(s.row_of(doc, "x3")["lon"]) - float(s.row_of(doc, "x1")["lon"]), 0.20),
+		"the group keeps its shape")
+	_check(is_equal_approx(float(s.row_of(doc, "x4")["lat"]), 49.20), "the row outside the group did not move")
+	h.undo(doc)
+	_check(is_equal_approx(float(s.row_of(doc, "x1")["lat"]), 49.10) and h.undo_depth() == 0,
+		"undoing the group move puts every row back in one step")
+
+	# ---- A finished live drag records the same thing: this is what the view calls when the button comes
+	# up, and it must stay one step however many mouse events it took.
+	var from_pos: Dictionary = {}
+	for v in ["x1", "x2"]:
+		var r0: Dictionary = s.row_of(doc, str(v))
+		from_pos[str(v)] = Vector2(float(r0["lat"]), float(r0["lon"]))
+	s.row_of(doc, "x1")["lat"] = 49.08
+	var drag_cmd: Dictionary = s.drag_cmd(doc, from_pos)
+	_check(h.do(doc, drag_cmd) and h.undo_depth() == 1, "a finished group drag is ONE undo step")
+	_check(is_equal_approx(float(s.row_of(doc, "x2")["lat"]), 49.10), "the rows that did not move are left out")
+	h.undo(doc)
+	_check(is_equal_approx(float(s.row_of(doc, "x1")["lat"]), 49.10), "undoing the drag restores the dragged row")
+	_check(s.drag_cmd(doc, {}).is_empty(), "a drag that went nowhere records nothing")
+
+	# ---- Group rotate about the selection's centre. x1 and x3 are level, so the centre sits on their
+	# latitude, half way between them.
+	var centre: Vector2 = s.centre(doc, ["x1", "x3"])
+	_check(is_equal_approx(centre.x, 49.10) and is_equal_approx(centre.y, -0.20),
+		"the selection centre is the middle of the group (%.4f, %.4f)" % [centre.x, centre.y])
+	h.clear()
+	_check(h.do(doc, s.rotate_cmd(doc, ["x1", "x3"], 90.0)) and h.undo_depth() == 1,
+		"the group rotate is ONE undo step")
+	# A quarter turn clockwise (E) takes the west end north of the centre and the east end south of it,
+	# both on the centre's own longitude, at the radius they had.
+	var arm: float = 0.10 * WorldCoords.units_per_deg_lon / WorldCoords.METERS_PER_DEG_LAT
+	_check(float(s.row_of(doc, "x1")["lat"]) > centre.x + arm * 0.5
+		and float(s.row_of(doc, "x3")["lat"]) < centre.x - arm * 0.5,
+		"a clockwise group rotate swings the group round the centre (%.3f, %.3f)"
+			% [float(s.row_of(doc, "x1")["lat"]), float(s.row_of(doc, "x3")["lat"])])
+	_check(absf(float(s.row_of(doc, "x1")["lon"]) - centre.y) < 0.005
+		and absf(float(s.row_of(doc, "x3")["lon"]) - centre.y) < 0.005,
+		"after a quarter turn the group lies north-south through the centre")
+	_check(is_equal_approx(absf(float(s.row_of(doc, "x1")["lat"]) - centre.x),
+		absf(float(s.row_of(doc, "x3")["lat"]) - centre.x)), "the group keeps its radius from the centre")
+	_check(is_equal_approx(float(s.row_of(doc, "x1")["yaw"]), 90.0)
+		and is_equal_approx(float(s.row_of(doc, "x3")["yaw"]), 110.0),
+		"the group rotate turns every row's yaw by the same angle")
+	_check(is_equal_approx(float(s.row_of(doc, "x2")["lat"]), 49.10), "a row outside the selection is untouched")
+	h.undo(doc)
+	_check(is_equal_approx(float(s.row_of(doc, "x1")["lat"]), 49.10)
+		and is_equal_approx(float(s.row_of(doc, "x1")["yaw"]), 0.0), "undoing the group rotate puts the group back")
+	# Remove circles never rotate, not even when they are in the selection.
+	var rot_cmd: Dictionary = s.rotate_cmd(doc, ["x1", "x3", "x4"], 45.0)
+	var parts: Array = rot_cmd.get("parts", []) as Array
+	_check(parts.size() == 4, "a rotate over two adds is a move and a rotate each (%d parts)" % parts.size())
+	var touches_x4: bool = false
+	for p in parts:
+		if str((p as Dictionary).get("id", "")) == "x4":
+			touches_x4 = true
+	_check(not touches_x4, "the remove circle is left out of the group rotate")
+	_check(s.rotate_cmd(doc, ["x4"], 45.0).is_empty(), "rotating only a remove circle does nothing")
+	h.clear()
+	_check(h.do(doc, rot_cmd) and is_equal_approx(float(s.row_of(doc, "x4")["lat"]), 49.20)
+		and is_equal_approx(float(s.row_of(doc, "x4")["lon"]), 0.00),
+		"the remove circle does not move in a group rotate")
+
+	# ---- Copy / paste: adds only, fresh ids, offsets right, ONE undo step.
+	doc = make.call()
+	h.clear()
+	var clip: Array = s.copy_rows(doc, ["x1", "x2", "x4"])
+	_check(clip.size() == 2, "copy takes the adds and leaves the remove circle behind (%d rows)" % clip.size())
+	_check(s.copy_rows(doc, ["x4"]).is_empty(), "copying only a remove circle copies nothing")
+	var n_before: int = doc.size()
+	var paste_cmd: Dictionary = s.paste_cmd(doc, clip)
+	_check(not paste_cmd.is_empty(), "a paste command is built from the clipboard")
+	_check(h.do(doc, paste_cmd), "the paste applies")
+	_check(doc.size() == n_before + 2, "the paste added one row per copied row")
+	_check(h.undo_depth() == 1, "the whole paste is ONE undo step")
+	var ids: Array = s.add_ids(paste_cmd)
+	_check(ids.size() == 2, "the paste reports the ids it created (%s)" % str(ids))
+	var fresh: bool = true
+	for v in ids:
+		fresh = fresh and str(v) != "x1" and str(v) != "x2" and str(v) != "x3" and str(v) != "x4"
+		fresh = fresh and not s.row_of(doc, str(v)).is_empty()
+	_check(fresh, "every pasted row gets a fresh id that is in the document (%s)" % str(ids))
+	_check(MapEdits.next_id("a", doc) != str(ids[0]) and MapEdits.next_id("a", doc) != str(ids[1]),
+		"the next id after a paste is past every id the paste used")
+	var orig: Dictionary = s.row_of(doc, "x1")
+	var copy1: Dictionary = s.row_of(doc, str(ids[0]))
+	_check(is_equal_approx(float(copy1["lat"]) - float(orig["lat"]), s.PASTE_D_LAT)
+		and is_equal_approx(float(copy1["lon"]) - float(orig["lon"]), s.PASTE_D_LON),
+		"a plain paste is offset from where it was copied (%.4f, %.4f)"
+			% [float(copy1["lat"]) - float(orig["lat"]), float(copy1["lon"]) - float(orig["lon"])])
+	_check(str(copy1["asset"]) == "church" and is_equal_approx(float(copy1["yaw"]), 0.0),
+		"the pasted row keeps its asset and yaw")
+	_check(is_equal_approx(float(copy1["lat"]) - float(s.row_of(doc, str(ids[1]))["lat"]),
+		float(orig["lat"]) - float(s.row_of(doc, "x2")["lat"])),
+		"the pasted group keeps the shape of the original")
+	# A paste at a point (the mouse) centres the pasted group on it.
+	var at := Vector2(50.50, 2.00)
+	var at_cmd: Dictionary = s.paste_cmd(doc, clip, at)
+	var at_ids: Array = s.add_ids(at_cmd)
+	_check(h.do(doc, at_cmd), "a paste at the mouse applies")
+	var landed: Vector2 = s.centre_of(s.rows_of(doc, at_ids))
+	_check(landed.distance_to(at) < 1.0e-6, "pasting at a point centres the group on it (%.4f, %.4f)"
+		% [landed.x, landed.y])
+	_check(h.undo_depth() == 2, "each paste is one undo step of its own")
+	h.undo(doc)
+	_check(doc.size() == n_before + 2, "undoing the second paste takes it back out in one step")
+	_check(s.prune(doc, ids).size() == 2, "the first paste's rows are still selectable after undoing the second")
+	h.undo(doc)
+	_check(doc.size() == n_before, "undoing the first paste takes it back out in one step")
+	_check(s.prune(doc, ids).is_empty(), "the selection is cleaned up after undoing the paste")
+	_check(s.paste_cmd(doc, []).is_empty(), "pasting an empty clipboard does nothing")
+
+	# ---- Group delete: one step, all of them, and the selection cleans up.
+	doc = make.call()
+	h.clear()
+	var del_ids: Array = ["x1", "x2"]
+	_check(h.do(doc, s.delete_cmd(doc, del_ids)) and h.undo_depth() == 1, "the group delete is ONE undo step")
+	_check(s.row_of(doc, "x1").is_empty() and s.row_of(doc, "x2").is_empty()
+		and not s.row_of(doc, "x3").is_empty(), "the group delete removed exactly the selection")
+	_check(s.prune(doc, del_ids).is_empty(), "the selection is cleaned up after a group delete")
+	h.undo(doc)
+	_check(not s.row_of(doc, "x1").is_empty() and not s.row_of(doc, "x2").is_empty(),
+		"undoing the group delete brings every row back in one step")
+	_check(s.prune(doc, del_ids).size() == 2, "the rows are selectable again after the undo")
+
+	# ---- Go to: cities, airfields and edits, by name and by id, best match first. The document is
+	# reset first: an undo puts a row back at the end, so the order would not be the fixture's.
+	doc = make.call()
+	var cities: Array = [{"name": "London", "lat": 51.5, "lon": -0.12},
+		{"name": "Londonderry", "lat": 55.0, "lon": -7.3}]
+	var fields: Array = [{"name": "Biggin Hill", "lat": 51.33, "lon": 0.03}]
+	var hits: Array = s.goto_matches("london", cities, fields, doc)
+	_check(hits.size() == 2 and str(hits[0]["name"]) == "London" and str(hits[1]["name"]) == "Londonderry",
+		"go to ranks a whole-name match above a prefix, then offers the rest (%d)" % hits.size())
+	_check(str(hits[0]["kind"]) == "city", "a city match says it is a city")
+	_check(is_equal_approx(float(hits[0]["lat"]), 51.5) and is_equal_approx(float(hits[0]["lon"]), -0.12),
+		"a city match carries its position")
+	_check(str(hits[0]["title"]).begins_with("City"), "a go-to match carries a title for the status line")
+	var air: Array = s.goto_matches("biggin", cities, fields, doc)
+	_check(air.size() == 1 and str(air[0]["kind"]) == "airfield", "go to finds an airfield by part of its name")
+	var by_id: Array = s.goto_matches("x3", cities, fields, doc)
+	_check(by_id.size() == 1 and str(by_id[0]["kind"]) == "edit" and str(by_id[0]["id"]) == "x3",
+		"go to finds an edit by its id")
+	var by_label: Array = s.goto_matches("barn", cities, fields, doc)
+	_check(by_label.size() == 2 and str(by_label[0]["id"]) == "x2",
+		"go to finds edits by asset label, in document order (%d)" % by_label.size())
+	_check(s.goto_matches("CHURCH", cities, fields, doc).size() == 1, "go to ignores case")
+	_check(s.goto_matches("  ", cities, fields, doc).is_empty(), "go to needs something typed")
+	_check(s.goto_matches("zzzz", cities, fields, doc).is_empty(), "go to reports no match as nothing")
+
+	# ---- The grid: adaptive, always roughly 60-120 px per cell.
+	var seen: Array = []
+	var ok: bool = true
+	for z in [1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0, 80.0]:
+		t.zoom = float(z)
+		var km: float = MapViewScript.grid_km(t.px_per_km())
+		var px: float = km * t.px_per_km()
+		seen.append("%.0fx=%.0fpx:%s" % [z, px, MapViewScript.grid_label(km)])
+		ok = ok and px >= MapViewScript.GRID_MIN_PX - 0.01 and px <= MapViewScript.GRID_MAX_PX + 0.01
+	_check(ok, "the map grid cell is 60-120 px at every zoom (%s)" % " ".join(seen))
+	_check(MapViewScript.grid_km(1.0) > MapViewScript.grid_km(1000.0), "the grid step shrinks as you zoom in")
+	_check(MapViewScript.grid_label(5.0) == "5 km" and MapViewScript.grid_label(0.5) == "500 m"
+		and MapViewScript.grid_label(1.5) == "1.5 km", "the grid caption reads in km and metres")
+

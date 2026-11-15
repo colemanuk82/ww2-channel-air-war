@@ -17,6 +17,7 @@ const DEFAULT_RADIUS: float = 25.0
 
 static var _edits: Array = []      # validated rows, in file order
 static var _removes: Array = []    # [{pos: Vector3, r2: float, what: String}] precomputed for is_removed
+static var _path: String = ""      # the file load() last read (or PATH)
 
 
 ## (Re)load the edits from `path` (PATH when omitted). A missing or malformed file simply leaves no edits.
@@ -25,6 +26,7 @@ static func load(path: String = "") -> void:
 		path = PATH
 	_edits = []
 	_removes = []
+	_path = path
 	var f: FileAccess = FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return
@@ -43,10 +45,7 @@ static func load(path: String = "") -> void:
 		if e.is_empty():
 			continue
 		_edits.append(e)
-		if str(e["op"]) == "remove":
-			var c: Vector3 = WorldCoords.latlon_to_world(float(e["lat"]), float(e["lon"]))
-			var r: float = float(e["radius"])
-			_removes.append({"pos": c, "r2": r * r, "what": str(e["what"])})
+	_rebuild_removes()
 
 ## A finite float for a JSON number, or null (used by the validators below).
 static func _num(v: Variant) -> Variant:
@@ -115,6 +114,60 @@ static func removes() -> Array:
 		if str((e as Dictionary)["op"]) == "remove":
 			out.append((e as Dictionary).duplicate())
 	return out
+
+
+## Every valid row, adds and removes together, in file order (copies, so a caller cannot mutate the
+## loaded set by accident). This is the map editor's starting document.
+static func all() -> Array:
+	var out: Array = []
+	for e in _edits:
+		out.append((e as Dictionary).duplicate(true))
+	return out
+
+
+## Replace the working set (the editor's document) and re-index the remove circles. Every row is
+## validated exactly as it would be on load, so a row the game could not use is never saved.
+## Returns the number of rows accepted.
+static func set_rows(rows: Array) -> int:
+	var next: Array = []
+	for row in rows:
+		var e: Dictionary = _validate(row)
+		if not e.is_empty():
+			next.append(e)
+	_edits = next
+	_rebuild_removes()
+	return _edits.size()
+
+
+## The path load() last read, for the editor's status line.
+static func last_path() -> String:
+	return _path
+
+
+## A fresh id for the editor: `prefix` plus one past the highest number already used with that prefix,
+## so ids stay unique and stable across reloads. `rows` is the document to scan; pass the editor's
+## working set. An empty document gives prefix + 1.
+static func next_id(prefix: String, rows: Array) -> String:
+	var best: int = 0
+	for e in rows:
+		var id: String = str((e as Dictionary).get("id", ""))
+		if not id.begins_with(prefix):
+			continue
+		var tail: String = id.substr(prefix.length())
+		if tail.is_valid_int():
+			best = maxi(best, int(tail))
+	return "%s%d" % [prefix, best + 1]
+
+
+## Recompute the fast remove-circle index from _edits (after load or set_rows).
+static func _rebuild_removes() -> void:
+	_removes = []
+	for e in _edits:
+		if str((e as Dictionary)["op"]) != "remove":
+			continue
+		var c: Vector3 = WorldCoords.latlon_to_world(float(e["lat"]), float(e["lon"]))
+		var r: float = float(e["radius"])
+		_removes.append({"pos": c, "r2": r * r, "what": str(e["what"])})
 
 
 static func has_edits() -> bool:

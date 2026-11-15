@@ -1,8 +1,4 @@
 {
 	"version": 1,
-	"edits": [
-		{"op": "add", "id": "a1", "asset": "windmill", "lat": 49.192, "lon": -0.402, "yaw": 30.0, "scale": 1.0},
-		{"op": "add", "id": "a2", "asset": "barn", "lat": 49.171, "lon": -0.332, "yaw": 120.0, "scale": 1.25},
-		{"op": "remove", "id": "r1", "lat": 49.18, "lon": -0.36, "radius": 25.0, "what": "all"}
-	]
+	"edits": []
 }
