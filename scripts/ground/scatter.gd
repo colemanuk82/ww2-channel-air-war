@@ -1815,6 +1815,10 @@ static func make_tile(origin: Vector2, cell: float, seed_v: int, exclude: Array)
 					trees_c.append(tr)
 				else:
 					trees_r.append(tr)
+	if MapEdits.has_removes():
+		_drop_removed(houses, "houses")
+		_drop_removed([hedges], "hedges")
+		_drop_removed([trees_c, trees_r], "trees")
 	for i in 4:
 		if not (houses[i] as Array).is_empty():
 			_add_houses(root, i, houses[i], 6500.0)
@@ -1833,6 +1837,22 @@ static func make_tile(origin: Vector2, cell: float, seed_v: int, exclude: Array)
 ## built-up, hedgerows and the odd tree on farmland, cattle on pasture. Everything sits on terrain.
 static func _make_tile_landcover(origin: Vector2, cell: float, seed_v: int, exclude: Array) -> Node3D:
 	return build_tile_nodes(tile_landcover_data(origin, cell, seed_v, exclude))
+
+
+## Drop houses / trees / hedges that fall inside a hand-made map-edit remove circle (MapEdits). The lists
+## hold Transform3D arrays and are edited in place. Countryside tiles only; runs on the tile worker thread.
+static func _drop_removed(lists: Array, what: String) -> void:
+	for lst in lists:
+		var arr: Array = lst
+		if arr.is_empty():
+			continue
+		var keep: Array = []
+		for t in arr:
+			if not MapEdits.is_removed((t as Transform3D).origin, what):
+				keep.append(t)
+		if keep.size() != arr.size():
+			arr.clear()
+			arr.append_array(keep)
 
 
 ## The expensive half of a land-cover tile: samples land cover / terrain / roads and computes every instance
@@ -1955,6 +1975,10 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 	var dmg_areas: Array = WarDamage.areas_near(origin, cell)
 	var ruins: Array = [[], []]
 	WarDamage.apply_to_houses(houses, ruins, dmg_areas)
+	if MapEdits.has_removes():
+		_drop_removed(houses, "houses")
+		_drop_removed([hedges], "hedges")
+		_drop_removed([trees_c, trees_r, wtrees_c, wtrees_r, blobs[0], blobs[1]], "trees")
 	var out: Dictionary = {"multis": [], "church": null}
 	# A church at the heart of each village (a cluster of houses in this tile)
 	var n_houses: int = 0

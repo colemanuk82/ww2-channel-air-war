@@ -139,6 +139,7 @@ func _ready() -> void:
 	_register_war_ground()
 	_register_buildup()
 	_register_kammhuber()
+	_register_map_edits()
 	add_child(BargeTraffic.new())
 	for ch in WestwallKit.chunks():
 		_add_site("westwall_%s_%d" % [str(ch[0]), int(ch[1])], ch[3], 9000.0, func(s: Dictionary) -> Node3D: return WestwallKit.build(str(s["lid"]), int(s["i0"]), int(s["i1"])), {"lid": str(ch[0]), "i0": int(ch[1]), "i1": int(ch[2])})
@@ -856,6 +857,48 @@ func _build_kammhuber(s: Dictionary) -> Node3D:
 	if EraClock.is_between("1941-01-01", "1942-12-31"):
 		_defences(c, s["pos"], "Axis", 0, 0, 2, 0, 1800.0, hash(str(s["key"])))
 	return c
+
+
+# ================================================================== hand-made map edits
+## Hand-made additions and removals from data/map_edits.json (MapEdits). Additions stream in as their own
+## small sites like any other scenery (spawned on the terrain at their lat/lon, yaw and scale). Removals keep
+## the procedural world out of their circle: the tile scatters skip houses / trees / hedges (Scatter), and a
+## site keep-out stops real sites (airfields, industry, towns...) appearing where a `sites` removal covers.
+func _register_map_edits() -> void:
+	MapEdits.load()
+	for e in MapEdits.removes():
+		var what: String = str(e["what"])
+		if what == "all" or what == "sites":
+			_exclude.append([WorldCoords.latlon_to_world(float(e["lat"]), float(e["lon"])), float(e["radius"])])
+	var n: int = 0
+	for e in MapEdits.adds():
+		var key: String = str(e["asset"])
+		if not MapAssets.has(key):
+			push_warning("WorldPopulator: map edit '%s' has unknown asset '%s'" % [str(e["id"]), key])
+			continue
+		var pos: Vector3 = WorldCoords.latlon_to_world(float(e["lat"]), float(e["lon"]))
+		if not WorldCoords.is_in_bounds(pos):
+			push_warning("WorldPopulator: map edit '%s' is outside the map" % str(e["id"]))
+			continue
+		_add_site("edit_" + str(e["id"]), pos, 8000.0, _build_map_add,
+			{"asset": key, "yaw": float(e["yaw"]), "scale": float(e["scale"])})
+		n += 1
+	if MapEdits.has_edits():
+		GroundKit.lp("  _register_map_edits (%d adds, %d removes)" % [n, MapEdits.removes().size()])
+
+
+## Build one hand-made addition: its catalogue node at the site's world position, yaw and scale.
+func _build_map_add(s: Dictionary) -> Node3D:
+	var n: Node3D = MapAssets.build(str(s["asset"]))
+	if n == null:
+		return Node3D.new()
+	var pos: Vector3 = s["pos"]
+	n.position = Vector3(pos.x, _y(pos), pos.z)
+	n.rotation.y = deg_to_rad(float(s.get("yaw", 0.0)))
+	var sc: float = float(s.get("scale", 1.0))
+	if not is_equal_approx(sc, 1.0):
+		n.scale = Vector3.ONE * sc
+	return n
 
 
 ## The 1944 invasion build-up (BuildupKit): marshalling areas, anchorages, Phoenix parks, embarkation hards.
