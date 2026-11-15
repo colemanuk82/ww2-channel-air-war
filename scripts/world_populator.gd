@@ -275,6 +275,21 @@ func _apply_airfield_zones(zones: Array) -> void:
 		terrain.call("set_airfield_zones", zones)
 
 
+## True inside a named town's circle. Some rural and civil-defence sites sit on their town's own centre point (the
+## data gives the town's coordinates); with their keep-clear discs they blanked the middle of the street grid and
+## cut the real roads out of Maidstone's centre.
+func _in_named_town(pos: Vector3) -> bool:
+	for e in _exclude:
+		if (e as Array).size() >= 4 and Vector2((e[0] as Vector3).x - pos.x, (e[0] as Vector3).z - pos.z).length() < float(e[1]):
+			return true
+	return false
+
+
+## Keep-clear radius for a civil-defence site: inside a named town only its own small plot.
+func _site_clear(pos: Vector3, r: float) -> float:
+	return minf(r, 55.0) if _in_named_town(pos) else r
+
+
 func _register_cities() -> void:
 	var lm: Dictionary = {}
 	for f in loc.get("features", []):
@@ -1705,6 +1720,8 @@ func _register_rural() -> void:
 		if not WorldCoords.is_in_bounds(pos):
 			continue
 		var size: int = int(dd.get("size", 1))
+		if _in_named_town(pos):
+			continue        # a hop garden / oast / farm placed on a town's own centre point: the town is there instead
 		_exclude.append([pos, 140.0 + 50.0 * float(size)])
 		RoadMesh.add_exclusion_disc(Vector2(pos.x, pos.z), 120.0 + 40.0 * float(size))
 		_add_site("rural_" + id, pos, 6800.0, _build_rural,
@@ -1797,8 +1814,8 @@ func _register_civil_defence() -> void:
 		if not WorldCoords.is_in_bounds(pos):
 			continue
 		var size: int = int(dd.get("size", 1))
-		_exclude.append([pos, 110.0 + 40.0 * float(size)])
-		RoadMesh.add_exclusion_disc(Vector2(pos.x, pos.z), 90.0 + 30.0 * float(size))
+		_exclude.append([pos, _site_clear(pos, 110.0 + 40.0 * float(size))])
+		RoadMesh.add_exclusion_disc(Vector2(pos.x, pos.z), 25.0 if _in_named_town(pos) else 90.0 + 30.0 * float(size))
 		_add_site("cd_" + id, pos, 6300.0, _build_civil_defence,
 			{"id": id, "kind": str(dd.get("kind", "surface_shelter")), "size": size})
 		n += 1

@@ -2457,14 +2457,25 @@ static func _town_cells(center: Vector3, size: int, seed_v: int) -> Dictionary:
 		for i in n + 1:
 			var q: Vector3 = tf.origin + ax * lerpf(-half, half, float(i) / float(n))
 			cells[Vector2i(floori(q.x / TOWN_OCC_CELL), floori(q.z / TOWN_OCC_CELL))] = true
-	# the civic core (market square, town hall, church) round the centre stays the town's own
-	var core: float = 70.0 + 15.0 * float(size)
-	var cr: int = int(ceil(core / TOWN_OCC_CELL))
-	var ck := Vector2i(floori(center.x / TOWN_OCC_CELL), floori(center.z / TOWN_OCC_CELL))
-	for dz in range(-cr, cr + 1):
-		for dx in range(-cr, cr + 1):
-			if Vector2(dx, dz).length() * TOWN_OCC_CELL <= core:
-				cells[ck + Vector2i(dx, dz)] = true
+	# the civic buildings (market square, town hall, station, quay) and the church keep their own ground - only
+	# their footprints, not a whole disc round the centre (that left the middle of Maidstone bare)
+	var spots: Array = []
+	for cv in d.get("civic", []):
+		var cvd: Dictionary = cv
+		if cvd.has("pos"):
+			spots.append([cvd["pos"], 30.0 + 10.0 * float(cvd.get("scale", 1.0))])
+	var chd: Variant = d.get("church")
+	if chd is Dictionary and (chd as Dictionary).has("pos"):
+		spots.append([(chd as Dictionary)["pos"], 30.0])
+	for sp in spots:
+		var spp: Vector3 = sp[0]
+		var sr: float = sp[1]
+		var cr: int = int(ceil(sr / TOWN_OCC_CELL))
+		var ck := Vector2i(floori(spp.x / TOWN_OCC_CELL), floori(spp.z / TOWN_OCC_CELL))
+		for dz in range(-cr, cr + 1):
+			for dx in range(-cr, cr + 1):
+				if Vector2(dx, dz).length() * TOWN_OCC_CELL <= sr:
+					cells[ck + Vector2i(dx, dz)] = true
 	return cells
 
 
