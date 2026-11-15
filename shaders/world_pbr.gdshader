@@ -16,7 +16,7 @@ render_mode specular_schlick_ggx, cull_back, depth_draw_opaque;
 
 // ---- surfaces (the toon_util contract) -----------------------------------------------------------
 uniform vec4 albedo : source_color = vec4(0.5, 0.5, 0.5, 1.0);
-uniform sampler2D surface_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D surface_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float tex_scale = 0.5;                         // triplanar tiles per metre
 uniform float roughness_v : hint_range(0.0, 1.0) = 0.8;
 uniform float metallic_v : hint_range(0.0, 1.0) = 0.0;

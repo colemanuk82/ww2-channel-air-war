@@ -72,6 +72,7 @@ var quality: int = 1  # 0 low, 1 medium, 2 high
 var shadows_enabled: bool = true
 var realistic_scenery: bool = true   # realistic (default) or classic cartoon scenery: toon_real vs toon shader, no ink outlines; applies on the next launch
 var msaa_level: int = 2      # 0 = off, 2 = 2x, 4 = 4x
+var aniso_level: int = 3     # anisotropic texture filtering: 0 off, 1 = 2x, 2 = 4x, 3 = 8x, 4 = 16x
 var post_fx: int = 2         # post effects: 0 off, 1 medium (filmic tonemap, bloom, grade), 2 high (adds ambient occlusion, sun scatter)
 var view_distance: int = 1   # 0 near, 1 normal, 2 far
 var cloud_detail: int = 1    # volumetric clouds: 0 low, 1 medium, 2 high (raymarch step size / sample count)
@@ -230,6 +231,7 @@ func _load_settings() -> void:
 	shadows_enabled = cf.get_value("gfx", "shadows", shadows_enabled)
 	realistic_scenery = cf.get_value("gfx", "realistic_scenery", realistic_scenery)
 	msaa_level = int(cf.get_value("gfx", "msaa", msaa_level))
+	aniso_level = clampi(int(cf.get_value("gfx", "aniso", aniso_level)), 0, 4)
 	post_fx = int(cf.get_value("gfx", "post_fx", post_fx))
 	quality = int(cf.get_value("gfx", "quality", quality))
 	view_distance = int(cf.get_value("gfx", "view_distance", view_distance))
@@ -362,6 +364,7 @@ func save_settings() -> void:
 	cf.set_value("gfx", "shadows", shadows_enabled)
 	cf.set_value("gfx", "realistic_scenery", realistic_scenery)
 	cf.set_value("gfx", "msaa", msaa_level)
+	cf.set_value("gfx", "aniso", aniso_level)
 	cf.set_value("gfx", "post_fx", post_fx)
 	cf.set_value("gfx", "quality", quality)
 	cf.set_value("gfx", "view_distance", view_distance)
@@ -605,6 +608,8 @@ func set_graphic(key: String, value: Variant) -> void:
 			show_lead_marker = bool(value)
 		"msaa":
 			msaa_level = int(value)
+		"aniso":
+			aniso_level = clampi(int(value), 0, 4)
 		"post_fx":
 			post_fx = clampi(int(value), 0, 2)
 		"quality":
@@ -682,6 +687,7 @@ func apply_quality(q: int) -> void:
 			outlines_enabled = false
 			shadows_enabled = false
 			msaa_level = 0
+			aniso_level = 1
 			view_distance = 0
 			post_fx = 0
 			cloud_detail = 0
@@ -689,6 +695,7 @@ func apply_quality(q: int) -> void:
 			outlines_enabled = true
 			shadows_enabled = true
 			msaa_level = 2
+			aniso_level = 3
 			view_distance = 1
 			post_fx = 1
 			cloud_detail = 1
@@ -696,6 +703,7 @@ func apply_quality(q: int) -> void:
 			outlines_enabled = true
 			shadows_enabled = true
 			msaa_level = 4
+			aniso_level = 4
 			view_distance = 2
 			post_fx = 2
 			cloud_detail = 2
@@ -722,6 +730,8 @@ func apply_graphics() -> void:
 		win.content_scale_factor = ui_scale
 		var vp: Viewport = win
 		_apply_upscaler(vp)
+		# sharper ground, runway and skin textures at shallow angles (only samplers marked anisotropic use it)
+		vp.anisotropic_filtering_level = clampi(aniso_level, 0, 4) as Viewport.AnisotropicFiltering
 		match msaa_level:
 			0:
 				vp.msaa_3d = Viewport.MSAA_DISABLED

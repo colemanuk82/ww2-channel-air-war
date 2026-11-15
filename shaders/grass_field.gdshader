@@ -18,6 +18,11 @@ uniform vec3 col_edge : source_color = vec3(0.285, 0.335, 0.17);// grass ring: ~
 uniform vec3 col_bare : source_color = vec3(0.30, 0.265, 0.185);// churned earth in the ruts and worn patches
 uniform float cross_on = 0.0;         // RAF stations: a second mown direction across the field
 uniform float cross_angle = 1.13;
+// The turf itself: a tiling sheet (assets/textures/airfield_grass, made by tools/make_grass_texture.py; R blades,
+// G clumps, B patches, each centred on 0.5). A texture is mipmapped and anisotropically filtered by the GPU, so it
+// stays sharp at shallow angles and never shimmers - the procedural blades below are only the fallback without it.
+uniform sampler2D grass_tex : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform bool use_grass_tex = false;
 
 varying vec2 lp;
 varying vec3 wp;
@@ -113,7 +118,15 @@ void fragment() {
 	float strand = (smoothstep(0.25, 0.75, b1) - 0.5) * 0.65 * (1.0 - smoothstep(0.013, 0.030, fp))
 		+ (b2 - 0.5) * 0.7 * (1.0 - smoothstep(0.0057, 0.013, fp));
 	float blade_k = (1.0 - smoothstep(60.0, 160.0, dist)) * (1.0 - outer * 0.3);
-	c *= 1.0 + fine * 0.22 * fine_k + strand * 0.30 * blade_k;
+	if (use_grass_tex) {
+		// two scales of the same sheet (3.1 m, and 13.7 m turned a quarter) so no repeat shows
+		vec3 t1 = texture(grass_tex, lp / 3.1).rgb;
+		vec3 t2 = texture(grass_tex, lp.yx / 13.7 + vec2(0.37, 0.61)).rgb;
+		float turf = (t1.r - 0.5) * 0.50 + (t1.g - 0.5) * 0.40 + (t2.g - 0.5) * 0.35 + (t2.b - 0.5) * 0.45;
+		c *= 1.0 + turf * 0.55 * (1.0 - smoothstep(400.0, 1500.0, dist)) * (1.0 - outer * 0.3);
+	} else {
+		c *= 1.0 + fine * 0.22 * fine_k + strand * 0.30 * blade_k;
+	}
 
 	c *= mix(1.0, 0.72, clamp(wetness, 0.0, 1.0));
 	ALBEDO = c;

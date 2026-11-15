@@ -5,7 +5,7 @@ global uniform float wetness;
 // space (no UVs), a hard-edged underside demarcation, structured panel seams (fuselage frames and stringer laps,
 // wing ribs and spar lines) with rivet rows only along the seams, the odd access hatch, and light weathering.
 // Object space: +X span (starboard), +Y up, -Z forward (nose). Textures come from tools/make_aircraft_camo.py.
-uniform sampler2D camo_tex : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D camo_tex : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float camo_scale = 0.30;                 // object-metres -> texture tiles
 uniform vec4 underside_color : source_color = vec4(0.58, 0.63, 0.66, 1.0);
 uniform float under_amount : hint_range(0.0, 1.0) = 0.85;

@@ -267,7 +267,11 @@ func _rw_tick() -> void:
 			continue
 		var ahead_clear: bool
 		if j == 0:
-			ahead_clear = pl_up or (pl_along > gap + 45.0 and pl.speed > 8.0)
+			# go with the leader: as soon as he is rolling under power and has opened a little room ahead of us
+			var room: float = pl_along
+			if is_instance_valid(e["ac"]):
+				room = (pl.global_position - (e["ac"] as Aircraft).global_position).dot(_rw_fwd) - gap
+			ahead_clear = pl_up or (room > 22.0 and pl.speed > 10.0 and pl.throttle > 0.5)
 		else:
 			var prev: Dictionary = _rw_after[j - 1]
 			if not bool(prev["rolled"]):
@@ -276,7 +280,7 @@ func _rw_tick() -> void:
 			var moved: float = 9999.0
 			if is_instance_valid(pa):
 				moved = ((pa as Aircraft).global_position - (prev["start"] as Vector3)).dot(_rw_fwd)
-			ahead_clear = moved > gap + 45.0 and _rw_t - float(prev["t"]) > 3.0
+			ahead_clear = moved > 25.0 and _rw_t - float(prev["t"]) > 1.5
 		if ahead_clear:
 			e["rolled"] = true
 			e["t"] = _rw_t
@@ -340,13 +344,29 @@ func begin_taxi_flight(af: Airfield, want: int, lead: TaxiController = null) -> 
 	_taxi_i = 0
 	_taxi_lead = lead
 	_taxi_wing.clear()
+	_taxi_armed = false
 
 
-## main._on_taxi_done: the player is lined up - open the hold for the first wingman and arm the runway
-## take-off queue behind him.
+## main._on_taxi_done: the player is lined up - arm the runway take-off queue behind him. (The wingmen are already
+## following him onto the runway: TaxiController opens each one's hold when the aircraft ahead goes through its own.)
 func player_lined_up(lineup: Vector3) -> void:
 	if taxi_af == null and _taxi_wing.is_empty():
 		return
+	_taxi_arm(lineup)
+	if not _taxi_wing.is_empty():
+		var c0: Variant = _taxi_wing[0]["ctrl"]
+		if c0 != null and is_instance_valid(c0):
+			(c0 as TaxiController).cleared = true
+
+
+var _taxi_armed: bool = false
+
+
+## Arm the runway take-off queue for the taxi-out flight (once): runway direction, start point, the 0.25 s tick.
+func _taxi_arm(lineup: Vector3) -> void:
+	if _taxi_armed:
+		return
+	_taxi_armed = true
 	var af: Airfield = taxi_af if taxi_af != null else _rw_af
 	if af != null:
 		_rw_af = af
@@ -359,8 +379,19 @@ func player_lined_up(lineup: Vector3) -> void:
 		_rw_timer.autostart = true
 		_rw_timer.timeout.connect(_rw_tick)
 		add_child(_rw_timer)
-	if not _taxi_wing.is_empty():
-		(_taxi_wing[0]["ctrl"] as TaxiController).cleared = true
+
+
+## The player has begun his take-off roll (under power down the runway) or is already off the ground.
+func _player_rolling() -> bool:
+	var pl: Aircraft = (player as Aircraft) if is_instance_valid(player) else null
+	if pl == null or pl.state != Aircraft.State.ALIVE:
+		return false
+	if not pl.on_ground:
+		return true
+	var af: Airfield = taxi_af if taxi_af != null else _rw_af
+	if af == null or not is_instance_valid(af):
+		return false
+	return pl.speed > 12.0 and pl.throttle > 0.5 and absf(wrapf(pl.get_heading_deg() - af.heading_deg, -180.0, 180.0)) < 25.0
 
 
 func _taxi_wingmen_tick() -> void:
@@ -408,17 +439,16 @@ func _taxi_wingmen_tick() -> void:
 func _taxi_wing_lined_up(w: Aircraft, j: int) -> void:
 	if not is_instance_valid(w):
 		return
+	if is_instance_valid(player):
+		_taxi_arm((player as Node3D).global_position)
 	_rw_after.append({"ac": w, "start": w.global_position, "rolled": false, "t": _rw_t})
 	_rw_active = true
-	if _rw_timer == null:
-		_rw_timer = Timer.new()
-		_rw_timer.wait_time = 0.25
-		_rw_timer.autostart = true
-		_rw_timer.timeout.connect(_rw_tick)
-		add_child(_rw_timer)
 	if j + 1 < _taxi_wing.size():
-		(_taxi_wing[j + 1]["ctrl"] as TaxiController).cleared = true
-		Radio.say(Radio.callsign_of(w), "Holding short. Waiting for you to get clear.", Radio.Kind.FRIENDLY, 0.4)
+		var cn: Variant = _taxi_wing[j + 1]["ctrl"]
+		if cn != null and is_instance_valid(cn):
+			(cn as TaxiController).cleared = true
+	if j == 0 and not _player_rolling():
+		Radio.say(Radio.callsign_of(w), "Lined up behind you. Ready when you are.", Radio.Kind.FRIENDLY, 0.4)
 
 
 ## Debug (--rw-test): the player's aircraft takes off by itself after 12 s; positions are logged every 2 s.
@@ -766,12 +796,20 @@ func _process(delta: float) -> void:
 	if running:
 		elapsed += delta
 		# drive the taxiing wingmen (the player's own controller is ticked from main)
+		var roll: int = -1          # is the player rolling? worked out once, only if a wingman is still taxiing
 		for e in _taxi_wing:
 			var c: TaxiController = e["ctrl"]
 			if c == null or not is_instance_valid(c):
 				continue
 			if c.active:
-				c.tick(delta)
+				if roll < 0:
+					roll = 1 if _player_rolling() else 0
+				# the player is off down the runway: a wingman already on the centreline behind him goes from where
+				# he stands instead of creeping on to his slot first
+				if roll == 1 and c.on_runway(20.0):
+					c.finish_here()
+				else:
+					c.tick(delta)
 			else:
 				e["ctrl"] = null
 				c.queue_free()

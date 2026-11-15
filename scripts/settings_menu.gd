@@ -38,6 +38,7 @@ var _quality: OptionButton
 var _outlines: OptionButton
 var _shadows: OptionButton
 var _msaa: OptionButton
+var _aniso: OptionButton
 var _post: OptionButton
 var _view: OptionButton
 var _clouds: OptionButton
@@ -237,6 +238,8 @@ func _build_video_page() -> VBoxContainer:
 		GameState.set_graphic("shadows", i == 1))
 	_msaa = _row(page, "Anti-aliasing", ["Off", "2x", "4x"], [0, 2, 4].find(GameState.msaa_level), func(i: int) -> void:
 		GameState.set_graphic("msaa", [0, 2, 4][i]))
+	_aniso = _row(page, "Anisotropic filtering", ["Off", "2x", "4x", "8x", "16x"], GameState.aniso_level, func(i: int) -> void:
+		GameState.set_graphic("aniso", i))
 	_post = _row(page, "Post effects", ["Off", "Medium", "High"], GameState.post_fx, func(i: int) -> void:
 		GameState.set_graphic("post_fx", i))
 	_view = _row(page, "View distance", ["Near", "Normal", "Far"], GameState.view_distance, func(i: int) -> void:
@@ -1014,6 +1017,7 @@ func _refresh() -> void:
 	_outlines.select(1 if GameState.outlines_enabled else 0)
 	_shadows.select(1 if GameState.shadows_enabled else 0)
 	_msaa.select(maxi([0, 2, 4].find(GameState.msaa_level), 0))
+	_aniso.select(clampi(GameState.aniso_level, 0, 4))
 	_post.select(clampi(GameState.post_fx, 0, 2))
 	_view.select(clampi(GameState.view_distance, 0, 2))
 	_clouds.select(clampi(GameState.cloud_detail, 0, 2))

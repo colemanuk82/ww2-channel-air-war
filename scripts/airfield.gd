@@ -686,6 +686,7 @@ func _build_parallel(earth: Material) -> void:
 ## direction, a ragged edge into longer grass, wandering wheel ruts and worn patches, faded into the terrain at its
 ## border. It replaced a stack of thin boxes, whose stepped edges and depth fighting showed as artefacts.
 static var _field_shader: Shader
+static var _field_tex: Texture2D     # the turf sheet (tools/make_grass_texture.py); without it the shader draws procedural blades
 
 
 func _grass_surface(L: float, a: Material, b: Material, edge: Material, bare: Material, cross: bool) -> void:
@@ -704,6 +705,11 @@ func _grass_surface(L: float, a: Material, b: Material, edge: Material, bare: Ma
 	sm.set_shader_parameter("col_edge", _mat_col(edge))
 	sm.set_shader_parameter("col_bare", _mat_col(bare))
 	sm.set_shader_parameter("cross_on", 1.0 if cross else 0.0)
+	if _field_tex == null and ResourceLoader.exists("res://assets/textures/airfield_grass/airfield_grass.png"):
+		_field_tex = load("res://assets/textures/airfield_grass/airfield_grass.png") as Texture2D
+	if _field_tex != null:
+		sm.set_shader_parameter("grass_tex", _field_tex)
+		sm.set_shader_parameter("use_grass_tex", true)
 	var pm := PlaneMesh.new()
 	pm.size = Vector2(hw * 2.0, hl * 2.0)
 	var mi := MeshInstance3D.new()
