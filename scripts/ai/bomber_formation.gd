@@ -246,6 +246,8 @@ func _tick_defence(delta: float, enemies: Array[Aircraft]) -> void:
 	# under attack: an enemy fighter close to any of us
 	var hot: bool = false
 	for e in enemies:
+		if not is_instance_valid(e):     # the list is up to 0.3 s old: an aircraft freed since (despawn) must not be touched (release-build crash)
+			continue
 		for m in members:
 			if is_instance_valid(m) and m.state == Aircraft.State.ALIVE and e.global_position.distance_to(m.global_position) < 900.0:
 				hot = true
@@ -313,6 +315,8 @@ func _process(delta: float) -> void:
 		var best: Aircraft = null
 		var bd: float = GUN_RANGE * vis
 		for e in enemies:
+			if not is_instance_valid(e):
+				continue
 			var d: float = e.global_position.distance_to(m.global_position)
 			if d < bd and _turret_can_bear(m, e):
 				bd = d

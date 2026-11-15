@@ -75,6 +75,7 @@ func _ready() -> void:
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	_test_report_link()
 	_test_gameplay_additions()
+	_test_stale_enemy_cache()
 	_test_combat_audio()
 	_test_controls_ui()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
@@ -177,6 +178,23 @@ func _test_gameplay_additions() -> void:
 	var ws := WeaponSystem.new()
 	_check(not ws.jammed and ws.JAM_SAFE > 1.0, "guns start clear; short bursts never jam")
 	ws.free()
+
+
+func _test_stale_enemy_cache() -> void:
+	print("-- bomber defence ignores an enemy freed since its list was built")
+	var f := BomberFormation.new()
+	add_child(f)
+	var m := Aircraft.new()
+	f.add_child(m)
+	f.members.append(m)
+	var gone := Aircraft.new()
+	add_child(gone)
+	var stale: Array[Aircraft] = [gone]
+	gone.free()      # freed after the list was made (a despawn): a release build crashed calling a method on it
+	f._def_t = 0.0
+	f._tick_defence(1.0, stale)
+	_check(is_instance_valid(f), "a bomber formation survives a stale enemy in its defence list")
+	f.queue_free()
 
 
 func _test_report_link() -> void:
