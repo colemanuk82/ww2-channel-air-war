@@ -50,6 +50,8 @@ static func populate(container: Node3D, af: Airfield, axf: Transform3D, y: float
 	_crew(container, team, depot + Vector3(18, 0, 10), 0.3)
 	_crew(container, team, tower + Vector3(12, 0, 6), 1.2)
 	_crew(container, team, dump + Vector3(-14, 0, 0), 2.0)
+	# the men: walking between the pads, depot, dump and tower, working at the aircraft, standing talking
+	AirfieldPeople.populate(container, af, axf, y, team, rws, pads, depot, dump, tower)
 	# fuel bowsers: depot -> dispersals -> depot
 	for b in 2:
 		var stops: Array = [depot]

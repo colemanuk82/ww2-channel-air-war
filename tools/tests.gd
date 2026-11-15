@@ -2606,7 +2606,15 @@ func _test_ai_takeoff_all() -> void:
 					for dg in [0.0, 5.0, 10.0, 15.0]:
 						var pt: float = deg_to_rad(dg)
 						var prop_low: float = ac.ground_offset(pt) + (ac._gg_py - ac._gg_pr) * cos(pt) - ac._gg_pz * sin(pt)
-						_check(prop_low >= 0.4, "%s: propeller clears the runway at %.0f deg (%.2f m)" % [sid, dg, prop_low])
+						_check(prop_low >= Aircraft.PROP_CLEAR - 0.005, "%s: propeller clears the runway at %.0f deg (%.2f m)" % [sid, dg, prop_low])
+					# ...and it does so with the wheels ON the runway: from the tail-lift limit up to the rest attitude the
+					# aircraft stands on its tyres (it used to be lifted clear of them to give the propeller 0.45 m)
+					_check(ac._gg_clear <= rest + 0.001, "%s: tail-lift limit is within the rest attitude (%.1f / %.1f deg)" % [sid, rad_to_deg(ac._gg_clear), rad_to_deg(rest)])
+					for pt2 in [ac._gg_clear, rest]:
+						var on_wheels: float = -(ac._gg_ym * cos(pt2) - ac._gg_zm * sin(pt2))
+						if ac._gg_tail:
+							on_wheels = maxf(on_wheels, -(ac._gg_yt * cos(pt2) - ac._gg_zt * sin(pt2)))
+						_check(ac.ground_offset(pt2) <= on_wheels + 0.02, "%s: stands on its wheels at %.1f deg nose-up (lifted %.2f m)" % [sid, rad_to_deg(pt2), ac.ground_offset(pt2) - on_wheels])
 				print("   stance %s: rest %.1f deg, origin %.2f m (gear stat %.2f), prop r %.2f" % [sid, rad_to_deg(rest), ac.ground_offset(rest), st.gear_height, ac._gg_pr])
 			p.begin_takeoff(dir, AIPilot.State.PATROL)
 			_check(ac.crew_count() >= 1 and (not bomber or ac.crew_count() >= 2), "%s: crew count sensible (%d)" % [sid, ac.crew_count()])

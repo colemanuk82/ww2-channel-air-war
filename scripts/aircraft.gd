@@ -254,6 +254,10 @@ var _gg_py: float = 0.0       # propeller centre height / station / radius
 var _gg_pz: float = 0.0
 var _gg_pr: float = 0.0
 var _gg_rest: float = 0.0     # nose-up attitude at rest (radians); 0 for nose-wheel types
+var _gg_clear: float = 0.0          # the least nose-up angle on the wheels at which the propeller tips clear the ground
+## Gap kept between the propeller tips and the ground. (It was 0.45 m, which lifted aircraft with a big propeller
+## clean off their wheels: they stood and rolled a foot above the runway.)
+const PROP_CLEAR: float = 0.08
 
 
 # ---------------------------------------------------------------- far LOD
@@ -376,6 +380,16 @@ func _scan_ground_geometry() -> void:
 			_gg_pr = maxf(pb.size.x, pb.size.y) * 0.5
 			_gg_py = pb.position.y + pb.size.y * 0.5
 			_gg_pz = (global_transform.affine_inverse() * _prop.global_transform).origin.z
+	# how far the tail may come up on the take-off run before the propeller would touch: the wheels stay on the
+	# ground and the tail stops rising there (instead of the whole aircraft being lifted to make room)
+	_gg_clear = 0.0
+	if _gg_pr > 0.0:
+		_gg_clear = _gg_rest
+		for i in 60:
+			var a: float = deg_to_rad(float(i) * 0.5)
+			if -(_gg_ym * cos(a) - _gg_zm * sin(a)) >= (_gg_pr - _gg_py) * cos(a) + _gg_pz * sin(a) + PROP_CLEAR:
+				_gg_clear = minf(a, _gg_rest)
+				break
 	_gg_ok = true
 
 
@@ -390,7 +404,7 @@ func ground_offset(pit: float) -> float:
 	if _gg_tail:
 		h = maxf(h, -(_gg_yt * c - _gg_zt * s))
 	if _gg_pr > 0.0:
-		h = maxf(h, (_gg_pr - _gg_py) * c + _gg_pz * s + 0.45)
+		h = maxf(h, (_gg_pr - _gg_py) * c + _gg_pz * s + PROP_CLEAR)
 	return h
 
 
@@ -1659,7 +1673,7 @@ func _move_and_ground(delta: float) -> void:
 		if pit < 0.0 or ground_airspeed() < rotate_speed:
 			# a tail-dragger sits tail-down on its mains and tail wheel, and the tail lifts as the speed builds
 			var tail_down: float = 1.0 - smoothstep(stats.stall_speed * 0.12, stats.stall_speed * 0.5, ground_airspeed())
-			var goal: float = _gg_rest * tail_down if ground_airspeed() < rotate_speed else 0.0
+			var goal: float = maxf(_gg_rest * tail_down if ground_airspeed() < rotate_speed else 0.0, _gg_clear)
 			rotate_object_local(Vector3.RIGHT, (goal - pit) * clampf(5.0 * delta, 0.0, 1.0))
 		# Lift-off: a real aircraft rotates at about 1.1 x the stall speed and only leaves the runway once the nose is
 		# at the attitude the wing needs to carry its weight. Leaving earlier (or with the flight path pointing
@@ -1712,7 +1726,9 @@ func _rest_height(surf: float) -> float:
 	var y: float = position.y + (surf - lowest)
 	if _gg_pr > 0.0:
 		var pit: float = _pitch_angle()
-		y = maxf(y, surf + (_gg_pr - _gg_py) * cos(pit) + _gg_pz * sin(pit) + 0.45)
+		if player_controlled and Engine.get_frames_drawn() % 120 == 0 and OS.get_cmdline_user_args().has("--gear-debug"):
+			print("GEAR wheels_y=%.3f prop_y=%.3f est=%.3f surf=%.3f pos=%.3f pit=%.1f rest=%.1f prop_r=%.2f prop_cy=%.2f prop_z=%.2f ym=%.2f yt=%.2f clear=%.1f radii=%s" % [y, surf + (_gg_pr - _gg_py) * cos(pit) + _gg_pz * sin(pit) + PROP_CLEAR, est, surf, position.y, rad_to_deg(pit), rad_to_deg(_gg_rest), _gg_pr, _gg_py, _gg_pz, _gg_ym, _gg_yt, rad_to_deg(_gg_clear), str(_wheels.map(func(w): return snappedf(float(w["radius"]), 0.01)))])
+		y = maxf(y, surf + (_gg_pr - _gg_py) * cos(pit) + _gg_pz * sin(pit) + PROP_CLEAR)
 	return y
 
 

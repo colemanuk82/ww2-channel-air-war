@@ -3313,14 +3313,29 @@ func _parse_debug_args() -> void:
 		elif a.begins_with("--chute="):   # debug: close-up of a parachuting pilot of the given side, e.g. --chute=Axis
 			var cside: String = a.substr(8)
 			get_tree().create_timer(0.3).timeout.connect(func() -> void:
-				var ch: Parachute = FX.parachute(player.global_position + Vector3(0, 40, 0), "", cside)
+				var ch: Parachute = FX.parachute(player.global_position + Vector3(30, 400, 0), "", cside)
 				if ch != null:
 					var cc := Camera3D.new()
 					cc.fov = 58.0
 					ch.add_child(cc)
 					cc.position = Vector3(5.0, 4.5, 12.0)
 					LookUtil.look(cc, ch.global_position + Vector3(0, 3.6, 0), Vector3.UP)
-					cc.make_current())
+					if _args.has("--chute-close"):      # the pilot himself, three-quarter front
+						cc.position = Vector3(-1.9, 0.9, -3.4)
+						LookUtil.look(cc, ch.global_position + Vector3(0, 0.25, 0), Vector3.UP)
+					cc.make_current()
+					get_tree().process_frame.connect(func() -> void:
+						if is_instance_valid(cc) and not cc.current:
+							cc.make_current()))
+		elif a.begins_with("--people-demo"):   # debug: every ground-figure animation in a labelled line beside the player (AirfieldPeople.demo)
+			GameState.show_hud = false
+			GameState.show_hints = false
+			get_tree().create_timer(1.0).timeout.connect(func() -> void:
+				var pf: Vector3 = player.get_forward()
+				pf.y = 0.0
+				var pb: Vector3 = player.global_position + pf.normalized() * 25.0 + Vector3(-pf.z, 0.0, pf.x).normalized() * 130.0
+				pb.y = GroundKit.ground_y(pb.x, pb.z) + 0.01
+				AirfieldPeople.demo(self, pb, Vector3(-pf.z, 0.0, pf.x), a.substr(14) if a.contains("=") else ""))
 		elif a == "--noout":
 			GameState.outlines_enabled = false
 		elif a == "--nohud":      # debug: clean screenshots with the HUD and hints hidden

@@ -168,6 +168,8 @@ static func build(container: Node3D, center: Vector3, heading_deg: float, team: 
 			towers.append(_w(axf, yaw, Vector3(sx * (HX - 5.0), 0.0, sz * (HZ - 5.0)), PI * 0.25 * sx * sz))
 	towers.append(_w(axf, yaw, Vector3(16.0, 0.0, HZ - 8.0), 0.0))
 	container.add_child(Scatter.multi(CampAssets.guard_tower("army"), towers, 4500.0))
+	# the soldiers (one MultiMesh, animated in its shader): sentries, squads at drill, crews, men off duty
+	AirfieldPeople.populate_camp(container, axf, team, seed_v)
 	# flagpole by the orderly room
 	var fp: Vector3 = axf * Vector3(-90.0, 0.0, 150.0)
 	var fy: float = GroundKit.ground_y(fp.x, fp.z)

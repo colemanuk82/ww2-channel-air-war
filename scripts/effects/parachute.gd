@@ -166,17 +166,38 @@ func _cap_m(r: float, h: float) -> CapsuleMesh:
 	return m
 
 
-## A two-segment limb hanging from a pivot: upper part and (bent) lower part, with a hand/boot at the end.
-func _limb(parent: Node3D, pivot_pos: Vector3, upper: float, lower: float, r: float, col: Color, end_col: Color, end_size: Vector3, phase: float, amp: float, base_x: float, base_z: float) -> void:
+func _cyl_m(top_r: float, bottom_r: float, h: float) -> CylinderMesh:
+	var m := CylinderMesh.new()
+	m.top_radius = top_r
+	m.bottom_radius = bottom_r
+	m.height = h
+	m.radial_segments = 12
+	m.rings = 1
+	return m
+
+
+## A two-segment limb hanging from a pivot: a rounded joint at the top, an upper part tapering to the elbow / knee,
+## a slimmer (bent) lower part, and a gloved hand or a flying boot at the end (`boot` = the boot colour's limb).
+func _limb(parent: Node3D, pivot_pos: Vector3, upper: float, lower: float, r: float, col: Color, end_col: Color, boot: bool, phase: float, amp: float, base_x: float, base_z: float) -> void:
 	var piv := Node3D.new()
 	piv.position = pivot_pos
 	parent.add_child(piv)
-	_part(piv, _cap_m(r, upper + r), col, Vector3(0, -upper * 0.5, 0))
+	_part(piv, _sph_m(r * 1.12), col, Vector3.ZERO)                                                   # shoulder / hip joint
+	_part(piv, _cyl_m(r, r * 0.84, upper), col, Vector3(0, -upper * 0.5, 0))
 	var knee := Node3D.new()
 	knee.position = Vector3(0, -upper, 0)
 	piv.add_child(knee)
-	_part(knee, _cap_m(r * 0.88, lower + r), col, Vector3(0, -lower * 0.5, 0))
-	_part(knee, _box_m(end_size.x, end_size.y, end_size.z), end_col, Vector3(0, -lower - end_size.y * 0.3, end_size.z * 0.18), Vector3.ONE, 9)
+	_part(knee, _sph_m(r * 0.86), col, Vector3.ZERO)                                                  # elbow / knee
+	if boot:
+		# fleece-lined flying boot: a wide soft leg to mid-shin, a rounded foot
+		_part(knee, _cyl_m(r * 0.80, r * 0.72, lower * 0.45), col, Vector3(0, -lower * 0.225, 0))
+		_part(knee, _cyl_m(r * 0.92, r * 0.80, lower * 0.58), end_col, Vector3(0, -lower * 0.71, 0), Vector3.ONE, 9)
+		_part(knee, _cyl_m(r * 0.96, r * 0.96, 0.04), end_col.lightened(0.25), Vector3(0, -lower * 0.43, 0), Vector3.ONE, 9)   # boot-top band
+		_part(knee, _sph_m(r * 0.95), end_col, Vector3(0, -lower - 0.03, -0.075), Vector3(1.0, 0.72, 1.75), 9)                            # foot
+	else:
+		_part(knee, _cyl_m(r * 0.80, r * 0.62, lower), col, Vector3(0, -lower * 0.5, 0))
+		_part(knee, _cyl_m(r * 0.74, r * 0.66, lower * 0.26), end_col, Vector3(0, -lower * 0.86, 0), Vector3.ONE, 9)                      # gauntlet cuff
+		_part(knee, _sph_m(r * 0.78), end_col, Vector3(0, -lower - r * 0.45, 0), Vector3(0.85, 1.15, 0.7), 9)                             # gloved hand
 	_limbs.append({"node": piv, "knee": knee, "ang": Vector2(base_x, base_z), "vel": Vector2.ZERO, "base": Vector2(base_x, base_z), "phase": phase, "amp": amp})
 
 
@@ -224,36 +245,61 @@ func _build_pilot(side: String) -> void:
 	_rim_lines.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_rig.add_child(_rim_lines)
 	_sync_lines()
-	# the pilot, hanging in the harness (origin = middle of the body)
+	# the pilot, hanging in the harness (origin = middle of the body; he faces -Z)
 	_pilot = Node3D.new()
 	_rig.add_child(_pilot)
-	_part(_pilot, _box_m(0.52, 0.66, 0.3), cloth, Vector3(0, 0.22, 0))                    # torso
-	_part(_pilot, _box_m(0.58, 0.46, 0.36), vest, Vector3(0, 0.3, 0.01))                  # life jacket over the chest
-	if not axis:
-		_part(_pilot, _box_m(0.2, 0.1, 0.34), vest.darkened(0.15), Vector3(0, 0.56, 0.0))  # Mae West collar bladders
-	_part(_pilot, _box_m(0.5, 0.2, 0.3), cloth2, Vector3(0, -0.2, 0))                     # hips
-	_part(_pilot, _box_m(0.56, 0.06, 0.34), strap, Vector3(0, -0.12, 0), Vector3.ONE, 9)                  # harness belt
-	for sx in [-1.0, 1.0]:
-		_part(_pilot, _box_m(0.07, 0.62, 0.34), strap, Vector3(sx * 0.2, 0.26, 0.01))     # shoulder straps
-	_part(_pilot, _box_m(0.2, 0.1, 0.2), skin, Vector3(0, 0.62, 0), Vector3.ONE, 10)                     # neck
-	_head = Node3D.new()
-	_head.position = Vector3(0, 0.78, 0)
-	_pilot.add_child(_head)
-	_part(_head, _sph_m(0.17), skin, Vector3.ZERO, Vector3(0.95, 1.05, 1.0), 10)              # face
-	_part(_head, _sph_m(0.19), leather, Vector3(0, 0.05, 0.015), Vector3(1.0, 0.82, 1.05), 9) # flying helmet
-	for sx in [-1.0, 1.0]:
-		_part(_head, _box_m(0.05, 0.14, 0.12), leather.darkened(0.1), Vector3(sx * 0.18, -0.01, 0.0), Vector3.ONE, 9)   # ear flaps / earphones
-	_part(_head, _box_m(0.34, 0.06, 0.06), Color(0.08, 0.08, 0.07), Vector3(0, 0.1, -0.15), Vector3.ONE, 9)             # goggle strap + frames pushed up
-	for sx in [-1.0, 1.0]:
-		_part(_head, _sph_m(0.05), Color(0.25, 0.3, 0.32), Vector3(sx * 0.07, 0.1, -0.17), Vector3(1.0, 0.8, 0.6))
-	_part(_head, _box_m(0.17, 0.12, 0.08), Color(0.22, 0.24, 0.2) if not axis else Color(0.45, 0.46, 0.44), Vector3(0, -0.07, -0.15), Vector3.ONE, 9)  # oxygen mask, hanging loose
+	var canvas: Color = Color(0.44, 0.42, 0.30) if not axis else Color(0.40, 0.41, 0.36)
+	var metal := Color(0.55, 0.55, 0.52)
+	# body: a chest broad at the shoulders tapering to the waist, flattened front to back, over rounded hips
+	_part(_pilot, _cyl_m(0.275, 0.215, 0.54), cloth, Vector3(0, 0.25, 0), Vector3(1.0, 1.0, 0.60))
+	_part(_pilot, _sph_m(0.275), cloth, Vector3(0, 0.52, 0), Vector3(1.0, 0.40, 0.60))                    # the slope of the shoulders
+	_part(_pilot, _cyl_m(0.215, 0.240, 0.20), cloth2, Vector3(0, -0.12, 0), Vector3(1.0, 1.0, 0.66))      # waist to hips
+	_part(_pilot, _sph_m(0.240), cloth2, Vector3(0, -0.23, 0), Vector3(1.0, 0.60, 0.70))                  # seat
+	# life jacket
 	if axis:
-		_part(_head, _box_m(0.04, 0.05, 0.2), leather.darkened(0.25), Vector3(0, 0.2, 0.0), Vector3.ONE, 9)             # helmet seam
+		# kapok Schwimmweste: stitched vertical tubes down each side of the chest and a padded collar
+		for sx in [-1.0, 1.0]:
+			for k in 3:
+				_part(_pilot, _cap_m(0.047, 0.38), vest if k != 1 else vest.darkened(0.07), Vector3(sx * (0.055 + 0.088 * float(k)), 0.27, -0.165 + 0.012 * float(k)))
+		_part(_pilot, _sph_m(0.18), vest.darkened(0.06), Vector3(0, 0.575, 0.075), Vector3(1.2, 0.36, 0.95))
+	else:
+		# Mae West: two inflated lobes down the chest and the stole round the back of the neck
+		for sx in [-1.0, 1.0]:
+			_part(_pilot, _cap_m(0.105, 0.46), vest, Vector3(sx * 0.125, 0.29, -0.160), Vector3(1.0, 1.0, 0.72))
+		_part(_pilot, _sph_m(0.19), vest.darkened(0.10), Vector3(0, 0.575, 0.07), Vector3(1.25, 0.40, 1.0))
+		_part(_pilot, _box_m(0.05, 0.30, 0.02), vest.darkened(0.25), Vector3(0, 0.30, -0.225))            # the laced join between the lobes
+	# parachute harness: shoulder straps down to the quick-release box, a chest strap, leg straps, the belt,
+	# and the emptied pack flat on his back
+	for sx in [-1.0, 1.0]:
+		_part(_pilot, _box_m(0.055, 0.60, 0.025), strap, Vector3(sx * 0.235, 0.25, -0.150), Vector3.ONE, 9)
+		_part(_pilot, _box_m(0.055, 0.58, 0.025), strap, Vector3(sx * 0.200, 0.26, 0.170), Vector3.ONE, 9)
+		_part(_pilot, _box_m(0.05, 0.26, 0.025), strap, Vector3(sx * 0.125, -0.22, -0.150), Vector3.ONE, 9)   # leg straps
+	_part(_pilot, _box_m(0.50, 0.05, 0.025), strap, Vector3(0, 0.03, -0.158), Vector3.ONE, 9)             # chest strap, under the jacket
+	_part(_pilot, _cyl_m(0.055, 0.055, 0.04), metal, Vector3(0, 0.03, -0.185), Vector3(1.0, 1.0, 1.0), 9) # quick-release box
+	_part(_pilot, _cyl_m(0.222, 0.228, 0.06), strap, Vector3(0, -0.07, 0), Vector3(1.0, 1.0, 0.68), 9)    # belt
+	_part(_pilot, _box_m(0.36, 0.42, 0.06), canvas, Vector3(0, 0.24, 0.195))                              # pack
+	_part(_pilot, _box_m(0.30, 0.05, 0.065), canvas.darkened(0.2), Vector3(0, 0.24, 0.198))               # its open flaps
+	_part(_pilot, _cyl_m(0.072, 0.082, 0.13), skin, Vector3(0, 0.63, 0), Vector3.ONE, 10)                 # neck
+	_head = Node3D.new()
+	_head.position = Vector3(0, 0.80, 0)
+	_pilot.add_child(_head)
+	_part(_head, _sph_m(0.165), skin, Vector3(0, -0.01, -0.005), Vector3(0.90, 1.10, 0.98), 10)           # face
+	_part(_head, _sph_m(0.045), skin, Vector3(0, -0.03, -0.165), Vector3(0.7, 0.9, 0.8), 10)              # nose
+	_part(_head, _sph_m(0.185), leather, Vector3(0, 0.045, 0.02), Vector3(0.98, 0.86, 1.04), 9)           # flying helmet
+	_part(_head, _sph_m(0.17), leather, Vector3(0, -0.04, 0.045), Vector3(1.0, 0.95, 0.80), 9)            # ...down over the back of the neck
+	for sx in [-1.0, 1.0]:
+		_part(_head, _cyl_m(0.062, 0.062, 0.05), leather.darkened(0.18), Vector3(sx * 0.165, -0.01, 0.0), Vector3(1.0, 1.0, 1.0), 9)   # earphone housings
+		_part(_head, _box_m(0.03, 0.17, 0.035), leather.darkened(0.1), Vector3(sx * 0.125, -0.13, -0.05), Vector3.ONE, 9)              # chin strap
+	_part(_head, _box_m(0.33, 0.045, 0.05), Color(0.08, 0.08, 0.07), Vector3(0, 0.105, -0.13), Vector3.ONE, 9)   # goggles pushed up: strap and frame
+	for sx in [-1.0, 1.0]:
+		_part(_head, _sph_m(0.052), Color(0.25, 0.3, 0.32), Vector3(sx * 0.07, 0.105, -0.158), Vector3(1.0, 0.8, 0.55))
+	_part(_head, _sph_m(0.07), Color(0.22, 0.24, 0.2) if not axis else Color(0.45, 0.46, 0.44), Vector3(0.06, -0.15, -0.12), Vector3(1.0, 0.9, 0.8), 9)   # oxygen mask, unclipped and hanging by one strap
+	if axis:
+		_part(_head, _box_m(0.04, 0.05, 0.2), leather.darkened(0.25), Vector3(0, 0.2, 0.0), Vector3.ONE, 9)      # helmet seam
 	# arms: hands up on the risers; legs hanging with a slight knee bend
 	for sx in [-1.0, 1.0]:
-		_limb(_pilot, Vector3(sx * 0.34, 0.5, 0.0), 0.32, 0.3, 0.075, cloth, leather, Vector3(0.12, 0.12, 0.12), sx * 1.3, 0.35, 2.5, sx * 0.18)
-		_limb(_pilot, Vector3(sx * 0.14, -0.28, 0.0), 0.42, 0.42, 0.095, cloth2, boots, Vector3(0.16, 0.16, 0.3), sx * 2.4 + 0.7, 0.28, 0.0, sx * 0.04)
-
+		_limb(_pilot, Vector3(sx * 0.315, 0.47, 0.0), 0.31, 0.28, 0.082, cloth, leather, false, sx * 1.3, 0.35, 2.5, sx * 0.18)
+		_limb(_pilot, Vector3(sx * 0.125, -0.27, 0.0), 0.44, 0.43, 0.108, cloth2, boots, true, sx * 2.4 + 0.7, 0.28, 0.0, sx * 0.04)
 
 func launch(pos: Vector3, p_team: String = "", p_look: String = "") -> void:
 	team = p_team
