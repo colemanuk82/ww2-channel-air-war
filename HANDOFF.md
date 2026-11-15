@@ -1,3 +1,18 @@
+# SESSION 2026-11-15: VRAM-scaled keep-alive caches
+- New `scripts/vram_budget.gd` (`VramBudget`): total VRAM read once from the Windows display-driver registry
+  (`HardwareInformation.qwMemorySize`), cached in `user://vram_mb.txt`; `WW2_VRAM_MB` overrides, `WW2_NO_CACHE=1` turns the
+  caches off (A/B). `factor()` = VRAM/4 GB clamped 0.5..6; `has_headroom()` = under 70% of VRAM in use.
+- `terrain_chunk_manager.gd`: built chunk meshes are kept in an LRU `_mesh_cache` (96 MB x factor); a chunk coming back
+  into range, or changing detail level, installs the cached mesh instead of rebuilding (max 12 per streaming pass).
+  `rebuild()` clears it. Prints hit/miss counts on exit.
+- `world_populator.gd`: finished tiles flown away from are detached (`remove_child`) into `_tile_cache` (40 x factor tiles,
+  furthest dropped first) and re-added when back in range; unfinished tiles, load-screen boost and era rebuilds
+  (`free_all`) still free as before.
+- Pushed to main as 4ef700e, tests green, NOT released.
+- **Not done:** no measured before/after. The two hidden autopilot runs (`--ambient --autopilot --perf=120:30`) timed out
+  at 400 s before the PERF line. Needs a scripted loop flight path revisiting the same area, run with and without
+  `WW2_NO_CACHE=1`, comparing `[hitch]` counts / low1_fps. Possible follow-ups: larger texture/shadow resolution on big cards.
+
 # SESSION 2026-11-01 (v2.104): music licences
 - **A licence must be present for every music track uploaded to the game.** The 19 *Battle of Britain* film cues
   that had been sitting in `assets/music/ingame/` since v2.24 (and shipping inside every export, `embed_pck=true`)
