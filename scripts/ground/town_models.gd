@@ -776,29 +776,6 @@ static func terrace_row(units: int, rng_or_hash: int) -> ArrayMesh:
 	return m
 
 
-## One slot of town street for the grid towns (Scatter._add_street_row): unit length along X (the instance scales X to
-## the slot), 8 m across (local Z -4..4) - a 5 m setts / tarmac carriageway with a raised pavement and kerb each
-## side. A thick slab (sinking 0.45 m) so it sits into gently sloping ground instead of floating over it.
-static func street_strip() -> ArrayMesh:
-	if _cache.has("street_strip"):
-		return _cache["street_strip"]
-	var b := MB.new()
-	var road := Color(0.20, 0.20, 0.21)
-	var pave := Color(0.50, 0.49, 0.46)
-	var kerb := Color(0.60, 0.58, 0.54)
-	b.box(-0.5, 0.5, -0.45, 0.06, -2.45, 2.45, road, true, road * 1.04)
-	for s in [-1.0, 1.0]:
-		var z0: float = minf(s * 2.45, s * 4.0)
-		var z1: float = maxf(s * 2.45, s * 4.0)
-		b.box(-0.5, 0.5, -0.45, 0.14, z0, z1, pave, true, pave * 1.05)
-		var k0: float = minf(s * 2.45, s * 2.62)
-		var k1: float = maxf(s * 2.45, s * 2.62)
-		b.box(-0.5, 0.5, 0.13, 0.15, k0, k1, kerb, true, kerb)
-	var m: ArrayMesh = b.commit(paint_material())
-	_cache["street_strip"] = m
-	return m
-
-
 ## Kerb + pavement strip laid in front of a named-town terrace row (P4.6): one low slab the length of the
 ## run (the instance scales local X), 3.6 m wide (local Z -1.8..1.8), 0.14 m proud of the ground with the
 ## kerb line on the street side (-Z). Built on the painted-prop material like the market square's cobbles;
