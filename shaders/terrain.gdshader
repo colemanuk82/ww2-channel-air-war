@@ -473,6 +473,7 @@ void fragment() {
 			float road_k = 1.0 - smoothstep(2.3, 2.6, c_road);
 			float pave_k = (1.0 - smoothstep(3.8, 4.1, c_road)) * (1.0 - road_k);
 			float st_k = smoothstep(0.55, 0.85, urban);       // only in the built-up core, not over the fields at a town's ragged edge
+			st_k *= clamp(COLOR.r, 0.0, 1.0);                 // and not along a railway (chunk vertex colour, 1 = no line near)
 			road_k *= st_k;
 			pave_k *= st_k;
 			float kerb = (1.0 - smoothstep(0.0, 0.25, abs(c_road - 2.45))) * s_aa * st_k;

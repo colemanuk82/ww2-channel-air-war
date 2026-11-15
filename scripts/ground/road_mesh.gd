@@ -200,13 +200,33 @@ static func prepare_block(origin: Vector2, size: float) -> void:
 
 const RAIL_CELL: float = 30.0
 static var _rail_block: Dictionary = {}   # Vector2i cell -> true: ground within ~45 units of a railway
+static var rail_index_ready: bool = false   # set once _build_rail_block has finished (the terrain workers read it)
 static var _rail_segs: Dictionary = {}    # Vector2i cell -> Array of [a, b] rail segments crossing it (near_rail_within)
 
 
 ## True when p is within `r` (up to RAIL_CELL) of a railway centreline: the exact test the town terraces use, so a
 ## street can run up to the railway fence (near_rail's ~45 m keep-out left whole blocks of a railway town empty).
+## Distance from p to the nearest railway centreline, or `cap` when none is within about RAIL_CELL.
+static func rail_distance(p: Vector2, cap: float) -> float:
+	if not rail_index_ready:            # the index is still being built on its worker: never read it half-made
+		return cap
+	var best: float = cap * cap
+	var ck := Vector2i(floori(p.x / RAIL_CELL), floori(p.y / RAIL_CELL))
+	for dz in range(-2, 3):
+		for dx in range(-2, 3):
+			var segs: Variant = _rail_segs.get(Vector2i(ck.x + dx, ck.y + dz))
+			if segs == null:
+				continue
+			for sg in (segs as Array):
+				var a: Vector2 = sg[0]
+				var ab: Vector2 = (sg[1] as Vector2) - a
+				var t: float = clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
+				best = minf(best, (a + ab * t).distance_squared_to(p))
+	return sqrt(best)
+
+
 static func near_rail_within(p: Vector2, r: float) -> bool:
-	if _rail_segs.is_empty():
+	if not rail_index_ready or _rail_segs.is_empty():
 		return false
 	var ck := Vector2i(floori(p.x / RAIL_CELL), floori(p.y / RAIL_CELL))
 	for dz in range(-1, 2):
@@ -270,6 +290,7 @@ static func _build_rail_block() -> void:
 				for dz in range(-1, 2):
 					for dx in range(-1, 2):
 						_rail_block[Vector2i(ck.x + dx, ck.y + dz)] = true
+	rail_index_ready = true
 
 
 ## The parsed roads (world-space polylines) are cached in user:// as packed arrays, keyed on the source file's size,

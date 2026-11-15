@@ -663,9 +663,21 @@ func _build_arrays(key: Vector2i, lod: int) -> Array:
 		norms.append_array(sn)
 		for k in si.size():
 			indices.append(si[k] + off)
+	# vertex colour R: 1 = ordinary ground, falling to 0 beside a railway, where the terrain shader paints no town
+	# streets (the painted grid used to run its streets right along the tracks). Only the detailed rings carry it.
+	var cols := PackedColorArray()
+	cols.resize(verts.size())
+	cols.fill(Color.WHITE)
+	if step <= 65.0:
+		for j2 in n:
+			for i2 in n:
+				var rd: float = RoadMesh.rail_distance(Vector2(ox + float(i2) * step, oz + float(j2) * step), 60.0)
+				if rd < 60.0:
+					cols[j2 * n + i2] = Color(smoothstep(22.0, 48.0, rd), 1.0, 1.0)
 	var arrays: Array = []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts
 	arrays[Mesh.ARRAY_NORMAL] = norms
+	arrays[Mesh.ARRAY_COLOR] = cols
 	arrays[Mesh.ARRAY_INDEX] = indices
 	return arrays
