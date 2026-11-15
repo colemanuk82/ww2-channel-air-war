@@ -473,20 +473,16 @@ void fragment() {
 			float road_k = 1.0 - smoothstep(2.3, 2.6, c_road);
 			float pave_k = (1.0 - smoothstep(3.8, 4.1, c_road)) * (1.0 - road_k);
 			float st_k = smoothstep(0.55, 0.85, urban);       // only in the built-up core, not over the fields at a town's ragged edge
-			// The painted grid is a stand-in for distant towns only. Up close the real 3D houses and road ribbons are
-			// there, laid out differently (named towns follow the real streets, rivers and parks are kept clear), so
-			// the grid drew streets across rivers and empty ground; it now fades in only beyond the near-house range.
-			float grid_k = st_k * smoothstep(1700.0, 2600.0, length(VERTEX));
-			road_k *= grid_k;
-			pave_k *= grid_k;
-			float kerb = (1.0 - smoothstep(0.0, 0.25, abs(c_road - 2.45))) * s_aa * grid_k;
+			road_k *= st_k;
+			pave_k *= st_k;
+			float kerb = (1.0 - smoothstep(0.0, 0.25, abs(c_road - 2.45))) * s_aa * st_k;
 			vec3 setts = tarmac_col * (0.92 + 0.16 * t_vnoise2(xz * 0.5)) * (0.94 + 0.12 * t_vnoise2(xz * 3.1));
 			setts = mix(setts, setts * 0.75, smoothstep(0.6, 0.85, t_vnoise2(xz * 0.21 + 4.0)) * 0.6);   // oil and wet patches
 			vec3 pave = paving_col * 1.12 * (0.93 + 0.14 * t_vnoise2(xz * 1.3));
 			vec3 avg_street = mix(setts, pave, 0.4);
 			setts = mix(avg_street, setts, s_aa);
 			pave = mix(avg_street, pave, s_aa);
-			float yard_k = smoothstep(16.0, 17.5, fv) * (1.0 - smoothstep(24.5, 26.0, fv)) * (1.0 - cross_k) * grid_k;
+			float yard_k = smoothstep(16.0, 17.5, fv) * (1.0 - smoothstep(24.5, 26.0, fv)) * (1.0 - cross_k) * st_k;
 			vec3 yard_g = mix(gardens, mix(soil_col, mud_col, 0.5) * 0.85, 0.35) * 0.88;
 			town = mix(town, yard_g, yard_k * 0.8);
 			town = mix(town, pave, pave_k);
