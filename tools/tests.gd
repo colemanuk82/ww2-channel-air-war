@@ -29,6 +29,8 @@ func _ready() -> void:
 	_test_escape_and_backup()
 	_test_interior_cockpit()
 	_test_data_files()
+	_test_map_edits()
+	_test_map_assets()
 	_test_river_data()
 	_test_landmarks_all()
 	_test_house_variants()
@@ -1179,6 +1181,96 @@ func _load_json(path: String) -> Variant:
 func _check_has_entries(d: Dictionary, key: String, what: String) -> void:
 	var arr: Array = d.get(key, [])
 	_check(arr.size() > 0, "%s non-empty (%d)" % [what, arr.size()])
+
+
+## MapEdits (data/map_edits.json): parse + validate good and bad rows, is_removed circle maths, save / load.
+func _test_map_edits() -> void:
+	print("-- map edits")
+	var p: String = "user://t_map_edits.json"
+	var good: Dictionary = {"version": 1, "edits": [
+		{"op": "add", "id": "g1", "asset": "church", "lat": 49.18, "lon": -0.36, "yaw": 90.0, "scale": 1.0},
+		{"op": "add", "id": "g2", "asset": "barn", "lat": 49.20, "lon": -0.30},
+		{"op": "remove", "id": "g3", "lat": 49.18, "lon": -0.36, "radius": 100.0, "what": "houses"}]}
+	_write_text(p, JSON.stringify(good))
+	MapEdits.load(p)
+	_check(MapEdits.adds().size() == 2 and MapEdits.removes().size() == 1, "two good adds and one good remove parse")
+	var a2: Dictionary = MapEdits.adds()[1]
+	_check(float(a2["yaw"]) == 0.0 and float(a2["scale"]) == 1.0, "a missing yaw and scale default")
+	MapEdits.load()
+	_check(MapEdits.adds().size() == 2 and MapEdits.removes().size() == 1, "the shipped data/map_edits.json has two adds and one remove")
+	var bad: Dictionary = {"version": 1, "edits": [1, {},
+		{"op": "warp", "id": "b1", "lat": 1.0, "lon": 2.0},
+		{"op": "add", "id": "b2", "lat": 1.0, "lon": 2.0},
+		{"op": "add", "id": "b3", "asset": "x", "lat": "north", "lon": 2.0},
+		{"op": "add", "id": "b4", "asset": "x", "lat": 1.0, "lon": 2.0, "scale": 0.0},
+		{"op": "remove", "id": "b5", "lat": 1.0, "lon": 2.0, "what": "towns"},
+		{"op": "remove", "id": "b6", "lat": 1.0, "lon": 2.0, "radius": -4.0}]}
+	_write_text(p, JSON.stringify(bad))
+	MapEdits.load(p)
+	_check(MapEdits.adds().is_empty() and MapEdits.removes().is_empty(), "every bad row is skipped, never fatal")
+	MapEdits.load("res://no_such_map_edits.json")
+	_check(not MapEdits.has_edits(), "a missing file means no edits")
+	_write_text(p, "[1, 2, 3]")
+	MapEdits.load(p)
+	_check(not MapEdits.has_edits(), "a file that is not a JSON object means no edits")
+	_write_text(p, "{\"version\": 1}")
+	MapEdits.load(p)
+	_check(not MapEdits.has_edits(), "a file with no edits array means no edits")
+	var c: Vector3 = WorldCoords.latlon_to_world(49.18, -0.36)
+	_write_text(p, JSON.stringify(good))
+	MapEdits.load(p)
+	_check(MapEdits.is_removed(c, "houses") and MapEdits.is_removed(c + Vector3(90.0, 0.0, 0.0), "houses"), "a point inside a remove circle is removed")
+	_check(not MapEdits.is_removed(c + Vector3(0.0, 0.0, 110.0), "houses"), "a point outside the circle is kept")
+	_check(not MapEdits.is_removed(c, "trees"), "a houses-only removal leaves the trees alone")
+	var every: Dictionary = {"version": 1, "edits": [{"op": "remove", "id": "g4", "lat": 49.18, "lon": -0.36, "radius": 50.0, "what": "all"}]}
+	_write_text(p, JSON.stringify(every))
+	MapEdits.load(p)
+	_check(MapEdits.is_removed(c, "trees") and MapEdits.is_removed(c, "sites"), "what 'all' matches every kind")
+	_write_text(p, JSON.stringify(good))
+	MapEdits.load(p)
+	var a0: String = JSON.stringify(MapEdits.adds())
+	var r0: String = JSON.stringify(MapEdits.removes())
+	var rt: String = "user://t_map_edits_rt.json"
+	_check(MapEdits.save(rt), "the edits save")
+	var txt: String = FileAccess.get_file_as_string(rt)
+	_check(txt.contains("\n") and txt.contains("\"version\"") and txt.contains("\"edits\""), "the saved file is pretty JSON")
+	MapEdits.save(rt)
+	_check(FileAccess.get_file_as_string(rt) == txt, "saving twice is byte-stable")
+	MapEdits.load(rt)
+	_check(JSON.stringify(MapEdits.adds()) == a0 and JSON.stringify(MapEdits.removes()) == r0, "save then load round trips")
+	MapEdits.load()
+	for pp in [p, rt]:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(pp))
+
+
+## MapAssets: the catalogue of placeable keys - every key builds a Node3D with a label and a category.
+func _test_map_assets() -> void:
+	print("-- map assets")
+	var keys: Array = MapAssets.keys()
+	_check(keys.size() >= 32, "the asset catalogue lists placeable keys (%d)" % keys.size())
+	_check(MapAssets.has("church") and MapAssets.has("barn") and MapAssets.has("windmill") and MapAssets.has("house_terrace"), "the catalogue has the church, barn, windmill and houses")
+	var fails: Array = []
+	var cats: Dictionary = {}
+	for k in keys:
+		var n: Node3D = MapAssets.build(str(k))
+		if n == null:
+			fails.append(str(k))
+		else:
+			n.free()
+		cats[MapAssets.category(str(k))] = true
+		if MapAssets.label(str(k)).is_empty():
+			fails.append(str(k) + " (no label)")
+	_check(fails.is_empty(), "every asset key builds a Node3D with a label; fail: %s" % ", ".join(PackedStringArray(fails)))
+	_check(cats.has("building") and cats.has("prop") and cats.size() == 2, "every asset is categorised building or prop")
+	_check(MapAssets.build("no_such_asset") == null and MapAssets.label("no_such_asset") == "", "an unknown key is not in the catalogue")
+
+
+## Write text to any res:// / user:// path (test helper).
+func _write_text(path: String, s: String) -> void:
+	var f: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	if f != null:
+		f.store_string(s)
+		f = null
 
 
 # ------------------------------------------------------------------ rivers
