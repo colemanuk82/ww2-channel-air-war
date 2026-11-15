@@ -287,7 +287,9 @@ func _register_cities() -> void:
 		var pos: Vector3 = _ll(d)
 		var size: int = int(d["size"])
 		var radius: float = 90.0 + float(size) * 85.0
-		_exclude.append([pos, radius * 0.95])
+		# a named town's circle: kept clear of trees, hedges and farms, but the grid town's terraces may fill the parts
+		# of it the town's own layout leaves empty (Scatter.town_slot_taken) - the 4th field marks it as a town
+		_exclude.append([pos, radius * 0.95, hash(String(d["id"])) + 77, size])
 		# Phase 5.3: hand the city its landmark index so _build_city can resolve cities[].landmark names to landmark
 		# ids and place only those whose features[] row is absent (an existing row is streamed as `lm_<id>` instead).
 		# `lm` is id -> features row; `lm_json` is id -> {name, lat, lon} from data/landmarks_1940.json.

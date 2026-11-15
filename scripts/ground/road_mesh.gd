@@ -200,6 +200,27 @@ static func prepare_block(origin: Vector2, size: float) -> void:
 
 const RAIL_CELL: float = 30.0
 static var _rail_block: Dictionary = {}   # Vector2i cell -> true: ground within ~45 units of a railway
+static var _rail_segs: Dictionary = {}    # Vector2i cell -> Array of [a, b] rail segments crossing it (near_rail_within)
+
+
+## True when p is within `r` (up to RAIL_CELL) of a railway centreline: the exact test the town terraces use, so a
+## street can run up to the railway fence (near_rail's ~45 m keep-out left whole blocks of a railway town empty).
+static func near_rail_within(p: Vector2, r: float) -> bool:
+	if _rail_segs.is_empty():
+		return false
+	var ck := Vector2i(floori(p.x / RAIL_CELL), floori(p.y / RAIL_CELL))
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			var segs: Variant = _rail_segs.get(Vector2i(ck.x + dx, ck.y + dz))
+			if segs == null:
+				continue
+			for sg in (segs as Array):
+				var a: Vector2 = sg[0]
+				var ab: Vector2 = (sg[1] as Vector2) - a
+				var t: float = clampf((p - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
+				if (a + ab * t).distance_squared_to(p) < r * r:
+					return true
+	return false
 
 
 ## True near a railway: trees, houses, farms and hedges keep off the track.
@@ -238,6 +259,11 @@ static func _build_rail_block() -> void:
 			for st in steps + 1:
 				var q: Vector2 = a.lerp(bb, float(st) / float(steps))
 				var ck := Vector2i(floori(q.x / RAIL_CELL), floori(q.y / RAIL_CELL))
+				var sl: Variant = _rail_segs.get(ck)
+				if sl == null:
+					_rail_segs[ck] = [[a, bb]]
+				elif ((sl as Array).back() as Array)[0] != a:
+					(sl as Array).append([a, bb])
 				if core.has(ck):
 					continue
 				core[ck] = true

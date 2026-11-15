@@ -2387,6 +2387,87 @@ static func _add_terrace(lists: Array, p: Vector2, rng: RandomNumberGenerator, y
 		lst.append(_xf(Vector3(q.x, y, q.y), a, Vector3(unit_w * 1.02, h, depth)))
 
 
+# ---------------------------------------------------------------- named towns and the street grid
+## A named town (WorldPopulator city site) keeps its circle clear of the scatter, but its own layout fills only part
+## of it, which left a bare patch in the middle of the street grid (Maidstone). Grid rows may go inside the circle
+## wherever the town's own houses, rows and civic core are not: the town's layout is deterministic, so it is worked
+## out here once per town (on whichever thread asks first) and kept as a set of occupied TOWN_OCC_CELL cells.
+const TOWN_OCC_CELL: float = 20.0
+static var _town_occ: Dictionary = {}       # town seed -> {Vector2i: true}
+static var _town_occ_mx := Mutex.new()
+
+
+## Ground a terrace may stand on: like _land, but railways keep only RAIL_HOUSE_CLEAR off (houses back onto the line).
+const RAIL_HOUSE_CLEAR: float = 16.0
+static func _land_house(x: float, z: float) -> bool:
+	var q := Vector2(x, z)
+	return GroundKit.raw_y(x, z) >= 1.2 and not RoadMesh.near_rail_within(q, RAIL_HOUSE_CLEAR) and not RoadMesh.near_road(q, 6.0) and not RiverMesh.near_river(q)
+
+
+static func _ok_town_slot(c: Vector2, exclude: Array) -> bool:
+	if not _land_house(c.x, c.y) or _beach(c) or in_lake(c.x, c.y):
+		return false
+	var town: Array = []
+	for e in exclude:
+		if (e as Array).size() >= 4:
+			town.append(e)
+		else:
+			var ec: Vector3 = e[0]
+			var er: float = e[1]
+			if Vector2(ec.x, ec.z).distance_squared_to(c) < er * er:
+				return false
+	for t in town:
+		var tc: Vector3 = t[0]
+		var r: float = t[1]
+		if Vector2(tc.x, tc.z).distance_squared_to(c) < r * r and town_slot_taken(tc, int(t[3]), int(t[2]), c):
+			return false
+	return true
+
+
+## True when the named town at `center` has a house, terrace row or its civic core within reach of point c.
+static func town_slot_taken(center: Vector3, size: int, seed_v: int, c: Vector2) -> bool:
+	# worked out under the lock: a dozen tile workers asking for the same town at once each built its whole layout
+	_town_occ_mx.lock()
+	var occ: Variant = _town_occ.get(seed_v)
+	if occ == null:
+		occ = _town_cells(center, size, seed_v)
+		_town_occ[seed_v] = occ
+	_town_occ_mx.unlock()
+	var k := Vector2i(floori(c.x / TOWN_OCC_CELL), floori(c.y / TOWN_OCC_CELL))
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			if (occ as Dictionary).has(k + Vector2i(dx, dz)):
+				return true
+	return false
+
+
+static func _town_cells(center: Vector3, size: int, seed_v: int) -> Dictionary:
+	var cells: Dictionary = {}
+	var d: Dictionary = town_layout(center, size, seed_v, true)
+	var xfs: Array = []
+	for lst in d.get("houses", []):
+		xfs.append_array(lst as Array)
+	for rk in (d.get("rows", {}) as Dictionary).keys():
+		xfs.append_array((d["rows"] as Dictionary)[rk] as Array)
+	for t in xfs:
+		var tf: Transform3D = t
+		var half: float = maxf(tf.basis.get_scale().x, tf.basis.get_scale().z) * 0.5
+		var ax: Vector3 = tf.basis.x.normalized()
+		var n: int = maxi(int(ceil(half * 2.0 / TOWN_OCC_CELL)), 1)
+		for i in n + 1:
+			var q: Vector3 = tf.origin + ax * lerpf(-half, half, float(i) / float(n))
+			cells[Vector2i(floori(q.x / TOWN_OCC_CELL), floori(q.z / TOWN_OCC_CELL))] = true
+	# the civic core (market square, town hall, church) round the centre stays the town's own
+	var core: float = 70.0 + 15.0 * float(size)
+	var cr: int = int(ceil(core / TOWN_OCC_CELL))
+	var ck := Vector2i(floori(center.x / TOWN_OCC_CELL), floori(center.z / TOWN_OCC_CELL))
+	for dz in range(-cr, cr + 1):
+		for dx in range(-cr, cr + 1):
+			if Vector2(dx, dz).length() * TOWN_OCC_CELL <= core:
+				cells[ck + Vector2i(dx, dz)] = true
+	return cells
+
+
 const STREET_FILL := [Vector2.ZERO, Vector2(11.0, 0.0), Vector2(0.0, 11.0), Vector2(11.0, 11.0)]   # sub-samples per 22 m step
 const STREET_BLOCK: float = 34.0     # street (8 m) + front row + back yards + back row, across the street grid
 const STREET_SEG: float = 26.0       # one terrace slot along the street
@@ -2423,7 +2504,7 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 	if tile_rect.has_area() and not tile_rect.has_point(c):
 		done.erase(key)
 		return                                            # the neighbouring tile builds this slot (no doubled rows)
-	if not _ok(c, exclude, 1.2):
+	if not _ok_town_slot(c, exclude):
 		return
 	_add_town_trees(town_trees, dc, int(bi), row, int(si), org, along, across, u_c, exclude)
 	var unit_w: float = rng.randf_range(5.6, 7.4)
@@ -2436,7 +2517,7 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 	var back: Vector2 = across * (1.0 if row == 0 else -1.0)  # from the row towards its back yards
 	for i in n:
 		var q: Vector2 = start + along * unit_w * float(i)
-		if not _land(q.x, q.y, 1.2) or RoadMesh.near_road(q, depth * 0.6):
+		if not _land_house(q.x, q.y) or RoadMesh.near_road(q, depth * 0.6):
 			continue
 		# mostly one builder's row, but an odd house is rebuilt, taller or lower: a broken, real roof line
 		var hv: float = rng.randf_range(-0.6, 0.6)
