@@ -99,16 +99,21 @@ void fragment() {
 	// not by distance: it stays crisp wherever it is resolved and is gone before it can alias or shimmer,
 	// whatever the render resolution or upscaler. (Distance fades left a fuzzy band of noise 12-55 m out.)
 	float fp = max(length(dFdx(lp)), length(dFdy(lp)));
-	float fine = vnoise(lp * 2.3 + sd) * 0.6 + vnoise(lp * 0.55) * 0.4;
-	float fine_k = (1.0 - smoothstep(120.0, 420.0, dist)) * (1.0 - smoothstep(0.08, 0.4, fp));
+	// Each noise scale has its own fade, set by its cell size: full while a pixel is under a quarter of a cell,
+	// gone once a cell is two pixels or less. (One shared fade let the finer scale of each pair run on past the
+	// point where it could be resolved, and it crawled as fuzz whenever the camera moved.)
+	float fine = (vnoise(lp * 2.3 + sd) - 0.5) * 0.6 * (1.0 - smoothstep(0.095, 0.215, fp))
+		+ (vnoise(lp * 0.55) - 0.5) * 0.4 * (1.0 - smoothstep(0.40, 0.90, fp));
+	float fine_k = 1.0 - smoothstep(120.0, 420.0, dist);
 	// blades: thin, slightly leaning strands (cells 6 cm x 25 cm), a lighter tip and a dark gap between each,
 	// with two scales so no repeat shows; only where a pixel is smaller than a strand
 	vec2 bq = vec2(lp.x * 17.0 + vnoise(lp * 1.7) * 3.0, lp.y * 4.0 + lp.x * 1.3);
 	float b1 = vnoise(bq);
 	float b2 = vnoise(bq * vec2(2.3, 1.7) + 11.0);
-	float strand = smoothstep(0.25, 0.75, b1) * 0.65 + (b2 - 0.5) * 0.7;
-	float blade_k = (1.0 - smoothstep(0.02, 0.07, fp)) * (1.0 - smoothstep(60.0, 160.0, dist)) * (1.0 - outer * 0.3);
-	c *= 1.0 + (fine - 0.5) * 0.22 * fine_k + (strand - 0.32) * 0.30 * blade_k;
+	float strand = (smoothstep(0.25, 0.75, b1) - 0.5) * 0.65 * (1.0 - smoothstep(0.013, 0.030, fp))
+		+ (b2 - 0.5) * 0.7 * (1.0 - smoothstep(0.0057, 0.013, fp));
+	float blade_k = (1.0 - smoothstep(60.0, 160.0, dist)) * (1.0 - outer * 0.3);
+	c *= 1.0 + fine * 0.22 * fine_k + strand * 0.30 * blade_k;
 
 	c *= mix(1.0, 0.72, clamp(wetness, 0.0, 1.0));
 	ALBEDO = c;

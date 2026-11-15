@@ -165,10 +165,20 @@ vec3 arable_stage(vec3 soil, vec3 fallow, vec3 young, vec3 ripe, vec3 stub, floa
 	return mix(ripe, stub, smoothstep(0.86, 1.0, s));
 }
 
+// Weight of a noise band whose cells are `cell` metres across when one screen pixel covers `px` metres of ground:
+// 1 while a pixel is under a quarter of a cell, 0 once a cell is two pixels or less. Fine ground detail is faded
+// with this, not by distance alone: detail smaller than a pixel cannot be drawn, it only flickers from frame to
+// frame as the camera moves (the "fuzzy grass" at low level, worst under FSR 2 / DLSS and a low sun).
+float t_band(float px, float cell) {
+	return 1.0 - smoothstep(cell * 0.22, cell * 0.5, px);
+}
+
 void fragment() {
 	float h = w_pos.y;
 	float slope = 1.0 - clamp(w_normal.y, 0.0, 1.0);
 	vec2 xz = w_pos.xz;
+	// metres of ground under one screen pixel (view-space derivatives: exact at any world coordinate)
+	float gpx = max(length(dFdx(VERTEX)), length(dFdy(VERTEX)));
 
 	// --- farmland: domain-warped Voronoi cells (irregular field shapes) with thin hedgerows ---
 	// (Lattice kept identical to the previous version so Scatter.field_edge() stays in sync.)
@@ -264,7 +274,8 @@ void fragment() {
 	// field_variation: 0 blends everything toward one regional sward, 1 keeps the full patchwork
 	field = mix(mix(grass_a, grass_b, region), field, field_variation);
 	// within-field texture: finer mottled canopy instead of a flat fill
-	float micro = t_vnoise2(xz * 0.42 + fh2 * 40.0) * 0.5 + t_vnoise2(xz * 0.11 + 9.0) * 0.35 + t_vnoise2(xz * 1.1 + fh3 * 10.0) * 0.15;
+	float micro = mix(0.5, t_vnoise2(xz * 0.42 + fh2 * 40.0), t_band(gpx, 2.4)) * 0.5 + mix(0.5, t_vnoise2(xz * 0.11 + 9.0), t_band(gpx, 9.0)) * 0.35
+		+ mix(0.5, t_vnoise2(xz * 1.1 + fh3 * 10.0), t_band(gpx, 0.9)) * 0.15;
 	field *= 1.0 + (micro - 0.5) * 0.32 * detail_strength;
 
 	// hedgerow / headland shading along the cell boundaries (subtle linear feature, not a hard step)
@@ -390,7 +401,7 @@ void fragment() {
 	}
 	// Mid-range texture (visible from altitude): mottled canopy of grass/crop, drill lines per field, dappled light.
 	{
-		float mott = t_vnoise2(xz * 0.045) * 0.5 + t_vnoise2(xz * 0.13 + 7.0) * 0.3 + t_vnoise2(xz * 0.4 + 2.0) * 0.2;
+		float mott = t_vnoise2(xz * 0.045) * 0.5 + mix(0.5, t_vnoise2(xz * 0.13 + 7.0), t_band(gpx, 7.7)) * 0.3 + mix(0.5, t_vnoise2(xz * 0.4 + 2.0), t_band(gpx, 2.5)) * 0.2;
 		vec2 fd = normalize(vec2(t_hash12(cell_id + 3.1) - 0.5, t_hash12(cell_id + 8.7) - 0.5) + vec2(0.001));
 		float drill = abs(fract(dot(xz, fd) / 7.0) - 0.5) * 2.0;
 		float drill_k = 1.0 - smoothstep(700.0, 3000.0, length(VERTEX));   // fine lines alias into moire rings at range
@@ -522,20 +533,21 @@ void fragment() {
 	// the high-frequency bands (tufts, stalk streaks, speckle) alias much closer, so they die first
 	float near_hi = 1.0 - smoothstep(140.0, 900.0, dist_v);
 	if (near_k > 0.0 && h > 1.5 && urban < 0.5) {
-		float g1 = t_vnoise2(xz * 0.55);
-		float g2 = t_vnoise2(xz * 2.3);
+		// every band below also carries its own pixel-size fade (t_band): see gpx at the top
+		float g1 = mix(0.5, t_vnoise2(xz * 0.55), t_band(gpx, 1.8));
+		float g2 = mix(0.5, t_vnoise2(xz * 2.3), t_band(gpx, 0.43));
 		float g3 = t_vnoise2(xz * 0.11 + 9.0);
 		float grain = (g1 * 0.45 + g2 * 0.35 * near_hi + g3 * 0.55) - 0.67;
 		vec2 fdir = normalize(vec2(t_hash12(cell_id + 3.1) - 0.5, t_hash12(cell_id + 8.7) - 0.5) + vec2(0.001));
-		float rows = smoothstep(0.35, 0.65, abs(fract(dot(xz, fdir) / 2.6) - 0.5) * 2.0);
+		float rows = mix(0.5, smoothstep(0.35, 0.65, abs(fract(dot(xz, fdir) / 2.6) - 0.5) * 2.0), t_band(gpx, 1.0));
 		float crop = is_crop;
-		float tuft = smoothstep(0.55, 0.9, t_vnoise2(xz * 1.3 + 31.0));
+		float tuft = mix(0.4, smoothstep(0.55, 0.9, t_vnoise2(xz * 1.3 + 31.0)), t_band(gpx, 0.6));
 		float detail = grain * 0.45 + crop * (rows - 0.5) * 0.16 * lowland + (1.0 - crop) * (tuft - 0.4) * 0.10 * lowland * near_hi;
 		// blade/stalk streaks and clods: stretched noise along the field direction plus fine speckle
-		float streak = t_vnoise2(vec2(dot(xz, fdir) * 0.9, dot(xz, vec2(-fdir.y, fdir.x)) * 5.0)) - 0.5;
-		float speck = t_hash12(floor(xz * 3.0)) - 0.5;
+		float streak = (t_vnoise2(vec2(dot(xz, fdir) * 0.9, dot(xz, vec2(-fdir.y, fdir.x)) * 5.0)) - 0.5) * t_band(gpx, 0.2);
+		float speck = (t_hash12(floor(xz * 3.0)) - 0.5) * t_band(gpx, 0.25);
 		// (streaks halved: under a low sun the stretched noise read as a motion-blur smear across the fields)
-		detail += streak * 0.15 * lowland * near_hi + speck * 0.12 * near_hi + (t_vnoise2(xz * 6.0) - 0.5) * 0.14 * near_hi;
+		detail += streak * 0.15 * lowland * near_hi + speck * 0.12 * near_hi + (t_vnoise2(xz * 6.0) - 0.5) * 0.14 * near_hi * t_band(gpx, 0.167);
 		col *= 1.0 + detail * near_k * 1.5 * (0.6 + 0.4 * detail_strength);
 		// Texture micro detail (P2): the detail texture carries turf/soil grain finer than the value noise
 		// can resolve, sampled at two world scales (1.2 m and 4.9 m per tile) so no single repeat reads as a
@@ -559,7 +571,7 @@ void fragment() {
 			vec3 dry = col * vec3(1.12, 1.06, 0.82);
 			vec3 lush = col * vec3(0.86, 0.96, 0.84);
 			col = mix(col, mix(lush, dry, smoothstep(0.35, 0.68, pt)), 0.55 * nk * lowland * (1.0 - crop * 0.6));
-			float fl = smoothstep(0.82, 0.95, t_hash12(floor(xz * 1.7) + 13.0)) * (1.0 - crop);
+			float fl = smoothstep(0.82, 0.95, t_hash12(floor(xz * 1.7) + 13.0)) * (1.0 - crop) * t_band(gpx, 0.45);
 			col = mix(col, col * vec3(1.18, 1.16, 1.02), fl * 0.35 * nk * lowland);
 		}
 	}
@@ -785,9 +797,10 @@ void fragment() {
 		float rk = (1.0 - smoothstep(1800.0, 9000.0, cam_d)) * (1.0 - water_k) * (1.0 - urban * 0.8);
 		if (rk > 0.001) {
 			float hb = t_vnoise2(xz * 0.016 + 3.0) * 3.2 + t_vnoise2(xz * 0.055 + 11.0) * 1.1
-				+ t_vnoise2(xz * 0.19 + 23.0) * 0.30 * (1.0 - smoothstep(300.0, 1200.0, cam_d))
+				+ (t_vnoise2(xz * 0.19 + 23.0) - 0.5) * 0.30 * (1.0 - smoothstep(300.0, 1200.0, cam_d)) * t_band(gpx, 5.3)
 				// tussocks and clods right under the camera: catch the low sun as a fine broken surface
-				+ (t_vnoise2(xz * 0.85 + 5.0) * 0.10 + t_vnoise2(xz * 2.9 + 17.0) * 0.035) * (1.0 - smoothstep(80.0, 450.0, cam_d));
+				// (pixel-size faded like the colour grain: an unresolved bump only sparkles under the low sun)
+				+ ((t_vnoise2(xz * 0.85 + 5.0) - 0.5) * 0.10 * t_band(gpx, 1.18) + (t_vnoise2(xz * 2.9 + 17.0) - 0.5) * 0.035 * t_band(gpx, 0.34)) * (1.0 - smoothstep(80.0, 450.0, cam_d));
 			// P2: the detail texture's B channel adds the same turf/soil micro relief to this lighting-only
 			// bump, so clods and tussocks catch the low sun right under the camera in exactly the places the
 			// colour grain above shows them. Fetched only when it can matter (the rk > 0.001 gate above plus
