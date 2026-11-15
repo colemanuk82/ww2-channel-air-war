@@ -2354,6 +2354,7 @@ func free_all() -> void:
 	for k in _tiles.keys():
 		(_tiles[k] as Node).queue_free()
 	_tiles.clear()
+	_free_tile_cache()
 
 
 func pin_site(key: String) -> void:
@@ -2398,6 +2399,13 @@ func _stream_tiles() -> void:
 			var c := Vector2((float(k.x) + 0.5) * TILE, (float(k.y) + 0.5) * TILE)
 			var d: float = c.distance_to(Vector2(fp.x, fp.z))
 			if d < TILE_RADIUS:
+				if _tile_cache.has(k):
+					# flown over before and kept resident: put the finished tile straight back
+					var cn: Node3D = (_tile_cache[k] as Dictionary)["node"]
+					_tile_cache.erase(k)
+					add_child(cn)
+					_tiles[k] = cn
+					continue
 				cand.append([_boost_dist(d, c, fp) if boost else d, k])
 	cand.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
 	# Finish the background tile job (the scatter maths ran on a worker; only node creation is left).
@@ -2480,11 +2488,54 @@ func _stream_tiles() -> void:
 	if _load_notes and boost and Time.get_ticks_msec() - int(_lstat[2]) > 3000:
 		_lstat[2] = Time.get_ticks_msec()
 		print("[loadnotes] sites_left=%d tiles_left=%d jobs=%d/%d tiles_done=%d avg_job=%.0f ms staged=%d" % [_pend_sites, _pend_tiles, _tile_jobs.size(), _max_tile_jobs(), _lstat[0], float(_lstat[1]) / maxf(float(_lstat[0]), 1.0) / 1000.0, _staged.size()])
+	var unfinished: Dictionary = {}
+	for ff in _finishing:
+		unfinished[(ff as Dictionary)["k"]] = true
 	for k3 in _tiles.keys():
 		var c3 := Vector2((float(k3.x) + 0.5) * TILE, (float(k3.y) + 0.5) * TILE)
 		if c3.distance_to(Vector2(fp.x, fp.z)) > TILE_RADIUS + TILE * 1.5:
-			(_tiles[k3] as Node).queue_free()
+			var tn: Node3D = _tiles[k3]
 			_tiles.erase(k3)
+			if _tile_cache_cap() > 0 and not unfinished.has(k3) and not boost and tn.is_inside_tree() and VramBudget.has_headroom():
+				# keep the finished tile (its meshes stay in video memory) out of the tree, not freed
+				remove_child(tn)
+				_tile_stamp += 1
+				_tile_cache[k3] = {"node": tn, "stamp": _tile_stamp}
+			else:
+				tn.queue_free()
+	_trim_tile_cache(fp)
+
+
+var _tile_cache: Dictionary = {}     # Vector2i -> {"node", "stamp"}: finished tiles flown away from, kept out of the tree
+var _tile_stamp: int = 0
+
+
+## Most tiles kept resident: scaled to the card's video memory (4 GB ~ 40, 8 GB ~ 80, 16 GB ~ 160).
+func _tile_cache_cap() -> int:
+	return int(40.0 * VramBudget.factor())
+
+
+func _trim_tile_cache(fp: Vector3) -> void:
+	var cap: int = _tile_cache_cap()
+	if not VramBudget.has_headroom():
+		cap = cap / 2
+	while _tile_cache.size() > cap:
+		# drop the one furthest from the aircraft
+		var worst: Vector2i = Vector2i.ZERO
+		var wd: float = -1.0
+		for k in _tile_cache.keys():
+			var d: float = Vector2((float(k.x) + 0.5) * TILE, (float(k.y) + 0.5) * TILE).distance_to(Vector2(fp.x, fp.z))
+			if d > wd:
+				wd = d
+				worst = k
+		((_tile_cache[worst] as Dictionary)["node"] as Node).free()
+		_tile_cache.erase(worst)
+
+
+func _free_tile_cache() -> void:
+	for k in _tile_cache.keys():
+		((_tile_cache[k] as Dictionary)["node"] as Node).free()
+	_tile_cache.clear()
 
 
 ## Load-screen preload radius: BOOST_RADIUS, smaller on the Low view distance (its scenery ends sooner too), so a

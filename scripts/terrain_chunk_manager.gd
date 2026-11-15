@@ -33,6 +33,12 @@ var _task_ids: Array = []
 var _generation: int = 0        # bumps on rebuild so stale results are dropped
 var _base_lod: Array = []
 var _pin_pos: Vector3 = Vector3(INF, 0.0, INF)
+var _mesh_cache: Dictionary = {}   # Vector3i(chunk x, chunk z, lod) -> {"mesh", "bytes", "stamp"}: built chunk meshes kept resident
+var _cache_bytes: int = 0
+var _cache_stamp: int = 0
+var _cache_budget: int = int(96.0 * 1048576.0 * VramBudget.factor())   # 4 GB card 96 MB .. 16 GB card 384 MB
+var cache_hits: int = 0
+var cache_misses: int = 0
 var _pin_radius: float = 0.0    # keep the start/respawn airfield's terrain resident while the player flies away
 
 # Kept for the whole session: a replay / next mission reuses the imagery and urban-mask textures instead of decoding
@@ -315,6 +321,8 @@ func _sea_distance_image(b: Rect2) -> Image:
 
 
 func _exit_tree() -> void:
+	if cache_hits + cache_misses > 0:
+		print("[terrain cache] hits %d misses %d kept %d (%.1f MB of %.0f MB budget)" % [cache_hits, cache_misses, _mesh_cache.size(), _cache_bytes / 1048576.0, _cache_budget / 1048576.0])
 	for id in _task_ids:
 		WorkerThreadPool.wait_for_task_completion(id)
 	_task_ids.clear()
@@ -366,6 +374,8 @@ func is_water_at(pos: Vector3) -> bool:
 ## Drop all chunks and regenerate (e.g. after adding flat zones).
 func rebuild() -> void:
 	_generation += 1
+	_mesh_cache.clear()      # the heights changed (flat zones): cached meshes are stale
+	_cache_bytes = 0
 	for k in _chunks.keys():
 		(_chunks[k]["node"] as Node).queue_free()
 	_chunks.clear()
@@ -465,6 +475,7 @@ func _update_streaming() -> void:
 			(_chunks[key]["node"] as Node).queue_free()
 			_chunks.erase(key)
 	requests.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	var _cache_installs: int = 0
 	for r in requests:
 		if _inflight >= max_inflight:
 			break
@@ -520,6 +531,37 @@ func _drain_results() -> void:
 func _install(key: Vector2i, lod: int, arrays: Array) -> void:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	cache_misses += 1
+	_cache_put(key, lod, mesh, arrays)
+	_install_mesh(key, lod, mesh)
+
+
+## Remember a built chunk mesh (least recently used goes first once over the VRAM-scaled budget).
+func _cache_put(key: Vector2i, lod: int, mesh: ArrayMesh, arrays: Array) -> void:
+	if _cache_budget <= 0 or not VramBudget.has_headroom():
+		return
+	var bytes: int = (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() * 40
+	if arrays[Mesh.ARRAY_INDEX] != null:
+		bytes += (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() * 4
+	var ck := Vector3i(key.x, key.y, lod)
+	if _mesh_cache.has(ck):
+		_cache_bytes -= int(_mesh_cache[ck]["bytes"])
+	_cache_stamp += 1
+	_mesh_cache[ck] = {"mesh": mesh, "bytes": bytes, "stamp": _cache_stamp}
+	_cache_bytes += bytes
+	while _cache_bytes > _cache_budget and _mesh_cache.size() > 1:
+		var oldest: Vector3i = ck
+		var os: int = 1 << 60
+		for k in _mesh_cache.keys():
+			var st: int = int(_mesh_cache[k]["stamp"])
+			if st < os and k != ck:
+				os = st
+				oldest = k
+		_cache_bytes -= int(_mesh_cache[oldest]["bytes"])
+		_mesh_cache.erase(oldest)
+
+
+func _install_mesh(key: Vector2i, lod: int, mesh: ArrayMesh) -> void:
 	var node: MeshInstance3D
 	if _chunks.has(key):
 		node = _chunks[key]["node"]

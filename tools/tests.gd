@@ -66,6 +66,7 @@ func _ready() -> void:
 	_test_ai_takeoff_all()
 	_test_realism()
 	_test_weak_gpu()
+	_test_vram_budget()
 	_test_accessibility()
 	_test_awards()
 	_test_legal_docs()
@@ -2441,6 +2442,14 @@ func _test_accessibility() -> void:
 	_check(g2.r > g2.b, "green friendly colour becomes yellow in colour-blind mode")
 	_check(is_equal_approx(GameState.accessible_color(Color(1, 0.5, 0.4, 0.5)).a, 0.5) or true, "alpha kept")
 	GameState.colorblind = save
+
+
+func _test_vram_budget() -> void:
+	var mb: int = VramBudget.total_mb()
+	_check(mb >= VramBudget.MIN_MB, "VRAM budget: total %d MB is at least the floor" % mb)
+	var f: float = VramBudget.factor()
+	_check(f >= 0.5 and f <= 6.0 or f == 0.0, "VRAM budget: cache factor %.2f is in range" % f)
+	_check(VramBudget.used_mb() >= 0.0, "VRAM budget: used memory readable")
 
 
 func _test_weak_gpu() -> void:
