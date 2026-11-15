@@ -84,6 +84,7 @@ func _ready() -> void:
 	_test_report_link()
 	_test_gameplay_additions()
 	_test_stale_enemy_cache()
+	_test_weapon_targets_left_tree()
 	_test_combat_audio()
 	_test_controls_ui()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
@@ -203,6 +204,21 @@ func _test_stale_enemy_cache() -> void:
 	f._tick_defence(1.0, stale)
 	_check(is_instance_valid(f), "a bomber formation survives a stale enemy in its defence list")
 	f.queue_free()
+
+
+func _test_weapon_targets_left_tree() -> void:
+	print("-- weapon targets taken out of the world between refreshes are skipped")
+	var t := Node3D.new()
+	t.add_to_group("damageable")
+	add_child(t)
+	Weapons._refresh_targets(true)
+	var idx: int = Weapons._tn.find(t)
+	_check(idx >= 0, "a damageable node in the tree is a weapon target")
+	remove_child(t)      # still alive, no longer in the tree: global_position would log an error every frame
+	Weapons._refresh_targets(false)
+	_check(idx >= 0 and Weapons._tr[idx] < 0.0, "a target that left the tree is dropped from the hit list")
+	t.free()
+	Weapons._refresh_targets(true)
 
 
 func _test_report_link() -> void:

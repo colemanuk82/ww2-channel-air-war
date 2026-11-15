@@ -282,7 +282,7 @@ func _refresh_targets(full: bool) -> void:
 			_nt += 1
 	for i in _nt:
 		var nd2: Node3D = _tn[i]
-		if is_instance_valid(nd2):
+		if is_instance_valid(nd2) and nd2.is_inside_tree():     # one taken out of the world since the full refresh has no position
 			_tp[i] = nd2.global_position
 		else:
 			_tr[i] = -1.0
