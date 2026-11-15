@@ -1866,6 +1866,7 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 	# a row stops at the tile edge (the neighbouring tile traces its own part)
 	var traced: Dictionary = {"_rect": Rect2(origin, Vector2(cell, cell))}
 	var street_rows: Dictionary = {}     # realistic towns: street-grid row slots already built in this tile
+	var tile_rect := Rect2(origin, Vector2(cell, cell))
 	for j in n:
 		for i in n:
 			var p := Vector2(origin.x + (float(i) + rng.randf()) * step, origin.y + (float(j) + rng.randf()) * step)
@@ -1937,7 +1938,13 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 						var edge_f: float = _built_frac(p)
 						if GameState.realistic_scenery:
 							if rng.randf() < 0.95 * (0.5 + 0.5 * edge_f):
-								_add_street_row(houses, p, rng, house_yaw, street_rows, exclude, trees_r)
+								# the 22 m samples missed about a third of the 26 x 13 m row slots, which left the painted
+								# streets half empty: try the slots round the sample too (each slot is built once, by
+								# the tile that holds its centre)
+								for off in STREET_FILL:
+									var pq: Vector2 = p + (off as Vector2)
+									if LandCover.class_at(pq.x, pq.y) == 50 and not in_park(pq.x, pq.y):
+										_add_street_row(houses, pq, rng, house_yaw, street_rows, exclude, trees_r, tile_rect)
 						elif rng.randf() < 0.88 * (0.45 + 0.55 * edge_f) and _ok(p, exclude, 1.2):
 							# the town's rows bend and merge with the next block instead of running dead straight
 							var yaw_j: float = house_yaw + (_vn(p.x * 0.0035 + 71.0, p.y * 0.0035 + 71.0) - 0.5) * 1.1 + rng.randf_range(-0.05, 0.05)
@@ -2380,6 +2387,7 @@ static func _add_terrace(lists: Array, p: Vector2, rng: RandomNumberGenerator, y
 		lst.append(_xf(Vector3(q.x, y, q.y), a, Vector3(unit_w * 1.02, h, depth)))
 
 
+const STREET_FILL := [Vector2.ZERO, Vector2(11.0, 0.0), Vector2(0.0, 11.0), Vector2(11.0, 11.0)]   # sub-samples per 22 m step
 const STREET_BLOCK: float = 34.0     # street (8 m) + front row + back yards + back row, across the street grid
 const STREET_SEG: float = 26.0       # one terrace slot along the street
 const CROSS_EVERY: float = 130.0     # a cross street every ~130 m
@@ -2389,7 +2397,7 @@ const CROSS_EVERY: float = 130.0     # a cross street every ~130 m
 ## constant inside each ~420 m district (so neighbouring rows line up) and changes between districts; each block
 ## is a street, a row of terraced houses facing it, back yards, and the next row facing the next street. Cross
 ## streets cut the rows every ~130 m, so streets and junctions show from the air. Each slot is built once.
-static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator, base_yaw: float, done: Dictionary, exclude: Array, town_trees: Array = []) -> void:
+static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator, base_yaw: float, done: Dictionary, exclude: Array, town_trees: Array = [], tile_rect: Rect2 = Rect2()) -> void:
 	var dc := Vector2i(floori(p.x / 420.0), floori(p.y / 420.0))
 	var a: float = _ih(dc.x, dc.y, 10) * PI     # by district, not by tile, so tiles agree
 	var along := Vector2(cos(a), -sin(a))
@@ -2412,6 +2420,9 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 		return
 	done[key] = true
 	var c: Vector2 = org + along * u_c + across * v_c
+	if tile_rect.has_area() and not tile_rect.has_point(c):
+		done.erase(key)
+		return                                            # the neighbouring tile builds this slot (no doubled rows)
 	if not _ok(c, exclude, 1.2):
 		return
 	_add_town_trees(town_trees, dc, int(bi), row, int(si), org, along, across, u_c, exclude)
