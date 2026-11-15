@@ -1,3 +1,44 @@
+# SESSION 2026-11-14/15: six-part improvement list, then town and terrain fixes (all on main)
+Owner asked for "all except store" from a six-part list; each part landed on main as its own commit (tests pass,
+4469 at the end). No release was made by this session (a separate thread cut one from main at b667528).
+`docs/STATUS.md` is now the one current-state page; old briefs / phase boards / release_v*.sh moved to `docs/archive/`.
+
+**Done**
+- Safety/release: `.github/workflows/tests.yml` (Windows runner, builds Godot 4.7.2 double once with
+  `accesskit=no d3d12=no`, cached; first run ~44 min, passes). `tools/shotcheck/` screenshot baselines
+  (`WW2_SHOTCHECK` holds the menu painting still). `scripts/report_link.gd`: opt-in crash report / feedback =
+  pre-filled GitHub issue (user paths scrubbed). Optional once-a-day update check (off by default).
+- Loading: `RoadMesh/RiverMesh.prepare_block` filled cells far outside each tile (~1.7 s per tile job): row spans
+  clipped to the tile -> Detling start 120+ s -> ~43 s (now ~56 s after the denser towns). Very-far tree tier past
+  2.5 km. Low preset preloads less. Debug: `--loadnotes`, `--prim-audit=N`, `WW2_TILE_JOBS`, richer `[spike]`.
+  The ~110 warm-up jobs were NOT threaded (no longer the bottleneck). Big-town frame rate is GPU-bound (shading,
+  not triangles) - needs a GPU profiler.
+- Visuals: near-LOD sash windows (TownModels._win), bombed tile towns lose trees, tree belts round paved fields.
+- UI: Training > First flight (taxi from dispersal, `wants_dispersal_start`), keyboard rebinding + 3 control
+  profiles, flight assists (auto-rudder / stall guard).
+- Audio: whiz / ricochet (procedural), cockpit low-pass on SFX bus, combat-aware GameMusic.
+- Gameplay: gun jams (on by default) + convergence option, Patrol Missions mode (OpsRoom kinds), Pilot's Life
+  squadron roster + branching steps (`"when"` in data/career.json).
+- Terrain / towns (owner feedback 15 Nov): terrain chunks stream nearest first (ground looked like water round
+  the aircraft); grid towns now fill every street slot (STREET_FILL sub-samples, slot built only by the tile
+  holding its centre); terraces keep 16 m from rails (`RoadMesh.near_rail_within`, rail segment index) instead of
+  ~45 m; painted street grid suppressed beside railways (terrain vertex colour R, `RoadMesh.rail_distance`);
+  named-town circles let grid rows fill where the town's own houses / civic footprints are not
+  (`Scatter.town_slot_taken`, computed once per town under a lock); rural sites inside a named town are skipped
+  and civil-defence sites there keep a 55 m plot / 25 m road gap (they sat on Maidstone's centre point and cut
+  its houses and roads out). The owner rejected 3D street strips and the near-range grid fade: both reverted.
+
+**Open / next**
+- Owner stopped work before: houses keep ~50 m back from wide rivers (RiverMesh block margin `hw + 18`), leaving
+  empty grid strips along the Medway. Narrowing it for houses was proposed, not started - ask first.
+- Not done from the list: per-type enemy tactics, bomber formation defence tuning, AI skill tuning (needs
+  play-testing); hit-confirm marker deliberately not re-added (owner removed it before).
+- Test runs that hit the hidden_run timeout leave `blackbox_CRASH_*` in the real user logs (menu shows a crash notice).
+- A teardown-only `SCRIPT ERROR: Trying to cast a freed object` (target_index.gd:217) sometimes prints after
+  `TESTS OK`; pre-existing race at shutdown.
+- Worktree workflow notes (import cache copy, CRLF-safe patching, buffered stdout, `--quit-after` counts from
+  before the load): see the assistant memory file `worktree-workflow.md`.
+
 # SESSION 2026-11-15: VRAM-scaled keep-alive caches
 - New `scripts/vram_budget.gd` (`VramBudget`): total VRAM read once from the Windows display-driver registry
   (`HardwareInformation.qwMemorySize`), cached in `user://vram_mb.txt`; `WW2_VRAM_MB` overrides, `WW2_NO_CACHE=1` turns the
