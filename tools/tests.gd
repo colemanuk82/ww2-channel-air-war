@@ -1218,7 +1218,7 @@ func _test_map_edits() -> void:
 	var a2: Dictionary = MapEdits.adds()[1]
 	_check(float(a2["yaw"]) == 0.0 and float(a2["scale"]) == 1.0, "a missing yaw and scale default")
 	MapEdits.load()
-	_check(MapEdits.adds().is_empty() and MapEdits.removes().is_empty(), "the shipped data/map_edits.json ships empty")
+	_check(MapEdits.adds().size() + MapEdits.removes().size() == MapEdits.all().size(), "every row of the shipped data/map_edits.json is a valid add or remove")
 	var bad: Dictionary = {"version": 1, "edits": [1, {},
 		{"op": "warp", "id": "b1", "lat": 1.0, "lon": 2.0},
 		{"op": "add", "id": "b2", "lat": 1.0, "lon": 2.0},
@@ -2853,10 +2853,10 @@ func _test_map_editor_edits() -> void:
 	var p: String = "user://t_map_editor.json"
 	var EditHistoryScript := load("res://tools/map_editor/edit_history.gd")
 	var h = EditHistoryScript.new()
-	# The shipped file ships empty, so seed a starting document the way a first session builds one:
+	# The shipped file may hold the author's edits, so seed a starting document the way a first session builds one:
 	# one add and one remove, which is what the rest of this test adds to.
 	MapEdits.load()
-	_check(MapEdits.all().is_empty(), "the shipped edit file starts empty")
+	_check(MapEdits.adds().size() + MapEdits.removes().size() == MapEdits.all().size(), "the shipped edit file holds only valid rows")
 	var seed_doc: Array = [
 		{"op": "add", "id": "s1", "asset": "barn", "lat": 49.10, "lon": -0.30, "yaw": 0.0, "scale": 1.0},
 		{"op": "remove", "id": "s2", "lat": 49.12, "lon": -0.28, "radius": 30.0, "what": "all"}]

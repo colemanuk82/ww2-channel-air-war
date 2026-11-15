@@ -1,4 +1,77 @@
 {
-	"version": 1,
-	"edits": []
+	"edits": [
+		{
+			"asset": "fuel_tank",
+			"id": "a1",
+			"lat": 50.77887,
+			"lon": -1.84818,
+			"op": "add",
+			"scale": 1.0,
+			"yaw": 0.0
+		},
+		{
+			"asset": "fuel_tank",
+			"id": "a2",
+			"lat": 50.77891,
+			"lon": -1.84779,
+			"op": "add",
+			"scale": 1.0,
+			"yaw": 0.0
+		},
+		{
+			"asset": "camo_net",
+			"id": "a3",
+			"lat": 50.77862,
+			"lon": -1.84797,
+			"op": "add",
+			"scale": 1.0,
+			"yaw": 0.0
+		},
+		{
+			"asset": "camo_tent",
+			"id": "a4",
+			"lat": 50.77783,
+			"lon": -1.84889,
+			"op": "add",
+			"scale": 1.0,
+			"yaw": 0.0
+		},
+		{
+			"asset": "halftrack",
+			"id": "a5",
+			"lat": 50.77992,
+			"lon": -1.84917,
+			"op": "add",
+			"scale": 1.0,
+			"yaw": 0.0
+		},
+		{
+			"asset": "truck",
+			"id": "a6",
+			"lat": 50.77986,
+			"lon": -1.84869,
+			"op": "add",
+			"scale": 1.0,
+			"yaw": 0.0
+		},
+		{
+			"asset": "nissen",
+			"id": "a7",
+			"lat": 50.77987,
+			"lon": -1.84896,
+			"op": "add",
+			"scale": 1.0,
+			"yaw": 0.0
+		},
+		{
+			"asset": "tank",
+			"id": "a8",
+			"lat": 50.78003,
+			"lon": -1.84898,
+			"op": "add",
+			"scale": 1.0,
+			"yaw": 0.0
+		}
+	],
+	"version": 1
 }

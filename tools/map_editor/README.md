@@ -1,13 +1,12 @@
 # Map editor
 
 Hand-made corrections to the game's world: place buildings and props, and cut removal circles so the
-procedural scatter keeps out of a spot. It is a developer tool - players never see it, and it is not
-part of the exported game.
+procedural scatter keeps out of a spot. It is a developer tool - players never see it - but it is packed into releases, so it can be run from the installed game too.
 
 The editor is a **separate app that lives inside this project**: its own scene rather than a second
 Godot project, because a nested `project.godot` cannot see the game's `res://` scripts or data. That
-is why it runs with the repo root as the project path. `export_presets.cfg` has
-`exclude_filter="tools/*"`, so nothing in here is packed into a release.
+is why it runs with the repo root as the project path. `export_presets.cfg` excludes the other tool folders
+from the export but not this one.
 
 ## Running it
 
