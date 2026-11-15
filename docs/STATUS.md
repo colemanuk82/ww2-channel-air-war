@@ -59,4 +59,4 @@ Never open a visible game window on the developer's PC: everything with pictures
 * **Audio:** bullet whiz and ricochets, cockpit low-pass, combat-aware in-flight music (all procedural).
 * **Gameplay:** gun jams (on by default) and a convergence option; *Patrol Missions* mode (pick an Ops Room job:
   intercept, recce, rescue, convoy hunt...); Pilot's Life squadron roster and branching story steps (`when`).
-* Known: in hidden-desktop screenshots the ground over Kent can render as water (also in v4.14); unconfirmed in play.
+* Terrain chunks now stream nearest first (they were built in grid order from the far corner, so the ground filled in from the horizon and showed as water round the aircraft).

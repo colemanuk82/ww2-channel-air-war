@@ -413,6 +413,7 @@ func _update_streaming() -> void:
 	var cx0: int = floori(fp.x / chunk_size)
 	var cz0: int = floori(fp.z / chunk_size)
 	var wanted: Dictionary = {}
+	var dist: Dictionary = {}      # key -> distance from the focus: the nearest chunks are built first
 	for dz in range(-cr, cr + 1):
 		for dx in range(-cr, cr + 1):
 			var key := Vector2i(cx0 + dx, cz0 + dz)
@@ -426,6 +427,7 @@ func _update_streaming() -> void:
 			if lod < 0:
 				continue
 			wanted[key] = lod
+			dist[key] = d
 	# The pinned start area stays wanted at its own detail, even when the focus is far away.
 	if _pin_radius > 0.0 and is_finite(_pin_pos.x):
 		var pcr: int = int(ceil(_pin_radius / chunk_size)) + 1
@@ -452,7 +454,11 @@ func _update_streaming() -> void:
 		var lod2: int = int(wanted[key])
 		var current2: int = _chunks[key]["lod"] if _chunks.has(key) else -1
 		if lod2 != current2 and _pending.get(key, -2) != lod2:
-			requests.append([0.0, key, lod2])
+			# nearest first (the requests were all priority 0, so chunks were built in grid order from the far
+			# corner and the ground filled in from the horizon towards the aircraft); a chunk that has nothing yet
+			# beats one that only changes detail
+			var pri: float = float(dist.get(key, 0.0)) + (0.0 if current2 < 0 else 4000.0)
+			requests.append([pri, key, lod2])
 	# unload far chunks
 	for key in _chunks.keys():
 		if not wanted.has(key):
