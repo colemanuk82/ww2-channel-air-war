@@ -2410,14 +2410,12 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 	var bi: float = floorf(v / STREET_BLOCK)
 	var fv: float = v - bi * STREET_BLOCK
 	if fv < 8.0:
-		_street_slot(streets, done, dc, int(bi), int(floorf(u / STREET_SEG)), org, along, across, a, false)
 		return                                            # the street itself
 	var row: int = 0 if fv < 21.0 else 1
 	var v_c: float = bi * STREET_BLOCK + (12.5 if row == 0 else 29.5)
 	var si: float = floorf(u / STREET_SEG)
 	var u_c: float = (si + 0.5) * STREET_SEG
 	if fposmod(u_c, CROSS_EVERY) < STREET_SEG:
-		_cross_slot(streets, done, dc, int(bi), int(si), org, along, across, a, u_c)
 		return                                            # a cross street / square
 	var key := Vector4i(dc.x, dc.y, int(bi) * 2 + row, int(si))
 	if done.has(key):
@@ -2461,43 +2459,14 @@ static func _add_street_row(lists: Array, p: Vector2, rng: RandomNumberGenerator
 				(lists[3] as Array).append(_xf(Vector3(eq.x, ey, eq.y), face, Vector3(rng.randf_range(2.8, 4.0), eh, rng.randf_range(3.0, 4.0))))
 	# the street this row faces, laid once per slot (both rows of a street share it), only where houses stand, never
 	# over water or a real road ribbon
-	_street_slot(streets, done, dc, int(bi) + row, int(si), org, along, across, a, placed > 0)
-
-
-## Built-up ground for the street grid: the land-cover town class, outside the parks.
-static func _built_at(q: Vector2) -> bool:
-	return LandCover.class_at(q.x, q.y) == 50 and not in_park(q.x, q.y)
-
-
-## One slot of the main street `street_i` (the street a row faces). Laid when its row has houses (`with_houses`),
-## or - to join the gaps - when the slot and the slots either side of it along the street are all built-up land,
-## so a street runs on through a gap in the houses but never out into the fields. Junction slots are included.
-## Never over water, a river or a real road ribbon. Each slot once (`done`), whichever tile or row reaches it.
-static func _street_slot(streets: Array, done: Dictionary, dc: Vector2i, street_i: int, si: int, org: Vector2, along: Vector2, across: Vector2, a: float, with_houses: bool) -> void:
-	var skey := Vector4i(dc.x, dc.y, -1000 - street_i, si)
-	if done.has(skey):
-		return
-	var u_c: float = (float(si) + 0.5) * STREET_SEG
-	var sc: Vector2 = org + along * u_c + across * (float(street_i) * STREET_BLOCK + 4.0)
-	if not with_houses and not (_built_at(sc) and _built_at(sc + along * STREET_SEG) and _built_at(sc - along * STREET_SEG)):
-		return
-	done[skey] = true
-	if _land(sc.x, sc.y, 1.0) and not RoadMesh.near_road(sc, 3.0) and not RiverMesh.near_river(sc):
-		streets.append(_xf(Vector3(sc.x, GroundKit.ground_y(sc.x, sc.y), sc.y), a, Vector3(STREET_SEG + 0.4, 1.0, 1.0)))
-
-
-## The cross street in a junction slot: it runs across the block between main street `bi` and the next one, where
-## the terrain shader paints it too. Laid when the ground on both sides of it along the main street is built-up.
-static func _cross_slot(streets: Array, done: Dictionary, dc: Vector2i, bi: int, si: int, org: Vector2, along: Vector2, across: Vector2, a: float, u_c: float) -> void:
-	var ckey := Vector4i(dc.x, dc.y, -5000 - bi, si)
-	if done.has(ckey):
-		return
-	done[ckey] = true
-	var cc: Vector2 = org + along * u_c + across * (float(bi) * STREET_BLOCK + 21.0)
-	if not (_built_at(cc) and _built_at(cc + along * STREET_SEG) and _built_at(cc - along * STREET_SEG)):
-		return
-	if _land(cc.x, cc.y, 1.0) and not RoadMesh.near_road(cc, 3.0) and not RiverMesh.near_river(cc):
-		streets.append(_xf(Vector3(cc.x, GroundKit.ground_y(cc.x, cc.y), cc.y), a + PI * 0.5, Vector3(STREET_BLOCK - 7.6, 1.0, 1.0)))
+	if placed > 0:
+		var street_i: int = int(bi) + row
+		var skey := Vector4i(dc.x, dc.y, -1000 - street_i, int(si))
+		if not done.has(skey):
+			done[skey] = true
+			var sc: Vector2 = org + along * u_c + across * (float(street_i) * STREET_BLOCK + 4.0)
+			if _land(sc.x, sc.y, 1.0) and not RoadMesh.near_road(sc, 3.0) and not RiverMesh.near_river(sc):
+				streets.append(_xf(Vector3(sc.x, GroundKit.ground_y(sc.x, sc.y), sc.y), a, Vector3(STREET_SEG + 0.4, 1.0, 1.0)))
 
 
 ## Street and garden trees for one terrace slot (realistic towns). Broadleaf only (limes, planes, fruit trees).
