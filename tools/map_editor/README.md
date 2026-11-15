@@ -111,6 +111,17 @@ It costs about 7 s to build the world the first time and ~10-25 s before everyth
 streamed in (the corner readout shows the tile and chunk counts while it settles). Quitting closes it
 first so the game's streaming worker threads are joined cleanly.
 
+It is **live**: every change to the document (place, move, rotate, resize, delete, paste, a new remove
+circle, undo, redo) shows in the open window within 0.15 s, saved or not, and opening the window shows
+the unsaved document too. Only what changed is rebuilt (`WorldPopulator.refresh_map_edits`): a placed
+asset moves or turns in place, and a remove circle that appears, goes or changes drops just the
+scenery tiles under it, which stream straight back in without the cut houses / trees / hedges. A
+`sites` (or `all`) circle keeps new sites out but does not take down a town or airfield that is
+already standing; that only happens when the world is next built from the saved file (save, then
+close and reopen the window), as in the game.
+Self-test: `--editor-3d --editor-place=<asset>` places the asset at the 3D view's centre half way to
+the `--editor-shot` frame.
+
 ## Grid
 
 `G`, or the Grid button, draws a map-space grid. It is adaptive: the step is the smallest of

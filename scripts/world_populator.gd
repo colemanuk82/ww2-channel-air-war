@@ -162,6 +162,10 @@ func _exit_tree() -> void:
 	for j in _tile_jobs:
 		WorkerThreadPool.wait_for_task_completion(int((j as Dictionary)["task"]))
 	_tile_jobs.clear()
+	for ob in _orphan_flat:      # dropped tile jobs / merges still running (see _drop_tile, _advance_finishing)
+		if int((ob as Array)[0]) >= 0:
+			WorkerThreadPool.wait_for_task_completion(int((ob as Array)[0]))
+	_orphan_flat.clear()
 	for st in _sites:            # site work still running on a worker (see _site_work)
 		for k in (st as Dictionary).keys():
 			if String(k).ends_with("_task") and st[k] is Array:
@@ -866,25 +870,196 @@ func _build_kammhuber(s: Dictionary) -> Node3D:
 ## site keep-out stops real sites (airfields, industry, towns...) appearing where a `sites` removal covers.
 func _register_map_edits() -> void:
 	MapEdits.load()
-	for e in MapEdits.removes():
-		var what: String = str(e["what"])
-		if what == "all" or what == "sites":
-			_exclude.append([WorldCoords.latlon_to_world(float(e["lat"]), float(e["lon"])), float(e["radius"])])
+	_edit_removes = MapEdits.removes()
+	_apply_edit_excludes()
 	var n: int = 0
 	for e in MapEdits.adds():
-		var key: String = str(e["asset"])
-		if not MapAssets.has(key):
-			push_warning("WorldPopulator: map edit '%s' has unknown asset '%s'" % [str(e["id"]), key])
+		if _add_map_edit_site(e):
+			n += 1
+	if MapEdits.has_edits():
+		GroundKit.lp("  _register_map_edits (%d adds, %d removes)" % [n, _edit_removes.size()])
+
+
+var _edit_rows: Dictionary = {}     # edit id -> the validated `add` row its live "edit_<id>" site was made from
+var _edit_removes: Array = []       # the validated `remove` rows the world is currently built with
+var _edit_exclude: Array = []       # the _exclude entries made from those rows (replaced on a refresh)
+
+
+## One `add` row as its own small site ("edit_<id>"). False (after a warning) for an unknown asset or a
+## position off the map.
+func _add_map_edit_site(e: Dictionary) -> bool:
+	var id: String = str(e["id"])
+	var key: String = str(e["asset"])
+	if not MapAssets.has(key):
+		push_warning("WorldPopulator: map edit '%s' has unknown asset '%s'" % [id, key])
+		return false
+	var pos: Vector3 = WorldCoords.latlon_to_world(float(e["lat"]), float(e["lon"]))
+	if not WorldCoords.is_in_bounds(pos):
+		push_warning("WorldPopulator: map edit '%s' is outside the map" % id)
+		return false
+	_add_site("edit_" + id, pos, 8000.0, _build_map_add,
+		{"asset": key, "yaw": float(e["yaw"]), "scale": float(e["scale"])})
+	_edit_rows[id] = e
+	return true
+
+
+## Site keep-outs for the `all` / `sites` remove circles. A fresh _exclude array is made rather than editing
+## the old one in place: tile jobs already running on workers hold the old one and keep reading it safely.
+func _apply_edit_excludes() -> void:
+	var ex: Array = []
+	for e0 in _exclude:
+		var keep: bool = true
+		for m in _edit_exclude:
+			if is_same(e0, m):
+				keep = false
+				break
+		if keep:
+			ex.append(e0)
+	_edit_exclude = []
+	for e in _edit_removes:
+		var what: String = str(e["what"])
+		if what == "all" or what == "sites":
+			var entry: Array = [WorldCoords.latlon_to_world(float(e["lat"]), float(e["lon"])), float(e["radius"])]
+			_edit_exclude.append(entry)
+			ex.append(entry)
+	_exclude = ex
+
+
+## The map editor changed its document: bring the live world in line with `rows` without rebuilding it.
+## Added / moved / turned / rescaled / deleted `add` rows change only their own "edit_<id>" site (a built
+## node is moved in place; a new asset means a fresh build). Remove circles that appeared, went or changed
+## drop the scenery tiles under them, so normal streaming rebuilds just those tiles with the new circles.
+## Returns {"added", "moved", "dropped", "tiles"} counts (for the tests and the editor's log).
+func refresh_map_edits(rows: Array) -> Dictionary:
+	MapEdits.set_rows(rows)
+	var out: Dictionary = {"added": 0, "moved": 0, "dropped": 0, "tiles": 0}
+	var next: Dictionary = {}
+	for e in MapEdits.adds():
+		next[str(e["id"])] = e
+	for id in _edit_rows.keys():
+		if not next.has(id):
+			_drop_map_edit_site(str(id))
+			out["dropped"] += 1
+	for id in next.keys():
+		var e: Dictionary = next[id]
+		if not _edit_rows.has(id):
+			if _add_map_edit_site(e):
+				out["added"] += 1
+			continue
+		var old: Dictionary = _edit_rows[id]
+		if old == e:
+			continue
+		if str(old["asset"]) != str(e["asset"]) or not _site_by_key.has("edit_" + str(id)):
+			_drop_map_edit_site(str(id))
+			if _add_map_edit_site(e):
+				out["added"] += 1
 			continue
 		var pos: Vector3 = WorldCoords.latlon_to_world(float(e["lat"]), float(e["lon"]))
 		if not WorldCoords.is_in_bounds(pos):
-			push_warning("WorldPopulator: map edit '%s' is outside the map" % str(e["id"]))
+			push_warning("WorldPopulator: map edit '%s' is outside the map" % str(id))
+			_drop_map_edit_site(str(id))
+			out["dropped"] += 1
 			continue
-		_add_site("edit_" + str(e["id"]), pos, 8000.0, _build_map_add,
-			{"asset": key, "yaw": float(e["yaw"]), "scale": float(e["scale"])})
-		n += 1
-	if MapEdits.has_edits():
-		GroundKit.lp("  _register_map_edits (%d adds, %d removes)" % [n, MapEdits.removes().size()])
+		var s: Dictionary = _site_by_key["edit_" + str(id)]
+		s["pos"] = pos
+		s["yaw"] = float(e["yaw"])
+		s["scale"] = float(e["scale"])
+		var n: Variant = s["node"]
+		if n != null and is_instance_valid(n):
+			_place_map_add(n as Node3D, s)
+		_edit_rows[id] = e
+		out["moved"] += 1
+	var new_r: Array = MapEdits.removes()
+	var keys: Array = tiles_touched_by_removes(_edit_removes, new_r, TILE)
+	if new_r != _edit_removes:
+		_edit_removes = new_r
+		_apply_edit_excludes()
+	for k in keys:
+		if _drop_tile(k):
+			out["tiles"] += 1
+	if not keys.is_empty():
+		BeachKit.forget(keys)
+	return out
+
+
+## Free one hand-made addition's site and forget it.
+func _drop_map_edit_site(id: String) -> void:
+	_edit_rows.erase(id)
+	var key: String = "edit_" + id
+	if not _site_by_key.has(key):
+		return
+	var s: Dictionary = _site_by_key[key]
+	_free_site(s)
+	s.erase("slicing")              # a build still going in is dropped when it finishes (see _sliced_done)
+	_site_by_key.erase(key)
+	for i in range(_sites.size() - 1, -1, -1):
+		if is_same(_sites[i], s):
+			_sites.remove_at(i)
+			break
+
+
+## Drop scenery tile `k` (built, cached or still being scattered) so streaming rebuilds it. True when
+## there was anything to drop.
+func _drop_tile(k: Vector2i) -> bool:
+	var hit: bool = false
+	if _tiles.has(k):
+		var tn: Node = _tiles[k]
+		_tiles.erase(k)              # a tile still finishing notices this and stops (see _advance_finishing)
+		if is_instance_valid(tn):
+			if tn.is_inside_tree():
+				tn.queue_free()
+			else:
+				tn.free()
+		hit = true
+	if _tile_cache.has(k):
+		((_tile_cache[k] as Dictionary)["node"] as Node).free()
+		_tile_cache.erase(k)
+		hit = true
+	for i in range(_tile_jobs.size() - 1, -1, -1):
+		var jb: Dictionary = _tile_jobs[i]
+		if jb["k"] == k:
+			# its scatter ran with the old circles: let the worker finish, then throw the result away
+			_orphan_flat.append([int(jb["task"]), [null]])
+			_tile_jobs.remove_at(i)
+			hit = true
+	return hit
+
+
+## The scenery tile keys (Vector2i, tile size `tile`) under every remove circle that differs between
+## `old_rows` and `new_rows` (MapEdits remove rows, matched by id): new circles, deleted circles, and both
+## the old and the new place of a moved / resized / retargeted one. Bounding box against the tile grid,
+## so it can over-include a corner tile but never misses one. Sorted, no duplicates.
+static func tiles_touched_by_removes(old_rows: Array, new_rows: Array, tile: float = TILE) -> Array:
+	var old_by: Dictionary = {}
+	for e in old_rows:
+		old_by[str((e as Dictionary).get("id", ""))] = e
+	var new_by: Dictionary = {}
+	for e in new_rows:
+		new_by[str((e as Dictionary).get("id", ""))] = e
+	var circles: Array = []
+	for id in old_by.keys():
+		if not new_by.has(id) or not _same_remove(old_by[id], new_by[id]):
+			circles.append(old_by[id])
+	for id in new_by.keys():
+		if not old_by.has(id) or not _same_remove(old_by[id], new_by[id]):
+			circles.append(new_by[id])
+	var seen: Dictionary = {}
+	for c in circles:
+		var d: Dictionary = c
+		var p: Vector3 = WorldCoords.latlon_to_world(float(d["lat"]), float(d["lon"]))
+		var r: float = float(d.get("radius", MapEdits.DEFAULT_RADIUS))
+		for kz in range(floori((p.z - r) / tile), floori((p.z + r) / tile) + 1):
+			for kx in range(floori((p.x - r) / tile), floori((p.x + r) / tile) + 1):
+				seen[Vector2i(kx, kz)] = true
+	var keys: Array = seen.keys()
+	keys.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.y < b.y or (a.y == b.y and a.x < b.x))
+	return keys
+
+
+static func _same_remove(a: Dictionary, b: Dictionary) -> bool:
+	return is_equal_approx(float(a["lat"]), float(b["lat"])) and is_equal_approx(float(a["lon"]), float(b["lon"])) \
+		and is_equal_approx(float(a.get("radius", 0.0)), float(b.get("radius", 0.0))) \
+		and str(a.get("what", "all")) == str(b.get("what", "all"))
 
 
 ## Build one hand-made addition: its catalogue node at the site's world position, yaw and scale.
@@ -892,13 +1067,16 @@ func _build_map_add(s: Dictionary) -> Node3D:
 	var n: Node3D = MapAssets.build(str(s["asset"]))
 	if n == null:
 		return Node3D.new()
+	_place_map_add(n, s)
+	return n
+
+
+## Put a hand-made addition's node at its site's position (on the terrain), yaw and scale.
+func _place_map_add(n: Node3D, s: Dictionary) -> void:
 	var pos: Vector3 = s["pos"]
 	n.position = Vector3(pos.x, _y(pos), pos.z)
 	n.rotation.y = deg_to_rad(float(s.get("yaw", 0.0)))
-	var sc: float = float(s.get("scale", 1.0))
-	if not is_equal_approx(sc, 1.0):
-		n.scale = Vector3.ONE * sc
-	return n
+	n.scale = Vector3.ONE * float(s.get("scale", 1.0))
 
 
 ## The 1944 invasion build-up (BuildupKit): marshalling areas, anchorages, Phoenix parks, embarkation hards.

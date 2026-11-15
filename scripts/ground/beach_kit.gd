@@ -20,6 +20,14 @@ static func _key(origin: Vector2, cell: float) -> Vector2i:
 	return Vector2i(roundi(origin.x / cell), roundi(origin.y / cell))
 
 
+## Drop precomputed rows for tile `keys` (the map editor changed a keep-out over them).
+static func forget(keys: Array) -> void:
+	_mx.lock()
+	for k in keys:
+		_cache.erase(k)
+	_mx.unlock()
+
+
 ## Compute the beach defences of several tiles in parallel (one worker task per tile) ahead of the tile builder,
 ## which then picks the rows out of the cache. This only *schedules* the work and returns: waiting here froze
 ## the loading screen for seconds at a time.

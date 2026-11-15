@@ -34,6 +34,7 @@ func _ready() -> void:
 	_test_edit_history()
 	_test_map_editor_edits()
 	_test_map_editor_multi()
+	_test_map_live_refresh()
 	_test_map_assets()
 	_test_river_data()
 	_test_landmarks_all()
@@ -2904,6 +2905,78 @@ func _test_map_editor_edits() -> void:
 	_check(kept == doc.size(), "set_rows drops invalid rows (%d of %d kept)" % [kept, dirty.size()])
 	_check(not EditHistoryScript.has_id(MapEdits.all(), "zz"), "an add with no asset is not kept")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(p))
+	MapEdits.load()
+
+
+## The map editor's live 3D window: WorldPopulator.refresh_map_edits brings a populator in line with the
+## editor's in-memory document, touching only the changed hand-made sites and the tiles under changed
+## remove circles. The populator never enters the tree here (no data load, no streaming).
+func _test_map_live_refresh() -> void:
+	print("-- map editor live 3D refresh")
+	var wp := WorldPopulator.new()
+	var add: Dictionary = {"op": "add", "id": "x", "asset": "barn", "lat": 49.10, "lon": -0.30, "yaw": 0.0, "scale": 1.0}
+	var r: Dictionary = wp.refresh_map_edits([add])
+	_check(wp._site_by_key.has("edit_x") and int(r["added"]) == 1, "an added row becomes site edit_x")
+	var s: Dictionary = wp._site_by_key.get("edit_x", {})
+	var fake := Node3D.new()            # stands in for the built node
+	s["node"] = fake
+	r = wp.refresh_map_edits([add])
+	_check(int(r["added"]) + int(r["moved"]) + int(r["dropped"]) + int(r["tiles"]) == 0, "an unchanged document touches nothing")
+	var moved: Dictionary = add.duplicate()
+	moved["lat"] = 49.11
+	moved["yaw"] = 45.0
+	moved["scale"] = 2.0
+	r = wp.refresh_map_edits([moved])
+	var want: Vector3 = WorldCoords.latlon_to_world(49.11, -0.30)
+	var s2: Dictionary = wp._site_by_key.get("edit_x", {})
+	_check(is_same(s2, s) and int(r["moved"]) == 1, "a moved row updates its site in place")
+	_check((s2.get("pos", Vector3.ZERO) as Vector3).distance_to(want) < 0.01, "the site's position follows the row")
+	_check(absf(fake.position.x - want.x) < 0.01 and absf(fake.position.z - want.z) < 0.01, "the built node moves with it")
+	_check(is_equal_approx(fake.rotation.y, deg_to_rad(45.0)) and is_equal_approx(fake.scale.x, 2.0), "and turns / scales with it")
+	var swapped: Dictionary = moved.duplicate()
+	swapped["asset"] = "church"
+	r = wp.refresh_map_edits([swapped])
+	var s3: Dictionary = wp._site_by_key.get("edit_x", {})
+	_check(not is_same(s3, s) and str(s3.get("asset", "")) == "church" and int(r["added"]) == 1,
+		"a new asset rebuilds the site")
+	_check(fake.is_queued_for_deletion(), "the old node is freed")
+	var n_sites: int = wp._sites.size()
+	r = wp.refresh_map_edits([])
+	_check(not wp._site_by_key.has("edit_x") and wp._sites.size() == n_sites - 1 and int(r["dropped"]) == 1,
+		"a deleted row's site is gone")
+	# Remove circles: the pure helper, then the tiles a refresh drops.
+	var tile: float = WorldPopulator.TILE
+	var circle: Dictionary = {"op": "remove", "id": "r1", "lat": 49.10, "lon": -0.30, "radius": 40.0, "what": "all"}
+	var c: Vector3 = WorldCoords.latlon_to_world(49.10, -0.30)
+	var k := Vector2i(floori(c.x / tile), floori(c.z / tile))
+	_check(WorldPopulator.tiles_touched_by_removes([], [circle], tile).has(k), "a new circle touches the tile under it")
+	_check(WorldPopulator.tiles_touched_by_removes([circle], [], tile).has(k), "a deleted circle touches the tile under it")
+	_check(WorldPopulator.tiles_touched_by_removes([circle], [circle.duplicate()], tile).is_empty(), "an unchanged circle touches nothing")
+	var bigger: Dictionary = circle.duplicate()
+	bigger["radius"] = 60.0
+	_check(WorldPopulator.tiles_touched_by_removes([circle], [bigger], tile).has(k), "a resized circle touches its tile")
+	var far_c: Dictionary = circle.duplicate()
+	far_c["lat"] = 49.30
+	var fw: Vector3 = WorldCoords.latlon_to_world(49.30, -0.30)
+	var kf := Vector2i(floori(fw.x / tile), floori(fw.z / tile))
+	var mv: Array = WorldPopulator.tiles_touched_by_removes([circle], [far_c], tile)
+	_check(mv.has(k) and mv.has(kf) and kf != k, "a moved circle touches its old and its new tile")
+	var other := Vector2i(k.x + 5, k.y)
+	wp._tiles[k] = Node3D.new()
+	wp._tiles[other] = Node3D.new()
+	r = wp.refresh_map_edits([circle])
+	_check(not wp._tiles.has(k) and wp._tiles.has(other) and int(r["tiles"]) == 1,
+		"a new circle drops only the tile under it, for streaming to rebuild")
+	_check(wp._exclude.size() == 1 and is_equal_approx(float(wp._exclude[0][1]), 40.0), "the circle keeps sites out")
+	r = wp.refresh_map_edits([bigger])
+	_check(wp._exclude.size() == 1 and is_equal_approx(float(wp._exclude[0][1]), 60.0), "a resized circle replaces its keep-out")
+	var houses: Dictionary = bigger.duplicate()
+	houses["what"] = "houses"
+	wp.refresh_map_edits([houses])
+	_check(wp._exclude.is_empty(), "a houses-only circle keeps no sites out")
+	(wp._tiles[other] as Node).free()
+	wp._tiles.clear()
+	wp.free()
 	MapEdits.load()
 
 

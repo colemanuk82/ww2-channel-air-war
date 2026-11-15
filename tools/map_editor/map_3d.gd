@@ -31,6 +31,7 @@ extends Control
 ##   view.focus_moved(lat, lon)                         # SIGNAL: the user panned / zoomed / resized
 ##   view.set_zoom(metres_per_px) / view.get_zoom() -> float
 ##   view.is_open() -> bool
+##   view.refresh_edits(rows) -> Dictionary  # show the editor's (unsaved) document now; no-op when closed
 ##   view.is_settled() -> bool      # terrain chunks and scenery tiles have stopped arriving
 ##   view.stats() -> Dictionary     # counters for the tests and the shot log
 ##   view.latlon_at(px) -> Vector2 / view.screen_of(lat, lon) -> Vector2
@@ -72,6 +73,7 @@ const EAGER_MAX: float = 40.0           # ... and no longer than this, however s
 const VIEW_MARGIN_TILES: float = 1.0    # a tile is "in view" when it comes this close to the visible rectangle
 const MIN_RENDER_PX: int = 64           # the render target never shrinks below this
 const OVERLAY_REFRESH: float = 0.25
+const REFRESH_EAGER_SECONDS: float = 0.5   # after an edit: eager until settled, at least this long
 
 var metres_per_px: float = MPP_DEFAULT
 var show_overlay: bool = false          # crosshair, scale bar and a readout (the shot scene uses it)
@@ -93,6 +95,8 @@ var _cam: Camera3D = null
 var _overlay: Control = null
 var _eager_t: float = 0.0               # how long the eager (boost) fill has been on
 var _eager_on: bool = false
+var _eager_need: float = EAGER_SECONDS  # the least time the current eager spell lasts
+var _refreshes: int = 0                 # refresh_edits calls since the world was built (stats)
 var _overlay_t: float = 0.0
 var _panning: bool = false
 var _pan_press: Vector2 = Vector2.ZERO
@@ -154,6 +158,34 @@ func _fill_host() -> void:
 
 func is_open() -> bool:
 	return _open
+
+
+## The editor's document changed: show `rows` (MapEdits rows, saved or not) in the live world at once.
+## Only the touched hand-made sites and the scenery tiles under changed remove circles are rebuilt (see
+## WorldPopulator.refresh_map_edits), and streaming goes eager again until the view has settled. No-op
+## while the window is closed. Returns the populator's counts ({} when closed).
+func refresh_edits(rows: Array) -> Dictionary:
+	if not _open or _wp == null or not _wp.has_method("refresh_map_edits"):
+		return {}
+	var t0: int = Time.get_ticks_usec()
+	var r: Dictionary = _wp.call("refresh_map_edits", rows)
+	_refreshes += 1
+	if int(r.get("added", 0)) + int(r.get("moved", 0)) + int(r.get("dropped", 0)) + int(r.get("tiles", 0)) > 0:
+		print("[map3d] edits refreshed in %.1f ms: +%d moved %d -%d, %d tiles to rebuild" % [
+			float(Time.get_ticks_usec() - t0) / 1000.0, int(r.get("added", 0)), int(r.get("moved", 0)),
+			int(r.get("dropped", 0)), int(r.get("tiles", 0))])
+		_go_eager(REFRESH_EAGER_SECONDS)
+	return r
+
+
+## Turn the populator's load-screen budget on until the view has settled (and at least `min_s` seconds).
+func _go_eager(min_s: float) -> void:
+	if eager_seconds <= 0.0 or _wp == null:
+		return
+	_eager_t = 0.0
+	_eager_need = min_s
+	_eager_on = true
+	_wp.set("boost", true)
 
 
 ## Look somewhere else. Host driven, so no focus_moved is emitted (the view is being told, not asked).
@@ -314,7 +346,7 @@ func stats() -> Dictionary:
 		"tiles": tiles, "nodes": sites, "pending": pending,
 		"view_tiles": vc.y, "view_tiles_have": vc.x, "covered": _view_tiles_present(),
 		"view_chunks": cc.y, "view_chunks_have": cc.x, "ground": _view_chunks_present(),
-		"settled": is_settled()}
+		"settled": is_settled(), "refreshes": _refreshes, "eager": _eager_on}
 
 
 # ================================================================== widget
@@ -407,6 +439,7 @@ func _build_world() -> void:
 	_world.add_child(_cam)
 	_cam.current = true
 	_eager_t = 0.0
+	_eager_need = eager_seconds
 	_eager_on = eager_seconds > 0.0
 	if _eager_on:
 		wp.set("boost", true)                             # the load-screen path: fill the area now
@@ -460,6 +493,7 @@ func _teardown_world() -> void:
 	_cam = null
 	_eager_t = 0.0
 	_eager_on = false
+	_refreshes = 0
 	_build_ms = 0
 	_terrain_ms = 0
 	_populator_ms = 0
@@ -560,7 +594,7 @@ func _process(delta: float) -> void:
 		_eager_t += delta
 		# Keep the populator's eager budget while the visible rectangle is still filling: the close-up is
 		# what the editor is waiting for, so it must not queue behind the tiles out at the 12.8 km edge.
-		var done: bool = _eager_t >= eager_seconds and is_settled()
+		var done: bool = _eager_t >= _eager_need and is_settled()
 		if (done or _eager_t >= EAGER_MAX) and _wp != null:
 			_eager_on = false
 			_wp.set("boost", false)      # back to the ordinary in-flight streaming budget

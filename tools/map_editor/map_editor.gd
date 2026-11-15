@@ -30,6 +30,7 @@ const ROT_STEP: float = 15.0
 const ROT_STEP_FINE: float = 1.0
 const RADIUS_STEP: float = 5.0
 const GOTO_ZOOM: float = 6.0        # the go-to box zooms in to at least this, if it is further out
+const LIVE_3D_SECS: float = 0.15    # the open 3D window is brought up to date at most this often
 
 const CATEGORIES: Array = [["building", "Buildings"], ["prop", "Props"]]
 
@@ -76,6 +77,11 @@ var _goto_needle: String = ""
 var _shot_select: Array = []                 # --editor-select=a1,a2, for the self-test shots
 var _remove_center: Vector2 = Vector2.ZERO
 var _remove_have: bool = false
+# Live 3D: every _refresh() marks the document as possibly changed; _process pushes it to the open 3D
+# window at most every LIVE_3D_SECS, never mid-drag, and only when its content really changed.
+var _live_dirty: bool = false
+var _live_t: float = 0.0
+var _live_hash: int = 0
 
 # --editor-shot: render a few real frames, save a picture and quit. This is how the drawing code is
 # checked without a window on the developer's desktop; see README.md.
@@ -85,6 +91,7 @@ var _shot_after: int = 90
 var _shot_done: bool = false
 var _shot_3d: bool = false          # --editor-3d: open the world window before the shot
 var _shot_at: Vector2 = Vector2(-1.0, -1.0)   # the --editor-at lat/lon, for the 3D open
+var _shot_place: String = ""        # --editor-place=<asset>: placed at the 3D view's centre half way to the shot
 
 
 func _ready() -> void:
@@ -655,6 +662,8 @@ func set_3d(on: bool, focus: Vector2 = Vector2(-1.0, -1.0)) -> void:
 		_map3d.open(_map3d.get_parent(), c.x, c.y, 1.5)
 		_map3d.visible = true
 		_view.visible = false
+		# the world was built from the saved file: show the in-memory document (unsaved changes too)
+		push_3d(true)
 	else:
 		_map3d.close()
 		_map3d.visible = false
@@ -674,6 +683,33 @@ func _on_3d_clicked(lat: float, lon: float, shift: bool) -> void:
 	if tool != "place" or place_asset.is_empty():
 		return
 	_place(lat, lon, shift)
+
+
+## Bring the open 3D window up to date with `edits` (no-op when it is closed, or when nothing changed
+## since the last push unless `force`). Normally called from _process via _live_tick.
+func push_3d(force: bool = false) -> void:
+	_live_dirty = false
+	_live_t = LIVE_3D_SECS
+	if _map3d == null or not _map3d.is_open():
+		return
+	var h: int = edits.hash()
+	if not force and h == _live_hash:
+		return
+	_live_hash = h
+	_map3d.refresh_edits(edits)
+
+
+## True while the 2D view is dragging the selection (the rows move every frame; push on release).
+func is_dragging() -> bool:
+	return not _drag_from_pos.is_empty()
+
+
+func _live_tick(delta: float) -> void:
+	if _map3d == null or not _map3d.is_open():
+		return
+	_live_t -= delta
+	if _live_dirty and _live_t <= 0.0 and not is_dragging():
+		push_3d()
 
 
 func undo() -> void:
@@ -737,6 +773,7 @@ func _update_title() -> void:
 
 
 func _refresh() -> void:
+	_live_dirty = true          # every document change ends in _refresh(): the 3D window catches up
 	if _view != null:
 		_view.queue_redraw()
 	_update_title()
@@ -861,6 +898,8 @@ func _parse_shot_args() -> void:
 			_shot_select = Array(arg.substr("--editor-select=".length()).split(",", false))
 		elif arg == "--editor-3d":
 			_shot_3d = true
+		elif arg.begins_with("--editor-place="):
+			_shot_place = arg.substr("--editor-place=".length())
 	if _shot_path.is_empty():
 		return
 	if zoom > 0.0:
@@ -904,11 +943,19 @@ func _on_shot_drawn() -> void:
 	_shot_tick()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if _shot_3d and _view != null and _view.size.x > 0.0:
 		_shot_3d = false
 		# The 2D view has no size at _ready, so its centre is meaningless; use the requested spot.
 		set_3d(true, _shot_at)
+	if not _shot_place.is_empty() and _map3d != null and _map3d.is_open() and _shot_frames >= _shot_after / 2:
+		# self-test of the live 3D refresh: an edit made AFTER the world was built must show up in it
+		var c: Vector2 = _map3d.get_focus()
+		place_asset = _shot_place
+		_shot_place = ""
+		_place(c.x, c.y, false)
+		print("[editor] live place %s at %.5f,%.5f (frame %d)" % [place_asset, c.x, c.y, _shot_frames])
+	_live_tick(delta)
 	_shot_tick()
 	if _view == null:
 		return
