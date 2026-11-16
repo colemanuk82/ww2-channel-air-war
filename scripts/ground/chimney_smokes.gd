@@ -40,13 +40,15 @@ func _process(delta: float) -> void:
 	if cam == null:
 		return
 	var cp: Vector3 = cam.global_position
+	if _emitters.size() < _holders.size():
+		_emitters.resize(_holders.size())      # _exit_tree clears them when the tile is re-parented; the holders stay
 	for i in _holders.size():
 		var h: Node3D = _holders[i]
 		var d: float = Vector2(h.global_position.x - cp.x, h.global_position.z - cp.z).length()
 		var e: Variant = _emitters[i]
 		if e == null and d < RANGE and _active_total < BUDGET:
 			var r: Array = GroundKit.fx_call("chimney_smoke", [h.global_position, size, h])
-			if r[0]:
+			if r.size() > 1 and r[0]:
 				_emitters[i] = r[1]
 				_active_total += 1
 		elif e != null and d > RANGE * 1.3:

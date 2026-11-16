@@ -13,7 +13,9 @@ render_mode cull_back;
 // dress (top_col / leg_col, four variants) and a side cap. Soldiers (the `soldier` bit: the airfield's drill squad
 // and sentries, everyone in an army camp) wear their side's service uniform, jackboots if German; those on duty -
 // marching, on sentry, running - also its steel helmet in place of the cap and a slung rifle.
-// INSTANCE_CUSTOM = (beat length, walking speed, phase 0..1, kind * 8 + soldier * 4 + dress), lengths in mesh metres.
+// The towns dress the same figure as civilians: dress 8-15 pick the town wardrobe below (suit, tweed, overcoat,
+// a woman's coat or dress with a skirt, a constable, an ARP warden, a Home Guard patrol).
+// INSTANCE_CUSTOM = (beat length, walking speed, phase 0..1, kind * 64 + soldier * 32 + dress), lengths in mesh metres.
 // kind: 0 walks the beat (-Z, turns, comes back), 1 stands talking, 2 bent over working, 3 waving, 4 runs the
 // beat, 5 marches it (a squad shares phase and speed, so it is in step), 6 sits at ease, 7 sentry who salutes,
 // 8 wounded man on a stretcher on the ground, 9 medic kneeling over him, 10 rear stretcher bearer, 11 the man on
@@ -21,8 +23,10 @@ render_mode cull_back;
 // share one beat, phase and speed, so the three move together), 14 passing a football round a ring (.x his place,
 // .y the ring's size), 15 the football (.x the ring's size, .y its radius), 16 standing smoking, 17 mechanic reaching
 // up into an engine, 18 mechanic kneeling at a wheel, 19 mechanic bent over on a wing (17-19 may stand raised: on a
-// work stand or the wing; they never dive for cover).
-// UV.y = 2 marks the cigarette, 3 the football; COLOR.a part 10 is the stretcher (posed with nobody).
+// work stand or the wing; they never dive for cover), 20 stands in a queue and shuffles, 21 rides a bicycle,
+// 22 pushes a pram, 23 stands in a knot at a corner talking with both hands.
+// UV.y = 2 marks the cigarette, 3 the football; COLOR.a part 10 is the stretcher, 11 the bicycle (a CYCLE), 12 the
+// pram (a PRAM) and 13 the skirt (women only) - all posed with nobody.
 
 // the four working dresses of the field's side (plain uniforms, not arrays: they are set from script one by one)
 uniform vec3 top0; uniform vec3 top1; uniform vec3 top2; uniform vec3 top3;
@@ -33,6 +37,22 @@ uniform vec3 cap_col = vec3(0.05, 0.07, 0.13);
 uniform vec3 soldier_top = vec3(0.13, 0.11, 0.04);
 uniform vec3 soldier_leg = vec3(0.13, 0.11, 0.04);
 uniform vec3 helmet_col = vec3(0.07, 0.08, 0.04);
+// the town wardrobe (dress 8-15): dark suit, tweed jacket, overcoat, a woman's long coat, a woman's summer dress,
+// a constable, an ARP warden and a Home Guard patrol (the last in the soldier's own uniform)
+uniform vec3 civ_top0; uniform vec3 civ_top1; uniform vec3 civ_top2; uniform vec3 civ_top3;
+uniform vec3 civ_top4; uniform vec3 civ_top5; uniform vec3 civ_top6; uniform vec3 civ_top7;
+uniform vec3 civ_leg0; uniform vec3 civ_leg1; uniform vec3 civ_leg2; uniform vec3 civ_leg3;
+uniform vec3 civ_leg4; uniform vec3 civ_leg5; uniform vec3 civ_leg6; uniform vec3 civ_leg7;
+uniform vec3 civ_cap0; uniform vec3 civ_cap1; uniform vec3 civ_cap2; uniform vec3 civ_cap3;
+uniform vec3 civ_cap4; uniform vec3 civ_cap5; uniform vec3 civ_cap6; uniform vec3 civ_cap7;
+uniform vec3 civ_helmet_col = vec3(0.006, 0.008, 0.018);   // the constable's and warden's dark navy helmet
+// the farm wardrobe (dress 16-20, Phase 2 farms): English farmer (waistcoat over shirt sleeves, flat cap), Women's Land
+// Army (green jumper, brown breeches, slouch hat), farm boy (short, grey trousers, cap), French farmer (blue smock,
+// beret), French farm woman (dark dress, headscarf, skirt). farm_arm is the sleeve colour (the body takes farm_top).
+uniform vec3 farm_top0; uniform vec3 farm_top1; uniform vec3 farm_top2; uniform vec3 farm_top3; uniform vec3 farm_top4;
+uniform vec3 farm_arm0; uniform vec3 farm_arm1; uniform vec3 farm_arm2; uniform vec3 farm_arm3; uniform vec3 farm_arm4;
+uniform vec3 farm_leg0; uniform vec3 farm_leg1; uniform vec3 farm_leg2; uniform vec3 farm_leg3; uniform vec3 farm_leg4;
+uniform vec3 farm_cap0; uniform vec3 farm_cap1; uniform vec3 farm_cap2; uniform vec3 farm_cap3; uniform vec3 farm_cap4;
 uniform float axis_side = 0.0;        // 1 on a German field: Stahlhelm and jackboots
 // per field (set on the MultiMeshInstance3D): 0..1 as enemy aircraft come over - every man dives flat - and the
 // seconds the field's clock has been held back while they lay there (so a walker stops instead of sliding)
@@ -51,6 +71,34 @@ vec3 pick(vec3 a, vec3 b, vec3 c, vec3 d, int i) {
 	return (i == 0) ? a : ((i == 1) ? b : ((i == 2) ? c : d));
 }
 
+// the town wardrobe: eight outfits, picked without a dynamic uniform-array index (i is dress - 8)
+vec3 civ_pick(vec3 a, vec3 b, vec3 c, vec3 d, vec3 e, vec3 f, vec3 g, vec3 h, int i) {
+	if (i < 1) { return a; }
+	if (i < 2) { return b; }
+	if (i < 3) { return c; }
+	if (i < 4) { return d; }
+	if (i < 5) { return e; }
+	if (i < 6) { return f; }
+	if (i < 7) { return g; }
+	return h;
+}
+vec3 civ_top_c(int d) { return civ_pick(civ_top0, civ_top1, civ_top2, civ_top3, civ_top4, civ_top5, civ_top6, civ_top7, d - 8); }
+vec3 civ_leg_c(int d) { return civ_pick(civ_leg0, civ_leg1, civ_leg2, civ_leg3, civ_leg4, civ_leg5, civ_leg6, civ_leg7, d - 8); }
+vec3 civ_cap_c(int d) { return civ_pick(civ_cap0, civ_cap1, civ_cap2, civ_cap3, civ_cap4, civ_cap5, civ_cap6, civ_cap7, d - 8); }
+
+// the farm wardrobe: five outfits (i is dress - 16), again without a dynamic uniform-array index
+vec3 farm_pick(vec3 a, vec3 b, vec3 c, vec3 d, vec3 e, int i) {
+	if (i < 1) { return a; }
+	if (i < 2) { return b; }
+	if (i < 3) { return c; }
+	if (i < 4) { return d; }
+	return e;
+}
+vec3 farm_top_c(int d) { return farm_pick(farm_top0, farm_top1, farm_top2, farm_top3, farm_top4, d - 16); }
+vec3 farm_arm_c(int d) { return farm_pick(farm_arm0, farm_arm1, farm_arm2, farm_arm3, farm_arm4, d - 16); }
+vec3 farm_leg_c(int d) { return farm_pick(farm_leg0, farm_leg1, farm_leg2, farm_leg3, farm_leg4, d - 16); }
+vec3 farm_cap_c(int d) { return farm_pick(farm_cap0, farm_cap1, farm_cap2, farm_cap3, farm_cap4, d - 16); }
+
 // turn p about the X axis through height py: a positive angle swings a hanging limb forward (-Z)
 vec3 rx(vec3 p, float py, float a) {
 	float c = cos(a);
@@ -61,18 +109,29 @@ vec3 rx(vec3 p, float py, float a) {
 
 void vertex() {
 	int limb = int(UV.x + 0.5);
-	int item = int(UV.y + 0.5);           // 0 / 1 body (1 = below the knee / elbow), 2 cigarette, 3 football
-	bool lower = UV.y > 0.5;
+	bool bigpart = UV.y > 50.0;           // parts 10 and up ride in UV.y as 100 + part (the colour alpha is an 8-bit unorm: a / 10 > 1 would clamp)
+	int item = bigpart ? 1 : int(UV.y + 0.5);           // 0 / 1 body (1 = below the knee / elbow), 2 cigarette, 3 football
+	bool lower = bigpart || UV.y > 0.5;
 	int code = int(INSTANCE_CUSTOM.w + 0.5);
-	int kind = code / 8;
-	bool soldier = (code - kind * 8) >= 4;
-	int pal = code - (code / 4) * 4;
-	bool armed = soldier && (kind == 4 || kind == 5 || kind == 7);
+	int kind = code / 64;                       // INSTANCE_CUSTOM.w = kind * 64 + soldier * 32 + dress
+	int cbit = code - kind * 64;
+	bool soldier = cbit >= 32;
+	int dress = cbit - (soldier ? 32 : 0);      // 0-3 the side's working dress, 8-15 the town wardrobe
+	int pal = dress - (dress / 4) * 4;
+	bool civ = dress >= 8;
+	bool armed = soldier && (civ || kind == 4 || kind == 5 || kind == 7);
 	bool medic = kind == 9 || kind == 12;
+	bool tin = civ ? (soldier || dress == 13 || dress == 14) : armed;    // a helmet in place of the cap
+	bool brodie = tin && axis_side < 0.5;
+	bool stahl = tin && axis_side > 0.5;
+	bool farm = dress >= 16;                    // the farm wardrobe 16-20 (Phase 2)
+	bool skirt = civ && (dress == 11 || dress == 12 || dress == 20);
 	float ph = INSTANCE_CUSTOM.z;
-	float t = TIME - t_off + ph * 61.0;
+	// kinds 26-28 (leading a horse, driving a cart / tractor, behind the plough) move rigidly with the horse team /
+	// cart / plough prop that shares their beat (shaders/farm_props.gdshader): they ignore the raid's held-back clock
+	float t = TIME - ((kind >= 26) ? 0.0 : t_off) + ph * 61.0;
 	float down = smoothstep(ph * 0.35, ph * 0.35 + 0.65, alarm);      // flat on his face (not all at the same instant)
-	if (kind == 8 || kind == 10 || kind == 11 || kind == 13 || kind == 15 || kind >= 17) {
+	if (kind == 8 || kind == 10 || kind == 11 || kind == 13 || kind == 15 || (kind >= 17 && kind <= 19) || kind >= 26) {
 		down = 0.0;           // the wounded stay on their stretchers, the bearers keep going, mechanics stay at their work
 	}
 	float sit = 0.0;
@@ -94,7 +153,7 @@ void vertex() {
 	float bob = 0.0;
 	vec3 ball = vec3(0.0); // the football's offset (kind 15)
 
-	if (kind == 0 || kind == 4 || kind == 5 || kind == 10 || kind == 11 || kind == 13) {
+	if (kind == 0 || kind == 4 || kind == 5 || kind == 10 || kind == 11 || kind == 13 || kind == 21 || kind == 22 || kind >= 26) {
 		// stride length, hip swing, knee fold, arm swing, elbow, forward lean, bob - walk / run / march / bearers
 		float stride = 1.5;
 		float a_th = 0.46;
@@ -191,7 +250,86 @@ void vertex() {
 			lie = 1.0;
 			carry_h = 0.78;
 			lie_h = 0.30 + carry_h;
+		} else if (kind == 21) {
+			// the rider: up on the saddle, leaning a little, the legs turning the pedals
+			float ped = t * 4.2 + ph * 6.283;
+			float pw = max(w, 0.45);
+			th_l = 0.66 + 0.30 * sin(ped) * pw;
+			th_r = 0.66 + 0.30 * sin(ped + PI) * pw;
+			kn_l = -1.05 - 0.28 * cos(ped) * pw;
+			kn_r = -1.05 - 0.28 * cos(ped + PI) * pw;
+			ar_l = 0.86 + 0.03 * sin(ped * 0.5);
+			ar_r = 0.86 + 0.03 * sin(ped * 0.5 + 1.7);
+			el_l = 0.30;
+			el_r = 0.30;
+			lean = 0.16;
+			bob = 0.006 * sin(ped * 2.0) * pw;
+		} else if (kind == 22) {
+			// pushing the pram: both hands out on the handle, unhurried steps
+			ar_l = 0.84 + 0.03 * sin(t * 1.1 + ph * 4.0);
+			ar_r = 0.84 + 0.03 * sin(t * 1.1 + ph * 4.0 + 0.9);
+			el_l = 0.34;
+			el_r = 0.34;
+			lean = 0.06;
+		} else if (kind == 26) {
+			// leading a horse: the right hand up at the halter beside its head, the left swinging, an easy stride
+			ar_r = 0.80 + 0.03 * sin(t * 1.3 + ph * 4.0);
+			el_r = 0.80;
+			ar_l = 0.04 - 0.30 * sin(g) * w;
+			el_l = 0.18 + 0.20 * w;
+			lean = 0.03;
+		} else if (kind == 27) {
+			// sat up on the cart's seat or the tractor's: thighs level, shins hanging, both hands forward on the reins /
+			// the wheel, rocking a little with the going
+			float rock = sin(t * 2.1 + ph * 5.0);
+			th_l = 1.50;
+			th_r = 1.50;
+			kn_l = -0.25 + 0.04 * rock;
+			kn_r = -0.30;
+			ar_l = 0.74 + 0.04 * rock;
+			ar_r = 0.80 + 0.04 * rock;
+			el_l = 0.55;
+			el_r = 0.60;
+			lean = 0.10;
+			sit = 1.0;
+			bob = 0.020 * rock * w;
+		} else if (kind == 28) {
+			// behind the plough: both hands forward and low on the handles, leaning into it, a slow steady pace
+			ar_l = 0.62 + 0.03 * sin(t * 1.7);
+			ar_r = 0.62 + 0.03 * sin(t * 1.7 + 1.0);
+			el_l = 0.30;
+			el_r = 0.30;
+			lean = 0.16;
+			ar_l += lean;
+			ar_r += lean;
 		}
+	} else if (kind == 24) {
+		// forking hay or stooks: a 3 s cycle, the tines driven into the heap with the body bent into it, then up and
+		// over in a toss; the arms' net swing is theta (see the hoe), the pole of the fork runs on from the forearm
+		float fc = 0.5 + 0.5 * sin(t * 2.1 + ph * 6.2832);
+		float fs = smoothstep(0.10, 0.90, fc);
+		lean = mix(0.55, 0.08, fs);
+		float th_f = mix(1.00, 2.20, fs);
+		ar_l = th_f + lean;
+		ar_r = th_f + lean + 0.05;
+		el_l = mix(0.12, 0.40, fs);
+		el_r = el_l;
+		th_l = mix(0.30, 0.05, fs);
+		th_r = mix(-0.25, -0.05, fs);
+		kn_l = -0.12 * (1.0 - fs);
+		yaw = 0.22 * sin(t * 0.17 + ph * 7.0) * fs;
+	} else if (kind == 25) {
+		// hoeing: bent well over, both hands on the hoe, a chop every 2.8 s with the blade at the ground
+		float hc = 0.5 + 0.5 * sin(t * 2.25 + ph * 6.2832);
+		lean = 0.75 + 0.05 * hc;
+		float th_h = 0.79 + 0.17 * hc;
+		ar_l = th_h + lean;
+		ar_r = th_h + lean + 0.03;
+		el_l = 0.05;
+		el_r = 0.05;
+		th_l = 0.26;
+		th_r = -0.22;
+		kn_l = -0.08;
 	} else if (kind == 1 || kind == 12) {
 		float talk = smoothstep(0.25, 0.9, sin(t * 0.47 + ph * 19.0));     // now and then a hand comes up to make a point
 		ar_r = 0.04 + 0.75 * talk + 0.10 * talk * sin(t * 4.0);
@@ -298,6 +436,30 @@ void vertex() {
 		yaw = 0.18 * sin(t * 0.19 + ph * 9.0);
 		th_l = 0.05;
 		th_r = -0.03;
+	} else if (kind == 20) {
+		// standing in a queue: hands hanging or in pockets, now and then a shuffle of the feet and a look about
+		float qc = fract(t * 0.11 + ph * 5.0);
+		float sh = smoothstep(0.60, 0.68, qc) * (1.0 - smoothstep(0.74, 0.86, qc));
+		th_l = 0.20 * sh;
+		th_r = -0.10 * sh;
+		kn_l = -0.36 * sh;
+		ar_l = -0.10 + 0.05 * sin(t * 0.7 + ph * 3.0);
+		ar_r = -0.06;
+		el_l = 0.26;
+		el_r = 0.22;
+		yaw = 0.14 * sin(t * 0.23 + ph * 8.0) + 0.10 * sin(t * 1.7);
+		lean = 0.04;
+	} else if (kind == 23) {
+		// a knot at a corner: talking with both hands, laughing, turning from one to the other
+		float tal = smoothstep(0.30, 0.85, sin(t * 0.62 + ph * 23.0));
+		ar_l = 0.30 + 0.55 * tal + 0.12 * sin(t * 3.7 + ph * 5.0);
+		ar_r = 0.30 + 0.40 * (1.0 - tal) + 0.12 * sin(t * 3.1 + ph * 7.0);
+		el_l = 0.60 + 0.70 * tal;
+		el_r = 0.60 + 0.55 * (1.0 - tal);
+		yaw = 0.42 * sin(t * 0.31 + ph * 11.0);
+		lean = 0.06 + 0.05 * sin(t * 0.9 + ph * 4.0);
+		th_l = 0.05 * sin(t * 0.5);
+		th_r = -th_l;
 	} else {
 		// sentry: at attention, and every so often a salute held for a couple of seconds
 		float sal = smoothstep(0.50, 0.72, sin(t * 0.5 + ph * 11.0));
@@ -321,11 +483,14 @@ void vertex() {
 
 	vec3 v = VERTEX;
 	vec3 n = NORMAL;
-	int part = int(COLOR.a * 10.0 + 0.5);
-	// headgear, rifle, cigarette, ball and stretcher that this man does not have are folded away (a degenerate point)
-	bool hide = (part == 3 && (armed || medic)) || (part == 9 && !armed) || (part == 6 && (!armed || axis_side > 0.5))
-		|| (part == 7 && (!armed || axis_side < 0.5)) || (part == 10 && kind != 8 && kind != 11)
-		|| (item == 2 && kind != 16) || (item == 3) != (kind == 15);
+	int part = bigpart ? int(UV.y + 0.5) - 100 : int(COLOR.a * 10.0 + 0.5);
+	// headgear, rifle, cigarette, ball, stretcher, bicycle, pram and skirt that this figure does not have are folded
+	// away (a degenerate point)
+	bool hide = (part == 3 && (tin || medic || (civ && dress == 11))) || (part == 9 && !armed)
+		|| (part == 6 && !brodie) || (part == 7 && !stahl)
+		|| (part == 10 && kind != 8 && kind != 11) || (part == 11 && kind != 21) || (part == 12 && kind != 22)
+		|| (part == 13 && !skirt) || (item == 2 && kind != 16) || (item == 3) != (kind == 15)
+		|| (part == 14 && kind != 24) || (part == 15 && kind != 25);
 	if (hide) {
 		v = vec3(0.0, 1.72, 0.0);
 	}
@@ -334,6 +499,7 @@ void vertex() {
 	} else if (part == 10) {
 		v.y += carry_h;                       // the stretcher: not posed with the man, carried at the bearers' hands
 	} else {
+		bool prop = part == 11 || part == 12;     // the bicycle and the pram go with the rider / pusher, not his legs
 		if (limb == 1 || limb == 2) {
 			float th = (limb == 1) ? th_l : th_r;
 			float kn = (limb == 1) ? kn_l : kn_r;
@@ -354,7 +520,7 @@ void vertex() {
 			n = rx(n, 0.0, ar);
 			v = rx(v, HIP_Y, -lean);
 			n = rx(n, 0.0, -lean);
-		} else if (lower) {
+		} else if (!prop && lower) {
 			v = rx(v, HIP_Y, -lean);
 			n = rx(n, 0.0, -lean);
 		}
@@ -362,8 +528,10 @@ void vertex() {
 		// lower of the two feet has risen (hips fixed in the air is what makes a walking figure look as if it hovers)
 		float lift_l = HIP_Y - (0.45 * cos(th_l) + 0.49 * cos(th_l + kn_l));
 		float lift_r = HIP_Y - (0.45 * cos(th_r) + 0.49 * cos(th_r + kn_r));
-		float settle = max(min(lift_l, lift_r), 0.0) * (1.0 - sit) * (1.0 - lie);
-		v.y += bob * 0.4 - settle - sit * (HIP_Y - 0.13);
+		// (a cyclist's legs are bent to the pedals, so he is not lowered to keep his boots on the road; the bicycle
+		// and the pram are not lowered at all)
+		float settle = max(min(lift_l, lift_r), 0.0) * (1.0 - sit) * (1.0 - lie) * (kind == 21 ? 0.0 : 1.0) * (prop ? 0.0 : 1.0);
+		v.y += prop ? 0.0 : (bob * 0.4 - settle - sit * (HIP_Y - 0.13));
 		// thrown flat: pitched forward about his boots, face down, lying on the thickness of his chest
 		v = rx(v, 0.0, -1.50 * down);
 		n = rx(n, 0.0, -1.50 * down);
@@ -376,6 +544,9 @@ void vertex() {
 			v.y += lie_h;
 		}
 	}
+	if (dress == 18) {
+		v *= 0.80;                            // the farm boy: a head shorter (the tools in his hands shrink with him)
+	}
 	float cy = cos(yaw);
 	float sy = sin(yaw);
 	v = vec3(v.x * cy + v.z * sy, v.y, -v.x * sy + v.z * cy);
@@ -387,20 +558,25 @@ void vertex() {
 	vec3 c = COLOR.rgb;
 	v_emit = 0.0;
 	if (part == 1) {
-		c = medic ? vec3(0.80, 0.80, 0.77) : (soldier ? soldier_top : pick(top0, top1, top2, top3, pal));
+		vec3 ctop = farm ? ((limb == 0) ? farm_top_c(dress) : farm_arm_c(dress)) : civ_top_c(dress);    // farmer: waistcoat, shirt sleeves
+		c = medic ? vec3(0.80, 0.80, 0.77) : (soldier ? soldier_top : (civ ? ctop : pick(top0, top1, top2, top3, pal)));
 	} else if (part == 2) {
-		c = (kind == 12) ? vec3(0.78, 0.78, 0.75) : (soldier ? soldier_leg : pick(leg0, leg1, leg2, leg3, pal));
+		vec3 cleg = farm ? farm_leg_c(dress) : civ_leg_c(dress);
+		c = (kind == 12) ? vec3(0.78, 0.78, 0.75) : (soldier ? soldier_leg : (civ ? cleg : pick(leg0, leg1, leg2, leg3, pal)));
 	} else if (part == 8) {
-		c = soldier ? ((axis_side > 0.5) ? vec3(0.006, 0.005, 0.004) : soldier_leg) : pick(leg0, leg1, leg2, leg3, pal);
+		vec3 cshin = (farm ? farm_leg_c(dress) : civ_leg_c(dress)) * 0.6;
+		c = soldier ? ((axis_side > 0.5) ? vec3(0.006, 0.005, 0.004) : soldier_leg) : (civ ? cshin : pick(leg0, leg1, leg2, leg3, pal));
 	} else if (part == 6 || part == 7) {
-		c = helmet_col;
+		c = (civ && !soldier) ? civ_helmet_col : helmet_col;
 	} else if (part == 3) {
-		c = soldier ? soldier_top * 0.8 : cap_col;
+		c = soldier ? soldier_top * 0.8 : (civ ? (farm ? farm_cap_c(dress) : civ_cap_c(dress)) : cap_col);
 	} else if (part == 4) {
 		c = pick(skin0, skin1, skin2, skin3, pal);
 	} else if (part == 5) {
-		c = pick(hair0, hair1, hair2, hair3, pal);
-	}
+		c = (civ && skirt) ? (farm ? farm_cap_c(dress) : civ_cap_c(dress)) : pick(hair0, hair1, hair2, hair3, pal);
+	} else if (part == 13) {
+		c = civ ? (farm ? farm_leg_c(dress) : civ_leg_c(dress)) : c;
+	}               // (parts 14 and 15, the pitchfork and the hoe, keep their own COLOR.rgb: ash handle, iron tines)
 	if (item == 2 && c.r > 0.5 && c.g < 0.3) {
 		v_emit = 2.5;                         // the lit end of the cigarette
 	}

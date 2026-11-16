@@ -2043,6 +2043,9 @@ static func tile_landcover_data(origin: Vector2, cell: float, seed_v: int, exclu
 			out["multis"].append(["wblob%d" % bv, multi_data(blobs[bv]), VIS_TREE])
 	for bm in BeachKit.tile_multis(origin, cell, seed_v, exclude):
 		out["multis"].append(bm)
+	# the house transforms themselves, for the village / town people planner (WorldPopulator drops this key once its
+	# plan is worked out; the multis above already hold the packed instance data)
+	out["house_xf"] = houses
 	return out
 
 

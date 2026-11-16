@@ -70,3 +70,101 @@ Never open a visible game window on the developer's PC: everything with pictures
 * **Airfield scenes:** heavy bombers parked behind the spectators at the take-off end (with crews), a field dressing station (hospital tent with red crosses, wounded on stretchers, kneeling medics, doctors, a stretcher party carrying a man in, period ambulances: Austin K2 / Phaenomen Granit), a ring of men passing a football, men smoking, and mechanics on work stands / trestles and wings at the engines of parked aircraft (positions from ModelSpecs and the model's own top surface). Also in the army camps (station, football). Figures are now 1.1x life size, the aircraft models' scale. Debug: `--people-shot=<kind>[,<n>[,<dist>]]`.
 * **Airfield ground:** the aerodrome grass fully covers the field patchwork (was 85%), roads are kept off the whole grass zone (1060 x 880 m) and rivers off 1250 m. The terrain's lighting-only relief takes its slope from world-space differences, not dFdx/dFdy (those made dashed lines along the mesh triangle edges). The dashed rows that were left came from the relief height itself: its float-hash value noise (t_vnoise2) stepped along lattice lines at these world coordinates; it now uses the exact integer-hash noise (s_ivn), and the relief shades the colour against the sun (shader global `sun_dir_world`, set by time_of_day.gd) instead of writing NORMAL.
 * **Worn airfield grass and the field boundary:** thinner, yellower patches, broken trodden footpaths and subtle muddy hollows in the aerodrome grass (terrain shader, `af_` block); a perimeter fence round each airfield with eight guard towers manned by sentries, and clumps of trees well away from the runway (`AirfieldPeople.dress_perimeter`). The stations' own boundary tree belt is now irregular copses (`Airfield._copse`: gaps, single trees and groups of up to seven, mixed sizes, five tree kinds) instead of identical rows of three. Every layout has one now: the dirt-strip, satellite and glider fields and the forward / ALG strips gained a belt, and the Luftwaffe grass fields a deeper two-row one. Parked aircraft, vehicles, guns, tents and huts now cast shadows close up (`AirfieldProp.SHADOW_KINDS`, with scenery shadows on: `Scatter.scenery_shadow_mode()`); their far stand-ins do not.
+* **Living towns and villages** (`AirfieldPeople.town_plan` / `village_plan`, `scripts/ground/airfield_people.gd`): the
+  towns of England and France and every tile's village now have people on their streets. Civilians in suits and flat
+  caps, women in coats and dresses (with a skirt), the odd constable, ARP warden and Home Guard patrol, and German
+  patrols in Axis-held France: walking the pavements, queueing outside shops, chatting at corners, riding bicycles and
+  pushing prams. Numbers follow the quality setting - 40-120 for a town on High, 10-30 for a village - as one MultiMesh
+  per town / tile, animated entirely in the vertex shader like the airfield men, and placed on the layout / tile
+  worker from the scatter's own house footprints and the land-cover street grid pavement lines (the streets the tiles
+  and the terrain shader actually draw), so nobody stands in a wall or out in the fields.
+  They fade at 1.2 km and dive for cover with the existing Driver when enemy aircraft are low. Debug:
+  `--town-people-shot=<n>[,<distance>[,<town id>]]` (a camera on the n-th standing townsperson, optionally of one
+  named town such as `folkestone`; it lives on the scene root so it survives the town streaming out, and prints
+  `[town-people-shot] at x, z`; give it a high `--frames` (2000) so the town has streamed in, and `--air --freeze
+  --at=lat,lon,...` so the player stays by the town; the airfield's `--people-shot` is unchanged). Each town logs
+  `[people] town <id>: N on the streets` and each village tile `[people] village tile x,z: N on the streets`.
+  A named town's own layout holds few houses, so most of its people are placed on the pavements of the land-cover
+  street grid (420 m districts, 34 m blocks, `town_plan` -> `_grid_people`); tests require >= 30 townspeople on High
+  for Folkestone's real layout (Folkestone gets 79, Boulogne 97 on High).
+
+## Occupation life (Phase 5, scripts/ground/occupation_life.gd)
+- German garrison in Axis-held towns of size 2 and up: two sentries either side of the town hall door (facing out, from the
+  civic "townhall" entry's yaw), a two-man patrol across the square on High, and two sentries at the station (civic
+  "station" entry). Made by OccupationLife.garrison, called from AirfieldPeople.town_plan with the same HouseMap, so
+  no sentry stands in a house. Allied towns get none. Harbour sentries and the Kommandantur flag are NOT built yet (no
+  harbour point in the town data and no flag prop in the town-model kit).
+- French civilians: OccupationLife.civilise runs on a town's men after planning (WorldPopulator._build_city). In a
+  continental town (continental(lat, lon): east of 1.5 E, or south of the Channel shore) the British-only outfits
+  (constable, ARP warden, Home Guard rifleman) become a dark suit or a tweed jacket. There is no gendarme outfit yet.
+  Village tiles still plan with the shared town_dress, so a liberated French village can still show British police
+  until the village hook gets a latitude and longitude (not done).
+- Luftwaffe airfields: unchanged; AirfieldPeople.populate already covers the Axis fields. The horse-drawn supply wagon
+  and the field-kitchen sitters were NOT added (no cart mesh exists and the brief asked for a report, not a guess).
+- Tests: _test_occupation_life in tools/tests.gd (continental coast, no British outfit in Axis towns, Boulogne civilians
+  made French, Axis garrison only in Axis towns).
+- Note: the module is loaded with const OccupationLife := preload(...) rather than class_name, because a new
+  class_name is not in the editor's class cache until a project import.
+
+## Military life everywhere (Phase 3, scripts/ground/military_people.gd)
+
+* **Gun and searchlight crews:** when a built site enters the world (`WorldPopulator._site_people` -> `MilitaryPeople.scan_site`)
+  every `AAGun` (88 mm / 3.7 in, Bofors, machine-gun pit) gets 3-7 men (`crew_size`, from the type and the quality
+  setting) and every `Searchlight` 3-4. They stand about outside the sandbag pit's entrance and, when an enemy aircraft
+  is within 1.5 km and below 3 km, RUN in to their posts on the pit floor (layer and spotter reach, loaders kneel at the
+  ammunition, ammunition number works, the sergeant shouts at the entrance); they walk back 8 s after the last enemy.
+  The run is the shader's RUN beat started at the matching clock phase (`beat_phase`; the shader TIME is measured once by a
+  4 x 4 pixel `TimeProbe` render), then swapped for the stationed pose. One MultiMesh + `CrewDriver` per 400 m cluster of guns
+  (the usual "everybody lies flat" driver is replaced for these). Searchlight crews work the lamp at the alarm.
+* **Sentries:** one at each pillbox / bunker (two on High), and at coastal batteries at the end casemates and the fire-control post.
+* **Per countryside tile** (`tile_plan`, planned on the tile worker with the village houses, `spawn_tile` on the main thread):
+  Home Guard (English side) or Feldgendarmerie (Axis-held ground, `GroundKit.side_at`, so the 1944-45 front moves it) at
+  crossroads outside the villages with a pole barrier, sandbags and a sentry box (`barrier_mesh`); pairs of rifle-carrying
+  soldiers marching a beat along beaches and cliff tops (both coasts); and roadside halts with 2-3 lorries on the verge and
+  4-7 men stood about them. Every spot is checked against the tile's `HouseMap`, land and bounds. Counts follow `density()`.
+* **Debug:** `--mil-log` (prints sites, checkpoints, halts, patrols, the shader clock offset), `--mil-alarm[=s]` (crews are
+  alarmed `s` seconds after they exist), `--mil-shot=<gun|light|sentry|checkpoint|halt|patrol>[,<distance>[,<skip>]]` (a held
+  camera on the first such group, picked with `--mil-pick=<frame>`; hidden-desktop screenshots only),
+  `--mil-demo=<gun|checkpoint|halt|patrol>[,<distance>[,<Allies|Axis>]]` (builds that group on open ground ahead of the start
+  and holds a camera on it). Test: `_test_military_people` in `tools/tests.gd`.
+
+## Life on the farms (Phase 2, scripts/ground/farm_people.gd)
+* A few work parties per countryside tile (about 2 x density() x a month factor: 4-5 on High in August, 2 in January), planned on the
+  tile worker next to `village_plan` (`FarmPeople.plan`, hooked in `WorldPopulator._start_tile_job`, spawned in stage 0 and by `_tile_people`).
+  Each party is INSIDE a field: cropland or grass, at least 9 m from every field boundary (`Scatter.field_edge`, the CPU mirror of
+  the terrain's field lattice), off roads / rivers / lakes / the sea, clear of the tile's houses (the farms are the anchors), along its
+  whole beat and a margin beyond it.
+* Seasons follow `EraClock.month()` and the terrain's crop cycle (`FarmPeople.JOB_W`): ploughing with horses (and a few Fordsons, rarer
+  in France) October to March, sowing and hoeing March to June, haymaking June-July (cart, forkers, haycocks), harvest July-September
+  (stooks, a gang bent to the sheaves, a loaded cart with forkers), fodder carting from a haystack in the dead of winter.
+* New figure Kinds (appended, nothing renumbered): `PITCHFORK` 24, `HOE` 25, `LEAD_HORSE` 26, `DRIVE_CART` 27, `PLOUGHMAN` 28; farm
+  dresses 16-20 (English farmer, Women's Land Army, farm boy, French farmer in a blue smock and beret, French farm woman); a pitchfork
+  and a hoe as item parts 14 / 15 on the right forearm. Kinds 26-28 ignore the raid's dive and held-back clock (they move with a prop).
+* Props (`shaders/farm_props.gdshader`, one MultiMesh per prop type per tile): a horse led with a hay cart, a driven horse and cart,
+  a plough team of two horses, a Fordson-like tractor with a trailed plough; animated walk (legs, head, tail) in the vertex stage.
+  The man and his prop are spawned from the same entry and run the same beat maths, so they stay rigid through the headland turn.
+  Stooks, haycocks and haystacks are plain still MultiMeshes. All low poly, built in code, nothing from other games.
+* Debug: `--farm-shot[=<plough|tractor|sow|hay|harvest|feed|any>[,<distance>[,<lat>,<lon>]]]` puts a camera on a work party (use with
+  `--date=YYYY-MM-DD` to pick the season); the log prints `[farm]` and `[farm-shot]` lines.
+* Test: `_test_farm_people` in tools/tests.gd.
+
+## Things that react to the war (`scripts/ground/war_reactions.gd`)
+
+* **Crash scenes:** an aircraft (either side) that comes down on land draws locals and soldiers: they run in from
+  70-170 m, stop on a ring 25-40 m from the wreck and talk, smoke or wave people back; Home Guard / police / ARP
+  wardens and civilians on British ground (also Allied-held France), German soldiers on German-held ground, and an
+  ambulance up the nearest road (within 220 m). One MultiMesh per scene, at most 4 scenes, cleared after 7 minutes or
+  when the camera is 3.2 km away; crashes more than 6 km from the camera are not staged.
+* **Downed pilots:** a parachutist who lands on land gets 2-4 captors walking up; the pilot raises a hand (WAVE) if
+  they are of the other side ("captured"), otherwise just talks.
+* **Low passes:** below 60 m the player's aircraft makes friendly people within 150 m (civilians, own-side crews and
+  soldiers) stop, turn and wave for 3.5-5.5 s; while the guns fire, friendly people within 130 m run 20-30 m away and
+  crouch. Enemy troops dive through the existing `AirfieldPeople.Driver`. A scan at ~8 Hz over the `people_mm` group
+  (every `AirfieldPeople.spawn` MultiMesh), working on cached arrays; measured 0.03 ms in the unit test.
+* **Runner timing:** the figure shader walks a beat there and back from its own `TIME`, so to make a runner stop at the
+  ring the manager samples the shader time once with a 1-pixel SubViewport probe (`shader time probe ok` in the log,
+  drift about 1 ms) and starts the stride at the launch moment. Headless runs fall back to the engine clock.
+* **Debug:** `--crash-scene-demo=close|far[,ahead,right]` (with `--hawkinge --freeze --nohud`, shot after ~80 s;
+  `--frames=5000`). Tests: `_test_war_reactions` in `tools/tests.gd` (headless MultiMeshes cannot be read back, so
+  the scene keeps `cur_pos` / `cur_code` mirrors).
+* **Time of day:** T steps through eight parts of the day (first light, sunrise, morning, midday, afternoon, golden hour, dusk, night) at a random time inside each (`TimeOfDay.STEPS`); --time= and missions keep the named presets. Golden hour warms the sky, sun and clouds fully but the light on the ground only part-way (the low-sun ground boost is 0.45, was 1.5).

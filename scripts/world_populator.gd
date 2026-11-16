@@ -33,6 +33,7 @@ var existing_airfields: Dictionary = {}
 var _runway_zones: Array = []
 var airfields: Dictionary = {}                 # id -> Airfield
 var loc: Dictionary = {}
+const OccupationLife := preload("res://scripts/ground/occupation_life.gd")     # Phase 5
 var enable_countryside: bool = true
 var enable_traffic: bool = true
 
@@ -2423,6 +2424,7 @@ func _site_people(s: Dictionary, n: Node3D) -> void:
 	if n.get_child_count() == 0 or n.has_meta("people_done"):
 		return
 	var key: String = str(s["key"])
+	MilitaryPeople.scan_site(n, key)          # gun / searchlight crews, sentries at pillboxes and batteries (Phase 3)
 	for pf in PEOPLE_SITES:
 		if key.begins_with(str(pf)):
 			n.set_meta("people_done", true)
@@ -2831,6 +2833,13 @@ func _start_tile_job(k: Vector2i) -> void:
 	var ex: Array = _exclude
 	var seed_v: int = k.x * 73856093 ^ k.y * 19349663
 	GroundKit.terrain()          # resolve the cached terrain node here, not from the worker
+	# the village folk: the side and the quality setting are read here, on the main thread
+	var team0: String = _team_of_pos(Vector3(org.x + TILE * 0.5, 0.0, org.y + TILE * 0.5))
+	var dens0: float = AirfieldPeople.density()
+	# the farm work parties (Phase 2): the month of the crop cycle and whether the tile is French, read here too
+	var month0: int = EraClock.month()
+	var ll0: Vector2 = WorldCoords.world_to_latlon(Vector3(org.x + TILE * 0.5, 0.0, org.y + TILE * 0.5))
+	var france0: bool = OccupationLife.continental(ll0.x, ll0.y)
 	var task: int = WorkerThreadPool.add_task(func() -> void:
 		var pt: PackedInt64Array = [Time.get_ticks_usec()]
 		RoadMesh.prepare_block(org, TILE)
@@ -2838,6 +2847,19 @@ func _start_tile_job(k: Vector2i) -> void:
 		pt.append(Time.get_ticks_usec())
 		res["data"] = Scatter.tile_landcover_data(org, TILE, seed_v, ex)
 		pt.append(Time.get_ticks_usec())
+		# the village street life, placed here on the worker with the houses it built (the main thread only makes the
+		# MultiMesh once the tile goes into the scene)
+		var hx: Array = (res["data"] as Dictionary).get("house_xf", [])
+		# the work parties in the fields (planned while the roads are still loaded, so they keep off them)
+		res["farm"] = FarmPeople.plan(org, TILE, hx, seed_v + 59, dens0, month0, france0)
+		if not hx.is_empty():
+			res["people"] = AirfieldPeople.village_plan(org, TILE, hx, seed_v + 31, team0, dens0)
+			OccupationLife.civilise(res["people"], ll0.x, ll0.y)     # no British police / wardens in French villages
+			res["people_team"] = team0
+			res["people_seed"] = seed_v + 37
+			(res["data"] as Dictionary).erase("house_xf")
+		# checkpoints, coastal patrols and roadside halts of this tile (Phase 3), planned here on the worker as well
+		res["mil"] = MilitaryPeople.tile_plan(org, TILE, hx, seed_v + 53, team0, dens0)
 		RiverMesh.clear_block()
 		RoadMesh.clear_block()
 		# the road and river ribbons are pure geometry: built here too, only the mesh upload is left for the main thread
@@ -2903,6 +2925,13 @@ func _finish_stage(f: Dictionary) -> void:
 			node.name = "tile_%d_%d" % [k.x, k.y]
 			add_child(node)
 			f["node"] = node
+			var ppl: Array = res.get("people", [])
+			if not ppl.is_empty():
+				AirfieldPeople.spawn_town(node, ppl, Vector3(org.x + TILE * 0.5, 0.0, org.y + TILE * 0.5), str(res.get("people_team", "Allies")), int(res.get("people_seed", 1)), "village tile %d,%d" % [k.x, k.y])
+			MilitaryPeople.spawn_tile(node, res.get("mil", {}), Vector3(org.x + TILE * 0.5, 0.0, org.y + TILE * 0.5))
+			var farm: Dictionary = res.get("farm", {})
+			if not farm.is_empty():
+				FarmPeople.spawn(node, farm, Vector3(org.x + TILE * 0.5, 0.0, org.y + TILE * 0.5), str(res.get("people_team", "Allies")), int(res.get("people_seed", 1)) + 16, "tile %d,%d" % [k.x, k.y])
 		1:
 			var rm: MeshInstance3D = RoadMesh.node_from_arrays(res.get("roads", []))
 			if rm != null:
@@ -3015,7 +3044,16 @@ func _make_tile(k: Vector2i) -> Node3D:
 	var org := Vector2(float(k.x) * TILE, float(k.y) * TILE)
 	RoadMesh.prepare_block(org, TILE)
 	RiverMesh.prepare_block(org, TILE)
-	var node: Node3D = Scatter.make_tile(org, TILE, k.x * 73856093 ^ k.y * 19349663, _exclude)
+	var seed_v: int = k.x * 73856093 ^ k.y * 19349663
+	# the land-cover data is kept here (not thrown away inside Scatter.make_tile) so the tile's villages get their
+	# people from the same house footprints
+	var tdata: Dictionary = {}
+	var node: Node3D
+	if LandCover.ready():
+		tdata = Scatter.tile_landcover_data(org, TILE, seed_v, _exclude)
+		node = Scatter.build_tile_nodes(tdata)
+	else:
+		node = Scatter.make_tile(org, TILE, seed_v, _exclude)
 	RiverMesh.clear_block()
 	RoadMesh.clear_block()
 	node.name = "tile_%d_%d" % [k.x, k.y]
@@ -3040,7 +3078,31 @@ func _make_tile(k: Vector2i) -> Node3D:
 		var rln: Node3D = RailKit.build_tile(org, TILE)
 		if rln != null:
 			node.add_child(GroundKit.flatten(rln, 6000.0 * Scatter.vis_scale))
+	_tile_people(node, org, tdata)
 	return node
+
+
+## The village street life of a tile built on the main thread (the load screen's warm-up tiles and a focus jump
+## before the land cover is ready): planned here and spawned as one MultiMesh. The streamed path does the same on
+## the tile's worker (see _start_tile_job).
+func _tile_people(node: Node3D, org: Vector2, data: Dictionary) -> void:
+	var hx0: Variant = data.get("house_xf", [])
+	var c0 := Vector3(org.x + TILE * 0.5, 0.0, org.y + TILE * 0.5)
+	MilitaryPeople.spawn_tile(node, MilitaryPeople.tile_plan(org, TILE, (hx0 as Array) if hx0 != null else [], hash(org) + 53, _team_of_pos(c0), AirfieldPeople.density()), c0)
+	var hx: Variant = data.get("house_xf", [])
+	var center := Vector3(org.x + TILE * 0.5, 0.0, org.y + TILE * 0.5)
+	var team: String = _team_of_pos(center)
+	# the farm work parties of a tile built on the main thread (Phase 2)
+	var ll: Vector2 = WorldCoords.world_to_latlon(center)
+	var farm: Dictionary = FarmPeople.plan(org, TILE, (hx as Array) if hx != null else [], hash(org) + 59, AirfieldPeople.density(), EraClock.month(), OccupationLife.continental(ll.x, ll.y))
+	FarmPeople.spawn(node, farm, center, team, hash(org) + 53, "tile %d,%d" % [int(round(org.x / TILE)), int(round(org.y / TILE))])
+	if hx == null or (hx as Array).is_empty():
+		return
+	var men: Array = AirfieldPeople.village_plan(org, TILE, hx as Array, hash(org) + 31, team, AirfieldPeople.density())
+	OccupationLife.civilise(men, ll.x, ll.y)     # no British police / wardens in French villages
+	var kx: int = int(round(org.x / TILE))
+	var kz: int = int(round(org.y / TILE))
+	AirfieldPeople.spawn_town(node, men, center, team, hash(org) + 37, "village tile %d,%d" % [kx, kz])
 
 
 const MAX_TILE_CONVOYS: int = 40
@@ -3935,18 +3997,28 @@ func _build_city(s: Dictionary) -> Node3D:
 	# built on a later tick (kept, so a town flown away from and back to is laid out only once).
 	if not s.has("town_d"):
 		var tseed: int = hash(String(d["id"])) + 77
+		var team0: String = _team_of_pos(pos)
+		var dens0: float = AirfieldPeople.density()
+		GroundKit.terrain()          # resolve the cached terrain node here, so the worker's ground heights are real
 		if boost or _sync_build or bool(s.get("pin", false)):
 			s["town_d"] = Scatter.town_layout(pos, size, tseed, true)
+			# the townsfolk, placed from the layout's own houses, kerbs and pavements
+			s["town_people"] = AirfieldPeople.town_plan(pos, s["town_d"], size, team0, tseed + 9, dens0)
 		else:
 			if not s.has("town_task"):
-				var holder: Array = [null]
+				var holder: Array = [null, null]
 				s["town_hold"] = holder
-				s["town_task"] = WorkerThreadPool.add_task(func() -> void: holder[0] = Scatter.town_layout(pos, size, tseed, true))
+				s["town_task"] = WorkerThreadPool.add_task(func() -> void:
+					var td: Dictionary = Scatter.town_layout(pos, size, tseed, true)
+					holder[0] = td
+					holder[1] = AirfieldPeople.town_plan(pos, td, size, team0, tseed + 9, dens0))
 			if not WorkerThreadPool.is_task_completed(int(s["town_task"])):
 				s["defer"] = true
 				return null
 			WorkerThreadPool.wait_for_task_completion(int(s["town_task"]))
-			s["town_d"] = (s["town_hold"] as Array)[0]
+			var hold: Array = s["town_hold"]
+			s["town_d"] = hold[0]
+			s["town_people"] = hold[1]
 			s.erase("town_task")
 			s.erase("town_hold")
 	# Buildings come from the land-cover tiles now (real built-up footprint), so only the site's
@@ -3963,6 +4035,11 @@ func _build_city(s: Dictionary) -> Node3D:
 	# Dense historic core (terraced street grid, taller blocks in the middle). The land-cover tiles
 	# leave this disc empty (see _exclude in _register_cities) and fill the suburbs around it.
 	container.add_child(Scatter.make_town_from(pos, s["town_d"]))
+	# the townsfolk on the pavements: one MultiMesh for the whole town, planned on the layout's worker
+	var ppl: Array = s.get("town_people", [])
+	OccupationLife.civilise(ppl, float(d["lat"]), float(d["lon"]))     # no British police or wardens in France (Phase 5)
+	if not ppl.is_empty():
+		AirfieldPeople.spawn_town(container, ppl, pos, team, hash(id) + 23, "town " + id)
 	_city_skyline(container, pos, size, id, radius)
 	_city_landmarks(container, d, s.get("lm", {}), s.get("lm_json", {}))
 	return container

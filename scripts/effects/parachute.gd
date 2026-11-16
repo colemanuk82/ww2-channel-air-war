@@ -378,6 +378,8 @@ func _process(delta: float) -> void:
 		rotation = Vector3.ZERO
 		if FX.is_water(p):
 			FX.water_splash(p, 2.0)
+		else:
+			WarReactions.on_pilot_down(global_position, team if team != "" else _look)     # captors walk up to him
 
 
 ## Damage contract: any hit (bullet, cannon, ram) brings the pilot down.

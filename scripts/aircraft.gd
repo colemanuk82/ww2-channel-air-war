@@ -1799,6 +1799,8 @@ func _crash(reason: String) -> void:
 
 func _spawn_crash_fx() -> void:
 	FX.crash_explosion(global_position, over_water)
+	if not over_water:
+		WarReactions.on_crash(global_position, team)      # locals and soldiers run to the wreck (scripts/ground/war_reactions.gd)
 
 
 ## A kill that goes up in the air: fireball and debris where the aircraft was, then it is gone.

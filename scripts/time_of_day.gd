@@ -9,6 +9,11 @@ signal preset_changed(preset_name: String)
 
 const PRESETS := {"dawn": 6.3, "noon": 12.0, "dusk": 18.4, "night": 23.0}
 const PRESET_ORDER := ["dawn", "noon", "dusk", "night"]
+## The T key steps through the day in eight parts, landing on a random time inside each one (never the same
+## clock twice): [name, earliest hour, latest hour]. The four named presets above stay for --time= and missions.
+const STEPS := [["first light", 5.4, 6.1], ["sunrise", 6.1, 7.2], ["morning", 7.6, 10.5], ["midday", 11.0, 13.8],
+	["afternoon", 14.0, 16.4], ["golden hour", 16.6, 17.8], ["dusk", 18.0, 19.2], ["night", 21.0, 26.5]]
+var _step: int = -1
 
 # key: hour, top, horizon, fog, light_col, sun_energy, moon_energy, ambient_col, ambient_energy, stars, fog_density
 var _keys: Array = []
@@ -309,8 +314,17 @@ func set_preset(preset_name: String) -> void:
 
 
 func cycle_preset() -> void:
-	var i: int = PRESET_ORDER.find(current_preset)
-	set_preset(PRESET_ORDER[(i + 1) % PRESET_ORDER.size()])
+	# the next of the eight parts of the day after the current clock, at a random time inside it
+	if _step < 0:
+		_step = STEPS.size() - 1
+		for i in STEPS.size():
+			if hour >= float(STEPS[i][1]) - 0.01 and hour < float(STEPS[i][2]):
+				_step = i
+				break
+	_step = (_step + 1) % STEPS.size()
+	var st: Array = STEPS[_step]
+	set_time(fposmod(randf_range(float(st[1]), float(st[2])), 24.0))
+	preset_changed.emit(current_preset)
 
 
 func set_weather_modifiers(p_fog_mul: float, p_light_mul: float, p_desat: float, p_sky_dim: float) -> void:
@@ -401,12 +415,17 @@ func _apply() -> void:
 		amb_e *= AMB_GAIN
 		# golden hour: a low sun grazes flat fields (N.L ~ 0.2-0.3), which left them a muddy olive. Push the sun
 		# up as it sinks so lit ground glows warm against crisp shadows (the ambient is left alone).
-		sun_e *= 1.0 + 1.5 * smoothstep(0.45, 0.12, sun_dir.y) * smoothstep(0.0, 0.06, sun_dir.y)
+		# (kept modest: at 1.5x the warm low sun made the whole countryside glow orange - the glow belongs to the
+		# sky and the clouds, which keep the full colour through sun_color)
+		sun_e *= 1.0 + 0.45 * smoothstep(0.45, 0.12, sun_dir.y) * smoothstep(0.0, 0.06, sun_dir.y)
 		# ... and lift the sky fill while the sun is low and just after it sets, so shaded fields keep their colour
 		# instead of going near-black (the sky still carries a lot of light at dusk)
 		amb_e *= 1.0 + 0.9 * smoothstep(0.35, 0.06, sun_dir.y) * smoothstep(-0.12, 0.0, sun_dir.y)
 
-	sun.light_color = lc
+	# the light on the ground is only part as warm as the sky's sun colour: golden hour tints the scenery, while
+	# the sky, the clouds (sun_color) and the sun disc carry the full gold
+	var low_k: float = smoothstep(0.40, 0.08, sun_dir.y) * smoothstep(-0.04, 0.04, sun_dir.y)
+	sun.light_color = lc.lerp(Color(1.0, 0.93, 0.84), 0.55 * low_k)
 	sun.light_energy = sun_e
 	sun.visible = sun_e > 0.001
 	# softer shadows while the sun is low (long shadows read harsh with a tight blur), tight at noon

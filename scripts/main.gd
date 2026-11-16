@@ -3336,6 +3336,17 @@ func _parse_debug_args() -> void:
 				var pb: Vector3 = player.global_position + pf.normalized() * 25.0 + Vector3(-pf.z, 0.0, pf.x).normalized() * 130.0
 				pb.y = GroundKit.ground_y(pb.x, pb.z) + 0.01
 				AirfieldPeople.demo(self, pb, Vector3(-pf.z, 0.0, pf.x), a.substr(14) if a.contains("=") else ""))
+		elif a.begins_with("--crash-scene-demo"):   # debug: stage a crash near the player and frame it: --crash-scene-demo=close|far[,dx,dz] (metres ahead / right of the player)
+			GameState.show_hud = false
+			GameState.show_hints = false
+			var cq: PackedStringArray = (a.substr(19) if a.contains("=") else "close").split(",")
+			get_tree().create_timer(1.0).timeout.connect(func() -> void:
+				var cf: Vector3 = player.get_forward()
+				cf.y = 0.0
+				cf = cf.normalized()
+				var cr := Vector3(-cf.z, 0.0, cf.x)
+				var cp: Vector3 = player.global_position + cf * (float(cq[1]) if cq.size() > 2 else 600.0) + cr * (float(cq[2]) if cq.size() > 2 else 350.0)
+				WarReactions.demo(self, cp, cq[0]))
 		elif a == "--noout":
 			GameState.outlines_enabled = false
 		elif a == "--nohud":      # debug: clean screenshots with the HUD and hints hidden

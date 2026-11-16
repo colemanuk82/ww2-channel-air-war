@@ -18,10 +18,41 @@ const HEIGHT_M: float = 1.78
 const FIG_H: float = 1.89             # the mesh as built, boots to crown
 const MAN: float = SCALE * HEIGHT_M / FIG_H
 
-enum Kind { WALK, TALK, WORK, WAVE, RUN, MARCH, SIT, SALUTE, PATIENT, MEDIC, BEARER, CARRIED, DOCTOR, BEARER_FRONT, PASSER, BALL, SMOKER, REACH, KNEEL, ON_WING }
+const OccupationLife := preload("res://scripts/ground/occupation_life.gd")     # Phase 5: the German garrison and French civilians
+enum Kind { WALK, TALK, WORK, WAVE, RUN, MARCH, SIT, SALUTE, PATIENT, MEDIC, BEARER, CARRIED, DOCTOR, BEARER_FRONT, PASSER, BALL, SMOKER, REACH, KNEEL, ON_WING, QUEUE, CYCLE, PRAM, CHAT,
+	## Phase 2 (farms), appended - never renumber: forking hay or stooks, hoeing bent over, leading a horse (right hand at the
+	## halter), sat on a cart's or tractor's seat, and walking behind the plough. The last three move with a horse / cart /
+	## plough prop of scripts/ground/farm_people.gd that shares their beat.
+	PITCHFORK, HOE, LEAD_HORSE, DRIVE_CART, PLOUGHMAN }
 
 const RUNWAY_CLEAR: float = 20.0      # nobody stands or walks this close to a runway edge
 const VIEW_RANGE: float = 1400.0
+const TOWN_VIEW: float = 1200.0       # the towns' figures fade out at this distance
+const TOWN_ROAD: float = 2.6          # m out from the pavement line: where the cyclists ride (1 m past the centre)
+# the land-cover street grid (Scatter._add_street_row, terrain.gdshader): one turned district per 420 m cell, a
+# main street every 34 m (8 m wide, so the pavement line is 2.4 m either side of its centre)
+const TOWN_DISTRICT: float = 420.0
+const TOWN_BLOCK: float = 34.0
+const TOWN_PAVE: float = 2.4
+
+## The town wardrobe: the same figure, dressed as civilians. The dress index is carried in INSTANCE_CUSTOM.w
+## (see code_of) and the shader picks these colours; 0-3 stay the side's working dress on the airfields.
+const CIV_SUIT: int = 8               # dark suit, flat cap
+const CIV_JACKET: int = 9             # tweed jacket and flannels
+const CIV_COAT: int = 10              # navy overcoat and trilby
+const CIV_WOMAN_COAT: int = 11        # long coat, headscarf, knee-length skirt
+const CIV_WOMAN_DRESS: int = 12       # summer dress, straw hat, skirt
+const CIV_POLICE: int = 13            # constable: dark navy, custodian helmet
+const CIV_ARP: int = 14               # ARP warden: dark blue, tin hat
+const CIV_HOME_GUARD: int = 15        # Home Guard: khaki battledress, tin hat, rifle (the soldier bit)
+const CIV_DRESSES: int = 8            # how many civilian outfits there are (8..15)
+## The farm wardrobe (Phase 2, dress 16-20; code_of keeps five bits for the dress, so up to 31 fit):
+const FARM_FARMER: int = 16           # English farmer: waistcoat over shirt sleeves, flat cap
+const FARM_LAND_GIRL: int = 17        # Women's Land Army: green jumper, brown breeches, slouch hat
+const FARM_BOY: int = 18              # farm boy: grey trousers and cap, a head shorter (shader scales him)
+const FARM_FARMER_FR: int = 19        # French farmer: blue smock (bleu de travail) and a black beret
+const FARM_WOMAN_FR: int = 20         # French farm woman: dark dress, headscarf, skirt
+const FARM_DRESSES: int = 5           # 16..20
 
 static var _mesh: ArrayMesh
 static var _shader: Shader
@@ -46,6 +77,10 @@ static func _part(acc: _Acc, m: PrimitiveMesh, xf: Transform3D, col: Color, part
 	var lin: Color = col.srgb_to_linear()
 	var vc := Color(lin.r, lin.g, lin.b, float(part) / 10.0)
 	var tag := Vector2(float(limb), float(item) if item >= 2 else (1.0 if lower else 0.0))
+	if part >= 10:
+		# the vertex colour's alpha is stored as an 8-bit unorm and so cannot hold part ids above 10 (a / 10 > 1): parts 10 and
+		# up (stretcher, bicycle, pram, skirt, farm tools) also ride in UV.y as 100 + part (all of them are "lower" parts)
+		tag.y = 100.0 + float(part)
 	for k in vs.size():
 		acc.v.append(xf * vs[k])
 		acc.n.append((nb * ns[k]).normalized())
@@ -165,6 +200,72 @@ static func figure_mesh() -> ArrayMesh:
 	var rifle_b := Basis(Vector3.BACK, 0.10) * Basis(Vector3.RIGHT, -0.10)
 	_box(a, Vector3(0.045, 1.10, 0.065), Vector3(-0.20, 1.30, 0.135), Color(0.25, 0.15, 0.08), 9, 0, true, rifle_b)
 	_box(a, Vector3(0.03, 0.34, 0.03), Vector3(-0.255, 1.99, 0.065), Color(0.07, 0.07, 0.08), 9, 0, true, rifle_b)        # barrel
+	# the bicycle (part 11: shown on a CYCLE instance only): two wheels, the frame, saddle and handlebars, with its
+	# pedals where the rider's feet turn. Metres, on the ground at y = 0, facing -Z.
+	var tyre := Color(0.055, 0.055, 0.05)
+	var bike := Color(0.12, 0.13, 0.12)
+	var chrome := Color(0.52, 0.53, 0.52)
+	for wz in [-0.62, 0.55]:
+		var wheel := CylinderMesh.new()
+		wheel.top_radius = 0.33
+		wheel.bottom_radius = 0.33
+		wheel.height = 0.035
+		wheel.radial_segments = 12
+		wheel.rings = 1
+		_part(a, wheel, Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(0.0, 0.33, wz)), tyre, 11, 0, true)
+		var hub := CylinderMesh.new()
+		hub.top_radius = 0.05
+		hub.bottom_radius = 0.05
+		hub.height = 0.10
+		hub.radial_segments = 6
+		hub.rings = 1
+		_part(a, hub, Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(0.0, 0.33, wz)), chrome, 11, 0, true)
+	_box(a, Vector3(0.035, 0.035, 0.50), Vector3(0.0, 0.80, -0.02), bike, 11, 0, true, Basis(Vector3.RIGHT, -0.08))
+	_box(a, Vector3(0.035, 0.44, 0.035), Vector3(0.0, 0.60, 0.12), bike, 11, 0, true, Basis(Vector3.RIGHT, 0.20))
+	_box(a, Vector3(0.035, 0.035, 0.52), Vector3(0.0, 0.58, -0.28), bike, 11, 0, true, Basis(Vector3.RIGHT, 0.55))
+	_box(a, Vector3(0.035, 0.035, 0.46), Vector3(0.0, 0.62, 0.30), bike, 11, 0, true, Basis(Vector3.RIGHT, -0.30))
+	_box(a, Vector3(0.11, 0.045, 0.21), Vector3(0.0, 0.97, 0.10), Color(0.20, 0.12, 0.07), 11, 0, true)
+	_box(a, Vector3(0.42, 0.03, 0.03), Vector3(0.0, 1.15, -0.45), chrome, 11, 0, true)
+	_box(a, Vector3(0.03, 0.32, 0.03), Vector3(0.0, 0.99, -0.46), bike, 11, 0, true)
+	for bx in [-1.0, 1.0]:
+		_box(a, Vector3(0.10, 0.025, 0.07), Vector3(bx * 0.10, 0.16, -0.02), chrome, 11, 0, true)
+	# a pram (part 12: shown on a PRAM instance only), pushed in front of a woman at the handle: the coachwork on
+	# four small wheels, a hood over the head end, the handle where her hands are. Facing -Z.
+	var pram_col := Color(0.20, 0.22, 0.27)
+	_box(a, Vector3(0.50, 0.30, 0.74), Vector3(0.0, 0.63, -0.82), pram_col, 12, 0, true)
+	_box(a, Vector3(0.52, 0.04, 0.76), Vector3(0.0, 0.79, -0.82), pram_col.lightened(0.18), 12, 0, true)
+	_ball(a, Vector3(0.0, 0.82, -0.54), 0.26, Vector3(1.0, 0.70, 0.62), 12, 0, true, pram_col.darkened(0.18))
+	_box(a, Vector3(0.42, 0.025, 0.025), Vector3(0.0, 1.18, -0.46), Color(0.10, 0.10, 0.10), 12, 0, true)
+	for sx in [-0.20, 0.20]:
+		_box(a, Vector3(0.025, 0.48, 0.025), Vector3(sx, 0.96, -0.47), pram_col, 12, 0, true, Basis(Vector3.RIGHT, 0.18))
+	for wz in [-0.48, -1.14]:
+		for pwx in [-0.23, 0.23]:
+			var pw := CylinderMesh.new()
+			pw.top_radius = 0.11
+			pw.bottom_radius = 0.11
+			pw.height = 0.05
+			pw.radial_segments = 8
+			pw.rings = 1
+			_part(a, pw, Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(pwx, 0.11, wz)), Color(0.07, 0.07, 0.07), 12, 0, true)
+	# a knee-length skirt (part 13: worn by the women of the town wardrobe, hidden on everyone else)
+	var skirt_m := CylinderMesh.new()
+	skirt_m.bottom_radius = 0.29
+	skirt_m.top_radius = 0.175
+	skirt_m.height = 0.44
+	skirt_m.radial_segments = 8
+	skirt_m.rings = 1
+	_part(a, skirt_m, Transform3D(Basis.from_scale(Vector3(1.0, 1.0, 0.72)), Vector3(0.0, 0.72, 0.0)), Color.WHITE, 13, 0, true)
+	# the farm tools (Phase 2), both fixed to the right forearm (limb 4, lower) so they swing with the arm: the pole runs
+	# straight on from the forearm's line through the hand (x 0.225), so with the arm swung forward the working end lies
+	# out in front and low - the tines in the hay (part 14, shown on a PITCHFORK only), the blade at the soil (part 15, a HOE)
+	var ash := Color(0.52, 0.40, 0.24)
+	var iron := Color(0.30, 0.30, 0.31)
+	_box(a, Vector3(0.036, 1.82, 0.036), Vector3(0.225, 0.34, 0.0), ash, 14, 4, true)                   # handle, y 1.25 .. -0.57
+	_box(a, Vector3(0.20, 0.03, 0.03), Vector3(0.225, -0.58, 0.0), iron, 14, 4, true)                     # the socket and crossbar
+	for tx in [-0.085, 0.0, 0.085]:
+		_box(a, Vector3(0.016, 0.38, 0.016), Vector3(0.225 + tx, -0.78, 0.0), iron, 14, 4, true)          # three tines
+	_box(a, Vector3(0.036, 1.50, 0.036), Vector3(0.225, 0.40, 0.0), ash, 15, 4, true)                    # hoe handle, y 1.15 .. -0.35
+	_box(a, Vector3(0.20, 0.17, 0.014), Vector3(0.225, -0.43, -0.04), iron, 15, 4, true, Basis(Vector3.RIGHT, -0.55))   # the blade
 	var arr: Array = []
 	arr.resize(Mesh.ARRAY_MAX)
 	arr[Mesh.ARRAY_VERTEX] = a.v
@@ -201,6 +302,32 @@ static func _material(team: String) -> ShaderMaterial:
 	sm.set_shader_parameter("soldier_leg", Vector3(s_leg.r, s_leg.g, s_leg.b))
 	sm.set_shader_parameter("helmet_col", Vector3(s_hel.r, s_hel.g, s_hel.b))
 	sm.set_shader_parameter("axis_side", 1.0 if axis else 0.0)
+	# the town wardrobe (dress index 8-15): suits, tweed and overcoats, the women's coats and dresses, the
+	# constable's navy, the ARP warden's blue and the Home Guard's khaki (the last in the soldier's own colours)
+	var civ_top: Array = [Color(0.19, 0.20, 0.23), Color(0.35, 0.29, 0.20), Color(0.16, 0.18, 0.24),
+		Color(0.30, 0.13, 0.16), Color(0.46, 0.52, 0.58), Color(0.10, 0.13, 0.23), Color(0.085, 0.10, 0.17), Color(0.45, 0.40, 0.25)]
+	var civ_leg: Array = [Color(0.12, 0.13, 0.16), Color(0.22, 0.20, 0.17), Color(0.14, 0.15, 0.19),
+		Color(0.26, 0.11, 0.14), Color(0.41, 0.47, 0.53), Color(0.09, 0.11, 0.20), Color(0.075, 0.09, 0.15), Color(0.42, 0.37, 0.23)]
+	var civ_cap: Array = [Color(0.15, 0.14, 0.13), Color(0.25, 0.21, 0.16), Color(0.21, 0.20, 0.19),
+		Color(0.56, 0.19, 0.19), Color(0.58, 0.52, 0.36), Color(0.06, 0.08, 0.16), Color(0.05, 0.06, 0.12), Color(0.86, 0.84, 0.76)]
+	for i in 8:
+		var ct: Color = (civ_top[i] as Color).srgb_to_linear()
+		var cl: Color = (civ_leg[i] as Color).srgb_to_linear()
+		var cc: Color = (civ_cap[i] as Color).srgb_to_linear()
+		sm.set_shader_parameter("civ_top%d" % i, Vector3(ct.r, ct.g, ct.b))
+		sm.set_shader_parameter("civ_leg%d" % i, Vector3(cl.r, cl.g, cl.b))
+		sm.set_shader_parameter("civ_cap%d" % i, Vector3(cc.r, cc.g, cc.b))
+	var chl: Color = Color(0.055, 0.07, 0.14).srgb_to_linear()
+	sm.set_shader_parameter("civ_helmet_col", Vector3(chl.r, chl.g, chl.b))
+	# the farm wardrobe (dress 16-20): body (waistcoat / jumper / smock), sleeves, legs, headgear / headscarf
+	var farm_top: Array = [Color(0.27, 0.23, 0.17), Color(0.20, 0.34, 0.20), Color(0.36, 0.34, 0.30), Color(0.15, 0.27, 0.50), Color(0.14, 0.12, 0.12)]
+	var farm_arm: Array = [Color(0.80, 0.78, 0.70), Color(0.20, 0.34, 0.20), Color(0.78, 0.76, 0.68), Color(0.15, 0.27, 0.50), Color(0.14, 0.12, 0.12)]
+	var farm_leg: Array = [Color(0.30, 0.26, 0.19), Color(0.36, 0.26, 0.14), Color(0.30, 0.30, 0.31), Color(0.17, 0.19, 0.26), Color(0.16, 0.13, 0.12)]
+	var farm_cap: Array = [Color(0.27, 0.24, 0.19), Color(0.40, 0.30, 0.17), Color(0.30, 0.29, 0.27), Color(0.04, 0.04, 0.05), Color(0.44, 0.20, 0.20)]
+	for i in FARM_DRESSES:
+		for pair in [["farm_top", farm_top], ["farm_arm", farm_arm], ["farm_leg", farm_leg], ["farm_cap", farm_cap]]:
+			var fc: Color = ((pair[1] as Array)[i] as Color).srgb_to_linear()
+			sm.set_shader_parameter("%s%d" % [pair[0], i], Vector3(fc.r, fc.g, fc.b))
 	_mats[team] = sm
 	return sm
 
@@ -222,6 +349,461 @@ static func _taxiway_clear(af: Airfield, p: Vector3) -> float:
 ## are nearly free to draw (one MultiMesh per site, animated in the vertex shader), so medium and high are busy.
 static func density() -> float:
 	return [0.7, 1.6, 2.2][clampi(GameState.quality, 0, 2)]
+
+
+# ------------------------------------------------------------------ towns and villages
+
+## Encode a figure's animation and dress into INSTANCE_CUSTOM.w (see the shader): kind * 64 + soldier * 32 + dress.
+## (Was kind * 8 + soldier * 4 + dress: the town wardrobe needs three dress bits, 8-15 being the civilians.)
+static func code_of(kind: int, soldier: bool, dress: int) -> int:
+	return kind * 64 + (32 if soldier else 0) + dress
+
+
+static func kind_of(code: int) -> int:
+	return code / 64
+
+
+static func soldier_of(code: int) -> bool:
+	return code - (code / 64) * 64 >= 32
+
+
+static func dress_of(code: int) -> int:
+	var rem: int = code - (code / 64) * 64
+	return rem - (32 if rem >= 32 else 0)
+
+
+## Occupancy of the houses, for the town and village planners: every building footprint as a rotated rectangle in a
+## 10 m hash, so a few hundred "may a person stand here" tests are a handful of rectangle checks instead of a walk
+## over every house. Civics and churches are discs. Runs on the tile / town worker thread with the layout.
+class HouseMap:
+	var cell: float = 10.0
+	var pad: float = 0.6                   # nobody stands closer than this to a wall
+	var cells: Dictionary = {}
+	var discs: Array = []                  # [centre (Vector2), radius]
+
+	func add(c: Vector2, hx: float, hz: float, yaw: float) -> void:
+		var cs: float = cos(yaw)
+		var sn: float = sin(yaw)
+		var d: Dictionary = {"c": c, "hx": hx, "hz": hz, "cs": cs, "sn": sn}
+		var ax: float = absf(cs) * hx + absf(sn) * hz
+		var az: float = absf(sn) * hx + absf(cs) * hz
+		var i0: int = floori((c.x - ax - pad) / cell)
+		var i1: int = floori((c.x + ax + pad) / cell)
+		var j0: int = floori((c.y - az - pad) / cell)
+		var j1: int = floori((c.y + az + pad) / cell)
+		for j in range(j0, j1 + 1):
+			for i in range(i0, i1 + 1):
+				var key := Vector2i(i, j)
+				var arr: Array = cells.get(key, [])
+				arr.append(d)
+				cells[key] = arr
+
+	## A house transform from the scatter (basis scale x = frontage, z = depth, yaw = its facing).
+	func add_xf(tf: Transform3D) -> void:
+		var sc: Vector3 = tf.basis.get_scale()
+		add(Vector2(tf.origin.x, tf.origin.z), absf(sc.x) * 0.5, absf(sc.z) * 0.5, AirfieldPeople._yaw_of(tf.basis))
+
+	func add_disc(c: Vector2, r: float) -> void:
+		discs.append([c, r])
+
+	func blocked(p: Vector2) -> bool:
+		var arr: Array = cells.get(Vector2i(floori(p.x / cell), floori(p.y / cell)), [])
+		for d in arr:
+			var rel: Vector2 = p - (d["c"] as Vector2)
+			var u: float = rel.x * float(d["cs"]) - rel.y * float(d["sn"])
+			var v: float = rel.x * float(d["sn"]) + rel.y * float(d["cs"])
+			if absf(u) <= float(d["hx"]) + pad and absf(v) <= float(d["hz"]) + pad:
+				return true
+		for s in discs:
+			if (p - (s[0] as Vector2)).length() <= float(s[1]):
+				return true
+		return false
+
+
+
+## How many people a named town shows on its streets: 40-120 on High, from its size (1-5) and the quality setting.
+static func town_target(size: int, dens: float) -> int:
+	return clampi(int(round((20.0 + 8.0 * float(size)) * dens)), 8, 120)
+
+
+## How many people a village or a suburb of a tile shows: a third of its houses' worth, 10-30 for a village on High
+## (a tile with fewer than eight houses is a farmstead, not a village, and gets nobody).
+static func village_target(houses: int, dens: float) -> int:
+	if houses < 8:
+		return 0
+	return clampi(int(round(float(houses) * 0.32 * dens)), 6, 40)
+
+
+## The outfit of one townsperson: [dress (8-15), soldier]. English streets: suits and flat caps, women in coats and
+## dresses, the odd constable, ARP warden or Home Guard patrol. French streets: the same civilians and the
+## gendarmerie, with German soldiers on them where the ground is Axis-held (the `team` the caller passes).
+static func town_dress(team: String, rng: RandomNumberGenerator) -> Array:
+	var axis: bool = team == "Axis"
+	if axis and rng.randf() < 0.07:
+		return [CIV_SUIT, true]                 # a German patrol: the soldier bit puts it in field grey and a Stahlhelm
+	if not axis and rng.randf() < 0.035:
+		return [CIV_HOME_GUARD, true]
+	var r: float = rng.randf()
+	if not axis and r < 0.035:
+		return [CIV_POLICE, false]
+	if not axis and r < 0.075:
+		return [CIV_ARP, false]
+	if r < 0.30:
+		return [CIV_SUIT, false]
+	if r < 0.52:
+		return [CIV_JACKET, false]
+	if r < 0.64:
+		return [CIV_COAT, false]
+	if r < 0.83:
+		return [CIV_WOMAN_COAT, false]
+	return [CIV_WOMAN_DRESS, false]
+
+
+## The person pushing a pram is a woman, whatever else the street gave this slot.
+static func pram_dress(dress: int, rng: RandomNumberGenerator) -> int:
+	if dress == CIV_WOMAN_COAT or dress == CIV_WOMAN_DRESS:
+		return dress
+	return CIV_WOMAN_COAT if rng.randf() < 0.6 else CIV_WOMAN_DRESS
+
+
+## Deterministic Fisher-Yates shuffle (Array.shuffle() uses a global rng, and the layout must stay put).
+static func _shuffle(a: Array, rng: RandomNumberGenerator) -> void:
+	for i in range(a.size() - 1, 0, -1):
+		var j: int = rng.randi_range(0, i)
+		var t: Variant = a[i]
+		a[i] = a[j]
+		a[j] = t
+
+
+## The yaw of a scaled (non-uniform) house / row basis: get_euler() is only right for a pure rotation.
+static func _yaw_of(b: Basis) -> float:
+	return atan2(-b.x.z, b.x.x)
+
+
+## May a person stand at p? On land inside the town/tile bounds, and not inside or against a building.
+static func _town_free(hm: HouseMap, p: Vector2, bounds: Rect2) -> bool:
+	if bounds.has_area() and not bounds.has_point(p):
+		return false
+	if GroundKit.raw_y(p.x, p.y) <= 0.8:
+		return false
+	return not hm.blocked(p)
+
+
+static func _town_line_free(hm: HouseMap, p0: Vector2, p1: Vector2, bounds: Rect2) -> bool:
+	var d: float = p0.distance_to(p1)
+	var steps: int = int(d / 2.5) + 1
+	for k in steps + 1:
+		if not _town_free(hm, p0.lerp(p1, float(k) / float(steps)), bounds):
+			return false
+	return true
+
+
+## One man standing (a queue, a knot, a sentry): the ground height is stored in the entry (index 9) so the
+## MultiMesh is built later without sampling the terrain again.
+static func _town_stand(men: Array, hm: HouseMap, p: Vector2, face: Vector2, kind: int, dress: int, soldier: bool, bounds: Rect2) -> bool:
+	if not _town_free(hm, p, bounds):
+		return false
+	var f: Vector2 = face.normalized() if face.length() > 0.01 else Vector2.DOWN
+	var gy: float = GroundKit.ground_y(p.x, p.y)
+	men.append([Vector3(p.x, 0.0, p.y), Vector3(f.x, 0.0, f.y), kind, 0.0, -1.0, 0.0, soldier, null, 0.0, gy, gy, dress])
+	return true
+
+
+## One man walking (or cycling, or pushing a pram) a straight beat along the street, with the ground heights at
+## both ends (indices 9 and 10).
+static func _town_beat(men: Array, hm: HouseMap, p0: Vector2, dir: Vector2, ln: float, kind: int, spd: float, dress: int, soldier: bool, bounds: Rect2) -> bool:
+	var dv: Vector2 = dir.normalized()
+	if dv.length() < 0.01:
+		return false
+	var p1: Vector2 = p0 + dv * ln
+	if not _town_line_free(hm, p0, p1, bounds):
+		return false
+	var y0: float = GroundKit.ground_y(p0.x, p0.y)
+	var y1: float = GroundKit.ground_y(p1.x, p1.y)
+	if absf(y1 - y0) > 7.0:
+		return false
+	men.append([Vector3(p0.x, 0.0, p0.y), Vector3(dv.x, 0.0, dv.y), kind, ln, -1.0, spd, soldier, null, 0.0, y0, y1, dress])
+	return true
+
+
+## One person on a pavement: a walker, a queue outside a shop, a knot at a corner, a cyclist out on the carriageway
+## or a woman with a pram. `p` lies on the pavement in front of the houses on the `nrm` side, the street runs along
+## `along`.
+static func _town_person(men: Array, hm: HouseMap, p: Vector2, along: Vector2, nrm: Vector2, rng: RandomNumberGenerator, team: String, bounds: Rect2) -> void:
+	var dr: Array = town_dress(team, rng)
+	var dress: int = int(dr[0])
+	var soldier: bool = bool(dr[1])
+	var sgn: float = 1.0 if rng.randf() < 0.5 else -1.0
+	var sdir: Vector2 = along * sgn
+	var roll: float = rng.randf()
+	if soldier:
+		# on patrol: a rifle on the sling, pacing the street or standing at the corner
+		if roll < 0.6:
+			_town_beat(men, hm, p - sdir * 18.0, sdir, 40.0, Kind.WALK, 0.0, dress, true, bounds)
+		else:
+			_town_stand(men, hm, p, -nrm, Kind.SALUTE if roll < 0.8 else Kind.CHAT, dress, true, bounds)
+		return
+	if roll < 0.15:
+		# a queue outside a shop: a file along the pavement, facing the window
+		var cnt: int = 3 + rng.randi() % 4
+		var gap: float = 0.92 * SCALE
+		for k in cnt:
+			_town_stand(men, hm, p + sdir * (float(k) * gap), nrm, Kind.QUEUE, int(town_dress(team, rng)[0]) if k > 0 else dress, false, bounds)
+	elif roll < 0.29:
+		# a knot at a corner, turning from one to the other
+		var cnt2: int = 2 + rng.randi() % 2
+		var a0: float = rng.randf() * TAU
+		for k in cnt2:
+			var a: float = a0 + TAU * float(k) / float(cnt2)
+			var q: Vector2 = p + Vector2(cos(a), sin(a)) * rng.randf_range(0.8, 1.2) * SCALE
+			_town_stand(men, hm, q, p - q, Kind.CHAT, int(town_dress(team, rng)[0]), false, bounds)
+	elif roll < 0.42:
+		# a cyclist, out on the carriageway
+		_town_beat(men, hm, p - nrm * (TOWN_ROAD + 0.8) - sdir * rng.randf_range(6.0, 26.0), sdir, rng.randf_range(28.0, 70.0), Kind.CYCLE, rng.randf_range(3.1, 3.8), dress, false, bounds)
+	elif roll < 0.56:
+		# a mother or grandmother with a pram
+		_town_beat(men, hm, p - sdir * rng.randf_range(4.0, 14.0), sdir, rng.randf_range(22.0, 50.0), Kind.PRAM, 0.85, pram_dress(dress, rng), false, bounds)
+	else:
+		_town_beat(men, hm, p - sdir * rng.randf_range(2.0, 16.0), sdir, rng.randf_range(24.0, 60.0), Kind.WALK, 0.0, dress, false, bounds)
+
+
+## One person outside a house: on the pavement in front of its wall (a village has no kerb strips to follow). The
+## house faces its street along -nrm, so the pavement is straight out from the front wall.
+static func _town_house_front(men: Array, hm: HouseMap, tf: Transform3D, rng: RandomNumberGenerator, team: String, bounds: Rect2) -> void:
+	var yaw: float = _yaw_of(tf.basis)
+	var sc: Vector3 = tf.basis.get_scale()
+	var nrm := Vector2(sin(yaw), cos(yaw))
+	var along := Vector2(cos(yaw), -sin(yaw))
+	var p: Vector2 = Vector2(tf.origin.x, tf.origin.z) - nrm * (absf(sc.z) * 0.5 + rng.randf_range(1.4, 2.2))
+	_town_person(men, hm, p, along, nrm, rng, team, bounds)
+
+
+## The pavements of the land-cover street grid through a named town. This is the grid the tiles lay the visible
+## terraces on (Scatter._add_street_row) and the terrain shader paints (terrain.gdshader: a 420 m district turned by
+## its own hash, a main street every 34 m), so people stand on the streets the player actually sees - a named town's
+## own layout (town_d) only fills part of its circle (Folkestone's holds a handful of houses). The pavement is
+## TOWN_PAVE either side of a street's centre line, clear of the terrace fronts by construction; `hm` still keeps
+## everyone out of the town_d buildings. Runs on the town worker with the layout.
+static func _grid_people(men: Array, hm: HouseMap, center: Vector2, radius: float, target: int, rng: RandomNumberGenerator, team: String, bounds: Rect2) -> void:
+	var tries: int = 0
+	while men.size() < target and tries < target * 14:
+		tries += 1
+		var a0: float = rng.randf() * TAU
+		var q: Vector2 = center + Vector2(cos(a0), sin(a0)) * sqrt(rng.randf()) * radius
+		var dc := Vector2i(floori(q.x / TOWN_DISTRICT), floori(q.y / TOWN_DISTRICT))
+		var org := Vector2(float(dc.x) * TOWN_DISTRICT, float(dc.y) * TOWN_DISTRICT)
+		var ang: float = Scatter._ih(dc.x, dc.y, 10) * PI
+		var along := Vector2(cos(ang), -sin(ang))
+		var across := Vector2(-along.y, along.x)
+		var rel: Vector2 = q - org
+		var u: float = rel.dot(along)
+		var bi: int = int(floorf(rel.dot(across) / TOWN_BLOCK))
+		var sgn: float = 1.0 if rng.randf() < 0.5 else -1.0
+		var p: Vector2 = org + along * u + across * (float(bi) * TOWN_BLOCK + 4.0 + sgn * TOWN_PAVE)
+		if p.distance_to(center) > radius or (bounds.has_area() and not bounds.has_point(p)):
+			continue
+		_town_person(men, hm, p, along, across * sgn, rng, team, bounds)
+
+
+## The people of one countryside tile's villages and suburbs, planned on the tile worker with the houses. `houses`
+## is the tile's own four variant lists (Scatter.tile_landcover_data "house_xf"), so the footprints are exactly the
+## ones it built. Returns men entries for spawn_town.
+static func village_plan(origin: Vector2, cell: float, houses: Array, seed_v: int, team: String, dens: float) -> Array:
+	var all: Array = []
+	for lst in houses:
+		all.append_array(lst as Array)
+	var target: int = village_target(all.size(), dens)
+	if target <= 0 or all.is_empty():
+		return []
+	var center := Vector3(origin.x + cell * 0.5, 0.0, origin.y + cell * 0.5)
+	var hm := HouseMap.new()
+	for t in all:
+		hm.add_xf(t)
+	var bounds := Rect2(origin + Vector2(4.0, 4.0), Vector2(cell - 8.0, cell - 8.0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_v
+	_shuffle(all, rng)
+	var men: Array = []
+	for t in all:
+		if men.size() >= target:
+			break
+		_town_house_front(men, hm, t, rng, team, bounds)
+	if men.size() > target:
+		men.resize(target)
+	return men
+
+
+## The people of a named town, planned on the town's own worker with its layout (`d` from Scatter.town_layout: its
+## "houses", "rows", "civic" and "church" are the town's own footprints) and then the pavements of the land-cover
+## street grid, which is where most of a big town's houses actually stand. Clear of every building. Returns men
+## entries for spawn_town.
+static func town_plan(center: Vector3, d: Dictionary, size: int, team: String, seed_v: int, dens: float) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_v
+	var radius: float = float(d.get("radius", 90.0 + float(size) * 85.0))
+	var bounds := Rect2(Vector2(center.x - radius * 1.4, center.z - radius * 1.4), Vector2(radius * 2.8, radius * 2.8))
+	var hm := HouseMap.new()
+	for lst in d.get("houses", []):
+		for t in (lst as Array):
+			hm.add_xf(t)
+	var rows: Dictionary = d.get("rows", {})
+	for rk in rows.keys():
+		for t2 in (rows[rk] as Array):
+			hm.add_xf(t2)
+	for cv in d.get("civic", []):
+		var cd: Dictionary = cv
+		if cd.has("pos"):
+			var cp: Vector3 = cd["pos"]
+			hm.add_disc(Vector2(cp.x, cp.z), (31.0 if str(cd.get("kind", "")) == "market" else 24.0) * float(cd.get("scale", 1.0)))     # the market's slab is 46 x 38 m: its corners reach 30 m
+	var chd: Variant = d.get("church")
+	if chd is Dictionary and (chd as Dictionary).has("pos"):
+		var chp: Vector3 = (chd as Dictionary)["pos"]
+		hm.add_disc(Vector2(chp.x, chp.z), 16.0)
+	var target: int = town_target(size, dens)
+	var men: Array = []
+	# the rest in front of the houses (their streets), in a hashed order so every quarter of the town is seen to
+	var all: Array = []
+	for lst2 in d.get("houses", []):
+		all.append_array(lst2 as Array)
+	# most of a big town is joined terrace rows (the "rows" units), not single houses: their fronts are streets too
+	for rk2 in rows.keys():
+		all.append_array(rows[rk2] as Array)
+	_shuffle(all, rng)
+	for t3 in all:
+		if men.size() >= target:
+			break
+		_town_house_front(men, hm, t3, rng, team, bounds)
+	# the civic core: a queue at the market and the town hall, knots of people about the square and the station
+	for cv2 in d.get("civic", []):
+		if men.size() >= target:
+			break
+		var cd2: Dictionary = cv2
+		var kind: String = str(cd2.get("kind", ""))
+		if kind != "market" and kind != "townhall" and kind != "station":
+			continue
+		var cp2: Vector3 = cd2["pos"]
+		var cpv := Vector2(cp2.x, cp2.z)
+		var a: float = rng.randf() * TAU
+		var fwd := Vector2(cos(a), sin(a))
+		var side := Vector2(-fwd.y, fwd.x)
+		for q in 4:
+			if men.size() >= target:
+				break
+			var p2: Vector2 = cpv + side * (float(q) * 0.95 * SCALE) + fwd * rng.randf_range(34.0, 39.0)
+			_town_stand(men, hm, p2, -fwd, Kind.QUEUE, CIV_SUIT if rng.randf() < 0.7 else CIV_JACKET, false, bounds)
+		for q2 in 3:
+			if men.size() >= target:
+				break
+			var a2: float = rng.randf() * TAU
+			var p3: Vector2 = cpv + Vector2(cos(a2), sin(a2)) * rng.randf_range(34.0, 40.0)
+			_town_stand(men, hm, p3, cpv - p3, Kind.CHAT, int(town_dress(team, rng)[0]), false, bounds)
+	# the German garrison of an Axis-held town (sentries at the town hall and the station, a patrol): OccupationLife
+	OccupationLife.garrison(men, hm, center, d, size, team, dens, rng, bounds)
+	# and the rest of the town: the pavements of the land-cover street grid (the streets the player actually sees)
+	if men.size() < target:
+		_grid_people(men, hm, Vector2(center.x, center.z), radius, target, rng, team, bounds)
+	if men.size() > target:
+		men.resize(target)
+	return men
+
+
+## One MultiMesh for a town's or village's streets from a town_plan() / village_plan(). The ground heights are in
+## the entries already, so nothing is sampled on the main thread; the men follow the terrain as it rolls.
+static func spawn_town(container: Node3D, men: Array, center: Vector3, team: String, seed_v: int, label: String = "") -> MultiMeshInstance3D:
+	if men.is_empty():
+		return null
+	var mi: MultiMeshInstance3D = spawn(container, men, Vector3(center.x, 0.0, center.z), team, seed_v, "", true)
+	if mi == null:
+		return null
+	mi.name = "TownPeople"
+	mi.visibility_range_end = TOWN_VIEW * minf(Scatter.vis_scale, 1.0)
+	mi.visibility_range_end_margin = 120.0
+	_debug_town_shot(container, men, label)
+	if label != "":
+		print("[people] %s: %d on the streets" % [label, men.size()])
+	return mi
+
+
+static var _town_shot_made: bool = false
+
+
+## The --town-people-shot camera: it takes over when it enters the scene (the town streams in after the player's own
+## camera is set up) and holds the shot (for the whole run), because a chase / orbit camera can be made current later.
+class TownShot extends Camera3D:
+	var hold_s: float = 900.0
+	var _until: int = 0
+
+	func _ready() -> void:
+		process_priority = 500                 # after the game's own camera has had its say this frame
+		_until = Time.get_ticks_msec() + int(hold_s * 1000.0)
+		make_current()
+		# the game's own camera can be made current at any point of a frame: take it back just before drawing
+		RenderingServer.frame_pre_draw.connect(_retake)
+
+
+	func _retake() -> void:
+		if Time.get_ticks_msec() < _until and is_inside_tree():
+			if not current:
+				make_current()
+
+	var _n: int = 0
+
+	func _process(_delta: float) -> void:
+		_n += 1
+		if Time.get_ticks_msec() > _until:
+			set_process(false)
+			return
+		if not current:
+			make_current()
+
+
+## Debug (--town-people-shot[=<n>[,<distance>]]): a camera on the n-th town pedestrian (hidden-desktop screenshots
+## of the figures close up). Waits for a named town (a village never takes the shot), so the town can stream in.
+static func _debug_town_shot(container: Node3D, men: Array, label: String) -> void:
+	if _town_shot_made or not label.begins_with("town"):
+		return
+	var arg: String = ""
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--town-people-shot"):
+			arg = a
+	if arg == "":
+		return
+	var rest: String = arg.substr(18)
+	if rest.begins_with("="):
+		rest = rest.substr(1)
+	var parts: PackedStringArray = rest.split(",")
+	var nth: int = 0
+	var back: float = 12.0
+	if parts.size() > 0 and String(parts[0]).is_valid_int():
+		nth = int(parts[0])
+	if parts.size() > 1 and String(parts[1]).is_valid_float():
+		back = float(parts[1])
+	if parts.size() > 2 and not label.contains(String(parts[2]).strip_edges()):
+		return                                  # --town-people-shot=n,dist,<town id>: wait for that town
+	var pick: Array = []
+	for m in men:
+		if not (m is Array) or (m as Array).size() < 3:
+			continue
+		if (m as Array).size() > 3 and float((m as Array)[3]) > 0.5:
+			continue                            # a figure on a beat walks off: take the ones standing about
+		var k: int = int((m as Array)[2])
+		if k == Kind.WALK or k == Kind.CYCLE or k == Kind.PRAM or k == Kind.QUEUE or k == Kind.CHAT:
+			pick.append(m)
+	if pick.is_empty():
+		return
+	var idx: int = clampi(nth, 0, pick.size() - 1)
+	var m2: Array = pick[idx]
+	var tp: Vector3 = m2[0]
+	tp.y = float(m2[9]) if m2.size() > 9 else GroundKit.ground_y(tp.x, tp.z)
+	var look: Vector3 = tp + Vector3(0.0, 1.0, 0.0)
+	var cp: Vector3 = look + Vector3(back * 0.7, back * 0.25, back)
+	var cam := TownShot.new()
+	cam.fov = 40.0
+	cam.transform = Transform3D(Basis.looking_at(look - cp, Vector3.UP), cp)
+	cam.hold_s = 900.0
+	GroundKit.tree().root.add_child.call_deferred(cam)      # not the town's node: that is freed when the town streams out
+	_town_shot_made = true
+	print("[town-people-shot] at %.0f, %.0f (man %d of %d, %.0f m back) stored y %.1f terrain y %.1f" % [tp.x, tp.z, idx, pick.size(), back, tp.y, GroundKit.ground_y(tp.x, tp.z)])
 
 
 ## Occupancy of a built site: the ground cells taken by anything standing on it (buildings, aircraft, vehicles,
@@ -1410,18 +1992,21 @@ static func spawn(container: Node3D, men: Array, origin: Vector3, team: String, 
 		p.y = 0.0
 		var p1: Vector3 = p + dir * ln
 		var elev: float = float(m[8]) if m.size() > 8 else 0.0      # raised: on a work stand or a wing
+		# the ground heights are worked out with the layout on the worker where there is no terrain on this thread
 		if follow_ground:
-			p.y = GroundKit.ground_y(w0.x, w0.z) + 0.01 - origin.y
+			var gy0: float = float(m[9]) if m.size() > 9 else GroundKit.ground_y(w0.x, w0.z)
+			p.y = gy0 + 0.01 - origin.y
 			p1.y = p.y
 			if ln > 1.0:
 				var w1: Vector3 = w0 + dir * ln
-				p1.y = GroundKit.ground_y(w1.x, w1.z) + 0.01 - origin.y
+				var gy1: float = float(m[10]) if m.size() > 10 else GroundKit.ground_y(w1.x, w1.z)
+				p1.y = gy1 + 0.01 - origin.y
 				dir = (p1 - p).normalized()
 		var bas: Basis = Basis.looking_at(dir, Vector3.UP).scaled(Vector3.ONE * MAN)
 		mm.set_instance_transform(i, Transform3D(bas, p + Vector3(0.0, elev, 0.0)))
 		var spd: float = float(m[5]) if float(m[5]) > 0.0 else rng.randf_range(1.25, 1.65)     # mesh metres a second
 		var ph: float = float(m[4]) if float(m[4]) >= 0.0 else rng.randf()
-		var dress: int = rng.randi() % CrewFigure.DRESSES
+		var dress: int = int(m[11]) if m.size() > 11 else rng.randi() % CrewFigure.DRESSES
 		var soldier: bool = bool(m[6]) if m.size() > 6 else (int(m[2]) == Kind.MARCH or int(m[2]) == Kind.SALUTE)
 		var kind: int = int(m[2])
 		if kind == Kind.TALK and rng.randf() < 0.22:
@@ -1430,13 +2015,14 @@ static func spawn(container: Node3D, men: Array, origin: Vector3, team: String, 
 		if m.size() > 7 and m[7] is Vector2:
 			cx = (m[7] as Vector2).x
 			spd = (m[7] as Vector2).y
-		mm.set_instance_custom_data(i, Color(cx, spd, ph, float(kind * 8 + (4 if soldier else 0) + dress)))
+		mm.set_instance_custom_data(i, Color(cx, spd, ph, float(code_of(kind, soldier, dress))))
 		for q in [p + Vector3(0.0, elev, 0.0), p1]:
 			lo = Vector3(minf(lo.x, (q as Vector3).x), minf(lo.y, (q as Vector3).y), minf(lo.z, (q as Vector3).z))
 			hi = Vector3(maxf(hi.x, (q as Vector3).x), maxf(hi.y, (q as Vector3).y), maxf(hi.z, (q as Vector3).z))
 	mm.custom_aabb = AABB(lo - Vector3(4.0, 1.0, 4.0), hi - lo + Vector3(8.0, 5.0, 8.0))
 	var mi := MultiMeshInstance3D.new()
 	mi.name = "AirfieldPeople"
+	mi.add_to_group("people_mm")            # WarReactions waves at low passes / scatters under fire
 	mi.multimesh = mm
 	mi.material_override = _material(team)
 	mi.position = origin

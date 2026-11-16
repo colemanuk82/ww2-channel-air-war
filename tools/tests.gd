@@ -80,6 +80,10 @@ func _ready() -> void:
 	_test_era_damage()
 	_test_terraces_war_damage()
 	_test_harbour_war()
+	_test_town_people()
+	_test_farm_people()
+	_test_military_people()
+	_test_war_reactions()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	_test_report_link()
 	_test_gameplay_additions()
@@ -90,6 +94,97 @@ func _ready() -> void:
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
+
+
+func _test_military_people() -> void:
+	print("-- military people: gun crews, checkpoints, halts, the run phase")
+	var dens: Array[float] = [0.7, 1.6, 2.2]
+	var sizes_ok: bool = true
+	for gt in ["88mm", "bofors", "mg"]:
+		var prev: int = 0
+		for d in dens:
+			var n: int = MilitaryPeople.crew_size(gt, d)
+			if n < 3 or n > 7 or n < prev:
+				sizes_ok = false
+			prev = n
+	_check(sizes_ok, "gun crews are 3-7 men and grow with the quality setting")
+	_check(MilitaryPeople.crew_size("88mm", 2.2) == 7 and MilitaryPeople.crew_size("mg", 0.7) == 3, "an 88 on High has seven men, a machine-gun pit on Low three")
+	# the posts stand on the pit floor, clear of the gun and inside the ring; the ease spots outside the entrance
+	var geo_ok: bool = true
+	var ease_ok: bool = true
+	var run_ok: bool = true
+	for gt2 in ["88mm", "bofors", "mg"]:
+		var rr: Vector2 = MilitaryPeople.pit_radii(gt2)
+		for sl in MilitaryPeople.gun_slots(gt2, 7):
+			var post: Vector2 = sl[0]
+			var ez: Vector2 = sl[1]
+			if post.length() < 3.0 or post.length() > rr.y - 0.8:
+				geo_ok = false
+			if ez.length() < rr.y + 1.5 or ez.y < rr.y:
+				ease_ok = false
+			if ez.distance_to(post) < 3.0:
+				run_ok = false
+	_check(geo_ok, "gun crew posts are between the gun and the sandbag ring (not inside the gun or the sandbags)")
+	_check(ease_ok, "the men stand about outside the pit's entrance")
+	_check(run_ok, "every man has a real run from his ease spot to his post")
+	var kinds_ok: bool = true
+	for k in [AirfieldPeople.Kind.REACH, AirfieldPeople.Kind.KNEEL, AirfieldPeople.Kind.WORK, AirfieldPeople.Kind.SALUTE, AirfieldPeople.Kind.RUN]:
+		var cc: int = AirfieldPeople.code_of(k, true, 2)
+		if AirfieldPeople.kind_of(cc) != k or not AirfieldPeople.soldier_of(cc) or AirfieldPeople.dress_of(cc) != 2:
+			kinds_ok = false
+	_check(kinds_ok, "crew kinds encode with the soldier flag")
+	# a run begins at the start of its beat: the shader's d = mod((TIME + ph * 61) * spd, lap) is 0 at the moment asked
+	var phase_ok: bool = true
+	for now in [0.0, 12.3, 1999.9, 3599.0]:
+		for ln in [4.0, 9.5, 14.0]:
+			for pr in [[3.0, 1.2], [1.4, 2.4]]:
+				var spd: float = pr[0]
+				var halt: float = pr[1]
+				var ph: float = MilitaryPeople.beat_phase(ln, spd, halt, now)
+				var lap: float = 2.0 * (ln + halt * spd)
+				var dd: float = fposmod((now + ph * 61.0) * spd, lap)
+				if ph < 0.0 or ph > 1.0 or minf(dd, lap - dd) > 0.01:
+					phase_ok = false
+	_check(phase_ok, "beat_phase starts a run / walk beat at its first end")
+	# checkpoints: on the approach side of the barrier, on the road and its verges
+	var cp_ok: bool = true
+	for dv in [Vector2(1.0, 0.0), Vector2(0.0, 1.0), Vector2(0.6, 0.8)]:
+		for w in [5.5, 8.0, 12.0]:
+			var spots: Array = MilitaryPeople.checkpoint_spots(Vector2(100.0, -50.0), dv, w, 4)
+			if spots.size() != 4:
+				cp_ok = false
+			for sp in spots:
+				var rel: Vector2 = (sp[0] as Vector2) - Vector2(100.0, -50.0)
+				var along: float = rel.dot(dv)
+				var lat: float = absf(rel.dot(Vector2(dv.y, -dv.x)))
+				if along < 4.0 or along > 9.5 or lat > w * 0.5 + 1.3:
+					cp_ok = false
+	_check(cp_ok, "checkpoint men stand before the barrier, on the road and its verges")
+	# halts: nobody inside a lorry's footprint
+	var halt_ok: bool = true
+	for sd in [-1.0, 1.0]:
+		for nl in [2, 3]:
+			var dh := Vector2(0.8, 0.6)
+			var h0 := Vector2(40.0, 70.0)
+			var hs: Array = MilitaryPeople.halt_spots(h0, dh, 6.5, sd, nl, 7)
+			if hs.size() != 7:
+				halt_ok = false
+			var latv: Vector2 = Vector2(dh.y, -dh.x) * float(sd)
+			var run: float = float(nl - 1) * 11.0
+			for h in hs:
+				var rel2: Vector2 = (h[0] as Vector2) - h0
+				var al: float = rel2.dot(dh)
+				var la: float = rel2.dot(latv)
+				for k in nl:
+					var cx: float = -run * 0.5 + float(k) * 11.0
+					if absf(al - cx) < 4.4 + 0.4 and absf(la - (6.5 * 0.5 + 2.4)) < 1.3 + 0.3:
+						halt_ok = false
+	_check(halt_ok, "men at a roadside halt never stand inside a lorry")
+	var bm: ArrayMesh = MilitaryPeople.barrier_mesh(6.5)
+	_check(bm != null and bm.get_surface_count() > 0, "the checkpoint barrier mesh builds")
+	# a tile with no roads and no coast plans nothing and does not fail
+	var empty_plan: Dictionary = MilitaryPeople.tile_plan(Vector2(5000.0, 5000.0), 1800.0, [[], [], [], []], 7, "Axis", 2.2)
+	_check(empty_plan is Dictionary, "a tile plan with nothing to plan on is an empty Dictionary")
 
 func _test_controls_ui() -> void:
 	print("-- key rebinding, control profiles, first-flight lesson, assists")
@@ -3227,3 +3322,357 @@ func _test_map_editor_multi() -> void:
 	_check(MapViewScript.grid_label(5.0) == "5 km" and MapViewScript.grid_label(0.5) == "500 m"
 		and MapViewScript.grid_label(1.5) == "1.5 km", "the grid caption reads in km and metres")
 
+## Phase 4, things that react to the war (scripts/ground/war_reactions.gd): a crash scene builds up, its people run in
+## and stop at the ring, the number of scenes is capped and they are cleared away; a downed pilot is captured by the
+## other side; low passes make friendly people wave and strafing makes them run away.
+func _test_war_reactions() -> void:
+	print("-- war reactions: crash scenes, captors, waving and scattering")
+	_check(WarReactions.is_captured("Axis", "Allies") and WarReactions.is_captured("Allies", "Axis") and not WarReactions.is_captured("Allies", "Allies"),
+		"a pilot is captured by the other side only")
+	_check(WarReactions.crew_team_for("Axis", "1940") == "Axis" and WarReactions.crew_team_for("Axis", "liberation") == "Allies" and WarReactions.crew_team_for("Allies", "1940") == "Allies",
+		"German-held ground is German until the liberation")
+	var tdec: bool = true
+	for tt in [0.4, 15.99, 16.0, 1234.5, 3599.7, 2047.31]:
+		var q := Color(roundf(tt / 3600.0 * 255.0) / 255.0, roundf(fposmod(tt / 16.0, 1.0) * 255.0) / 255.0, roundf(fposmod(tt, 1.0) * 255.0) / 255.0)
+		if absf(WarReactions.decode_time(q) - tt) > 0.05:
+			tdec = false
+	_check(tdec, "the shader-time probe pixel decodes to within 50 ms")
+	var pts := PackedVector2Array([Vector2(0, 0), Vector2(100, 0), Vector2(100, 100)])
+	var pp: Array = WarReactions.path_point(pts, PackedFloat32Array([0.0, 100.0, 200.0]), 150.0)
+	_check((pp[0] as Vector3).distance_to(Vector3(100, 0, 50)) < 0.01 and (pp[1] as Vector3).distance_to(Vector3(0, 0, 1)) < 0.01, "the ambulance path follows a road polyline")
+
+	var wr := WarReactions.new()
+	add_child(wr)
+	WarReactions.wave_p = 1.0
+	var pos := Vector3(3000.0, 12.0, 3000.0)
+	wr.test_focus = pos
+	wr.begin_crash(pos, "Allies", true)
+	_check(wr.scenes.size() == 1, "a crash on land stages one scene")
+	if wr.scenes.size() == 1:
+		var g: WarReactions.Gang = wr.scenes[0]
+		_check(g.n >= 4 and g.mm.instance_count == g.n, "a crash scene has %d people in one MultiMesh" % g.n)
+		_check(g.cur_pos[0].y < -1000.0, "nobody is on show before the alarm goes up")
+		for k in 480:
+			wr.step(0.25)
+		_check(g.arrived() == g.n, "all %d people have run in after two minutes" % g.n)
+		var ring_ok: bool = true
+		var kinds_ok: bool = true
+		var feet_ok: bool = true
+		for i in g.n:
+			var lp: Vector3 = g.cur_pos[i]
+			var d: float = Vector2(lp.x + g.mi.position.x - pos.x, lp.z + g.mi.position.z - pos.z).length()
+			ring_ok = ring_ok and d > 24.0 and d < 41.0
+			feet_ok = feet_ok and absf(lp.y + g.mi.position.y - 12.0) < 0.2
+			var kd: int = AirfieldPeople.kind_of(g.cur_code[i])
+			kinds_ok = kinds_ok and kd in [AirfieldPeople.Kind.TALK, AirfieldPeople.Kind.CHAT, AirfieldPeople.Kind.WAVE, AirfieldPeople.Kind.SMOKER]
+		_check(ring_ok, "they stop at a ring 25-40 m from the wreck")
+		_check(feet_ok, "they stand on the ground")
+		_check(kinds_ok, "they stand talking, smoking or waving once there")
+	for k in 6:
+		wr.begin_crash(pos + Vector3(900.0 * float(k + 1), 0.0, 0.0), "Axis", true)
+	_check(wr.scenes.size() <= WarReactions.MAX_SCENES, "at most %d crash scenes stand at once (%d)" % [WarReactions.MAX_SCENES, wr.scenes.size()])
+	wr.step(WarReactions.SCENE_LIFE + 1.0)
+	_check(wr.scenes.is_empty(), "crash scenes are cleared away when they are old")
+	wr.begin_crash(pos, "Allies", true)
+	wr.test_focus = pos + Vector3(9000.0, 0.0, 0.0)
+	wr.step(25.0)
+	_check(wr.scenes.is_empty(), "a scene the camera is far from is dropped")
+	wr.begin_crash(pos, "Allies")
+	_check(wr.scenes.is_empty(), "a crash far from the camera is not staged at all")
+	wr.test_focus = pos
+
+	# a downed pilot
+	wr.begin_pilot(pos, "Axis", true)
+	if wr.scenes.size() == 1:
+		var pg: WarReactions.Gang = wr.scenes[0]
+		_check(pg.is_pilot and pg.n >= 1 and pg.n <= 4 and pg.pilot_mi != null, "a downed pilot has up to four captors (%d) and his own figure" % pg.n)
+		_check(not pg.pilot_shown, "the pilot is not there while his canopy lies on the ground")
+		for k in 200:
+			wr.step(0.25)
+		_check(pg.pilot_shown and pg.arrived() == pg.n, "the pilot stands up and his captors reach him")
+		var pk: int = AirfieldPeople.kind_of(pg.pilot_code)
+		var want_k: int = AirfieldPeople.Kind.WAVE if WarReactions.is_captured("Axis", WarReactions.crew_team(pos)) else AirfieldPeople.Kind.TALK
+		_check(pk == want_k, "the enemy pilot raises a hand, one of our own just talks")
+	wr.step(300.0)
+
+	# low passes and strafing over a group of people (the figures' data is fed to the cache: a headless MultiMesh
+	# cannot be read back)
+	var men: Array = []
+	var fp := PackedVector3Array()
+	var fc := PackedInt32Array()
+	for k in 4:
+		men.append([Vector3(5000.0 + 20.0 * float(k), 12.0, 5000.0), Vector3(0, 0, -1), AirfieldPeople.Kind.TALK, 0.0, 0.3, 1.4, false, null, 0.0, 12.0, 12.0, 10])
+	men.append([Vector3(5260.0, 12.0, 5000.0), Vector3(0, 0, -1), AirfieldPeople.Kind.TALK, 0.0, 0.3, 1.4, false, null, 0.0, 12.0, 12.0, 10])
+	for m in men:
+		fp.append((m[0] as Vector3) - Vector3(5000.0, 12.0, 5000.0))
+		fc.append(AirfieldPeople.code_of(AirfieldPeople.Kind.TALK, false, 10))
+	var fri: MultiMeshInstance3D = AirfieldPeople.spawn(wr, men, Vector3(5000.0, 12.0, 5000.0), "Allies", 11, "", true)
+	var foes: Array = [[Vector3(5030.0, 12.0, 5040.0), Vector3(0, 0, -1), AirfieldPeople.Kind.TALK, 0.0, 0.3, 1.4, false, null, 0.0, 12.0, 12.0, 1]]
+	var foe: MultiMeshInstance3D = AirfieldPeople.spawn(wr, foes, Vector3(5030.0, 12.0, 5040.0), "Axis", 12, "", true)
+	var pcf: WarReactions.PeopleCache = wr._cache_for(fri)
+	pcf.feed(fp, fc)
+	var pce: WarReactions.PeopleCache = wr._cache_for(foe)
+	pce.feed(PackedVector3Array([Vector3(0.0, 0.0, 0.0)]), PackedInt32Array([AirfieldPeople.code_of(AirfieldPeople.Kind.TALK, false, 1)]))
+	var above := Vector3(5030.0, 42.0, 5000.0)
+	wr.scan_at(above, 30.0, "Allies", false)
+	wr.scan_at(above, 30.0, "Allies", false)
+	var waving: int = 0
+	for i in 5:
+		if AirfieldPeople.kind_of(pcf.code[i]) == AirfieldPeople.Kind.WAVE:
+			waving += 1
+	_check(waving == 4 and AirfieldPeople.kind_of(pcf.code[4]) != AirfieldPeople.Kind.WAVE, "friendly people within 150 m of a low pass wave, the one 250 m away does not (%d)" % waving)
+	_check(AirfieldPeople.kind_of(pce.code[0]) != AirfieldPeople.Kind.WAVE, "enemy troops do not wave")
+	var high := PackedInt32Array([AirfieldPeople.code_of(AirfieldPeople.Kind.TALK, false, 10)])
+	pcf.state[4] = 0
+	wr.scan_at(Vector3(5260.0, 400.0, 5000.0), 390.0, "Allies", false)
+	_check(AirfieldPeople.kind_of(pcf.code[4]) != AirfieldPeople.Kind.WAVE, "nobody waves at an aircraft that is high")
+	wr.step(7.0)
+	var back: int = 0
+	for i in 5:
+		if AirfieldPeople.kind_of(pcf.code[i]) == AirfieldPeople.Kind.TALK:
+			back += 1
+	_check(back == 5, "after a few seconds they go back to what they were doing (%d of 5)" % back)
+	wr.scan_at(above, 30.0, "Allies", true)
+	var running: int = 0
+	for i in 5:
+		if AirfieldPeople.kind_of(pcf.code[i]) == AirfieldPeople.Kind.RUN:
+			running += 1
+	_check(running >= 1 and running <= 4, "friendly people under fire run away (%d)" % running)
+	wr.step(15.0)
+	var moved: int = 0
+	var crouched: int = 0
+	for i in 4:
+		if pcf.pos[i].distance_to(fp[i]) > 15.0:
+			moved += 1
+		if AirfieldPeople.kind_of(pcf.code[i]) == AirfieldPeople.Kind.WORK:
+			crouched += 1
+	_check(moved >= 1 and crouched == moved, "the runners end up well away from where they stood and crouch there (%d)" % moved)
+	# the scan is cheap
+	WarReactions.wave_p = 0.0
+	var t0: int = Time.get_ticks_usec()
+	for k in 300:
+		wr.scan_at(above, 30.0, "Allies", false)
+	var per: float = float(Time.get_ticks_usec() - t0) / 300.0 / 1000.0
+	_check(per < 0.3, "a reaction scan over the people takes %.3f ms (< 0.3)" % per)
+	WarReactions.wave_p = 0.1
+	WarReactions.inst = null
+	wr.queue_free()
+
+
+## The towns and villages: head counts follow the quality setting, the new kinds encode in INSTANCE_CUSTOM.w, and
+## every person planned for a village stands clear of the houses it was planned from (never in a wall).
+func _test_town_people() -> void:
+	print("-- town people: counts, kind codes, house clearance")
+	var lo: int = AirfieldPeople.village_target(40, 0.7)
+	var mid: int = AirfieldPeople.village_target(40, 1.6)
+	var hi: int = AirfieldPeople.village_target(40, 2.2)
+	_check(lo > 0 and lo < mid and mid < hi and hi <= 40, "village numbers follow density (%d / %d / %d of 40 houses)" % [lo, mid, hi])
+	_check(AirfieldPeople.village_target(6, 2.2) == 0, "a farmstead of six houses gets nobody")
+	var tt: int = AirfieldPeople.town_target(3, 2.2)
+	_check(tt >= 40 and tt <= 120, "a size-3 town shows %d people on High (40-120)" % tt)
+	_check(AirfieldPeople.town_target(3, 0.7) < tt, "a town on Low shows fewer than on High")
+	# INSTANCE_CUSTOM.w = kind * 64 + soldier * 32 + dress
+	var ok: bool = true
+	var ks: Array[int] = [AirfieldPeople.Kind.QUEUE, AirfieldPeople.Kind.CYCLE, AirfieldPeople.Kind.PRAM, AirfieldPeople.Kind.CHAT]
+	var sols: Array[bool] = [false, true]
+	for k in ks:
+		for sol in sols:
+			for d in range(AirfieldPeople.CIV_SUIT, AirfieldPeople.CIV_HOME_GUARD + 1):
+				var c: int = AirfieldPeople.code_of(k, sol, d)
+				if AirfieldPeople.kind_of(c) != k or AirfieldPeople.soldier_of(c) != sol or AirfieldPeople.dress_of(c) != d:
+					ok = false
+	_check(ok, "the town kinds and the civilian wardrobe encode and decode in INSTANCE_CUSTOM.w")
+	var oc: int = AirfieldPeople.code_of(AirfieldPeople.Kind.MARCH, true, 2)
+	_check(AirfieldPeople.kind_of(oc) == AirfieldPeople.Kind.MARCH and AirfieldPeople.soldier_of(oc) and AirfieldPeople.dress_of(oc) == 2, "an airfield soldier still encodes to kind, soldier and dress")
+	# a street of houses with their fronts on the pavement, laid the way the scatter lays them
+	var houses: Array = [[], [], [], []]
+	for i in 24:
+		var hx: float = float(i) * 24.0
+		var xf := Transform3D(Basis(Vector3.UP, 0.0).scaled(Vector3(8.0, 6.0, 8.0)), Vector3(hx, 12.0, 0.0))
+		(houses[i % 4] as Array).append(xf)
+	var want: int = AirfieldPeople.village_target(24, 2.2)
+	var men: Array = AirfieldPeople.village_plan(Vector2(-200.0, -200.0), 900.0, houses, 4711, "Allies", 2.2)
+	_check(men.size() == want, "a village plans its density's head count (%d of %d)" % [men.size(), want])
+	var clear: bool = true
+	var feet: bool = true
+	var inside: bool = true
+	var tile := Rect2(Vector2(-196.0, -196.0), Vector2(892.0, 892.0))
+	for m in men:
+		var mp: Vector3 = m[0]
+		if not tile.has_point(Vector2(mp.x, mp.z)):
+			inside = false
+		if m.size() > 9 and absf(float(m[9]) - 12.0) > 0.001:
+			feet = false
+		for lst in houses:
+			for h in (lst as Array):
+				var tf: Transform3D = h
+				if absf(mp.x - tf.origin.x) < 4.0 and absf(mp.z - tf.origin.z) < 4.0:
+					clear = false
+	_check(inside, "village people stay inside their tile")
+	_check(clear, "no village person is planned inside a house footprint")
+	_check(feet, "village people carry their ground height from the worker (12 m test terrain)")
+	# the real thing: a named town's own layout, the way _build_city lays it out, plus the land-cover street grid
+	# its surrounding tiles lay through the circle (Folkestone's own town_d holds only a handful of houses)
+	var fpos: Vector3 = WorldCoords.latlon_to_world(51.0814, 1.1695)
+	var tseed: int = hash("folkestone") + 77
+	var td: Dictionary = Scatter.town_layout(fpos, 2, tseed, true)
+	var tmen: Array = AirfieldPeople.town_plan(fpos, td, 2, "Allies", tseed + 9, 2.2)
+	_check(tmen.size() >= 30, "Folkestone's real town layout plans %d townspeople on High (>= 30)" % tmen.size())
+	var bare: Dictionary = {"radius": 260.0}
+	var gmen: Array = AirfieldPeople.town_plan(fpos, bare, 2, "Allies", tseed + 11, 2.2)
+	_check(gmen.size() >= 30, "a town whose town_d is empty still gets %d people from the street grid" % gmen.size())
+	_check(gmen.size() <= AirfieldPeople.town_target(2, 2.2), "the street-grid plan stops at the town's target (%d)" % gmen.size())
+	_test_occupation_life()
+
+
+const OccupationLife := preload("res://scripts/ground/occupation_life.gd")
+
+## Phase 5 (scripts/ground/occupation_life.gd): the French civilians and the German garrison of the French towns.
+func _test_occupation_life() -> void:
+	print("-- occupation life: French civilians and the German garrison")
+	_check(OccupationLife.continental(50.726, 1.614), "Boulogne is on the continent")
+	_check(OccupationLife.continental(49.92, 1.08), "Dieppe is on the continent")
+	_check(not OccupationLife.continental(51.081, 1.1695), "Folkestone is in England")
+	_check(not OccupationLife.continental(51.13, 1.31), "Dover is in England")
+	# an Axis town's patrol is never dressed in a British outfit (police, ARP warden, Home Guard)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 991
+	var axis_ok: bool = true
+	for i in 600:
+		var dd: int = int(AirfieldPeople.town_dress("Axis", rng)[0])
+		if dd == AirfieldPeople.CIV_POLICE or dd == AirfieldPeople.CIV_ARP or dd == AirfieldPeople.CIV_HOME_GUARD:
+			axis_ok = false
+	_check(axis_ok, "no British-only outfit is dressed in an Axis-held town")
+	# a French town (Boulogne) turns its British-only civilians into French ones; an English town keeps them
+	var outfits: Array = [AirfieldPeople.CIV_POLICE, AirfieldPeople.CIV_ARP, AirfieldPeople.CIV_HOME_GUARD, AirfieldPeople.CIV_SUIT]
+	var test_men: Array = []
+	for i in 40:
+		var dress: int = int(outfits[i % 4])
+		test_men.append([Vector3.ZERO, Vector3.FORWARD, 0, 0.0, -1.0, 0.0, dress == AirfieldPeople.CIV_HOME_GUARD, null, 0.0, 0.0, 0.0, dress])
+	var english_left: int = OccupationLife.civilise(test_men, 51.081, 1.1695)
+	_check(english_left == 0, "Folkestone's civilians are left as they are")
+	var fixed: int = OccupationLife.civilise(test_men, 50.726, 1.614)
+	var french_ok: bool = true
+	for e in test_men:
+		var dd2: int = int(e[11])
+		if dd2 == AirfieldPeople.CIV_POLICE or dd2 == AirfieldPeople.CIV_ARP or dd2 == AirfieldPeople.CIV_HOME_GUARD or bool(e[6]):
+			french_ok = false
+	_check(french_ok and fixed == 30, "Boulogne's British-only civilians are all made French (%d changed, want 30)" % fixed)
+	# the German garrison: an Axis-held town gets its sentries and patrol at the town hall; an Allied one gets none
+	var gpos := Vector3(0.0, 0.0, 0.0)
+	var gd: Dictionary = {"civic": [{"kind": "townhall", "pos": gpos, "yaw": 0.0, "scale": 1.0}]}
+	var gb := Rect2(Vector2(-500.0, -500.0), Vector2(1000.0, 1000.0))
+	var gr := RandomNumberGenerator.new()
+	gr.seed = 5
+	var gax: Array = []
+	var added: int = OccupationLife.garrison(gax, AirfieldPeople.HouseMap.new(), gpos, gd, 2, "Axis", 2.2, gr, gb)
+	var soldiers: bool = true
+	for m in gax:
+		if not bool(m[6]):
+			soldiers = false
+	_check(added >= 2 and soldiers, "an Axis-held town hall gets its sentries (%d men, all soldiers)" % added)
+	var gal: Array = []
+	var allied_added: int = OccupationLife.garrison(gal, AirfieldPeople.HouseMap.new(), gpos, gd, 2, "Allies", 2.2, gr, gb)
+	_check(allied_added == 0, "an Allied-held town gets no German garrison")
+
+## Phase 2 (scripts/ground/farm_people.gd): life on the farms and in the fields. The new kinds and the farm wardrobe encode
+## in INSTANCE_CUSTOM.w without renumbering the old ones, the number of work parties follows the quality setting and the
+## month, each season has its own work, and nobody (and no prop or stook) is planned on a road-free spot that is not
+## farmland, on water, or inside a house of the tile.
+func _test_farm_people() -> void:
+	print("-- farm people: kinds, counts by density and season, placement")
+	var K = AirfieldPeople.Kind
+	_check(K.WALK == 0 and K.CHAT == 23 and K.PITCHFORK == 24 and K.HOE == 25 and K.LEAD_HORSE == 26 and K.DRIVE_CART == 27 and K.PLOUGHMAN == 28, "the farm kinds are appended after CHAT without renumbering the old ones")
+	var enc_ok: bool = true
+	for k in [K.PITCHFORK, K.HOE, K.LEAD_HORSE, K.DRIVE_CART, K.PLOUGHMAN]:
+		for sol in [false, true]:
+			for d in range(AirfieldPeople.FARM_FARMER, AirfieldPeople.FARM_WOMAN_FR + 1):
+				var c: int = AirfieldPeople.code_of(k, sol, d)
+				if AirfieldPeople.kind_of(c) != k or AirfieldPeople.soldier_of(c) != sol or AirfieldPeople.dress_of(c) != d:
+					enc_ok = false
+	_check(enc_ok, "the farm kinds and the farm wardrobe (dress 16-20) encode and decode in INSTANCE_CUSTOM.w")
+	var lo: int = FarmPeople.group_target(0.7, 8)
+	var mid: int = FarmPeople.group_target(1.6, 8)
+	var hi: int = FarmPeople.group_target(2.2, 8)
+	_check(lo >= 1 and lo < mid and mid < hi, "work parties per tile follow density (%d / %d / %d in August)" % [lo, mid, hi])
+	_check(FarmPeople.group_target(2.2, 8) > FarmPeople.group_target(2.2, 1), "the fields are busier at the harvest than in January (%d vs %d)" % [FarmPeople.group_target(2.2, 8), FarmPeople.group_target(2.2, 1)])
+	# the farmland north of Hawkinge: the nine tiles round it, with a lone house in each so the farm anchors exist
+	var hpos: Vector3 = WorldCoords.latlon_to_world(51.13, 1.12)
+	var tile: float = 1800.0
+	var o0 := Vector2(floorf(hpos.x / tile) * tile, floorf(hpos.z / tile) * tile)
+	var per_month: Dictionary = {}
+	var all_fine: bool = true
+	var bad: String = ""
+	for month in [1, 4, 6, 8, 11]:
+		var kinds: Dictionary = {}
+		var men_n: int = 0
+		var men_lo_n: int = 0
+		for ty in range(-1, 2):
+			for tx in range(-1, 2):
+				var org := Vector2(o0.x + float(tx) * tile, o0.y + float(ty) * tile)
+				var hx: Array = [[], [], [], []]
+				var hc := Vector3(org.x + tile * 0.5 + 300.0, 12.0, org.y + tile * 0.5 - 200.0)
+				(hx[0] as Array).append(Transform3D(Basis(Vector3.UP, 0.4).scaled(Vector3(9.0, 6.0, 7.0)), hc))
+				var pl: Dictionary = FarmPeople.plan(org, tile, hx, 4242 + tx * 7 + ty * 13, 2.2, month, false)
+				var pl_lo: Dictionary = FarmPeople.plan(org, tile, hx, 4242 + tx * 7 + ty * 13, 0.7, month, false)
+				men_lo_n += (pl_lo["men"] as Array).size()
+				for m in (pl["men"] as Array):
+					men_n += 1
+					var kd: int = int(m[2])
+					kinds[kd] = int(kinds.get(kd, 0)) + 1
+					var mp: Vector3 = m[0]
+					var q := Vector2(mp.x, mp.z)
+					var qs: Array = [q]
+					if float(m[3]) > 1.0:
+						qs.append(q + Vector2((m[1] as Vector3).x, (m[1] as Vector3).z) * float(m[3]))
+					for qq in qs:
+						var v: Vector2 = qq
+						var cls: int = LandCover.class_at(v.x, v.y)
+						var inside_house: bool = absf(v.x - hc.x) < 6.0 and absf(v.y - hc.z) < 6.0
+						if (cls != 40 and cls != 30) or GroundKit.raw_y(v.x, v.y) <= 0.8 or Scatter.in_lake(v.x, v.y) or inside_house or not Rect2(org, Vector2(tile, tile)).has_point(v):
+							all_fine = false
+							bad = "class %d at %.0f,%.0f" % [cls, v.x, v.y]
+				for pk in (pl["props"] as Dictionary).keys():
+					for e in ((pl["props"] as Dictionary)[pk] as Array):
+						var pp: Vector3 = (e as Array)[0]
+						if absf(pp.x - hc.x) < 6.0 and absf(pp.z - hc.z) < 6.0:
+							all_fine = false
+				for sk in (pl["still"] as Dictionary).keys():
+					for e2 in ((pl["still"] as Dictionary)[sk] as Array):
+						var sp: Vector3 = (e2 as Array)[0]
+						var scls: int = LandCover.class_at(sp.x, sp.z)
+						if scls != 40 and scls != 30 or Scatter.in_lake(sp.x, sp.z):
+							all_fine = false
+							bad = "still on class %d" % scls
+		per_month[month] = {"kinds": kinds, "men": men_n, "men_lo": men_lo_n}
+	_check(all_fine, "farm people, props and stooks stand on farmland or grass, off water, clear of the tile's houses and inside the tile (%s)" % bad)
+	var jan: Dictionary = per_month[1]
+	var aug: Dictionary = per_month[8]
+	_check(int(aug["men"]) > 0 and int(aug["men"]) > int(aug["men_lo"]), "High shows more field hands than Low (%d vs %d in August)" % [int(aug["men"]), int(aug["men_lo"])])
+	_check(int(aug["men"]) > int(jan["men"]), "more people work the fields in August than in January (%d vs %d)" % [int(aug["men"]), int(jan["men"])])
+	var ak: Dictionary = aug["kinds"]
+	_check(int(ak.get(K.PITCHFORK, 0)) + int(ak.get(K.WORK, 0)) > 0 and int(ak.get(K.PLOUGHMAN, 0)) == 0, "August is harvest: stooking and forking, no horse ploughing")
+	var nk: Dictionary = (per_month[11] as Dictionary)["kinds"]
+	_check(int(nk.get(K.PLOUGHMAN, 0)) + int(nk.get(K.DRIVE_CART, 0)) > 0 and int(nk.get(K.PITCHFORK, 0)) == 0, "November is ploughing (horse or tractor), no haymaking")
+	var sk4: Dictionary = (per_month[4] as Dictionary)["kinds"]
+	_check(int(sk4.get(K.HOE, 0)) > 0, "April is sowing and hoeing")
+	_check(int(((per_month[6] as Dictionary)["kinds"] as Dictionary).get(K.PITCHFORK, 0)) > 0, "June is haymaking")
+	# a prop and its man share one beat: same position, direction, length, speed and phase
+	var org2 := o0
+	var pl2: Dictionary = FarmPeople.plan(org2, tile, [], 99, 2.2, 10, false)
+	var tied: bool = true
+	var team_men: int = 0
+	for m2 in (pl2["men"] as Array):
+		var mk: int = int(m2[2])
+		if mk == K.PLOUGHMAN or mk == K.LEAD_HORSE or mk == K.DRIVE_CART:
+			team_men += 1
+			var found: bool = false
+			for pk2 in (pl2["props"] as Dictionary).keys():
+				for e3 in ((pl2["props"] as Dictionary)[pk2] as Array):
+					var ea: Array = e3
+					if (ea[0] as Vector3).is_equal_approx(m2[0]) and absf(float(ea[2]) - float(m2[3])) < 0.001 and absf(float(ea[3]) - float(m2[4])) < 0.001 and absf(float(ea[4]) - float(m2[5])) < 0.001:
+						found = true
+			if not found:
+				tied = false
+	_check(tied, "every ploughman, leader and driver has his prop on the same beat (%d teams)" % team_men)
+	_check(FarmPeople.prop_mesh(FarmPeople.Prop.PLOUGH_TEAM).get_surface_count() == 1 and FarmPeople.still_mesh(FarmPeople.Still.STOOK).get_surface_count() == 1, "the farm prop and still meshes build")
