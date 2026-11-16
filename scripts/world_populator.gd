@@ -254,9 +254,11 @@ func _register_airfields() -> void:
 		_exclude.append([pos, 1900.0])
 		var hdir: Vector3 = WorldCoords.heading_to_dir(float(d["heading_deg"]))
 		zones.append({"pos": pos, "heading": float(d["heading_deg"]), "half": Vector2(820.0, 1000.0), "feather": 200.0})
-		RoadMesh.add_exclusion_box(Vector2(pos.x, pos.z), Vector2(hdir.x, hdir.z), 720.0, 780.0)
+		# no road across the aerodrome grass (the zone above: 1000 m along the runway, 820 m across, plus its
+		# feather): it was 720 x 780, so roads crossed the grass toward the runway ends
+		RoadMesh.add_exclusion_box(Vector2(pos.x, pos.z), Vector2(hdir.x, hdir.z), 1060.0, 880.0)
 		# no river / canal ribbons, canal locks or power lines across the field either
-		RiverMesh.add_exclusion_disc(Vector2(pos.x, pos.z), 1050.0)
+		RiverMesh.add_exclusion_disc(Vector2(pos.x, pos.z), 1250.0)
 		PylonMesh.add_exclusion_disc(Vector2(pos.x, pos.z), 1200.0)
 		# a large army camp beside some fields: reserve its ground now so trees and buildings keep clear of it
 		var camp: Vector3 = Vector3.INF
@@ -2392,6 +2394,7 @@ func _build_site(s: Dictionary) -> Node3D:
 	if n == null:
 		n = Node3D.new()
 	n.name = str(s["key"])
+	_site_people(s, n)
 	var t1: int = Time.get_ticks_msec()
 	# A big site (an airfield is ~1,800 nodes, ~15 ms to enter the scene) goes in over a few frames: the container
 	# first, then its children in order under a small per-frame budget (see _advance_staged).
@@ -2409,6 +2412,24 @@ func _build_site(s: Dictionary) -> Node3D:
 	if bool(s["ambient"]):
 		_ambient_active += 1
 	return n
+
+
+## Men at the other built sites (AirfieldPeople.populate_site): which sites get them, soldiers or working dress.
+const PEOPLE_SITES := {"camp_": true, "pow_": true, "mil_": true, "vweap_": true, "decoy_": true, "coast_": true,
+	"cd_": false, "aviation_": false, "oil_": false, "port_": false, "dock_": false, "ind_": false, "aircraft_": false}
+
+
+func _site_people(s: Dictionary, n: Node3D) -> void:
+	if n.get_child_count() == 0 or n.has_meta("people_done"):
+		return
+	var key: String = str(s["key"])
+	for pf in PEOPLE_SITES:
+		if key.begins_with(str(pf)):
+			n.set_meta("people_done", true)
+			var pos: Vector3 = s["pos"]
+			var team: String = str(s["team"]) if s.has("team") and str(s["team"]) != "" else GroundKit.side_at(pos)
+			AirfieldPeople.populate_site(n, pos, team, int(s.get("size", 1)), bool(PEOPLE_SITES[pf]), hash(key) + 41)
+			return
 
 
 var _lstat: Array = [0, 0, 0]      # --loadnotes: tiles collected, their summed worker wall time (us), last print (ms)
@@ -3386,6 +3407,10 @@ func _build_airfield(s: Dictionary) -> Node3D:
 						if Vector2(cw.x - af.parked_spots[i].x, cw.z - af.parked_spots[i].z).length() < 2.0:
 							af.parked_spots.remove_at(i)
 				c.free()
+	if container.has_meta("people_args"):
+		var pa: Array = container.get_meta("people_args")
+		container.remove_meta("people_args")
+		AirfieldPeople.populate(container, pa[0], pa[1], pa[2], pa[3], pa[4], pa[5], pa[6], pa[7], pa[8])
 	return container
 
 

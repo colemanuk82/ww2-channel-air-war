@@ -173,6 +173,15 @@ float t_band(float px, float cell) {
 	return 1.0 - smoothstep(cell * 0.22, cell * 0.5, px);
 }
 
+// Height (m) of the lighting-only ground relief at p (see the Ground relief block in fragment): rolling ground,
+// smaller banks, and tussocks and clods near the camera - each band faded by distance and by pixel size.
+float relief_h(vec2 p, float cam_d, float px) {
+	return t_vnoise2(p * 0.016 + 3.0) * 3.2 + t_vnoise2(p * 0.055 + 11.0) * 1.1
+		+ (t_vnoise2(p * 0.19 + 23.0) - 0.5) * 0.30 * (1.0 - smoothstep(300.0, 1200.0, cam_d)) * t_band(px, 5.3)
+		+ ((t_vnoise2(p * 0.85 + 5.0) - 0.5) * 0.10 * t_band(px, 1.18) + (t_vnoise2(p * 2.9 + 17.0) - 0.5) * 0.035 * t_band(px, 0.34))
+			* (1.0 - smoothstep(80.0, 450.0, cam_d));
+}
+
 void fragment() {
 	float h = w_pos.y;
 	float slope = 1.0 - clamp(w_normal.y, 0.0, 1.0);
@@ -701,7 +710,9 @@ void fragment() {
 		// but real aerodrome grass still varies patch to patch
 		float mottle = 0.94 + 0.12 * t_vnoise2(xz * 0.006 + 17.0);
 		airfield_grass *= mow * mottle;
-		col = mix(col, airfield_grass, afw * 0.85);
+		// fully over the ground beneath: at 0.85 the field patchwork, hedge lines and painted tracks showed through
+		// the aerodrome grass (the mottle above keeps it from reading as a flat decal)
+		col = mix(col, airfield_grass, afw);
 	}
 	// steep faces -> rock (roughness-broken so faces are not a flat fill), then chalk / limestone by zone
 	float rockness = smoothstep(rock_slope - 0.14, rock_slope + 0.14, slope);
@@ -793,49 +804,27 @@ void fragment() {
 
 	col = mix(col, col * vec3(0.66, 0.70, 0.72) + vec3(0.0, 0.006, 0.012), wetness * (1.0 - urban * 0.4));
 	// Ground relief: the terrain mesh is too coarse to carry the small rolls, banks and hollows of real fields, so
-	// a few metres of procedural height are added in the lighting only (screen-space derivative bump, no extra
-	// geometry). Under the low sun this is what makes the fields read as ground rather than a painted sheet.
+	// a few metres of procedural height are added in the lighting only (no extra geometry). Under the low sun this is
+	// what makes the fields read as ground rather than a painted sheet.
+	// The slope is taken by finite differences of the relief height in world space, a pixel's width apart - not from
+	// the screen-space derivatives dFdx/dFdy. Those are taken across 2x2 pixel blocks, and a block that straddles an
+	// edge of the terrain mesh's triangles gets nonsense from the neighbouring triangle: single pixels turned away from
+	// the sun, rows of dark dashes along every mesh line (31 m apart) across the fields and the airfield grass.
 	{
 		float cam_d = length(VERTEX);
 		float rk = (1.0 - smoothstep(1800.0, 9000.0, cam_d)) * (1.0 - water_k) * (1.0 - urban * 0.8);
 		if (rk > 0.001) {
-			float hb = t_vnoise2(xz * 0.016 + 3.0) * 3.2 + t_vnoise2(xz * 0.055 + 11.0) * 1.1
-				+ (t_vnoise2(xz * 0.19 + 23.0) - 0.5) * 0.30 * (1.0 - smoothstep(300.0, 1200.0, cam_d)) * t_band(gpx, 5.3)
-				// tussocks and clods right under the camera: catch the low sun as a fine broken surface
-				// (pixel-size faded like the colour grain: an unresolved bump only sparkles under the low sun)
-				+ ((t_vnoise2(xz * 0.85 + 5.0) - 0.5) * 0.10 * t_band(gpx, 1.18) + (t_vnoise2(xz * 2.9 + 17.0) - 0.5) * 0.035 * t_band(gpx, 0.34)) * (1.0 - smoothstep(80.0, 450.0, cam_d));
-			// P2: the detail texture's B channel adds the same turf/soil micro relief to this lighting-only
-			// bump, so clods and tussocks catch the low sun right under the camera in exactly the places the
-			// colour grain above shows them. Fetched only when it can matter (the rk > 0.001 gate above plus
-			// its own near-camera fade); rk is applied to the whole height just below, as for the noise terms.
-			if (use_detail) {
-				float dk2 = 1.0 - smoothstep(250.0, 1500.0, cam_d);
-				if (dk2 > 0.0) {
-					vec3 d1 = texture(detail_tex, xz / 1.2).rgb;
-					vec3 d2 = texture(detail_tex, xz / 4.9).rgb;
-					float dht = (d1.b - 0.5) * 0.06 + (d2.b - 0.5) * 0.03;
-					hb += dht * dk2;
-				}
+			float e = 0.35;                       // a fixed step: one scaled to the pixel aliased into long streaks at grazing angles
+			float h0 = relief_h(xz, cam_d, gpx);
+			vec2 grad = vec2(relief_h(xz + vec2(e, 0.0), cam_d, gpx) - h0, relief_h(xz + vec2(0.0, e), cam_d, gpx) - h0) / e;
+			grad *= rk * (1.0 + 0.6 * rough);
+			float gl = length(grad);
+			if (gl > 0.45) {
+				grad *= 0.45 / gl;                 // never steeper than a 24 degree bank
 			}
-			hb *= rk * (1.0 + 0.6 * rough);
-			vec3 dpx = dFdx(VERTEX);
-			vec3 dpy = dFdy(VERTEX);
-			vec3 r1 = cross(dpy, NORMAL);
-			vec3 r2 = cross(NORMAL, dpx);
-			float det = dot(dpx, r1);
-			vec3 sg = sign(det) * (dFdx(hb) * r1 + dFdy(hb) * r2);
-			// length(sg) / abs(det) is the slope this relief asks for. The relief itself never asks for more than
-			// about 0.4 (a 22 degree bank). But along the edges of the terrain mesh's triangles the screen-space
-			// derivatives above come out wild on single pixels (worst with MSAA), and a slope of 2, 5 or 50 turned
-			// that pixel's normal away from the sun: rows of near-black dashes along the mesh lines, 31 m apart.
-			// So a pixel asking for an impossible slope gets no relief at all, and the rest is capped.
-			float slope_ask = length(sg) / max(abs(det), 1.0e-12);
-			if (slope_ask > 0.9) {
-				sg = vec3(0.0);
-			} else if (slope_ask > 0.45) {
-				sg *= 0.45 / slope_ask;
-			}
-			NORMAL = normalize(abs(det) * NORMAL - sg);
+			vec3 nw = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
+			nw = normalize(nw - vec3(grad.x, 0.0, grad.y));
+			NORMAL = normalize((VIEW_MATRIX * vec4(nw, 0.0)).xyz);
 		}
 	}
 	// Aerial perspective: far ground takes on the blue of the air in front of it (a cool tint, then the horizon
