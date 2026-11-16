@@ -53,6 +53,10 @@ uniform vec3 farm_top0; uniform vec3 farm_top1; uniform vec3 farm_top2; uniform 
 uniform vec3 farm_arm0; uniform vec3 farm_arm1; uniform vec3 farm_arm2; uniform vec3 farm_arm3; uniform vec3 farm_arm4;
 uniform vec3 farm_leg0; uniform vec3 farm_leg1; uniform vec3 farm_leg2; uniform vec3 farm_leg3; uniform vec3 farm_leg4;
 uniform vec3 farm_cap0; uniform vec3 farm_cap1; uniform vec3 farm_cap2; uniform vec3 farm_cap3; uniform vec3 farm_cap4;
+// the gendarme (dress 21, French towns): dark blue tunic and trousers, a kepi
+uniform vec3 gend_top = vec3(0.01, 0.015, 0.05);
+uniform vec3 gend_leg = vec3(0.01, 0.014, 0.04);
+uniform vec3 gend_cap = vec3(0.012, 0.02, 0.07);
 uniform float axis_side = 0.0;        // 1 on a German field: Stahlhelm and jackboots
 // per field (set on the MultiMeshInstance3D): 0..1 as enemy aircraft come over - every man dives flat - and the
 // seconds the field's clock has been held back while they lay there (so a walker stops instead of sliding)
@@ -124,7 +128,8 @@ void vertex() {
 	bool tin = civ ? (soldier || dress == 13 || dress == 14) : armed;    // a helmet in place of the cap
 	bool brodie = tin && axis_side < 0.5;
 	bool stahl = tin && axis_side > 0.5;
-	bool farm = dress >= 16;                    // the farm wardrobe 16-20 (Phase 2)
+	bool gend = dress == 21;                    // the gendarme
+	bool farm = dress >= 16 && !gend;           // the farm wardrobe 16-20 (Phase 2)
 	bool skirt = civ && (dress == 11 || dress == 12 || dress == 20);
 	float ph = INSTANCE_CUSTOM.z;
 	// kinds 26-28 (leading a horse, driving a cart / tractor, behind the plough) move rigidly with the horse team /
@@ -559,17 +564,18 @@ void vertex() {
 	v_emit = 0.0;
 	if (part == 1) {
 		vec3 ctop = farm ? ((limb == 0) ? farm_top_c(dress) : farm_arm_c(dress)) : civ_top_c(dress);    // farmer: waistcoat, shirt sleeves
+		if (gend) { ctop = gend_top; }
 		c = medic ? vec3(0.80, 0.80, 0.77) : (soldier ? soldier_top : (civ ? ctop : pick(top0, top1, top2, top3, pal)));
 	} else if (part == 2) {
-		vec3 cleg = farm ? farm_leg_c(dress) : civ_leg_c(dress);
+		vec3 cleg = gend ? gend_leg : (farm ? farm_leg_c(dress) : civ_leg_c(dress));
 		c = (kind == 12) ? vec3(0.78, 0.78, 0.75) : (soldier ? soldier_leg : (civ ? cleg : pick(leg0, leg1, leg2, leg3, pal)));
 	} else if (part == 8) {
-		vec3 cshin = (farm ? farm_leg_c(dress) : civ_leg_c(dress)) * 0.6;
+		vec3 cshin = (gend ? gend_leg : (farm ? farm_leg_c(dress) : civ_leg_c(dress))) * 0.6;
 		c = soldier ? ((axis_side > 0.5) ? vec3(0.006, 0.005, 0.004) : soldier_leg) : (civ ? cshin : pick(leg0, leg1, leg2, leg3, pal));
 	} else if (part == 6 || part == 7) {
 		c = (civ && !soldier) ? civ_helmet_col : helmet_col;
 	} else if (part == 3) {
-		c = soldier ? soldier_top * 0.8 : (civ ? (farm ? farm_cap_c(dress) : civ_cap_c(dress)) : cap_col);
+		c = soldier ? soldier_top * 0.8 : (civ ? (gend ? gend_cap : (farm ? farm_cap_c(dress) : civ_cap_c(dress))) : cap_col);
 	} else if (part == 4) {
 		c = pick(skin0, skin1, skin2, skin3, pal);
 	} else if (part == 5) {

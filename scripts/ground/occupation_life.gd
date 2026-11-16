@@ -51,7 +51,7 @@ static func civilise(men: Array, lat: float, lon: float) -> int:
 			continue
 		var dress: int = int(m[11])
 		if dress == AirfieldPeople.CIV_POLICE:
-			m[11] = AirfieldPeople.CIV_SUIT
+			m[11] = AirfieldPeople.CIV_GENDARME       # c1: dark blue tunic and kepi
 		elif dress == AirfieldPeople.CIV_ARP:
 			m[11] = AirfieldPeople.CIV_JACKET
 		elif dress == AirfieldPeople.CIV_HOME_GUARD:

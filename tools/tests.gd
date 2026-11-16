@@ -3523,6 +3523,7 @@ func _test_town_people() -> void:
 	_check(gmen.size() >= 30, "a town whose town_d is empty still gets %d people from the street grid" % gmen.size())
 	_check(gmen.size() <= AirfieldPeople.town_target(2, 2.2), "the street-grid plan stops at the town's target (%d)" % gmen.size())
 	_test_occupation_life()
+	_test_war_vehicles()
 
 
 const OccupationLife := preload("res://scripts/ground/occupation_life.gd")
@@ -3552,6 +3553,11 @@ func _test_occupation_life() -> void:
 	var english_left: int = OccupationLife.civilise(test_men, 51.081, 1.1695)
 	_check(english_left == 0, "Folkestone's civilians are left as they are")
 	var fixed: int = OccupationLife.civilise(test_men, 50.726, 1.614)
+	var gend_n: int = 0
+	for e in test_men:
+		if int((e as Array)[11]) == AirfieldPeople.CIV_GENDARME:
+			gend_n += 1
+	_check(gend_n == 10 and AirfieldPeople.CIV_GENDARME == 21 and AirfieldPeople.code_of(0, false, AirfieldPeople.CIV_GENDARME) == 21, "a French constable is a gendarme (dress 21, ten of them here)")
 	var french_ok: bool = true
 	for e in test_men:
 		var dd2: int = int(e[11])
@@ -3574,6 +3580,43 @@ func _test_occupation_life() -> void:
 	var gal: Array = []
 	var allied_added: int = OccupationLife.garrison(gal, AirfieldPeople.HouseMap.new(), gpos, gd, 2, "Allies", 2.2, gr, gb)
 	_check(allied_added == 0, "an Allied-held town gets no German garrison")
+
+const WarVehicles := preload("res://scripts/ground/war_vehicles.gd")
+
+## c2 (scripts/ground/war_vehicles.gd): the fire engine or Opel Blitz that comes up the road to a crash, the Kommandantur
+## flag, the German sentries at Axis harbours and the Axis field's kitchen and wagons. Each one only where it belongs.
+func _test_war_vehicles() -> void:
+	print("-- war vehicles: fire engine, Opel Blitz, Kommandantur flag, harbour sentries, field kitchen")
+	_check(WarVehicles.rig_kind("Allies") == "fire_engine", "a crash on English ground brings a fire engine")
+	_check(WarVehicles.rig_kind("Axis") == "opel_blitz", "a crash on German ground brings an Opel Blitz instead")
+	var hall: Array = [{"kind": "townhall", "pos": Vector3.ZERO, "yaw": 0.0, "scale": 1.0}]
+	_check(WarVehicles.flag_flown("Axis", 3, hall), "an Axis-held town hall flies the Kommandantur flag")
+	_check(not WarVehicles.flag_flown("Allies", 3, hall), "an Allied town hall flies no Kommandantur flag")
+	_check(not WarVehicles.flag_flown("Axis", 1, hall), "no flag in an Axis-held size-1 town")
+	_check(not WarVehicles.flag_flown("Axis", 3, [{"kind": "station", "pos": Vector3.ZERO}]), "no flag in an Axis-held town without a town hall")
+	_check(WarVehicles.harbour_guarded("Axis", "port_boulogne") and WarVehicles.harbour_guarded("Axis", "dock_calais"), "Axis harbours and docks (Boulogne, Calais) get sentries")
+	_check(not WarVehicles.harbour_guarded("Allies", "port_dover") and not WarVehicles.harbour_guarded("Axis", "camp_kent"), "no sentries at Allied harbours or at other Axis sites")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 17
+	var fc: Array = WarVehicles.fire_crew(Vector3(100.0, 0.0, 100.0), rng)
+	var dark: bool = fc.size() >= 2 and fc.size() <= 3
+	for e in fc:
+		if int((e as Array)[11]) != AirfieldPeople.CIV_ARP:
+			dark = false
+	_check(dark, "the fire crew is 2-3 men in the dark ARP outfit (%d)" % fc.size())
+	_check(WarVehicles.fire_engine_mesh().get_surface_count() > 0 and WarVehicles.opel_blitz_mesh().get_surface_count() > 0 and WarVehicles.flag_mesh().get_surface_count() > 0 and WarVehicles.kitchen_mesh().get_surface_count() > 0, "the vehicle, flag and kitchen meshes build")
+	# a field kitchen with 4-6 men and one or two wagons on an Axis field; nothing at an Allied one
+	var open := func(_p: Vector3) -> bool:
+		return true
+	var kc := Node3D.new()
+	var kmen: Array = WarVehicles.airfield_camp(kc, AirfieldPeople.Grid.new(Vector3.ZERO, 900.0), open, Vector3.ZERO, 900.0, 0.0, "Axis", 7)
+	_check(kmen.size() >= 5 and kmen.size() <= 8, "the Axis field's kitchen has its men (%d: 4-6 round the kitchen, plus a wagon driver each)" % kmen.size())
+	_check(kc.get_child_count() >= 2 and kc.get_child_count() <= 3, "the kitchen and one or two wagons are placed (%d nodes)" % kc.get_child_count())
+	var kb := Node3D.new()
+	var amen: Array = WarVehicles.airfield_camp(kb, AirfieldPeople.Grid.new(Vector3.ZERO, 900.0), open, Vector3.ZERO, 900.0, 0.0, "Allies", 7)
+	_check(amen.is_empty() and kb.get_child_count() == 0, "no field kitchen or wagons at an Allied airfield")
+	kc.free()
+	kb.free()
 
 ## Phase 2 (scripts/ground/farm_people.gd): life on the farms and in the fields. The new kinds and the farm wardrobe encode
 ## in INSTANCE_CUSTOM.w without renumbering the old ones, the number of work parties follows the quality setting and the

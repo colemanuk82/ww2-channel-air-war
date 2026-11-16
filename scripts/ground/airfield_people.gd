@@ -53,6 +53,7 @@ const FARM_BOY: int = 18              # farm boy: grey trousers and cap, a head 
 const FARM_FARMER_FR: int = 19        # French farmer: blue smock (bleu de travail) and a black beret
 const FARM_WOMAN_FR: int = 20         # French farm woman: dark dress, headscarf, skirt
 const FARM_DRESSES: int = 5           # 16..20
+const CIV_GENDARME: int = 21          # French gendarme: dark blue tunic and trousers, kepi (the shader's gend_* colours)
 
 static var _mesh: ArrayMesh
 static var _shader: Shader
@@ -241,12 +242,16 @@ static func figure_mesh() -> ArrayMesh:
 	for wz in [-0.48, -1.14]:
 		for pwx in [-0.23, 0.23]:
 			var pw := CylinderMesh.new()
-			pw.top_radius = 0.11
-			pw.bottom_radius = 0.11
+			pw.top_radius = 0.16
+			pw.bottom_radius = 0.16
 			pw.height = 0.05
 			pw.radial_segments = 8
 			pw.rings = 1
-			_part(a, pw, Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(pwx, 0.11, wz)), Color(0.07, 0.07, 0.07), 12, 0, true)
+			_part(a, pw, Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(pwx, 0.16, wz)), Color(0.07, 0.07, 0.07), 12, 0, true)
+		_box(a, Vector3(0.50, 0.025, 0.04), Vector3(0.0, 0.17, wz), Color(0.10, 0.10, 0.10), 12, 0, true)      # the axle
+	for csx in [-0.17, 0.17]:
+		_box(a, Vector3(0.03, 0.30, 0.03), Vector3(csx, 0.33, -0.82), Color(0.10, 0.10, 0.10), 12, 0, true)      # the springs / chassis legs
+	_box(a, Vector3(0.40, 0.03, 0.80), Vector3(0.0, 0.47, -0.82), Color(0.10, 0.10, 0.10), 12, 0, true)       # the chassis under the coachwork
 	# a knee-length skirt (part 13: worn by the women of the town wardrobe, hidden on everyone else)
 	var skirt_m := CylinderMesh.new()
 	skirt_m.bottom_radius = 0.29
@@ -278,9 +283,10 @@ static func figure_mesh() -> ArrayMesh:
 	return _mesh
 
 
-static func _material(team: String) -> ShaderMaterial:
-	if _mats.has(team):
-		return _mats[team]
+static func _material(team: String, town: bool = false) -> ShaderMaterial:
+	var mkey: String = (team + "_town") if (town and team == "Axis") else team       # a German garrison in a town wears the army's field grey, not the Luftwaffe blue-grey
+	if _mats.has(mkey):
+		return _mats[mkey]
 	if _shader == null:
 		_shader = load("res://shaders/airfield_people.gdshader")
 	var sm := ShaderMaterial.new()
@@ -298,6 +304,10 @@ static func _material(team: String) -> ShaderMaterial:
 	var s_top: Color = (Color(0.33, 0.37, 0.44) if axis else Color(0.45, 0.40, 0.25)).srgb_to_linear()
 	var s_leg: Color = (Color(0.31, 0.35, 0.42) if axis else Color(0.43, 0.38, 0.24)).srgb_to_linear()
 	var s_hel: Color = (Color(0.21, 0.24, 0.29) if axis else Color(0.31, 0.33, 0.22)).srgb_to_linear()
+	if axis and town:                                                  # Wehrmacht feldgrau: a green-grey tunic and trousers, a field-grey Stahlhelm
+		s_top = Color(0.30, 0.33, 0.27).srgb_to_linear()
+		s_leg = Color(0.27, 0.30, 0.25).srgb_to_linear()
+		s_hel = Color(0.19, 0.22, 0.18).srgb_to_linear()
 	sm.set_shader_parameter("soldier_top", Vector3(s_top.r, s_top.g, s_top.b))
 	sm.set_shader_parameter("soldier_leg", Vector3(s_leg.r, s_leg.g, s_leg.b))
 	sm.set_shader_parameter("helmet_col", Vector3(s_hel.r, s_hel.g, s_hel.b))
@@ -328,7 +338,7 @@ static func _material(team: String) -> ShaderMaterial:
 		for pair in [["farm_top", farm_top], ["farm_arm", farm_arm], ["farm_leg", farm_leg], ["farm_cap", farm_cap]]:
 			var fc: Color = ((pair[1] as Array)[i] as Color).srgb_to_linear()
 			sm.set_shader_parameter("%s%d" % [pair[0], i], Vector3(fc.r, fc.g, fc.b))
-	_mats[team] = sm
+	_mats[mkey] = sm
 	return sm
 
 
@@ -712,6 +722,15 @@ static func town_plan(center: Vector3, d: Dictionary, size: int, team: String, s
 static func spawn_town(container: Node3D, men: Array, center: Vector3, team: String, seed_v: int, label: String = "") -> MultiMeshInstance3D:
 	if men.is_empty():
 		return null
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--town-people-shot") and a.count(",") >= 3:
+			var kn: String = a.get_slice(",", 3).strip_edges().to_upper()
+			if Kind.has(kn):
+				for m in men:                        # debug: the chosen kind crawls, so it is still in front of the camera
+					if m is Array and int((m as Array)[2]) == int(Kind[kn]) and (m as Array).size() > 5:
+						(m as Array)[5] = 0.012
+						if float((m as Array)[3]) > 1.5:
+							(m as Array)[3] = 1.5           # (a short beat: he stays within a metre or two of where the camera looks)
 	var mi: MultiMeshInstance3D = spawn(container, men, Vector3(center.x, 0.0, center.z), team, seed_v, "", true)
 	if mi == null:
 		return null
@@ -784,9 +803,13 @@ static func _debug_town_shot(container: Node3D, men: Array, label: String) -> vo
 	for m in men:
 		if not (m is Array) or (m as Array).size() < 3:
 			continue
-		if (m as Array).size() > 3 and float((m as Array)[3]) > 0.5:
-			continue                            # a figure on a beat walks off: take the ones standing about
 		var k: int = int((m as Array)[2])
+		if (m as Array).size() > 3 and float((m as Array)[3]) > 0.5 and not (parts.size() > 3 and Kind.has(String(parts[3]).strip_edges().to_upper())):
+			continue                            # a figure on a beat walks off: take the ones standing about
+		if parts.size() > 3 and Kind.has(String(parts[3]).strip_edges().to_upper()):
+			if k == int(Kind[String(parts[3]).strip_edges().to_upper()]) and (parts.size() < 5 or ((m as Array).size() > 11 and int((m as Array)[11]) == int(parts[4]))):      # --town-people-shot=n,dist,<town>,<KIND>[,<dress>]
+				pick.append(m)
+			continue
 		if k == Kind.WALK or k == Kind.CYCLE or k == Kind.PRAM or k == Kind.QUEUE or k == Kind.CHAT:
 			pick.append(m)
 	if pick.is_empty():
@@ -795,6 +818,8 @@ static func _debug_town_shot(container: Node3D, men: Array, label: String) -> vo
 	var m2: Array = pick[idx]
 	var tp: Vector3 = m2[0]
 	tp.y = float(m2[9]) if m2.size() > 9 else GroundKit.ground_y(tp.x, tp.z)
+	if m2.size() > 3 and m2[1] is Vector3 and float(m2[3]) > 0.0 and float(m2[3]) <= 1.6:
+		tp += (m2[1] as Vector3) * (float(m2[3]) * 0.5)
 	var look: Vector3 = tp + Vector3(0.0, 1.0, 0.0)
 	var cp: Vector3 = look + Vector3(back * 0.7, back * 0.25, back)
 	var cam := TownShot.new()
@@ -803,7 +828,7 @@ static func _debug_town_shot(container: Node3D, men: Array, label: String) -> vo
 	cam.hold_s = 900.0
 	GroundKit.tree().root.add_child.call_deferred(cam)      # not the town's node: that is freed when the town streams out
 	_town_shot_made = true
-	print("[town-people-shot] at %.0f, %.0f (man %d of %d, %.0f m back) stored y %.1f terrain y %.1f" % [tp.x, tp.z, idx, pick.size(), back, tp.y, GroundKit.ground_y(tp.x, tp.z)])
+	print("[town-people-shot] at %.0f, %.0f (man %d of %d, %.0f m back) stored y %.1f terrain y %.1f entry %s" % [tp.x, tp.z, idx, pick.size(), back, tp.y, GroundKit.ground_y(tp.x, tp.z), str(m2)])
 
 
 ## Occupancy of a built site: the ground cells taken by anything standing on it (buildings, aircraft, vehicles,
@@ -1866,6 +1891,8 @@ class Driver extends Node:
 		mi.set_instance_shader_parameter("t_off", _off)
 
 	func _enemy_overhead() -> bool:
+		if "--no-alarm" in OS.get_cmdline_user_args():
+			return false                      # debug: close-up screenshots must not have everyone flat on the ground
 		var c: Vector3 = mi.global_position
 		for n in get_tree().get_nodes_in_group("aircraft"):
 			var ac: Aircraft = n as Aircraft
@@ -1875,6 +1902,7 @@ class Driver extends Node:
 			if d.y < 450.0 and Vector2(d.x, d.z).length() < reach:
 				return true
 		return false
+
 
 
 static func populate(container: Node3D, af: Airfield, axf: Transform3D, y: float, team: String, rws: Array, pads: Array, depot: Vector3, dump: Vector3, tower: Vector3) -> MultiMeshInstance3D:
@@ -1937,6 +1965,9 @@ static func populate(container: Node3D, af: Airfield, axf: Transform3D, y: float
 		g.mark_line(path[0], path[1], 3.0)
 		extra.append_array(st["men"])
 		break
+	# c2: the Luftwaffe field kitchen with its men and horse wagons (Axis fields only; nothing for the Allies)
+	# c2: loaded at run time (not preload) so war_vehicles.gd, which uses AirfieldPeople, does not form a preload cycle
+	extra.append_array(load("res://scripts/ground/war_vehicles.gd").airfield_camp(container, g, free_ok, axf.origin, af.runway_length * 0.75 + 450.0, y, team, seed0 + 31))
 	var men: Array = plan(af, axf, rws, pads, depot, dump, tower, seed0 + 1940, dens, g, kit, team, pave, extra)
 	# mechanics at work on the parked aircraft nearest the runway, and at every bomber at the take-off end
 	var parked: Array = []
@@ -2024,7 +2055,7 @@ static func spawn(container: Node3D, men: Array, origin: Vector3, team: String, 
 	mi.name = "AirfieldPeople"
 	mi.add_to_group("people_mm")            # WarReactions waves at low passes / scatters under fire
 	mi.multimesh = mm
-	mi.material_override = _material(team)
+	mi.material_override = _material(team, follow_ground)
 	mi.position = origin
 	mi.visibility_range_end = VIEW_RANGE
 	mi.visibility_range_end_margin = 100.0
@@ -2410,3 +2441,88 @@ class DemoCam extends Camera3D:
 		var look: Vector3 = base + right * x + fwd * 3.0 + Vector3(0.0, 1.5, 0.0)
 		var pos: Vector3 = base + right * (x + 3.0) - fwd * lerpf(17.0, 60.0, wide) + Vector3(0.0, lerpf(2.6, 9.0, wide), 0.0)
 		global_transform = Transform3D(Basis.looking_at(look - pos, Vector3.UP), pos)
+
+
+## Debug close-up line-up (main: --people-lineup=<set>[,<yaw deg>[,<Allies|Axis>[,<distance>]]]): figures standing still (the
+## beat is a metre or two and the pace a crawl) in a row in front of a fixed camera, for hidden-desktop screenshots of the
+## outfits and props. Sets: "ride" (cyclists, a pram, women in skirts), "med" (a carried stretcher and its bearers, a patient and
+## a medic, a doctor), "law" (English constable, ARP warden, French gendarme, German sentry and Home Guard), "farm" (farm dress).
+static func lineup(host: Node3D, base: Vector3, fwd: Vector3, spec: String) -> void:
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	var right := Vector3(-fwd.z, 0.0, fwd.x)
+	var f: PackedStringArray = spec.split(",")
+	var set: String = f[0] if f.size() > 0 else "ride"
+	var yaw: float = deg_to_rad(float(f[1])) if f.size() > 1 and f[1].is_valid_float() else 0.0
+	var team: String = f[2] if f.size() > 2 else "Allies"
+	var dist: float = float(f[3]) if f.size() > 3 and f[3].is_valid_float() else 7.5
+	var men: Array = []
+	var add := func(x: float, face: Vector3, kind: int, dress: int, soldier: bool, ln: float = 1.5) -> void:
+		var p: Vector3 = base + right * x
+		p.y = GroundKit.ground_y(p.x, p.z)
+		men.append([p, face, kind, ln, 0.3, 0.012, soldier, null, 0.0, p.y, p.y, dress])
+	match set:
+		"ride":
+			add.call(-5.4, right, Kind.CYCLE, CIV_SUIT, false)
+			add.call(-3.6, right, Kind.CYCLE, CIV_WOMAN_COAT, false)
+			add.call(-1.6, right, Kind.PRAM, CIV_WOMAN_COAT, false)
+			add.call(0.8, right, Kind.PRAM, CIV_WOMAN_DRESS, false)
+			add.call(2.6, -fwd, Kind.CHAT, CIV_WOMAN_DRESS, false, 0.0)
+			add.call(4.0, -fwd, Kind.CHAT, CIV_WOMAN_COAT, false, 0.0)
+			add.call(5.4, -fwd, Kind.QUEUE, CIV_WOMAN_COAT, false, 0.0)
+		"med":
+			add.call(-3.0, right, Kind.CARRIED, 0, false)
+			add.call(-3.0 - 1.42 * MAN, right, Kind.BEARER, 0, false)
+			add.call(-3.0 + 1.30 * MAN, right, Kind.BEARER_FRONT, 0, false)
+			add.call(1.5, right, Kind.PATIENT, 0, false, 0.0)
+			add.call(1.5, -fwd, Kind.MEDIC, 0, false, 0.0)
+			add.call(4.5, -fwd, Kind.DOCTOR, 0, false, 0.0)
+		"law":
+			add.call(-4.5, -fwd, Kind.CHAT, CIV_POLICE, false, 0.0)
+			add.call(-3.0, -fwd, Kind.CHAT, CIV_ARP, false, 0.0)
+			add.call(-1.5, -fwd, Kind.CHAT, CIV_GENDARME, false, 0.0)
+			add.call(0.0, -fwd, Kind.SALUTE, CIV_SUIT, true, 0.0)
+			add.call(1.5, -fwd, Kind.WALK, CIV_SUIT, true, 1.5)
+			add.call(3.0, -fwd, Kind.CHAT, CIV_HOME_GUARD, true, 0.0)
+			add.call(4.5, -fwd, Kind.CHAT, CIV_SUIT, false, 0.0)
+		_:
+			for i in 5:
+				add.call(-4.5 + 2.2 * float(i), -fwd, Kind.CHAT, FARM_FARMER + i, false, 0.0)
+	var mi: MultiMeshInstance3D = spawn(host, men, Vector3(base.x, 0.0, base.z), team, 5, "", true)
+	mi.visibility_range_end = 0.0
+	var cam := Camera3D.new()
+	cam.fov = 38.0
+	host.add_child(cam)
+	var look: Vector3 = base + Vector3(0.0, 1.0, 0.0)
+	var cp: Vector3 = look + (-fwd * cos(yaw) + right * sin(yaw)) * dist + Vector3(0.0, 0.7, 0.0)
+	cam.transform = Transform3D(Basis.looking_at(look - cp, Vector3.UP), cp)
+	cam.make_current()
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	var wr: WeakRef = weakref(cam)
+	tree.process_frame.connect(func() -> void:
+		var c: Camera3D = wr.get_ref() as Camera3D
+		if c != null and c.is_inside_tree() and not c.current:
+			c.make_current())
+
+
+## Debug camera (main: --look=<lat>,<lon>,<dist>,<height>[,<yaw deg>] or --look-xz=<x>,<z>,...): a fixed camera `dist` metres from the
+## point (toward yaw, 0 = looking north) and `height` metres above the ground there, aimed at the point 2 m up.
+static func look(host: Node3D, world: Vector3, dist: float, height: float, yaw_deg: float, aim_up: float = 2.0) -> void:
+	var gy: float = GroundKit.ground_y(world.x, world.z)
+	var target := Vector3(world.x, gy + aim_up, world.z)
+	var yaw: float = deg_to_rad(yaw_deg)
+	var off := Vector3(sin(yaw), 0.0, cos(yaw)) * dist          # the camera sits on the +yaw side, looking back at the point
+	var cam := Camera3D.new()
+	cam.fov = 45.0
+	cam.far = 6000.0
+	host.add_child(cam)
+	var cp: Vector3 = target + off + Vector3(0.0, height, 0.0)
+	cam.transform = Transform3D(Basis.looking_at(target - cp, Vector3.UP), cp)
+	cam.make_current()
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	var wr: WeakRef = weakref(cam)
+	tree.process_frame.connect(func() -> void:
+		var c: Camera3D = wr.get_ref() as Camera3D
+		if c != null and c.is_inside_tree() and not c.current:
+			c.make_current())
+	print("[look] camera at %.0f, %.0f, %.0f aimed at %.0f, %.0f, %.0f (ground %.1f)" % [cp.x, cp.y, cp.z, target.x, target.y, target.z, gy])

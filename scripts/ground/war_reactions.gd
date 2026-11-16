@@ -22,6 +22,7 @@ extends Node3D
 ## tick clock stands in.
 
 const MAN: float = AirfieldPeople.MAN
+const WarVehicles := preload("res://scripts/ground/war_vehicles.gd")     # c2: fire engine, Opel Blitz, firemen
 const MAX_SCENES: int = 4
 const SCENE_LIFE: float = 420.0          # s a crash scene stays before it is cleared away
 const FAR_REMOVE: float = 3200.0         # m from the camera at which a scene is dropped (after 20 s)
@@ -164,6 +165,13 @@ class Gang extends RefCounted:
 	var rig_dir: float = 1.0
 	var rig_t: float = 0.0
 	var rig_done: bool = false
+	var fire: MeshInstance3D = null          # c2: the fire engine (English ground) or Opel Blitz (German) on the ambulance's road
+	var fire_s: float = 0.0
+	var fire_end: float = 0.0
+	var fire_dir: float = 1.0
+	var fire_lat: float = 1.6                # its side of the road (opposite the ambulance)
+	var fire_done: bool = false
+	var fire_crew_mi: MultiMeshInstance3D = null   # the firemen by the engine, shown once it has parked
 
 	func arrived() -> int:
 		var k: int = 0
@@ -173,7 +181,7 @@ class Gang extends RefCounted:
 		return k
 
 	func free_all() -> void:
-		for node in [mi, pilot_mi, rig]:
+		for node in [mi, pilot_mi, rig, fire, fire_crew_mi]:
 			if node != null and is_instance_valid(node):
 				(node as Node).queue_free()
 
@@ -487,6 +495,7 @@ func _add_rig(g: Gang, pos: Vector3, crew: String) -> void:
 	mi.visible = false
 	add_child(mi)
 	g.rig = mi
+	_add_engine(g, crew)
 
 
 func _tick_rig(g: Gang, age: float, delta: float) -> void:
@@ -558,7 +567,70 @@ func _tick_gang(g: Gang, delta: float) -> bool:
 		g.pilot_shown = true
 		g.pilot_mi.multimesh.set_instance_transform(0, g.pilot_xf)
 	_tick_rig(g, age, delta)
+	_tick_fire(g, age, delta)
 	return true
+
+
+## c2: the second vehicle of a crash scene follows the ambulance's road from 30 m further back and parks 12 m short of the
+## ambulance's stop, on the other side of the road. On English ground it is a fire engine with 2-3 firemen, who appear
+## when it has parked; on German ground it is an Opel Blitz lorry.
+func _add_engine(g: Gang, crew: String) -> void:
+	if g.rig == null or g.rig_cum.size() < 2:
+		return
+	var total: float = g.rig_cum[g.rig_cum.size() - 1]
+	var stop_s: float = clampf(g.rig_end - g.rig_dir * 12.0, 0.0, total)
+	var start_s: float = clampf(g.rig_s - g.rig_dir * 30.0, 0.0, total)
+	if absf(stop_s - start_s) < 15.0:
+		return
+	var engine: bool = WarVehicles.rig_kind(crew) == "fire_engine"
+	var mi := MeshInstance3D.new()
+	mi.name = "CrashFireEngine" if engine else "CrashOpelBlitz"
+	mi.mesh = WarVehicles.fire_engine_mesh() if engine else WarVehicles.opel_blitz_mesh()
+	mi.visibility_range_end = 1400.0
+	mi.visible = false
+	add_child(mi)
+	g.fire = mi
+	g.fire_s = start_s
+	g.fire_end = stop_s
+	g.fire_dir = 1.0 if stop_s > start_s else -1.0
+	g.fire_lat = 1.6 if crew != "Axis" else -1.6
+	if not engine:
+		return
+	var pt: Array = path_point(g.rig_pts, g.rig_cum, stop_s)
+	var sp: Vector3 = pt[0]
+	var side: Vector3 = (pt[1] as Vector3).cross(Vector3.UP) * g.fire_lat
+	var stop_w := Vector3(sp.x + side.x, GroundKit.ground_y(sp.x, sp.z), sp.z + side.z)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(Vector2(stop_w.x, stop_w.z)) + 303
+	var men: Array = WarVehicles.fire_crew(stop_w, rng)
+	if men.is_empty():
+		return
+	var fmi: MultiMeshInstance3D = AirfieldPeople.spawn(self, men, Vector3(stop_w.x, 0.0, stop_w.z), crew, hash(Vector2(stop_w.x, stop_w.z)) + 5, "", true)
+	if fmi != null:
+		fmi.name = "FireCrew"
+		fmi.remove_from_group("people_mm")
+		fmi.visible = false
+		g.fire_crew_mi = fmi
+	print("[war-reactions] fire engine to park at %.0f,%.0f (%d m short of the ambulance), %d firemen" % [stop_w.x, stop_w.z, int(absf(g.rig_end - stop_s)), men.size()])
+
+
+func _tick_fire(g: Gang, age: float, delta: float) -> void:
+	if g.fire == null or not is_instance_valid(g.fire) or g.fire_done or age < 14.0:
+		return
+	g.fire.visible = true
+	var left: float = absf(g.fire_end - g.fire_s)
+	var v: float = clampf(sqrt(2.5 * left), 1.5, RIG_SPEED)
+	g.fire_s += g.fire_dir * minf(v * delta, left)
+	if left < 0.6:
+		g.fire_done = true
+		if g.fire_crew_mi != null and is_instance_valid(g.fire_crew_mi):
+			g.fire_crew_mi.visible = true
+	var pt: Array = path_point(g.rig_pts, g.rig_cum, g.fire_s)
+	var p: Vector3 = pt[0]
+	var t: Vector3 = (pt[1] as Vector3) * g.fire_dir
+	p += t.cross(Vector3.UP) * g.fire_lat
+	p.y = GroundKit.ground_y(p.x, p.z) + 0.02
+	g.fire.global_transform = Transform3D(Basis.looking_at(t, Vector3.UP).scaled(Vector3.ONE * AirfieldPeople.SCALE), p)
 
 
 func _local(g: Gang, w: Vector3) -> Vector3:

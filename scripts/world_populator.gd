@@ -34,6 +34,7 @@ var _runway_zones: Array = []
 var airfields: Dictionary = {}                 # id -> Airfield
 var loc: Dictionary = {}
 const OccupationLife := preload("res://scripts/ground/occupation_life.gd")     # Phase 5
+const WarVehicles := preload("res://scripts/ground/war_vehicles.gd")           # c2: flag, harbour sentries
 var enable_countryside: bool = true
 var enable_traffic: bool = true
 
@@ -2431,6 +2432,7 @@ func _site_people(s: Dictionary, n: Node3D) -> void:
 			var pos: Vector3 = s["pos"]
 			var team: String = str(s["team"]) if s.has("team") and str(s["team"]) != "" else GroundKit.side_at(pos)
 			AirfieldPeople.populate_site(n, pos, team, int(s.get("size", 1)), bool(PEOPLE_SITES[pf]), hash(key) + 41)
+			WarVehicles.harbour_sentries(n, pos, team, key, hash(key) + 61)     # c2: German sentries at Axis harbours
 			return
 
 
@@ -4035,6 +4037,7 @@ func _build_city(s: Dictionary) -> Node3D:
 	# Dense historic core (terraced street grid, taller blocks in the middle). The land-cover tiles
 	# leave this disc empty (see _exclude in _register_cities) and fill the suburbs around it.
 	container.add_child(Scatter.make_town_from(pos, s["town_d"]))
+	WarVehicles.kommandantur_flag(container, s["town_d"], team, size)     # c2: flag over an Axis-held town hall
 	# the townsfolk on the pavements: one MultiMesh for the whole town, planned on the layout's worker
 	var ppl: Array = s.get("town_people", [])
 	OccupationLife.civilise(ppl, float(d["lat"]), float(d["lon"]))     # no British police or wardens in France (Phase 5)

@@ -92,19 +92,28 @@ Never open a visible game window on the developer's PC: everything with pictures
 - German garrison in Axis-held towns of size 2 and up: two sentries either side of the town hall door (facing out, from the
   civic "townhall" entry's yaw), a two-man patrol across the square on High, and two sentries at the station (civic
   "station" entry). Made by OccupationLife.garrison, called from AirfieldPeople.town_plan with the same HouseMap, so
-  no sentry stands in a house. Allied towns get none. Harbour sentries and the Kommandantur flag are NOT built yet (no
-  harbour point in the town data and no flag prop in the town-model kit).
+  no sentry stands in a house. Allied towns get none. Harbour sentries and the Kommandantur flag are built now (see War props below).
 - French civilians: OccupationLife.civilise runs on a town's men after planning (WorldPopulator._build_city). In a
   continental town (continental(lat, lon): east of 1.5 E, or south of the Channel shore) the British-only outfits
   (constable, ARP warden, Home Guard rifleman) become a dark suit or a tweed jacket. There is no gendarme outfit yet.
   Village tiles still plan with the shared town_dress, so a liberated French village can still show British police
   until the village hook gets a latitude and longitude (not done).
-- Luftwaffe airfields: unchanged; AirfieldPeople.populate already covers the Axis fields. The horse-drawn supply wagon
-  and the field-kitchen sitters were NOT added (no cart mesh exists and the brief asked for a report, not a guess).
+- Luftwaffe airfields: unchanged; AirfieldPeople.populate already covers the Axis fields. The horse-drawn wagons and the
+  field kitchen are built now (see War props below).
 - Tests: _test_occupation_life in tools/tests.gd (continental coast, no British outfit in Axis towns, Boulogne civilians
   made French, Axis garrison only in Axis towns).
 - Note: the module is loaded with const OccupationLife := preload(...) rather than class_name, because a new
   class_name is not in the editor's class cache until a project import.
+
+## War props (scripts/ground/war_vehicles.gd)
+- Crash scenes: a red fire engine with a ladder and bell (English side) or a grey Opel Blitz (German side) parks on
+  the road about 12 m short of the ambulance, with 2-3 dark-clad firemen. Built inside WarReactions' gang (`_add_engine`, `_tick_fire`).
+- Kommandantur flag: a red flag with white discs on an iron pole over the town hall in Axis-held towns of size 2 and up (no swastika).
+  Hooked from WorldPopulator._build_city.
+- Harbour sentries: two German sentries 9-12 m landward of Axis port and dock sites (`port_` / `dock_` keys). Hooked from WorldPopulator._site_people.
+- Field kitchen: one kitchen trailer with 4-6 men and 1-2 horse-drawn wagons at Axis airfields, placed through AirfieldPeople's Grid.
+  The wagons are static.
+- Test: `_test_war_vehicles` in tools/tests.gd.
 
 ## Military life everywhere (Phase 3, scripts/ground/military_people.gd)
 
@@ -168,3 +177,11 @@ Never open a visible game window on the developer's PC: everything with pictures
   `--frames=5000`). Tests: `_test_war_reactions` in `tools/tests.gd` (headless MultiMeshes cannot be read back, so
   the scene keeps `cur_pos` / `cur_code` mirrors).
 * **Time of day:** T steps through eight parts of the day (first light, sunrise, morning, midday, afternoon, golden hour, dusk, night) at a random time inside each (`TimeOfDay.STEPS`); --time= and missions keep the named presets. Golden hour warms the sky, sun and clouds fully but the light on the ground only part-way (the low-sun ground boost is 0.45, was 1.5).
+
+## Ground people / low-light notes (c1 round)
+
+* Figures: one MultiMesh mesh posed in `shaders/airfield_people.gdshader`. Dress 8-15 town, 16-20 farm, `CIV_GENDARME` = 21 (dark blue tunic and kepi; French constables via `occupation_life.civilise`). Part ids >= 10 travel as UV.y = 100 + part (10 stretcher, 11 bicycle, 12 pram, 13 skirt, 14 pitchfork, 15 hoe). Axis town sentries use field-grey Wehrmacht colours.
+* Harvest parties also lay a subtle stubble ground patch (`farm_people._spawn_patches`).
+* Debug flags (put after `--air --freeze --at=`): `--people-lineup=ride|med|law|farm[,yaw,team,dist]`, `--look=lat,lon,dist,height[,yaw,delay,aim_up]`, `--look-xz=x,z,...`, `--no-alarm`, `--town-people-shot=n,dist,town,KIND[,dress]`.
+* Kommandantur flag sits on the Boulogne town-hall clock-tower finial; Saint-Omer field kitchen + horse wagons verified on screen.
+* Low light (`time_of_day.gd`): dusk/dawn ambient lift 0.9 -> 0.5, ambient x(1-0.18*low), sun x(1-0.10*low), sky ambient share x(1-0.35*low), cooler ambient at golden hour. Not yet verified on screen.

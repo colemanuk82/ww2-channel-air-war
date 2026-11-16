@@ -420,12 +420,18 @@ func _apply() -> void:
 		sun_e *= 1.0 + 0.45 * smoothstep(0.45, 0.12, sun_dir.y) * smoothstep(0.0, 0.06, sun_dir.y)
 		# ... and lift the sky fill while the sun is low and just after it sets, so shaded fields keep their colour
 		# instead of going near-black (the sky still carries a lot of light at dusk)
-		amb_e *= 1.0 + 0.9 * smoothstep(0.35, 0.06, sun_dir.y) * smoothstep(-0.12, 0.0, sun_dir.y)
+		# (was 0.9: at dawn/dusk the scenery looked too bright and shiny - user report - so a gentler lift, plus a
+		# slight overall dimming of the fill in low light; night stays readable)
+		amb_e *= 1.0 + 0.5 * smoothstep(0.35, 0.06, sun_dir.y) * smoothstep(-0.12, 0.0, sun_dir.y)
+		amb_e *= 1.0 - 0.18 * smoothstep(0.35, 0.0, sun_dir.y)
+		sun_e *= 1.0 - 0.10 * smoothstep(0.30, 0.05, sun_dir.y)
 
 	# the light on the ground is only part as warm as the sky's sun colour: golden hour tints the scenery, while
 	# the sky, the clouds (sun_color) and the sun disc carry the full gold
 	var low_k: float = smoothstep(0.40, 0.08, sun_dir.y) * smoothstep(-0.04, 0.04, sun_dir.y)
 	sun.light_color = lc.lerp(Color(1.0, 0.93, 0.84), 0.55 * low_k)
+	# the shade is lit by the (blue-ish) sky, not by the sunset: a red ambient turned back-lit grass maroon at 18h (c1 check)
+	amb = amb.lerp(Color(0.60, 0.64, 0.74), 0.45 * low_k)
 	sun.light_energy = sun_e
 	sun.visible = sun_e > 0.001
 	# softer shadows while the sun is low (long shadows read harsh with a tight blur), tight at noon
@@ -438,6 +444,9 @@ func _apply() -> void:
 
 	environment.ambient_light_color = amb
 	environment.ambient_light_energy = amb_e
+	# the bright dusk/dawn sky fed the ambient + reflections and made the scenery look glossy: take less from the sky
+	if ng_light:
+		environment.ambient_light_sky_contribution = AMB_SKY_SHARE * (1.0 - 0.35 * smoothstep(0.35, 0.0, sun_dir.y))
 	var haze_day: float = haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0)
 	environment.fog_light_color = fogc.lerp(Color(0.52, 0.47, 0.40), 0.34 * haze_day).lerp(Color(0.78, 0.79, 0.80), overcast * 0.4)
 	# light shafts: thicken the (high-preset) volumetric haze while the sun is low, so a dawn or dusk sun throws

@@ -3336,6 +3336,23 @@ func _parse_debug_args() -> void:
 				var pb: Vector3 = player.global_position + pf.normalized() * 25.0 + Vector3(-pf.z, 0.0, pf.x).normalized() * 130.0
 				pb.y = GroundKit.ground_y(pb.x, pb.z) + 0.01
 				AirfieldPeople.demo(self, pb, Vector3(-pf.z, 0.0, pf.x), a.substr(14) if a.contains("=") else ""))
+		elif a.begins_with("--people-lineup"):   # debug: figures standing in a row in front of a fixed camera (AirfieldPeople.lineup): --people-lineup=<ride|med|law|farm>[,yaw,team,dist]
+			GameState.show_hud = false
+			GameState.show_hints = false
+			get_tree().create_timer(1.0).timeout.connect(func() -> void:
+				var lf: Vector3 = player.get_forward()
+				lf.y = 0.0
+				var lb: Vector3 = player.global_position + lf.normalized() * 25.0 + Vector3(-lf.z, 0.0, lf.x).normalized() * 130.0
+				lb.y = GroundKit.ground_y(lb.x, lb.z) + 0.01
+				AirfieldPeople.lineup(self, lb, lf, a.substr(16) if a.contains("=") else "ride"))
+		elif a.begins_with("--look"):   # debug: a fixed camera at a point (AirfieldPeople.look): --look=<lat>,<lon>,<dist>,<height>[,<yaw>[,<delay s>]] or --look-xz=<x>,<z>,...
+			GameState.show_hud = false
+			GameState.show_hints = false
+			var lk: PackedStringArray = a.substr(a.find("=") + 1).split(",")
+			var lk_xz: bool = a.begins_with("--look-xz")
+			get_tree().create_timer(float(lk[5]) if lk.size() > 5 else 20.0).timeout.connect(func() -> void:
+				var lw: Vector3 = Vector3(float(lk[0]), 0.0, float(lk[1])) if lk_xz else WorldCoords.latlon_to_world(float(lk[0]), float(lk[1]))
+				AirfieldPeople.look(self, lw, float(lk[2]), float(lk[3]), float(lk[4]) if lk.size() > 4 else 200.0, float(lk[6]) if lk.size() > 6 else 2.0))
 		elif a.begins_with("--crash-scene-demo"):   # debug: stage a crash near the player and frame it: --crash-scene-demo=close|far[,dx,dz] (metres ahead / right of the player)
 			GameState.show_hud = false
 			GameState.show_hints = false

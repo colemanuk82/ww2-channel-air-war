@@ -266,6 +266,11 @@ static func _job_harvest(out: Dictionary, c: Vector2, dir: Vector2, france: bool
 		return false
 	for sp0 in row:
 		_still(out, Still.STOOK, sp0, rng.randf() * TAU, rng.randf_range(0.9, 1.15))
+	# the field under the gang may be painted as grass, not stubble (the terrain gives each field its own crop stage): a
+	# soft patch of golden stubble under the stooks, cart and workers (spawn() lays it on the ground)
+	if not out.has("patches"):
+		out["patches"] = []
+	(out["patches"] as Array).append([c, dir, 0.5 * float(stooks) * 5.0 + 9.0, 17.0, c.x * 0.37 + c.y * 0.11])
 	var bent: int = mini(rng.randi_range(2, 4), row.size())
 	for k2 in bent:
 		var sp: Vector2 = row[(k2 * 2 + rng.randi() % 2) % row.size()]
@@ -318,7 +323,7 @@ static func _job_feed(out: Dictionary, c: Vector2, dir: Vector2, france: bool, r
 ## Returns {"men": entries for AirfieldPeople.spawn, "props": {Prop: entries}, "still": {Still: entries},
 ## "groups": [{"job", "pos", "dir"}]} - plain data, nothing here touches the scene tree.
 static func plan(org: Vector2, cell: float, houses: Array, seed_v: int, dens: float, month: int, france: bool) -> Dictionary:
-	var out: Dictionary = {"men": [], "props": {}, "still": {}, "groups": []}
+	var out: Dictionary = {"men": [], "props": {}, "still": {}, "groups": [], "patches": []}
 	var target: int = group_target(dens, month)
 	if target <= 0:
 		return out
@@ -674,9 +679,76 @@ static func spawn(container: Node3D, pl: Dictionary, center: Vector3, team: Stri
 	var stills: Dictionary = pl.get("still", {})
 	for sk in stills.keys():
 		_spawn_still(container, int(sk), stills[sk] as Array, origin, range_end)
+	_spawn_patches(container, pl.get("patches", []) as Array, origin, range_end)
 	if label != "":
 		print("[farm] %s: %d people, %d props, %d still" % [label, men.size(), _count(props), _count(stills)])
 	_debug_farm_shot(pl, label)
+
+
+static var _patch_mat: StandardMaterial3D
+
+
+## Golden stubble under a harvest party: a soft-edged patch laid on the ground (a grid that follows the terrain; the colour
+## fades out toward the rim, so it reads as the field's own stubble and not as a slab). Patch = [centre Vector2, direction
+## Vector2, half length, half width, noise seed].
+static func _spawn_patches(container: Node3D, list: Array, origin: Vector3, range_end: float) -> void:
+	if list.is_empty():
+		return
+	if _patch_mat == null:
+		_patch_mat = StandardMaterial3D.new()
+		_patch_mat.vertex_color_use_as_albedo = true
+		_patch_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_patch_mat.roughness = 1.0
+		_patch_mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+		_patch_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var vs := PackedVector3Array()
+	var cs := PackedColorArray()
+	var ns := PackedVector3Array()
+	var ids := PackedInt32Array()
+	var n: int = 12
+	for pt in list:
+		var c: Vector2 = pt[0]
+		var d: Vector2 = pt[1]
+		var hl: float = float(pt[2])
+		var hw: float = float(pt[3])
+		var sd: float = float(pt[4])
+		var across := Vector2(-d.y, d.x)
+		var base: int = vs.size()
+		for j in n + 1:
+			for i in n + 1:
+				var u: float = float(i) / float(n) * 2.0 - 1.0
+				var v: float = float(j) / float(n) * 2.0 - 1.0
+				var p: Vector2 = c + d * (u * hl) + across * (v * hw)
+				var r: float = maxf(absf(u), absf(v))
+				var edge: float = 1.0 - smoothstep(0.55, 1.0, r)
+				var ns1: float = 0.5 + 0.5 * sin(p.x * 0.11 + sd) * sin(p.y * 0.13 - sd * 0.7)
+				var shade: float = 0.92 + 0.12 * ns1
+				var col := Color(0.62 * shade, 0.54 * shade, 0.32 * shade, 0.58 * edge).srgb_to_linear()
+				col.a = 0.58 * edge
+				vs.append(Vector3(p.x - origin.x, GroundKit.ground_y(p.x, p.y) + 0.15 - origin.y, p.y - origin.z))
+				ns.append(Vector3.UP)
+				cs.append(col)
+		for j in n:
+			for i in n:
+				var a: int = base + j * (n + 1) + i
+				ids.append_array(PackedInt32Array([a, a + 1, a + n + 1, a + 1, a + n + 2, a + n + 1]))
+	var arr: Array = []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = vs
+	arr[Mesh.ARRAY_NORMAL] = ns
+	arr[Mesh.ARRAY_COLOR] = cs
+	arr[Mesh.ARRAY_INDEX] = ids
+	var am := ArrayMesh.new()
+	am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	am.surface_set_material(0, _patch_mat)
+	var mi := MeshInstance3D.new()
+	mi.name = "HarvestStubble"
+	mi.mesh = am
+	mi.position = origin
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.visibility_range_end = range_end * 0.8
+	mi.visibility_range_end_margin = 80.0
+	container.add_child(mi)
 
 
 static func _count(d: Dictionary) -> int:
@@ -789,7 +861,7 @@ static func _debug_farm_shot(pl: Dictionary, label: String) -> void:
 		var dd: float = 0.0
 		if near != null:
 			dd = Vector2(gp.x - (near as Vector3).x, gp.z - (near as Vector3).z).length()
-			if dd > 1500.0:
+			if dd > 4500.0:
 				continue
 		if dd < best_d:
 			best_d = dd
