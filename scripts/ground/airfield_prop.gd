@@ -89,6 +89,8 @@ func _engine_start_tick(tm: Timer) -> void:
 				FX.engine_start_puff(nose, 1.2))
 
 
+const SHADOW_KINDS: Array = ["parked", "tank", "truck", "gun", "tent", "hut"]
+
 const VIS_RANGE := {"tank": 3500.0, "gun": 2600.0, "parked": 4200.0, "truck": 2600.0, "tent": 3200.0, "hut": 6000.0, "ammo": 4500.0, "blister": 7000.0, "crates": 2200.0, "drums": 2200.0}
 
 
@@ -97,7 +99,9 @@ func _build_intact(root: Node3D) -> void:
 		var mi := MeshInstance3D.new()
 		mi.mesh = _mesh
 		mi.transform = t
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# the near model casts a shadow (with scenery shadows on): a parked aircraft or lorry with none looked pasted on
+		# beside the men and work stands that do. The far stand-in never does - it is past the shadow cascades.
+		mi.cast_shadow = Scatter.scenery_shadow_mode() if pkind in SHADOW_KINDS else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		# fade by size: a truck or tent is a speck beyond ~3 km, a parked fighter beyond ~4 km, while hangars and
 		# hut rows still read from much further out (they shape the field from altitude)
 		var vr: float = float(VIS_RANGE.get(pkind, 7000.0))
