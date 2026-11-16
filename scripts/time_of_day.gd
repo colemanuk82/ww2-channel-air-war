@@ -455,6 +455,7 @@ func _apply() -> void:
 	# the sea reflects the sky (water.gdshader Fresnel term)
 	RenderingServer.global_shader_parameter_set("sky_top", Vector3(top.r, top.g, top.b))
 	RenderingServer.global_shader_parameter_set("sky_horizon", Vector3(hor.r, hor.g, hor.b))
+	RenderingServer.global_shader_parameter_set("sun_dir_world", sun_dir)     # terrain relief shading (terrain.gdshader)
 	sky_material.set_shader_parameter("top_color", top)
 	sky_material.set_shader_parameter("horizon_color", hor)
 	sky_material.set_shader_parameter("ground_color", hor.darkened(0.35))

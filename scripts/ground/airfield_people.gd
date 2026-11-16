@@ -840,6 +840,84 @@ static func mechanics_at(ap: AirfieldProp, rng: RandomNumberGenerator, men: Arra
 		men.append([Vector3(wpg.x, 0.0, wpg.z), W.basis * Vector3(-gs * 0.6, 0.0, gz - kz), Kind.KNEEL, 0.0, -1.0, 0.0, false])
 
 
+## The airfield boundary: a wire perimeter fence (posts and strands) round the aerodrome grass, broken where a
+## taxiway, a building or water is in the way, with sentry towers at the corners and along the sides (a man up in
+## each), and clumps of trees on the grass well away from the runway. Everything is marked into `g` so the men keep
+## clear of it. Returns the sentries (men entries, raised onto the towers).
+static func dress_perimeter(container: Node3D, af: Airfield, axf: Transform3D, y: float, team: String, rws: Array, g: Grid, pave: Grid, seed_v: int) -> Array:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_v
+	var inv: Transform3D = axf.affine_inverse()
+	var yaw: float = axf.basis.get_euler().y
+	var hx: float = 680.0
+	var hz: float = clampf(af.runway_length * 0.5 + 320.0, 560.0, 820.0)
+	var land_ok := func(w: Vector3, rw_margin: float) -> bool:
+		var lw: Vector3 = inv * w
+		return pave.free_at(w) and g.free_at(w) and not GroundKit.is_water(w.x, w.z) and GroundKit.raw_y(w.x, w.z) > 0.8 \
+			and AirfieldActivity.leg_clear(rws, lw, lw, RUNWAY_CLEAR + rw_margin)
+	# the fence: 5 m bays, dropped wherever they would cross something
+	var bays: Array = []
+	for t in CampAssets.fence_ring(axf, yaw, hx, hz, 0.0):
+		var xf: Transform3D = t
+		var mid: Vector3 = xf.origin + xf.basis.x.normalized() * 2.5
+		if land_ok.call(xf.origin, 0.0) and land_ok.call(mid, 0.0):
+			bays.append(xf)
+			g.mark_disc(mid, 3.0)
+	if not bays.is_empty():
+		var fmi: MultiMeshInstance3D = Scatter.multi(CampAssets.fence_bay(false), bays, 2600.0, false)
+		fmi.name = "PeopleKit"
+		container.add_child(fmi)
+	# sentry towers at the corners, the middle of each long side and part-way along each end
+	var towers: Array = []
+	var men: Array = []
+	var spots: Array = [Vector3(-hx, 0, -hz), Vector3(hx, 0, -hz), Vector3(hx, 0, hz), Vector3(-hx, 0, hz),
+		Vector3(-hx, 0, 0), Vector3(hx, 0, 0), Vector3(-hx * 0.55, 0, -hz), Vector3(hx * 0.55, 0, hz)]
+	for lp in spots:
+		var inward: Vector3 = Vector3(-signf(lp.x) if absf(lp.x) > 1.0 else 0.0, 0.0, -signf(lp.z) if absf(lp.z) > 1.0 else 0.0)
+		var tp: Vector3 = axf * ((lp as Vector3) + inward * 6.0)
+		if not land_ok.call(tp, 40.0):
+			continue
+		var ty: float = GroundKit.ground_y(tp.x, tp.z)
+		towers.append(Transform3D(Basis(Vector3.UP, yaw + rng.randf_range(-0.1, 0.1)), Vector3(tp.x, ty, tp.z)))
+		g.mark_disc(tp, 4.0)
+		var look: Vector3 = axf.basis * (-inward)
+		men.append([Vector3(tp.x, 0.0, tp.z), look, Kind.TALK if rng.randf() < 0.6 else Kind.SMOKER, 0.0, -1.0, 0.0, true, null, ty - y + 4.25])
+	if not towers.is_empty():
+		var tmi: MultiMeshInstance3D = Scatter.multi(CampAssets.guard_tower("army"), towers, 4500.0)
+		tmi.name = "PeopleKit"
+		container.add_child(tmi)
+	# clumps of trees on the grass, well clear of the runway and its approaches
+	var clumps: int = int(round(10.0 * density())) + 6
+	var cones: Array = []
+	var rounds: Array = []
+	var made: int = 0
+	for _try in clumps * 12:
+		if made >= clumps:
+			break
+		var lc := Vector3(rng.randf_range(-hx + 40.0, hx - 40.0), 0.0, rng.randf_range(-hz + 40.0, hz - 40.0))
+		if absf(lc.x) < af.runway_width * 0.5 + 230.0:
+			continue                                   # nothing near the runway or under the climb-out
+		var wc: Vector3 = axf * lc
+		if not land_ok.call(wc, 200.0):
+			continue
+		var n: int = 3 + rng.randi() % 5
+		for k in n:
+			var tw: Vector3 = wc + Vector3(rng.randf_range(-16.0, 16.0), 0.0, rng.randf_range(-16.0, 16.0))
+			if not land_ok.call(tw, 200.0):
+				continue
+			var sc: float = rng.randf_range(0.85, 1.35)
+			var t2 := Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(sc, sc * rng.randf_range(0.9, 1.25), sc)), Vector3(tw.x, GroundKit.ground_y(tw.x, tw.z) - 0.3, tw.z))
+			if rng.randf() < 0.3:
+				cones.append(t2)
+			else:
+				rounds.append(t2)
+			g.mark_disc(tw, 5.0)
+		made += 1
+	if not cones.is_empty() or not rounds.is_empty():
+		CampAssets.add_trees(container, [cones, rounds])
+	return men
+
+
 ## A few heavy bombers parked on the grass behind the spectators at the take-off end, noses toward the runway.
 ## Real parked aircraft (ParkedAircraft: destructible, the period's types for the side), marked into `g` so nobody
 ## is placed under them. Returns [[world position, the way it faces, half span], ...].
@@ -1230,6 +1308,8 @@ static func populate(container: Node3D, af: Airfield, axf: Transform3D, y: float
 	var free_ok := func(q: Vector3) -> bool:
 		var lq: Vector3 = inv * q
 		return g.free_at(q) and pave.free_at(q) and AirfieldActivity.leg_clear(rws, lq, lq, RUNWAY_CLEAR + 4.0)
+	# the perimeter fence, its towers and sentries, and trees away from the runway
+	extra.append_array(dress_perimeter(container, af, axf, y, team, rws, g, pave, seed0 + 23))
 	# heavy bombers parked behind the spectators at the take-off end, with their crews in front of them
 	var bombers: Array = take_off_bombers(container, af, axf, y, team, rws, g, pave, 3 if dens >= 1.0 else 2, seed0 + 11)
 	for bm in bombers:

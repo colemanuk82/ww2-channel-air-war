@@ -104,6 +104,8 @@ uniform float grass_translucency : hint_range(0.0, 1.0) = 0.35; // grazing-angle
 // Cloud cover 0..1 (set by CloudField): drifting soft shadow patches on the ground.
 global uniform float cloud_shadow;
 global uniform vec3 sky_horizon;
+// direction toward the sun in world space (TimeOfDay): the ground relief is shaded with it, see Ground relief
+global uniform vec3 sun_dir_world;
 global uniform float night_amount;
 // Ground wetness 0..1 (set by WeatherManager while it rains): darker, richer, slightly glossy-looking ground.
 global uniform float wetness;
@@ -175,10 +177,13 @@ float t_band(float px, float cell) {
 
 // Height (m) of the lighting-only ground relief at p (see the Ground relief block in fragment): rolling ground,
 // smaller banks, and tussocks and clods near the camera - each band faded by distance and by pixel size.
+// The exact integer-hash noise (s_ivn), not t_vnoise2: the float hash drifts at these world coordinates, so the two
+// cells either side of a lattice line disagreed on their shared corners and the relief stepped there - the slope
+// lighting drew it as thin dark-and-light dashes across the fields and the airfield grass.
 float relief_h(vec2 p, float cam_d, float px) {
-	return t_vnoise2(p * 0.016 + 3.0) * 3.2 + t_vnoise2(p * 0.055 + 11.0) * 1.1
-		+ (t_vnoise2(p * 0.19 + 23.0) - 0.5) * 0.30 * (1.0 - smoothstep(300.0, 1200.0, cam_d)) * t_band(px, 5.3)
-		+ ((t_vnoise2(p * 0.85 + 5.0) - 0.5) * 0.10 * t_band(px, 1.18) + (t_vnoise2(p * 2.9 + 17.0) - 0.5) * 0.035 * t_band(px, 0.34))
+	return s_ivn(p * 0.016 + 3.0, 101u) * 3.2 + s_ivn(p * 0.055 + 11.0, 102u) * 1.1
+		+ (s_ivn(p * 0.19 + 23.0, 103u) - 0.5) * 0.30 * (1.0 - smoothstep(300.0, 1200.0, cam_d)) * t_band(px, 5.3)
+		+ ((s_ivn(p * 0.85 + 5.0, 104u) - 0.5) * 0.10 * t_band(px, 1.18) + (s_ivn(p * 2.9 + 17.0, 105u) - 0.5) * 0.035 * t_band(px, 0.34))
 			* (1.0 - smoothstep(80.0, 450.0, cam_d));
 }
 
@@ -710,6 +715,24 @@ void fragment() {
 		// but real aerodrome grass still varies patch to patch
 		float mottle = 0.94 + 0.12 * t_vnoise2(xz * 0.006 + 17.0);
 		airfield_grass *= mow * mottle;
+		// Wear, so the grass is not a bowling green: thinner, yellower patches; footpaths af_trodden across the field,
+		// wandering and broken (where men walk between the huts, the pens and the aircraft day after day); and the
+		// odd low muddy hollow, darker and wet-looking. All low frequency, faded crisp by their own pixel width.
+		float af_thin = smoothstep(0.46, 0.78, t_vnoise2(xz * 0.021 + 61.0) * 0.7 + t_vnoise2(xz * 0.09 + 7.0) * 0.3);
+		airfield_grass = mix(airfield_grass, airfield_grass * vec3(1.14, 1.08, 0.80), af_thin * 0.60);
+		vec2 af_pw = xz + vec2(t_vnoise2(xz * 0.006 + 3.0), t_vnoise2(xz * 0.006 + 9.0)) * 90.0;
+		float af_pn = t_vnoise2(af_pw * 0.0045 + 21.0);
+		float af_pn2 = t_vnoise2(af_pw * 0.0072 + 47.0);
+		float af_pfw = max(fwidth(af_pn), 1.0e-5);
+		float af_pfw2 = max(fwidth(af_pn2), 1.0e-5);
+		float af_path = 1.0 - smoothstep(0.0075, 0.0075 + af_pfw * 1.5, abs(af_pn - 0.5));
+		af_path = max(af_path, (1.0 - smoothstep(0.0060, 0.0060 + af_pfw2 * 1.5, abs(af_pn2 - 0.5))) * 0.85);
+		af_path *= smoothstep(0.35, 0.55, t_vnoise2(xz * 0.011 + 83.0));        // paths come and go
+		vec3 af_trodden = mix(airfield_grass, soil_col * vec3(1.10, 1.02, 0.92), 0.62);
+		airfield_grass = mix(airfield_grass, af_trodden, af_path * 0.85);
+		float af_mud = smoothstep(0.64, 0.84, t_vnoise2(xz * 0.0105 + 131.0) * 0.75 + t_vnoise2(xz * 0.045 + 17.0) * 0.25);
+		vec3 af_mud_col = mix(soil_col * vec3(0.58, 0.54, 0.50), airfield_grass * 0.62, 0.30);
+		airfield_grass = mix(airfield_grass, af_mud_col, af_mud * 0.70);
 		// fully over the ground beneath: at 0.85 the field patchwork, hedge lines and painted tracks showed through
 		// the aerodrome grass (the mottle above keeps it from reading as a flat decal)
 		col = mix(col, airfield_grass, afw);
@@ -822,9 +845,16 @@ void fragment() {
 			if (gl > 0.45) {
 				grad *= 0.45 / gl;                 // never steeper than a 24 degree bank
 			}
-			vec3 nw = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz;
-			nw = normalize(nw - vec3(grad.x, 0.0, grad.y));
-			NORMAL = normalize((VIEW_MATRIX * vec4(nw, 0.0)).xyz);
+			// Shade the colour by how the relief turns the ground to the sun, instead of writing NORMAL: any written
+			// normal - however it was derived - left thin dark-and-light lines along the terrain mesh's triangle
+			// rows on flat ground (the airfield grass most of all). The vertex normal still lights the real hills.
+			vec3 nb = normalize(w_normal);
+			vec3 nr = normalize(nb - vec3(grad.x, 0.0, grad.y));
+			vec3 ls = normalize(sun_dir_world);
+			float lit0 = max(dot(nb, ls), 0.05);
+			float relief_shade = clamp(max(dot(nr, ls), 0.0) / lit0, 0.55, 1.45);
+			relief_shade = mix(1.0, relief_shade, smoothstep(0.0, 0.08, ls.y) * (1.0 - night_amount));
+			col *= relief_shade;
 		}
 	}
 	// Aerial perspective: far ground takes on the blue of the air in front of it (a cool tint, then the horizon

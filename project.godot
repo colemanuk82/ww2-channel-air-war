@@ -16,7 +16,7 @@ file_logging/max_log_files=8
 [application]
 
 config/name="WW2 Channel Air War"
-config/version="4.22"
+config/version="4.23"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 
@@ -117,6 +117,10 @@ sky_top={
 sky_horizon={
 "type": "vec3",
 "value": Vector3(0.72, 0.84, 0.95)
+}
+sun_dir_world={
+"type": "vec3",
+"value": Vector3(0.3, 0.8, -0.5)
 }
 wake_0={
 "type": "vec4",

@@ -589,12 +589,37 @@ func _tree_belt(c: Vector3, ax: float, az: float, west_x: float, runways: Array)
 				break
 		if not clear:
 			continue
-		var outward := Vector3(sin(a) / ax, 0.0, cos(a) / az).normalized()
-		var along := Vector3(outward.z, 0.0, -outward.x)
-		for k in 3:
-			var q: Vector3 = tp + outward * (float(k) - 1.0) * 13.0 + along * ((float((j * 5 + k) % 3) - 1.0) * 8.0)
-			trees_local.append(Transform3D(Basis(Vector3.UP, a + float((j * 7 + k) % 5) * 0.13), q))
+		var first: int = trees_local.size()
+		_copse(tp, Vector3(sin(a) / ax, 0.0, cos(a) / az).normalized(), j)
+		for ti in range(trees_local.size() - 1, first - 1, -1):
+			var q: Vector3 = (trees_local[ti] as Transform3D).origin
+			for rw in runways:
+				var qa: Vector3 = rw[0]
+				var qd: Vector3 = ((rw[1] as Vector3) - qa).normalized()
+				var qt: float = clampf((q - qa).dot(qd), -900.0, ((rw[1] as Vector3) - qa).length() + 900.0)
+				if (qa + qd * qt).distance_to(q) < 170.0:
+					trees_local.remove_at(ti)      # the copse spread a tree back into an approach lane
+					break
 
+
+## One clump of the boundary tree line: a loose, uneven copse rather than three identical trees in a ruled row -
+## 1 to 7 trees, a spread of sizes and heights, an odd standing tree or a gap, pushed in and out of the line.
+## Seeded from the slot so the layout is the same every visit. The populator splits them across tree kinds.
+func _copse(tp: Vector3, outward: Vector3, j: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(Vector3i(int(tp.x), int(tp.z), j))
+	var r: float = rng.randf()
+	if r < 0.18:
+		return                                           # a gap in the line
+	var along := Vector3(outward.z, 0.0, -outward.x)
+	var c: Vector3 = tp + outward * rng.randf_range(-35.0, 45.0) + along * rng.randf_range(-30.0, 30.0)
+	var n: int = 1 if r < 0.32 else rng.randi_range(2, 7)
+	var spread: float = 6.0 + float(n) * 3.2
+	for k in n:
+		var q: Vector3 = c + outward * rng.randfn(0.0, spread * 0.45) + along * rng.randfn(0.0, spread * 0.8)
+		var s: float = rng.randf_range(0.7, 1.45)
+		var b := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * rng.randf_range(0.85, 1.3), s))
+		trees_local.append(Transform3D(b, q))
 
 ## Dirt-strip field: one wide pale gravel/dirt runway, a big dirt apron with a row of arched hangars behind it,
 ## a taxi strip joining apron and runway, parked aircraft, huts and silos (set dressing is added by the populator).
@@ -626,6 +651,8 @@ func _build_grass(earth: Material) -> void:
 	for row in 3:
 		for i in 6:
 			_dispersal_local.append(Vector3(-150.0 - float(row) * 38.0, 0.0, -190.0 + float(i) * 40.0))
+	# boundary tree line: uneven copses round the field (the apron side is kept further out)
+	_tree_belt(Vector3.ZERO, 390.0, L * 0.5 + 270.0, -1.0e9, [[Vector3(0, 0, -L * 0.5), Vector3(0, 0, L * 0.5)]])
 
 
 ## Two crossing paved runways (main = gameplay) inside an octagonal perimeter track, frying-pan hardstandings
@@ -906,11 +933,7 @@ func _build_raf_grass(earth: Material) -> void:
 		var tp := Vector3(sin(a4) * (rx + 55.0), 0.0, cos(a4) * (rz + 55.0))
 		if tp.x < -rx * 0.35:
 			continue
-		var inner := Vector3(sin(a4) * (rx + 20.0), 0.0, cos(a4) * (rz + 20.0))
-		var outward := (tp - inner).normalized()
-		for k in 3:
-			var q: Vector3 = tp + outward * (float(k) - 1.0) * 14.0 + Vector3(cos(a4), 0.0, -sin(a4)) * ((float(j % 3) - 1.0) * 9.0)
-			trees_local.append(Transform3D(Basis(Vector3.UP, a4 + float((j * 7 + k) % 5) * 0.13), q))
+		_copse(tp, Vector3(sin(a4) / (rx + 55.0), 0.0, cos(a4) / (rz + 55.0)).normalized(), j + 100)
 
 
 ## Luftwaffe forward grass field (Pas-de-Calais / Normandy, 1940-41): a rolled grass strip with worn wheel tracks,
@@ -949,6 +972,9 @@ func _build_lw_field(earth: Material) -> void:
 		for sx in [-1.0, 1.0]:
 			if j % 3 == 0:
 				markers_local.append(Transform3D(Basis(), Vector3(sx * runway_width * 1.1, 0.0, zz)))
+	# the Luftwaffe tucked these fields against woods and hedgerows: a deeper, two-row belt of copses
+	_tree_belt(Vector3.ZERO, L * 0.34 + 110.0, L * 0.5 + 190.0, -1.0e9, [[Vector3(0, 0, -L * 0.5), Vector3(0, 0, L * 0.5)]])
+	_tree_belt(Vector3.ZERO, L * 0.34 + 175.0, L * 0.5 + 255.0, -1.0e9, [[Vector3(0, 0, -L * 0.5), Vector3(0, 0, L * 0.5)]])
 
 
 func _pad(at: Vector3, r: float, mat: Material) -> void:
@@ -1035,6 +1061,8 @@ func _build_forward(earth: Material) -> void:
 	for i in 4:
 		var z2: float = -L * 0.3 + float(i) * L * 0.2
 		_dispersal_local.append(Vector3(55.0, 0.0, z2))
+	# boundary tree line: the copses and hedgerow trees the strip was cut between
+	_tree_belt(Vector3.ZERO, 270.0, L * 0.5 + 240.0, -1.0e9, [[Vector3(0, 0, -L * 0.5), Vector3(0, 0, L * 0.5)]])
 
 
 ## A runway between two local points (built on a pivot at its midpoint).

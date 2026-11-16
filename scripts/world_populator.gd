@@ -3646,7 +3646,17 @@ func _add_boundary_trees(container: Node3D, af: Airfield, axf: Transform3D) -> v
 		var tt: Transform3D = tw[ti]
 		tt.origin.y = GroundKit.ground_y(tt.origin.x, tt.origin.z) - 0.3
 		tw[ti] = tt
-	container.add_child(Scatter.multi(Scatter.tree_variant(4), tw, 6500.0))
+	# several tree kinds mixed through each copse, not one tree repeated round the whole field
+	var kinds: Array = [2, 3, 4, 5, 6]
+	var split: Array = []
+	for _k in kinds:
+		split.append([])
+	for tt in tw:
+		var o: Vector3 = (tt as Transform3D).origin
+		split[absi(hash(Vector2i(int(o.x * 3.0), int(o.z * 3.0)))) % kinds.size()].append(tt)
+	for ki in kinds.size():
+		if not (split[ki] as Array).is_empty():
+			container.add_child(Scatter.multi(Scatter.tree_variant(kinds[ki]), split[ki], 6500.0))
 
 
 func _dress_grass_station(container: Node3D, af: Airfield, axf: Transform3D, y: float, team: String, rng: RandomNumberGenerator) -> void:
