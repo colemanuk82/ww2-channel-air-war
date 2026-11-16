@@ -177,8 +177,11 @@ void fragment() {
 	float h = w_pos.y;
 	float slope = 1.0 - clamp(w_normal.y, 0.0, 1.0);
 	vec2 xz = w_pos.xz;
-	// metres of ground under one screen pixel (view-space derivatives: exact at any world coordinate)
-	float gpx = max(length(dFdx(VERTEX)), length(dFdy(VERTEX)));
+	// Metres of ground under one screen pixel, along the long axis of its footprint: the pixel's angular size times
+	// the distance, stretched by how shallowly the ground is seen. From the distance and the smooth vertex normal,
+	// not from dFdx/dFdy of the position (those are constant across a terrain triangle and step at its edges).
+	vec3 gpx_dir = normalize(VERTEX);
+	float gpx = length(VERTEX) * 2.0 / (abs(PROJECTION_MATRIX[1][1]) * VIEWPORT_SIZE.y) / max(abs(dot(gpx_dir, normalize(NORMAL))), 0.05);
 
 	// --- farmland: domain-warped Voronoi cells (irregular field shapes) with thin hedgerows ---
 	// (Lattice kept identical to the previous version so Scatter.field_edge() stays in sync.)
@@ -821,6 +824,17 @@ void fragment() {
 			vec3 r2 = cross(NORMAL, dpx);
 			float det = dot(dpx, r1);
 			vec3 sg = sign(det) * (dFdx(hb) * r1 + dFdy(hb) * r2);
+			// length(sg) / abs(det) is the slope this relief asks for. The relief itself never asks for more than
+			// about 0.4 (a 22 degree bank). But along the edges of the terrain mesh's triangles the screen-space
+			// derivatives above come out wild on single pixels (worst with MSAA), and a slope of 2, 5 or 50 turned
+			// that pixel's normal away from the sun: rows of near-black dashes along the mesh lines, 31 m apart.
+			// So a pixel asking for an impossible slope gets no relief at all, and the rest is capped.
+			float slope_ask = length(sg) / max(abs(det), 1.0e-12);
+			if (slope_ask > 0.9) {
+				sg = vec3(0.0);
+			} else if (slope_ask > 0.45) {
+				sg *= 0.45 / slope_ask;
+			}
 			NORMAL = normalize(abs(det) * NORMAL - sg);
 		}
 	}
