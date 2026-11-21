@@ -23,6 +23,7 @@ uniform float bands = 4.0;
 uniform float wave_scale = 0.013;
 uniform float scroll_speed = 0.05;
 uniform float reflect_strength = 1.0;
+uniform float cel_alpha = 0.0;       // cel style: a floor for the sea's opacity so the sandy seabed does not show through (0 = off)
 uniform float lake_mode = 0.0;       // 1 = inland reservoir (DamKit): calm water, no depth bands / shore foam / caps
 
 global uniform vec3 sky_top;
@@ -223,6 +224,7 @@ void fragment() {
 	ROUGHNESS = mix(0.18, 0.85, foam_m);
 	SPECULAR = 0.0;
 	ALPHA = clamp(0.35 + smoothstep(0.0, foam_depth * 1.5, diff) * 0.65 + foam * 0.5, 0.0, 1.0);
+	ALPHA = max(ALPHA, cel_alpha);
 	if (water_debug > 0.5 && water_debug < 1.5) {
 		ALBEDO = vec3(0.0);
 		EMISSION = vec3(clamp(diff / 150.0, 0.0, 1.0), clamp(scene_depth / 3000.0, 0.0, 1.0), clamp(-VERTEX.z / 3000.0, 0.0, 1.0));

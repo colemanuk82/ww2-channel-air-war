@@ -229,6 +229,37 @@ func apply_post(level: int) -> void:
 	environment.volumetric_fog_detail_spread = 2.0
 	environment.volumetric_fog_gi_inject = 0.0
 	environment.volumetric_fog_sky_affect = 0.0
+	if GameState.art_style == 1:
+		_apply_cel_post()
+	elif _cel_ssr_was:
+		_cel_ssr_was = false
+		set_wet_reflections(true)
+
+
+const CEL_FOG_MUL := 0.12           # cel style: fog density multiplier (clear, bright air)
+var _cel_ssr_was: bool = false      # SSR was on when the cel style switched it off; given back on Realistic
+
+
+## Cel-shaded style only (apply_post calls this last, so every value here is overwritten again by the next
+## apply_post when the style is Realistic). The flat-banded look has no use for the photographic effects:
+## ambient occlusion, indirect-light bounce, reflections, volumetric haze and bloom are all off, and the
+## tonemapper / grade give vivid colour instead of a filmic roll-off. The user's saved settings are untouched.
+func _apply_cel_post() -> void:
+	if environment.ssr_enabled:
+		_cel_ssr_was = true
+	environment.ssao_enabled = false
+	environment.ssil_enabled = false
+	ssr_allowed = false
+	set_wet_reflections(false)
+	environment.volumetric_fog_enabled = false
+	environment.glow_enabled = false
+	environment.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.tonemap_exposure = 1.0
+	environment.adjustment_contrast = 1.0
+	environment.adjustment_saturation = 1.1
+	environment.fog_sun_scatter = 0.0
+	environment.fog_aerial_perspective = 0.15
 
 
 var _tick_acc: float = 0.0
@@ -436,6 +467,8 @@ func _apply() -> void:
 	sun.visible = sun_e > 0.001
 	# softer shadows while the sun is low (long shadows read harsh with a tight blur), tight at noon
 	sun.shadow_blur = lerpf(0.7, 1.15, smoothstep(0.45, 0.12, sun_dir.y) * smoothstep(-0.02, 0.06, sun_dir.y))
+	if GameState.art_style == 1:
+		sun.shadow_blur = 0.0              # cel style: hard-edged shadows
 	sun.global_transform = Transform3D(Basis.looking_at(-sun_dir, Vector3.UP), Vector3.ZERO)
 	moon.light_color = Color(0.6, 0.7, 1.0)
 	moon.light_energy = moon_e
@@ -449,6 +482,9 @@ func _apply() -> void:
 		environment.ambient_light_sky_contribution = AMB_SKY_SHARE * (1.0 - 0.35 * smoothstep(0.35, 0.0, sun_dir.y))
 	var haze_day: float = haze_k * clampf(sun_dir.y * 4.0, 0.0, 1.0)
 	environment.fog_light_color = fogc.lerp(Color(0.52, 0.47, 0.40), 0.34 * haze_day).lerp(Color(0.78, 0.79, 0.80), overcast * 0.4)
+	if GameState.art_style == 1:
+		var fcc: Color = environment.fog_light_color
+		environment.fog_light_color = Color.from_hsv(fcc.h, minf(fcc.s * 1.8 + 0.05, 0.85), minf(fcc.v * 1.05, 1.0))   # bluer, cleaner horizon haze
 	# light shafts: thicken the (high-preset) volumetric haze while the sun is low, so a dawn or dusk sun throws
 	# visible rays through the gaps between clouds; thin again by day so the noon air stays clear
 	if environment.volumetric_fog_enabled:
@@ -466,6 +502,8 @@ func _apply() -> void:
 		_mist_mat.albedo = Color(0.95, 0.95, 0.97).lerp(lc, 0.35 * clampf(sun_e, 0.0, 1.0))
 		_mist.visible = environment.volumetric_fog_enabled and mist_k > 0.01
 	environment.fog_density = (FOG_GAIN if ng_light else 1.0) * (float(s[9]) + FOG_DENSITY_BASE) * fog_mul * (1.0 + HAZE_FOG_MUL * haze_day * (0.45 + 0.55 * haze_low)) * (0.0 if OS.get_environment("WW2_NO_FOG") == "1" else 1.0)
+	if GameState.art_style == 1:
+		environment.fog_density *= CEL_FOG_MUL      # cel style: a clear, bright air with only a light distance haze
 	sun_color = lc
 	horizon_color = hor
 	light_level = clampf(sun_e / (1.3 * (SUN_GAIN if ng_light else 1.0)) + moon_e * 0.3 + 0.12, 0.0, 1.0)

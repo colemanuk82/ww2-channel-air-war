@@ -1,3 +1,5 @@
+> **SUPERSEDED 2026-11-21: the pixel-art style was replaced by the Cel-shaded style (same art_style index 1, scripts/cel_shade.gd, shaders/cel/; see docs/STATUS.md). pixel_art.gd, shaders/pixel/, the palette and the pixel-grid option were removed; the notes below are historical.**
+
 # PROGRAM: Pixel-art art style (Slotbound-like), behind a settings toggle
 
 # PROGRAM: Pixel-art art style (Slotbound-like), behind a settings toggle

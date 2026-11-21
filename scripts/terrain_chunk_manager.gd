@@ -88,6 +88,8 @@ func _make_material() -> void:
 		material.set_shader_parameter("detail_tex", _detail_tex)
 		material.set_shader_parameter("use_detail", true)
 	_apply_imagery()
+	if GameState.art_style == 1:
+		set_cel_look(true)
 
 
 ## Ground tint zones (airfield grass, army-camp mud, POW-compound sand). zones: Array of {"pos": Vector3,
@@ -338,6 +340,20 @@ func set_pin(pos: Vector3, radius: float) -> void:
 	_pin_pos = pos
 	_pin_radius = maxf(radius, 0.0)
 	_timer = 0.0
+
+
+## Cel-shaded style: the sea floor seen through the shallows is turquoise-blue instead of khaki sand, and the
+## fine detail texture layer is off (flat bands read cleaner without it). Passing null restores the original
+## uniform values, so Realistic is untouched.
+var _cel_look_on: bool = false
+
+
+func set_cel_look(on: bool) -> void:
+	if material == null or on == _cel_look_on:
+		return
+	_cel_look_on = on
+	material.set_shader_parameter("seabed_col", Color(0.10, 0.42, 0.70) if on else null)
+	material.set_shader_parameter("use_detail", false if on else (_detail_tex != null))
 
 
 ## Scale the terrain streaming/LOD distances (graphics "view distance" setting).

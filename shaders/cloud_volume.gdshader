@@ -28,6 +28,9 @@ instance uniform float ctype = 0.0;   // 0 cumulus, 1 towering cumulus / anvil, 
                                       // 5 lenticular, 6 castellanus, 7 cirrocumulus, 8 congestus, 9 stratus
 instance uniform float nfreq = 2.1;   // noise frequency (bigger clouds get finer lumps)
 instance uniform float rseed = 1.0;   // per-cloud 0..1: a towering cell with rseed < storm_frac is a dark storm cell
+uniform float cel_k = 0.0;             // 1 = cel-shaded style (set by CloudField.set_detail); 0 = the original look
+uniform float cel_lo = 0.50;           // cel bands: brightness below this is the blue-grey shade ...
+uniform float cel_hi = 0.78;           // ... above this the flat white top
 uniform float storm_frac = 0.0;       // share of towering cells that are storm cells (set from the weather)
 
 varying vec3 l_cam;
@@ -289,6 +292,25 @@ void fragment() {
 	}
 	float alpha = 1.0 - T;
 	float fade = 1.0 - smoothstep(fade_near, fade_far, dist_cam);
-	ALBEDO = min(acc / max(alpha, 0.001) * light_level, vec3(1.15)) * mix(1.0, 0.40, stormy);
-	ALPHA = clamp(alpha, 0.0, 1.0) * fade;
+	vec3 out_col = min(acc / max(alpha, 0.001) * light_level, vec3(1.15)) * mix(1.0, 0.40, stormy);
+	float out_a = clamp(alpha, 0.0, 1.0);
+	if (cel_k > 0.5) {
+		// cel style: flat white tops with two hard shade bands (blue-grey undersides) and a crisp edge, no smudge
+		float lv = dot(out_col, vec3(0.2126, 0.7152, 0.0722)) / max(light_level, 0.2);
+		lv /= mix(1.0, 0.40, stormy);
+		float s_mid = smoothstep(cel_lo - 0.02, cel_lo + 0.02, lv);
+		float s_hi = smoothstep(cel_hi - 0.02, cel_hi + 0.02, lv);
+		vec3 lit = cloud_color.rgb * light_level;
+		vec3 sh = shade_color.rgb * light_level * 0.92;
+		vec3 band = mix(sh, mix(sh, lit, 0.55), s_mid);
+		band = mix(band, lit, s_hi);
+		out_col = band * mix(1.0, 0.40, stormy);
+		if (!thin_hi) {
+			float rim = smoothstep(0.26, 0.36, out_a) * (1.0 - smoothstep(0.42, 0.66, out_a));   // soft ink rim just inside the edge
+			out_col = mix(out_col, vec3(0.13, 0.20, 0.36) * light_level, rim * 0.6);
+			out_a = smoothstep(0.30, 0.44, out_a);
+		}
+	}
+	ALBEDO = out_col;
+	ALPHA = out_a * fade;
 }

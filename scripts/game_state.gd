@@ -71,8 +71,8 @@ var era_date: String = ""          # ISO date of the current mission / campaign 
 var quality: int = 1  # 0 low, 1 medium, 2 high
 var shadows_enabled: bool = true
 var realistic_scenery: bool = true   # realistic (default) or classic cartoon scenery: toon_real vs toon shader, no ink outlines; applies on the next launch
-var art_style: int = 0               # 0 realistic (default), 1 pixel art (PROMPT-pixel-art.md): a screen pass over the 3D frame
-var pixel_native: int = 2            # pixel art grid: index into PixelArt.NATIVE_PRESETS (480x270 at 2); applies on the next launch
+var art_style_saved: int = 0            # what settings.cfg holds; --cel (debug) changes art_style for a run only, never this
+var art_style: int = 0               # 0 realistic (default), 1 cel-shaded (scripts/cel_shade.gd): flat light bands + ink lines; lowers heavy effects while on, never the saved settings
 var msaa_level: int = 2      # 0 = off, 2 = 2x, 4 = 4x
 var aniso_level: int = 3     # anisotropic texture filtering: 0 off, 1 = 2x, 2 = 4x, 3 = 8x, 4 = 16x
 var post_fx: int = 2         # post effects: 0 off, 1 medium (filmic tonemap, bloom, grade), 2 high (adds ambient occlusion, sun scatter)
@@ -233,7 +233,7 @@ func _load_settings() -> void:
 	shadows_enabled = cf.get_value("gfx", "shadows", shadows_enabled)
 	realistic_scenery = cf.get_value("gfx", "realistic_scenery", realistic_scenery)
 	art_style = clampi(int(cf.get_value("gfx", "art_style", art_style)), 0, 1)
-	pixel_native = clampi(int(cf.get_value("gfx", "pixel_native", pixel_native)), 0, 3)
+	art_style_saved = art_style
 	msaa_level = int(cf.get_value("gfx", "msaa", msaa_level))
 	aniso_level = clampi(int(cf.get_value("gfx", "aniso", aniso_level)), 0, 4)
 	post_fx = int(cf.get_value("gfx", "post_fx", post_fx))
@@ -367,8 +367,7 @@ func save_settings() -> void:
 	cf.set_value("gfx", "outlines", outlines_enabled)
 	cf.set_value("gfx", "shadows", shadows_enabled)
 	cf.set_value("gfx", "realistic_scenery", realistic_scenery)
-	cf.set_value("gfx", "art_style", art_style)
-	cf.set_value("gfx", "pixel_native", pixel_native)
+	cf.set_value("gfx", "art_style", art_style_saved)
 	cf.set_value("gfx", "msaa", msaa_level)
 	cf.set_value("gfx", "aniso", aniso_level)
 	cf.set_value("gfx", "post_fx", post_fx)
@@ -608,8 +607,7 @@ func set_graphic(key: String, value: Variant) -> void:
 			realistic_scenery = bool(value)
 		"art_style":
 			art_style = clampi(int(value), 0, 1)
-		"pixel_native":
-			pixel_native = clampi(int(value), 0, 3)
+			art_style_saved = art_style
 		"player_heal":
 			player_heal = bool(value)
 		"pitch_ladder":
@@ -722,6 +720,11 @@ func apply_quality(q: int) -> void:
 	settings_changed.emit()
 
 
+var _cel_lowered: bool = false         # the cel style has swapped MSAA for FXAA and hard shadow filtering
+var _cel_prev_ssaa: int = 0            # ... and these are the values to give back
+var _cel_prev_shadow_q: int = 2
+
+
 ## Push the current settings to the running game (call after the world/light/camera exist).
 func apply_graphics() -> void:
 	RenderingServer.global_shader_parameter_set("outline_enabled", 1.0 if outlines_enabled else 0.0)
@@ -754,17 +757,28 @@ func apply_graphics() -> void:
 		if effective_upscaler() != Upscaler.OFF:
 			vp.msaa_3d = Viewport.MSAA_DISABLED      # DLSS / FSR 2 do their own temporal anti-aliasing
 		if art_style == 1:
-			# Pixel art wants a hard-edged frame at the native grid size, so everything that blurs or
-			# resamples it is off here (see PROMPT-pixel-art.md 1.3). The pass itself is PixelArt.
+			# Cel-shaded: the ink lines and flat bands are made by the screen pass, and depth / normal
+			# edge detection wants a single-sample frame, so MSAA is swapped for cheap FXAA. Nothing
+			# saved changes; the next apply_graphics with Realistic puts the old values back.
+			if not _cel_lowered:
+				_cel_prev_ssaa = vp.screen_space_aa
+				_cel_prev_shadow_q = int(ProjectSettings.get_setting("rendering/lights_and_shadows/directional_shadow/soft_shadow_filter_quality", 2))
 			vp.msaa_3d = Viewport.MSAA_DISABLED
-			vp.anisotropic_filtering_level = Viewport.ANISOTROPY_DISABLED
-	# The screen pass is a node, not a viewport setting, so it has to be toggled too - otherwise
-	# switching back to Realistic resets MSAA and still leaves the frame crushed to 480x270.
-	for px in get_tree().get_nodes_in_group("pixel_art"):
-		if px != null and is_instance_valid(px):
-			px.call("set_native_preset", pixel_native)
-			px.call("set_enabled", art_style == 1)
-	# ... and so is each aircraft's pixel-art ink outline: put it on or take it off with the style
+			vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
+			RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_HARD)
+			_cel_lowered = true
+		elif _cel_lowered:
+			vp.screen_space_aa = _cel_prev_ssaa as Viewport.ScreenSpaceAA
+			RenderingServer.directional_soft_shadow_filter_set_quality(_cel_prev_shadow_q as RenderingServer.ShadowQuality)
+			_cel_lowered = false
+	# The screen pass is a node, not a viewport setting, so it has to be toggled too.
+	for cs in get_tree().get_nodes_in_group("cel_shade"):
+		if cs != null and is_instance_valid(cs):
+			cs.call("set_enabled", art_style == 1)
+	for wp in get_tree().get_nodes_in_group("water_plane"):
+		if wp != null and is_instance_valid(wp):
+			wp.call("set_cel_look", art_style == 1)
+	# ... and so is each aircraft's ink outline: put it on or take it off with the style
 	for ac in get_tree().get_nodes_in_group("aircraft"):
 		if ac != null and is_instance_valid(ac) and ac.has_method("refresh_art_style"):
 			ac.call("refresh_art_style")
@@ -776,17 +790,31 @@ func apply_graphics() -> void:
 			sun.directional_shadow_max_distance = (2600.0 if post_fx >= 2 else 1400.0) * float(VIEW_SCALES[clampi(view_distance, 0, 2)])   # high: scenery shadows reach across the fields
 			# high: an 8k sun shadow atlas keeps hedge and tree shadows crisp and thin across the fields
 			RenderingServer.directional_shadow_atlas_set_size(8192 if post_fx >= 2 else 4096, true)
+			if art_style == 1:
+				# cel style: hard shadows read as flat shapes, so two cascades and (on High) a half-size atlas do
+				RenderingServer.directional_shadow_atlas_set_size(4096, true)
+				sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+				sun.directional_shadow_max_distance = minf(sun.directional_shadow_max_distance, 1400.0)
+			else:
+				sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
 		if tod.has_method("apply_post"):
 			tod.call("apply_post", post_fx)
 	var wm: Node = get_tree().root.get_node_or_null("WeatherManager")
 	if wm and wm.get("cloud_field") != null and wm.get("cloud_field").has_method("set_detail"):
-		wm.get("cloud_field").call("set_detail", cloud_detail)
+		wm.get("cloud_field").call("set_detail", mini(cloud_detail, 1) if art_style == 1 else cloud_detail)
 	var terr: Node = get_tree().get_first_node_in_group("terrain")
+	if terr and terr.has_method("set_cel_look"):
+		terr.call("set_cel_look", art_style == 1)
 	if terr and terr.has_method("set_view_scale"):
 		terr.call("set_view_scale", float(VIEW_SCALES[clampi(view_distance, 0, 2)]))
 
 
 var radio_voice: bool = false     # computer text-to-speech for calls with no recorded clip (off: recorded voices or text only)
+
+
+## Flip Realistic <-> Cel-shaded (F7 in game): applied live and saved like the Options row.
+func toggle_art_style() -> void:
+	set_graphic("art_style", 0 if art_style == 1 else 1)
 
 
 func toggle_outlines() -> void:
@@ -923,6 +951,7 @@ func _setup_input() -> void:
 	_key("respawn", KEY_BACKSPACE)
 	_key("start_mode_toggle", KEY_F2)
 	_key("airfield_cycle", KEY_F3)
+	_key("art_style_toggle", KEY_F7)       # Realistic <-> Cel-shaded
 
 
 # ---------------------------------------------------------------- gamepad remapping

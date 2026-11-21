@@ -88,6 +88,27 @@ Never open a visible game window on the developer's PC: everything with pictures
   street grid (420 m districts, 34 m blocks, `town_plan` -> `_grid_people`); tests require >= 30 townspeople on High
   for Folkestone's real layout (Folkestone gets 79, Boulogne 97 on High).
 
+## Art style: Realistic / Cel-shaded (scripts/cel_shade.gd, shaders/cel/)
+Options > Video > Art style. Index 0 = Realistic (default, byte-for-byte the old path: every cel hook is gated on
+`GameState.art_style == 1`), index 1 = **Cel-shaded** (the old "Pixel art" slot, same saved index; pixel grid, dither and
+palette are gone). **F7** (action `art_style_toggle`, remappable in Options > Controls) flips between them in flight with
+a HUD toast and saves through `set_graphic`.
+* Post pass: a full-screen quad (`CelShade`, `cel_post.gdshader`, render_priority -128 so clouds and the sea, which are
+  transparent, draw on top of its opaque-only screen copy - at +100 it overwrote them) reads colour, depth and normals:
+  full-resolution ink lines (one-sided depth second difference + normal creases, width scales with window height),
+  2-3 flat light bands, saturated colours (greens teal-shifted, gold/mustard damped), clean banded sky. HUD untouched.
+* Aircraft: inverted-hull ink (`cel_ink.gdshader`) - thick black on the player, team ink on AI (red enemy, yellow
+  friendly, fog-free so distant aircraft stay readable); canopy glass gets haze + glint streaks (cel only).
+* Sea and clouds: water/seabed recoloured (ultramarine offshore, lighter near the coast) via `set_cel_look`; clouds use
+  `cel_k` in `cloud_volume.gdshader` (flat white tops, two hard blue-grey bands, ink rim).
+* Lowered only while cel is on (recomputed in `apply_graphics`/`apply_post`, restored on Realistic, saved settings never
+  touched; `GameState.art_style_saved` is what `settings.cfg` holds, so the debug `--cel` flag cannot leak into it):
+  MSAA -> off (FXAA), soft shadow filter -> hard, sun shadow atlas 4096 / 2 cascades / max distance 1400, shadow blur 0,
+  SSAO, SSIL, SSR, volumetric fog, glow and reflected sky light off, FILMIC tonemap (exposure 1.0, contrast 1.0,
+  saturation 1.1), fog density x0.12 with no sun scatter, cloud detail capped at Medium, terrain detail texture off.
+* Debug: `--cel` forces it for a run (`--pixel` is the old alias), `--call-after=N:set_art_style:0|1`,
+  `--cloudview=kind:nth:dist:dy` puts the camera next to a cloud. Tests: `_test_cel_style`, `_test_cel_ink`,
+  `_test_art_style_key` (incl. "Realistic leaves every graphics setting at its saved value").
 ## Occupation life (Phase 5, scripts/ground/occupation_life.gd)
 - German garrison in Axis-held towns of size 2 and up: two sentries either side of the town hall door (facing out, from the
   civic "townhall" entry's yaw), a two-man patrol across the square on High, and two sentries at the station (civic

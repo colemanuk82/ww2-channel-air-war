@@ -234,11 +234,9 @@ func _build_video_page() -> VBoxContainer:
 		GameState.set_outline_visibility(GameState.outline_near, v, false))
 	_row(page, "Scenery look (next launch)", ["Realistic", "Classic cartoon"], 0 if GameState.realistic_scenery else 1, func(i: int) -> void:
 		GameState.set_graphic("realistic_scenery", i == 0))
-	_row(page, "Art style", ["Realistic", "Pixel art"], GameState.art_style, func(i: int) -> void:
+	_row(page, "Art style", ["Realistic", "Cel-shaded"], GameState.art_style, func(i: int) -> void:
 		GameState.set_graphic("art_style", i)
 		GameState.apply_graphics())
-	_row(page, "Pixel grid", ["320x180", "400x225", "480x270", "640x360"], GameState.pixel_native, func(i: int) -> void:
-		GameState.set_graphic("pixel_native", i))
 	_shadows = _row(page, "Shadows", ["Off", "On"], 1 if GameState.shadows_enabled else 0, func(i: int) -> void:
 		GameState.set_graphic("shadows", i == 1))
 	_msaa = _row(page, "Anti-aliasing", ["Off", "2x", "4x"], [0, 2, 4].find(GameState.msaa_level), func(i: int) -> void:
@@ -1076,6 +1074,7 @@ const BINDINGS := [
 	["Time of day", "T", "", "-"],
 	["Weather", "Y", "", "-"],
 	["Outlines", "O", "", "-"],
+	["Art style (Realistic / Cel-shaded)", "F7", "art_style_toggle", ""],
 	["SYSTEM", "", "", ""],
 	["Pause / back", "Esc", "ui_cancel", ""],
 	["Respawn", "Backspace", "", "-"],

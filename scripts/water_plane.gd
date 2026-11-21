@@ -7,6 +7,7 @@ var focus: Node3D
 
 
 func _ready() -> void:
+	add_to_group("water_plane")
 	var pm := PlaneMesh.new()
 	pm.size = Vector2(size, size)
 	pm.subdivide_width = 1
@@ -31,6 +32,8 @@ func _ready() -> void:
 			material_override = sm
 	extra_cull_margin = 16384.0
 	position.y = 0.0
+	if GameState.art_style == 1:
+		set_cel_look(true)        # built while the cel style is already on (start-up, a new mission)
 
 
 var _wake_t: float = 0.0
@@ -72,3 +75,17 @@ func _update_wakes() -> void:
 			var ln: float = float(sh.get("_len") if "_len" in sh else 30.0) * sh.scale.x
 			v = Vector4(sh.global_position.x, sh.global_position.z, -sh.rotation.y, ln)
 		RenderingServer.global_shader_parameter_set("wake_%d" % i, v)
+
+## Cel-shaded style: a clearly blue sea (light turquoise shallows, deeper blue offshore) instead of the
+## Channel's grey-green. Passing null puts the shader's own defaults back, so Realistic is untouched.
+func set_cel_look(on: bool) -> void:
+	var m: ShaderMaterial = material_override as ShaderMaterial
+	if m == null or m.shader == null or m.shader.resource_path.ends_with("water.gdshader") == false:
+		return
+	m.set_shader_parameter("shallow_color", Color(0.20, 0.66, 0.80) if on else null)
+	m.set_shader_parameter("mid_color", Color(0.04, 0.24, 0.62) if on else null)
+	m.set_shader_parameter("deep_color", Color(0.02, 0.10, 0.42) if on else null)
+	m.set_shader_parameter("depth_fade", 24.0 if on else null)
+	m.set_shader_parameter("reflect_strength", 0.5 if on else null)
+	m.set_shader_parameter("cel_alpha", 0.93 if on else null)
+

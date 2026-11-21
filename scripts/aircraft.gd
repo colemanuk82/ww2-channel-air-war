@@ -198,18 +198,29 @@ func _apply_team_outline() -> void:
 			mi.material_overlay = m
 
 
-var _ink_mat: ShaderMaterial = null      # the last pixel-art ink made for this aircraft (null = none yet)
+var _ink_mat: ShaderMaterial = null      # the last cel-style ink made for this aircraft (null = none yet)
 
 
-## Art style changed at run time (GameState.apply_graphics): put the pixel-art ink on, or take it off
+## Art style changed at run time (GameState.apply_graphics): put the cel ink on, or take it off
 ## again. Before this the ink stayed on an aircraft built in pixel mode after switching back to
 ## Realistic - the player kept a cream outline in the realistic look.
 func refresh_art_style() -> void:
-	_remove_pixel_ink()
-	_apply_pixel_ink()
+	_remove_cel_ink()
+	_apply_cel_ink()
 
 
-func _remove_pixel_ink() -> void:
+## The canopy glass gets a light sky haze and crisp white glint bands in the cel style only: a material overlay
+## on the glass meshes (shaders/canopy_glass.gdshader with cel_k = 1; the model's own glass is untouched).
+func _is_glass_mesh(mi: MeshInstance3D) -> bool:
+	var nm: String = String(mi.name)
+	return nm.begins_with("Canopy") and nm.findn("frame") < 0
+
+
+static func _is_cel_glass(m: Material) -> bool:
+	var sm: ShaderMaterial = m as ShaderMaterial
+	return sm != null and sm.shader != null and sm.shader.resource_path.ends_with("canopy_glass.gdshader")
+
+func _remove_cel_ink() -> void:
 	for root in [_model, _lod_model]:
 		if root == null or not is_instance_valid(root):
 			continue
@@ -218,6 +229,9 @@ func _remove_pixel_ink() -> void:
 			if mi == null:
 				continue
 			var ov: Material = mi.material_overlay
+			if ov != null and _is_cel_glass(ov):
+				ov = ov.next_pass         # the glass overlay sits first in the chain; what follows is the team outline
+				mi.material_overlay = ov
 			if ov == null:
 				continue
 			if _is_ink(ov):
@@ -228,37 +242,44 @@ func _remove_pixel_ink() -> void:
 
 static func _is_ink(m: Material) -> bool:
 	var sm: ShaderMaterial = m as ShaderMaterial
-	return sm != null and sm.shader != null and sm.shader.resource_path.ends_with("pixel/aircraft_ink.gdshader")
+	return sm != null and sm.shader != null and sm.shader.resource_path.ends_with("cel/cel_ink.gdshader")
 
 
-## Pixel-art mode: give EVERY aircraft a hard ink silhouette (the player included), so the airframe
-## reads as a drawn sprite at 480x270 instead of a dark blob. The game's team outline skips the
-## player, which is exactly the aircraft the player is looking at most. See shaders/pixel/aircraft_ink.
-func _apply_pixel_ink() -> void:
+## Cel-shaded style: give EVERY aircraft a thick ink silhouette (the player included; the game's team
+## outline skips the player). See shaders/cel/cel_ink.gdshader.
+func _apply_cel_ink() -> void:
 	if GameState.art_style != 1 or _model == null:
 		return
+	var gmat := ShaderMaterial.new()
+	gmat.shader = load("res://shaders/canopy_glass.gdshader") as Shader
+	gmat.set_shader_parameter("cel_k", 1.0)
+	gmat.set_shader_parameter("opacity", 0.0)
+	gmat.set_shader_parameter("rim_amount", 0.0)
+	gmat.set_shader_parameter("glint", 0.0)
 	var m := ShaderMaterial.new()
 	_ink_mat = m
-	m.shader = load("res://shaders/pixel/aircraft_ink.gdshader") as Shader
-	# The player gets a BRIGHT outline, not a dark one: the camouflage airframe is dark and the ground
-	# and sea are mid-tones, so a dark ink would swallow the aircraft instead of separating it (the
-	# first attempt did exactly that - it read as a solid black blob). AI aircraft keep dark ink, which
-	# separates them from the pale sky; their team colour comes from the game's own outline.
+	m.shader = load("res://shaders/cel/cel_ink.gdshader") as Shader
+	# JSR-style ink: the player's aircraft gets a thick BLACK outline; AI aircraft are inked in their team
+	# colour (red enemy, yellow friendly), as thick as the player's, so they stay readable at range.
 	if player_controlled:
-		m.set_shader_parameter("ink_color", Color(0.96, 0.94, 0.86))   # palette cream, entry 11
+		m.set_shader_parameter("ink_color", Color(0.02, 0.02, 0.03))
 	else:
-		# AI aircraft are inked in their team colour (red enemy, yellow friendly), as thick as the
-		# player's: a dark ink drawn over the thin team outline hid the red once the frame was crushed
 		var friendly: bool = team == GameState.player_side
 		m.set_shader_parameter("ink_color", Color(1.0, 0.85, 0.1) if friendly else Color(1.0, 0.16, 0.1))
-	m.set_shader_parameter("thickness", 0.085)
-	m.set_shader_parameter("dist_scale", 0.0016)
+	m.set_shader_parameter("thickness", 0.06)
+	m.set_shader_parameter("dist_scale", 0.0034)
 	for root in [_model, _lod_model]:
 		if root == null or not is_instance_valid(root):
 			continue
 		for n in (root as Node3D).find_children("*", "MeshInstance3D", true, false):
 			var mi: MeshInstance3D = n as MeshInstance3D
 			if mi == null or String(mi.name).findn("disc") >= 0:
+				continue
+			if _is_glass_mesh(mi):
+				gmat.next_pass = null
+				var gcopy: ShaderMaterial = gmat.duplicate() as ShaderMaterial
+				gcopy.next_pass = mi.material_overlay
+				mi.material_overlay = gcopy
 				continue
 			# Keep the team colour as the overlay when it exists (AI aircraft), and put the ink on the
 			# next_pass so the two do not fight over the same slot.
@@ -285,7 +306,7 @@ func _build_model() -> void:
 	_contrail_pts.clear()
 	add_child(_model)
 	_apply_team_outline()
-	_apply_pixel_ink()
+	_apply_cel_ink()
 	_prop = _model.find_child("Propeller", true, false) as Node3D
 	_prop_disc = _model.find_child("PropDisc", true, false) as Node3D
 	_prop_blades = _prop.find_child("Blades", true, false) as Node3D if _prop else null
@@ -358,7 +379,7 @@ func _build_lod_model() -> void:
 	_lod_box(fin, Vector3(c.x, c.y + bb.size.y * 0.26, bb.end.z - fin.z * 0.55), col)
 	_lod_model.visible = false
 	_apply_team_outline()      # the far boxes need the team colour too; the detailed model drops out beyond 1.8 km
-	_apply_pixel_ink()
+	_apply_cel_ink()
 
 
 func _lod_box(size: Vector3, pos: Vector3, col: Color) -> void:

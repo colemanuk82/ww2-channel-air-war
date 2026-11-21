@@ -1,4 +1,4 @@
-﻿extends Node3D
+extends Node3D
 ## Game root: builds the world (terrain, sea, airfields), shows the start menu, then starts a session:
 ## player aircraft + camera + HUD + a ModeBase picked from ModeRegistry. Handles pause / results / restart.
 ##
@@ -100,9 +100,9 @@ var _ov_t: float = 0.0
 
 var _respawn_timer: float = -1.0
 var _bail: BailOut     # bail-out (J held): the pilot on his parachute; see scripts/bail_out.gd
-var _pixel: PixelArt   # pixel-art screen pass (PROMPT-pixel-art.md); null until the HUD exists
-var _pixel_shot: String = ""   # --pixel-shot=path: save the pixel frame at 4x and quit
-var _pixel_frames: int = 200   # how many frames to let the scenery settle before --pixel-shot captures
+var _cel: CelShade   # cel-shaded screen pass (scripts/cel_shade.gd); null until the HUD exists
+var _cel_sweep: Array = []   # --cel-sweep=<json>: [{name, params}] shader tuning variants, one PNG each
+var _cel_sweep_t: int = 0
 var _taxi: TaxiController = null   # taxi to the runway: guidance for the player, driving for AI / --taxi-test
 var _dispersal_done: bool = false  # the sortie's first spawn already used the dispersal (respawns start on the runway)
 var _menu: StartMenu
@@ -1806,13 +1806,12 @@ func start_game(cfg: Dictionary) -> void:
 	hud.visible = not _args.has("--nohud")      # debug: completely clean screenshots
 	add_child(hud)
 	hud.bind_aircraft(player)
-	# Pixel-art mode: a screen pass on layer 5, so it covers the 3D frame and leaves the HUD (layer 10)
-	# on top at full resolution. See PROMPT-pixel-art.md; --pixel forces it on for a run.
-	_pixel = PixelArt.new()
-	add_child(_pixel)
-	if GameState.art_style == 1 or _args.has("--pixel"):
-		_pixel.set_native_preset(GameState.pixel_native)
-		_pixel.set_enabled(true)
+	# Cel-shaded style: a full-screen quad in the 3D scene (the HUD canvas layers stay on top, untouched).
+	# --cel (or the old --pixel) forces it on for a run.
+	_cel = CelShade.new()
+	add_child(_cel)
+	if GameState.art_style == 1 or _args.has("--cel") or _args.has("--pixel"):
+		_cel.set_enabled(true)
 	var gvis := GVision.new()
 	gvis.hud = hud
 	add_child(gvis)
@@ -3270,6 +3269,9 @@ func _process(delta: float) -> void:
 			list = SIDE_AIRFIELDS[GameState.player_side]
 		GameState.start_airfield = list[(list.find(GameState.start_airfield) + 1) % list.size()]
 		_spawn_player()
+	if Input.is_action_just_pressed("art_style_toggle"):
+		GameState.toggle_art_style()
+		hud.show_message("Art style: %s" % ("Cel-shaded" if GameState.art_style == 1 else "Realistic"), 1.8)
 	if Input.is_action_just_pressed("outline_toggle"):
 		GameState.toggle_outlines()
 		hud.show_message("Outlines %s" % ("ON" if GameState.outlines_enabled else "OFF"), 1.5)
@@ -3300,19 +3302,13 @@ func _parse_debug_args() -> void:
 			_want_cockpit = true
 			camera_rig.force_cockpit = true
 			camera_rig.set_cockpit(true)
-		elif a == "--pixel":            # debug: force pixel-art mode on (PROMPT-pixel-art.md)
+		elif a == "--cel" or a == "--pixel":   # debug: force the cel-shaded style on (--pixel is the old name)
 			GameState.art_style = 1
-			if _pixel != null:
-				_pixel.set_native_preset(GameState.pixel_native)
-				_pixel.set_enabled(true)
-		elif a.begins_with("--pixel-native="):   # debug: pixel-art grid, e.g. --pixel-native=480x270
-			var pn: PackedStringArray = a.substr(15).split("x")
-			if pn.size() == 2 and _pixel != null:
-				_pixel.set_native(Vector2i(int(pn[0]), int(pn[1])))
-				_pixel.set_enabled(true)
-		elif a.begins_with("--pixel-shot="):     # debug: save the frame at a 4x nearest upscale, then quit
-			_pixel_shot = a.substr(13)
-			_pixel_frames = _shot_frames       # share --frames=N so one settle covers both shots
+			GameState.apply_graphics()
+			if _cel != null:
+				_cel.set_enabled(true)
+		elif a.begins_with("--cel-sweep="):   # debug: shader tuning sweep, see _cel_sweep_tick
+			_cel_sweep = JSON.parse_string(FileAccess.get_file_as_string(a.substr(12)))
 		elif a == "--bomber-demo":
 			_start_bomber_demo()
 		elif a.begins_with("--gunner="):   # debug: step into defensive gun position N (bombers only)
@@ -3613,12 +3609,9 @@ func _parse_debug_args() -> void:
 			get_tree().create_timer(secs).timeout.connect(func() -> void:
 				print("FPS ", Engine.get_frames_per_second(), " aircraft ", get_tree().get_nodes_in_group("aircraft").size())
 				get_tree().quit())
-	# --pixel-shot shares the --shot settle count so one --frames=N covers both pictures.
-	if _pixel_shot != "" and _pixel_frames == 200:
-		_pixel_frames = _shot_frames
 	# screenshot runs (--shot= / --tour=) capture with the upscaler off: DLSS / frame
 	# generation have no valid frame in --no-window runs and abort the save upstream
-	var want_capture: bool = _shot_path != "" or _pixel_shot != ""
+	var want_capture: bool = _shot_path != ""
 	for a in _args:
 		if a.begins_with("--tour=") or a.begins_with("--ui-shot="):
 			want_capture = true
@@ -3824,12 +3817,8 @@ func _physics_process(delta: float) -> void:
 		if _log_t > 0.5:
 			_log_t = 0.0
 			print("t=%.1f spd=%.1f alt=%.1f gnd=%s stall=%s pitch=%.1f thr=%.2f" % [Time.get_ticks_msec() / 1000.0, player.speed, player.altitude_agl, player.on_ground, player.stalled, rad_to_deg(player._pitch_angle()), player.throttle])
-	if _pixel_shot != "":
-		# --pixel-shot has its own frame counter so it works with or without --shot=...
-		_pixel_frames -= 1
-		if _pixel_frames == 0:
-			print("[pixel] capture, pass=%s" % ("on" if _pixel != null and _pixel.enabled else "off"))
-			_pixel_shot_save()
+	if not _cel_sweep.is_empty():
+		_cel_sweep_tick()
 	if _shot_path != "":
 		if _args.has("--plate"):      # story plate: no HUD or overlays in the picture
 			for c in get_children():
@@ -3858,23 +3847,42 @@ func _physics_process(delta: float) -> void:
 		_tour_tick()
 
 
+## Tuning sweep (--cel-sweep=file.json with --frames=N): after N frames, apply each variant's shader
+## uniforms in turn and save the frame to <dir>/<name>.png (1080p), then quit.
+func _cel_sweep_tick() -> void:
+	_cel_sweep_t += 1
+	var start: int = 300
+	for a in _args:
+		if a.begins_with("--frames="):
+			start = int(a.substr(9))
+	var ph: int = _cel_sweep_t - start
+	if ph < 0 or _cel == null or _cel.material() == null:
+		return
+	var idx: int = ph / 10
+	var sub: int = ph % 10
+	if idx >= _cel_sweep.size():
+		get_tree().quit()
+		return
+	var v: Dictionary = _cel_sweep[idx]
+	if sub == 0:
+		for k in (v.get("params", {}) as Dictionary):
+			var val: Variant = v["params"][k]
+			if val is Array and (val as Array).size() == 3:
+				val = Vector3(val[0], val[1], val[2])
+			_cel.material().set_shader_parameter(k, val)
+	elif sub == 8:
+		var img: Image = get_viewport().get_texture().get_image()
+		img.resize(1920, 1080, Image.INTERPOLATE_LANCZOS)
+		img.save_png("res://build/cel/%s.png" % v.get("name", "v%d" % idx))
+		print("[cel] sweep saved ", v.get("name", idx))
+
+
 ## Set the art style at run time (--call-after=N:set_art_style:0|1). Used to prove the live toggle
 ## works in both directions, which is how the "still pixelated after switching back" bug was found.
 func set_art_style(style: int) -> void:
 	GameState.set_graphic("art_style", style)
-	print("[pixel] art_style=%d pass_enabled=%s" % [GameState.art_style,
-		str(_pixel != null and _pixel.enabled)])
-
-
-## Pixel-art capture (--pixel-shot=path): save the frame resampled to the pixel grid at a 4x nearest
-## upscale, then quit. Needs --shot=... as well, which controls the settle frame count.
-func _pixel_shot_save() -> void:
-	if _pixel == null:
-		return
-	var path: String = ProjectSettings.globalize_path(_pixel_shot)
-	if not _pixel.save_upscaled(path, 4):
-		push_error("[pixel] could not save %s" % path)
-	get_tree().quit()
+	print("[cel] art_style=%d pass_enabled=%s" % [GameState.art_style,
+		str(_cel != null and _cel.enabled)])
 
 
 ## Screenshot tour: read a JSON list of locations and save one PNG per stop in a

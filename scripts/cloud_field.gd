@@ -578,6 +578,8 @@ func set_detail(level: int) -> void:
 	mat.set_shader_parameter("step_k", sk[l])
 	mat.set_shader_parameter("max_steps", ms[l])
 	mat.set_shader_parameter("light_every", le[l])
+	if GameState.art_style == 1 or mat.get_shader_parameter("cel_k") != null:
+		mat.set_shader_parameter("cel_k", 1.0 if GameState.art_style == 1 else 0.0)   # cel clouds: flat bands, crisp edge
 
 
 var _rr: int = 0

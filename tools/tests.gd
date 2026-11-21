@@ -30,8 +30,9 @@ func _ready() -> void:
 	_test_interior_cockpit()
 	_test_data_files()
 	_test_map_edits()
-	_test_pixel_palette()
-	_test_pixel_mode()
+	_test_cel_style()
+	_test_cel_ink()
+	_test_art_style_key()
 	_test_map_editor_transform()
 	_test_edit_history()
 	_test_map_editor_edits()
@@ -3723,77 +3724,174 @@ func _test_farm_people() -> void:
 	_check(FarmPeople.prop_mesh(FarmPeople.Prop.PLOUGH_TEAM).get_surface_count() == 1 and FarmPeople.still_mesh(FarmPeople.Still.STOOK).get_surface_count() == 1, "the farm prop and still meshes build")
 
 
-## Headless checks for the pixel-art art style (PROMPT-pixel-art.md): the palette generator, the
-## PixelArt pass and the live Realistic <-> Pixel art toggle.
+## Headless checks for the cel-shaded art style (scripts/cel_shade.gd, shaders/cel/): the screen pass, the
+## settings it lowers while on (and that Realistic gives every one back, saved values untouched), and the
+## aircraft ink outline.
 
 
-## The shipped palette is exactly 32 valid colours, and the generator reproduces it (run
-## tools/make_pixel_palette.py --check).
-func _test_pixel_palette() -> void:
-	print("-- pixel palette")
-	var path: String = "res://assets/textures/pixel/palette.json"
-	_check(FileAccess.file_exists(path), "the pixel palette manifest exists")
-	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	_check(d is Dictionary, "the palette manifest is a JSON object")
-	if not (d is Dictionary):
-		return
-	var cols: Array = (d as Dictionary).get("colours", [])
-	_check(cols.size() == 32, "the palette has exactly 32 colours (%d)" % cols.size())
-	_check(int((d as Dictionary).get("count", 0)) == 32, "the manifest count agrees")
-	var bad: Array = []
-	var seen: Dictionary = {}
-	for c in cols:
-		var a: Array = c
-		if a.size() != 3:
-			bad.append(str(c))
-			continue
-		for v in a:
-			if int(v) < 0 or int(v) > 255:
-				bad.append(str(c))
-		# duplicates would waste a palette slot
-		var key: String = "%d,%d,%d" % [int(a[0]), int(a[1]), int(a[2])]
-		if seen.has(key):
-			bad.append("duplicate " + key)
-		seen[key] = true
-	_check(bad.is_empty(), "every palette entry is a unique 0-255 RGB colour; bad: %s" % ", ".join(PackedStringArray(bad)))
-	var img := Image.new()
-	_check(img.load("res://assets/textures/pixel/palette.png") == OK, "the palette PNG loads")
-	_check(img.get_width() == 32 and img.get_height() == 1, "the palette PNG is 32x1 (%dx%d)" % [img.get_width(), img.get_height()])
+func _gfx_snapshot() -> Dictionary:
+	return {"quality": GameState.quality, "msaa": GameState.msaa_level, "aniso": GameState.aniso_level,
+		"post_fx": GameState.post_fx, "cloud": GameState.cloud_detail, "view": GameState.view_distance,
+		"shadows": GameState.shadows_enabled, "outlines": GameState.outlines_enabled,
+		"upscaler": GameState.upscaler, "frame_gen": GameState.frame_gen, "vsync": GameState.vsync_on,
+		"fps_cap": GameState.fps_cap, "ui_scale": GameState.ui_scale}
 
 
-## The PixelArt pass builds, and GameState.art_style drives it both ways. This is the regression test
-## for "it stays pixelated after switching back to Realistic": apply_graphics() used to reset the
-## viewport but never told the pass to stop drawing.
-func _test_pixel_mode() -> void:
-	print("-- pixel art mode")
-	var px: PixelArt = PixelArt.new()
-	add_child(px)
-	_check(px.get_child_count() == 1, "the pixel pass builds its full-screen rect")
-	_check(px.native_size() == Vector2i(480, 270), "the default grid is 480x270 (Slotbound's), got %s" % str(px.native_size()))
-	_check(px.get_child(0) is ColorRect, "the pass draws through a ColorRect")
-	var sh: ShaderMaterial = (px.get_child(0) as ColorRect).material as ShaderMaterial
-	_check(sh != null and sh.shader != null, "the pass has its shader")
+func _env_snapshot(e: Environment) -> Dictionary:
+	return {"ssao": e.ssao_enabled, "ssil": e.ssil_enabled, "ssr": e.ssr_enabled, "vfog": e.volumetric_fog_enabled,
+		"glow": e.glow_enabled, "tonemap": e.tonemap_mode, "exposure": e.tonemap_exposure,
+		"contrast": e.adjustment_contrast, "sat": e.adjustment_saturation, "reflect": e.reflected_light_source,
+		"scatter": e.fog_sun_scatter, "aerial": e.fog_aerial_perspective}
 
+
+func _ink_of(mi: MeshInstance3D) -> ShaderMaterial:
+	var ov: Material = mi.material_overlay
+	while ov != null:
+		if Aircraft._is_ink(ov):
+			return ov as ShaderMaterial
+		ov = ov.next_pass
+	return null
+
+
+func _test_cel_style() -> void:
+	print("-- cel-shaded style")
+	var cel: CelShade = CelShade.new()
+	add_child(cel)
+	_check(cel.material() != null and cel.material().shader != null, "the cel pass builds its shader")
+	_check(not cel.is_active(), "the cel pass starts hidden")
 	var restore: int = GameState.art_style
-	GameState.set_graphic("art_style", 1)
-	_check(GameState.art_style == 1, "art_style can be turned on")
-	_check(px.enabled and (px.get_child(0) as ColorRect).visible, "pixel art on: the pass is enabled and visible")
+	var vp: Window = get_window()
+
+	# Realistic leaves every saved graphics setting where the user put it
+	GameState.art_style = 0
+	var saved: Dictionary = _gfx_snapshot()
+	GameState.apply_graphics()
+	_check(_gfx_snapshot() == saved, "Realistic: apply_graphics leaves every saved graphics setting unchanged")
+	_check(not cel.is_active(), "Realistic: the cel pass is off")
+	var real_msaa: int = vp.msaa_3d
+	var real_ssaa: int = vp.screen_space_aa
+	var real_aniso: int = vp.anisotropic_filtering_level
+
+	# cel on: the heavy effects are lowered, but the saved values are not
+	GameState.art_style = 1
+	GameState.apply_graphics()
+	_check(cel.is_active(), "cel style: the pass is on")
+	_check(_gfx_snapshot() == saved, "cel style: the user's saved graphics settings are not changed")
+	_check(vp.msaa_3d == Viewport.MSAA_DISABLED, "cel style: MSAA is off")
+	_check(vp.screen_space_aa == Viewport.SCREEN_SPACE_AA_FXAA, "cel style: FXAA replaces MSAA")
+
+	# and back: everything restored
+	GameState.art_style = 0
+	GameState.apply_graphics()
+	_check(not cel.is_active(), "back to Realistic: the cel pass is off again")
+	_check(vp.msaa_3d == real_msaa and vp.screen_space_aa == real_ssaa and vp.anisotropic_filtering_level == real_aniso,
+		"back to Realistic: MSAA, screen-space AA and anisotropy are restored")
+	_check(_gfx_snapshot() == saved, "back to Realistic: saved graphics settings unchanged")
+
+	# environment: lowered only while the style is on, every value restored afterwards
+	var tod: Node = get_tree().root.get_node_or_null("TimeOfDay")
+	var own_tod: bool = false
+	if tod == null:
+		tod = (load("res://scripts/time_of_day.gd") as GDScript).new()
+		add_child(tod)
+		own_tod = true
+	var env: Environment = tod.get("environment")
+	_check(env != null, "the time-of-day environment exists")
+	if env != null:
+		for lvl in [0, 1, 2]:
+			GameState.art_style = 0
+			tod.call("apply_post", lvl)
+			var real: Dictionary = _env_snapshot(env)
+			GameState.art_style = 1
+			tod.call("apply_post", lvl)
+			var cel_env: Dictionary = _env_snapshot(env)
+			_check(not cel_env["ssao"] and not cel_env["ssil"] and not cel_env["ssr"] and not cel_env["vfog"] and not cel_env["glow"],
+				"cel style (post_fx %d): SSAO, SSIL, SSR, volumetric fog and glow are all off" % lvl)
+			if lvl == 2:
+				_check(real["ssao"] and real["ssil"] and real["vfog"], "Realistic high really has SSAO, SSIL and volumetric fog on")
+			GameState.art_style = 0
+			tod.call("apply_post", lvl)
+			_check(_env_snapshot(env) == real, "back to Realistic (post_fx %d): every environment value is restored" % lvl)
+		tod.call("apply_post", GameState.post_fx)
+	if own_tod:
+		tod.queue_free()
+	# the sea turns clearly blue in cel style and gets its own colours back afterwards
+	var sea: WaterPlane = WaterPlane.new()
+	add_child(sea)
+	var sea_mat: ShaderMaterial = sea.material_override as ShaderMaterial
+	var real_deep: Variant = sea_mat.get_shader_parameter("deep_color")
+	GameState.art_style = 1
+	GameState.apply_graphics()
+	var cel_deep: Variant = sea_mat.get_shader_parameter("deep_color")
+	_check(cel_deep is Color and (cel_deep as Color).b > (cel_deep as Color).g, "cel style: the sea is blue")
+	GameState.art_style = 0
+	GameState.apply_graphics()
+	_check(sea_mat.get_shader_parameter("deep_color") == real_deep, "back to Realistic: the sea shader colours are the original ones")
+	sea.queue_free()
+	GameState.art_style = restore
+	GameState.apply_graphics()
+	cel.queue_free()
+
+
+## F7 flips the art style both ways, and the action is registered with a key.
+func _test_art_style_key() -> void:
+	print("-- art style key")
+	_check(InputMap.has_action("art_style_toggle"), "the art_style_toggle action exists")
+	var has_key: bool = false
+	for e in InputMap.action_get_events("art_style_toggle"):
+		if e is InputEventKey and (e as InputEventKey).physical_keycode == KEY_F7:
+			has_key = true
+	_check(has_key, "F7 is bound to the art style toggle")
+	var restore: int = GameState.art_style
 	GameState.set_graphic("art_style", 0)
-	_check(GameState.art_style == 0, "art_style can be turned back off")
-	_check(not px.enabled and not (px.get_child(0) as ColorRect).visible,
-		"realistic: the pass is disabled and hidden (this is the 'still pixelated' regression)")
-	GameState.set_graphic("art_style", 1)
-	_check(px.enabled and (px.get_child(0) as ColorRect).visible, "pixel art can be turned on again")
-
-	# every grid preset is valid and settable
-	var ok: bool = true
-	for i in PixelArt.NATIVE_PRESETS.size():
-		px.set_native_preset(i)
-		if px.native_size() != PixelArt.NATIVE_PRESETS[i]:
-			ok = false
-	_check(ok, "every pixel grid preset applies")
-	px.set_native(Vector2i(0, 0))
-	_check(px.native_size().x >= 64 and px.native_size().y >= 36, "a nonsense grid is clamped, not accepted")
-
+	GameState.toggle_art_style()
+	_check(GameState.art_style == 1, "the toggle turns the cel style on")
+	GameState.toggle_art_style()
+	_check(GameState.art_style == 0, "the toggle turns it back to Realistic")
 	GameState.set_graphic("art_style", restore)
-	px.queue_free()
+
+
+## The ink outline: thick black on the player's aircraft, team colours on the AI's, gone in Realistic.
+func _test_cel_ink() -> void:
+	print("-- cel aircraft ink")
+	var restore: int = GameState.art_style
+	var enemy_team: String = "Axis" if GameState.player_side == "Allies" else "Allies"
+	var cases: Array = [["player", true, GameState.player_side], ["friendly", false, GameState.player_side], ["enemy", false, enemy_team]]
+	for cs in cases:
+		var ac: Aircraft = Aircraft.new()
+		add_child(ac)
+		ac.player_controlled = cs[1]
+		ac.team = cs[2]
+		var root := Node3D.new()
+		var mi := MeshInstance3D.new()
+		mi.mesh = BoxMesh.new()
+		root.add_child(mi)
+		ac.add_child(root)
+		ac._model = root
+		if not cs[1]:
+			var team_mat := ShaderMaterial.new()
+			team_mat.shader = load("res://shaders/team_outline.gdshader") as Shader
+			mi.material_overlay = team_mat
+		GameState.art_style = 1
+		ac.refresh_art_style()
+		var ink: ShaderMaterial = _ink_of(mi)
+		_check(ink != null, "%s aircraft get the cel ink" % cs[0])
+		if ink != null:
+			var col: Color = ink.get_shader_parameter("ink_color")
+			match String(cs[0]):
+				"player":
+					_check(col.r < 0.1 and col.g < 0.1 and col.b < 0.1, "the player's outline is black")
+				"friendly":
+					_check(col.r > 0.9 and col.g > 0.7 and col.b < 0.3, "a friendly AI aircraft is outlined yellow")
+				"enemy":
+					_check(col.r > 0.9 and col.g < 0.3 and col.b < 0.3, "an enemy AI aircraft is outlined red")
+			_check(float(ink.get_shader_parameter("dist_scale")) >= 0.003, "the outline is thick enough to read at range")
+		GameState.art_style = 0
+		ac.refresh_art_style()
+		_check(_ink_of(mi) == null, "%s aircraft: the ink comes off in Realistic" % cs[0])
+		if not cs[1]:
+			_check(mi.material_overlay != null, "AI aircraft keep their team outline in Realistic")
+		else:
+			_check(mi.material_overlay == null, "the player's aircraft has no overlay at all in Realistic")
+		ac.queue_free()
+	GameState.art_style = restore
