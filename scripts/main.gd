@@ -3567,9 +3567,15 @@ func _parse_debug_args() -> void:
 			get_tree().create_timer(float(a.substr(14))).timeout.connect(func() -> void:
 				_pause.set_open(true)
 				_ui_shot())
-		elif a.begins_with("--call-after="):   # --call-after=3:restart | quit_to_menu
+		elif a.begins_with("--call-after="):   # --call-after=3:restart | quit_to_menu | set_art_style:0|1
 			var cp: PackedStringArray = a.substr(13).split(":")
-			get_tree().create_timer(float(cp[0])).timeout.connect(func() -> void: call(cp[1]))
+			var cfn: String = str(cp[1])
+			var carg: PackedStringArray = Array(cp).slice(2) if cp.size() > 2 else PackedStringArray()
+			get_tree().create_timer(float(cp[0])).timeout.connect(func() -> void:
+				if cfn == "set_art_style" and carg.size() > 0:
+					set_art_style(int(carg[0]))
+				else:
+					call(cfn))
 		elif a == "--autopilot":
 			# debug: let the AI fly the player's aircraft (used to soak-test combat modes)
 			player.player_controlled = false
@@ -3850,6 +3856,14 @@ func _physics_process(delta: float) -> void:
 			get_tree().quit()
 	if _tour_active:
 		_tour_tick()
+
+
+## Set the art style at run time (--call-after=N:set_art_style:0|1). Used to prove the live toggle
+## works in both directions, which is how the "still pixelated after switching back" bug was found.
+func set_art_style(style: int) -> void:
+	GameState.set_graphic("art_style", style)
+	print("[pixel] art_style=%d pass_enabled=%s" % [GameState.art_style,
+		str(_pixel != null and _pixel.enabled)])
 
 
 ## Pixel-art capture (--pixel-shot=path): save the frame resampled to the pixel grid at a 4x nearest

@@ -758,6 +758,12 @@ func apply_graphics() -> void:
 			# resamples it is off here (see PROMPT-pixel-art.md 1.3). The pass itself is PixelArt.
 			vp.msaa_3d = Viewport.MSAA_DISABLED
 			vp.anisotropic_filtering_level = Viewport.ANISOTROPY_DISABLED
+	# The screen pass is a node, not a viewport setting, so it has to be toggled too - otherwise
+	# switching back to Realistic resets MSAA and still leaves the frame crushed to 480x270.
+	for px in get_tree().get_nodes_in_group("pixel_art"):
+		if px != null and is_instance_valid(px):
+			px.call("set_native_preset", pixel_native)
+			px.call("set_enabled", art_style == 1)
 	var tod: Node = get_tree().root.get_node_or_null("TimeOfDay")
 	if tod and tod.get("sun") != null:
 		var sun: DirectionalLight3D = tod.get("sun")

@@ -46,6 +46,7 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	add_to_group("pixel_art")        # GameState.apply_graphics() finds the pass here to toggle it live
 	_build()
 	set_enabled(enabled)
 

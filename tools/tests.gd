@@ -30,6 +30,8 @@ func _ready() -> void:
 	_test_interior_cockpit()
 	_test_data_files()
 	_test_map_edits()
+	_test_pixel_palette()
+	_test_pixel_mode()
 	_test_map_editor_transform()
 	_test_edit_history()
 	_test_map_editor_edits()
@@ -3719,3 +3721,79 @@ func _test_farm_people() -> void:
 				tied = false
 	_check(tied, "every ploughman, leader and driver has his prop on the same beat (%d teams)" % team_men)
 	_check(FarmPeople.prop_mesh(FarmPeople.Prop.PLOUGH_TEAM).get_surface_count() == 1 and FarmPeople.still_mesh(FarmPeople.Still.STOOK).get_surface_count() == 1, "the farm prop and still meshes build")
+
+
+## Headless checks for the pixel-art art style (PROMPT-pixel-art.md): the palette generator, the
+## PixelArt pass and the live Realistic <-> Pixel art toggle.
+
+
+## The shipped palette is exactly 32 valid colours, and the generator reproduces it (run
+## tools/make_pixel_palette.py --check).
+func _test_pixel_palette() -> void:
+	print("-- pixel palette")
+	var path: String = "res://assets/textures/pixel/palette.json"
+	_check(FileAccess.file_exists(path), "the pixel palette manifest exists")
+	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	_check(d is Dictionary, "the palette manifest is a JSON object")
+	if not (d is Dictionary):
+		return
+	var cols: Array = (d as Dictionary).get("colours", [])
+	_check(cols.size() == 32, "the palette has exactly 32 colours (%d)" % cols.size())
+	_check(int((d as Dictionary).get("count", 0)) == 32, "the manifest count agrees")
+	var bad: Array = []
+	var seen: Dictionary = {}
+	for c in cols:
+		var a: Array = c
+		if a.size() != 3:
+			bad.append(str(c))
+			continue
+		for v in a:
+			if int(v) < 0 or int(v) > 255:
+				bad.append(str(c))
+		# duplicates would waste a palette slot
+		var key: String = "%d,%d,%d" % [int(a[0]), int(a[1]), int(a[2])]
+		if seen.has(key):
+			bad.append("duplicate " + key)
+		seen[key] = true
+	_check(bad.is_empty(), "every palette entry is a unique 0-255 RGB colour; bad: %s" % ", ".join(PackedStringArray(bad)))
+	var img := Image.new()
+	_check(img.load("res://assets/textures/pixel/palette.png") == OK, "the palette PNG loads")
+	_check(img.get_width() == 32 and img.get_height() == 1, "the palette PNG is 32x1 (%dx%d)" % [img.get_width(), img.get_height()])
+
+
+## The PixelArt pass builds, and GameState.art_style drives it both ways. This is the regression test
+## for "it stays pixelated after switching back to Realistic": apply_graphics() used to reset the
+## viewport but never told the pass to stop drawing.
+func _test_pixel_mode() -> void:
+	print("-- pixel art mode")
+	var px: PixelArt = PixelArt.new()
+	add_child(px)
+	_check(px.get_child_count() == 1, "the pixel pass builds its full-screen rect")
+	_check(px.native_size() == Vector2i(480, 270), "the default grid is 480x270 (Slotbound's), got %s" % str(px.native_size()))
+	_check(px.get_child(0) is ColorRect, "the pass draws through a ColorRect")
+	var sh: ShaderMaterial = (px.get_child(0) as ColorRect).material as ShaderMaterial
+	_check(sh != null and sh.shader != null, "the pass has its shader")
+
+	var restore: int = GameState.art_style
+	GameState.set_graphic("art_style", 1)
+	_check(GameState.art_style == 1, "art_style can be turned on")
+	_check(px.enabled and (px.get_child(0) as ColorRect).visible, "pixel art on: the pass is enabled and visible")
+	GameState.set_graphic("art_style", 0)
+	_check(GameState.art_style == 0, "art_style can be turned back off")
+	_check(not px.enabled and not (px.get_child(0) as ColorRect).visible,
+		"realistic: the pass is disabled and hidden (this is the 'still pixelated' regression)")
+	GameState.set_graphic("art_style", 1)
+	_check(px.enabled and (px.get_child(0) as ColorRect).visible, "pixel art can be turned on again")
+
+	# every grid preset is valid and settable
+	var ok: bool = true
+	for i in PixelArt.NATIVE_PRESETS.size():
+		px.set_native_preset(i)
+		if px.native_size() != PixelArt.NATIVE_PRESETS[i]:
+			ok = false
+	_check(ok, "every pixel grid preset applies")
+	px.set_native(Vector2i(0, 0))
+	_check(px.native_size().x >= 64 and px.native_size().y >= 36, "a nonsense grid is clamped, not accepted")
+
+	GameState.set_graphic("art_style", restore)
+	px.queue_free()
