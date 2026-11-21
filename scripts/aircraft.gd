@@ -198,6 +198,39 @@ func _apply_team_outline() -> void:
 			mi.material_overlay = m
 
 
+var _ink_mat: ShaderMaterial = null      # the last pixel-art ink made for this aircraft (null = none yet)
+
+
+## Art style changed at run time (GameState.apply_graphics): put the pixel-art ink on, or take it off
+## again. Before this the ink stayed on an aircraft built in pixel mode after switching back to
+## Realistic - the player kept a cream outline in the realistic look.
+func refresh_art_style() -> void:
+	_remove_pixel_ink()
+	_apply_pixel_ink()
+
+
+func _remove_pixel_ink() -> void:
+	for root in [_model, _lod_model]:
+		if root == null or not is_instance_valid(root):
+			continue
+		for n in (root as Node3D).find_children("*", "MeshInstance3D", true, false):
+			var mi: MeshInstance3D = n as MeshInstance3D
+			if mi == null:
+				continue
+			var ov: Material = mi.material_overlay
+			if ov == null:
+				continue
+			if _is_ink(ov):
+				mi.material_overlay = null
+			elif ov.next_pass != null and _is_ink(ov.next_pass):
+				ov.next_pass = null
+
+
+static func _is_ink(m: Material) -> bool:
+	var sm: ShaderMaterial = m as ShaderMaterial
+	return sm != null and sm.shader != null and sm.shader.resource_path.ends_with("pixel/aircraft_ink.gdshader")
+
+
 ## Pixel-art mode: give EVERY aircraft a hard ink silhouette (the player included), so the airframe
 ## reads as a drawn sprite at 480x270 instead of a dark blob. The game's team outline skips the
 ## player, which is exactly the aircraft the player is looking at most. See shaders/pixel/aircraft_ink.
@@ -205,6 +238,7 @@ func _apply_pixel_ink() -> void:
 	if GameState.art_style != 1 or _model == null:
 		return
 	var m := ShaderMaterial.new()
+	_ink_mat = m
 	m.shader = load("res://shaders/pixel/aircraft_ink.gdshader") as Shader
 	# The player gets a BRIGHT outline, not a dark one: the camouflage airframe is dark and the ground
 	# and sea are mid-tones, so a dark ink would swallow the aircraft instead of separating it (the
@@ -213,9 +247,12 @@ func _apply_pixel_ink() -> void:
 	if player_controlled:
 		m.set_shader_parameter("ink_color", Color(0.96, 0.94, 0.86))   # palette cream, entry 11
 	else:
-		m.set_shader_parameter("ink_color", Color(0.09, 0.08, 0.11))
-	m.set_shader_parameter("thickness", 0.085 if player_controlled else 0.06)
-	m.set_shader_parameter("dist_scale", 0.0016 if player_controlled else 0.0011)
+		# AI aircraft are inked in their team colour (red enemy, yellow friendly), as thick as the
+		# player's: a dark ink drawn over the thin team outline hid the red once the frame was crushed
+		var friendly: bool = team == GameState.player_side
+		m.set_shader_parameter("ink_color", Color(1.0, 0.85, 0.1) if friendly else Color(1.0, 0.16, 0.1))
+	m.set_shader_parameter("thickness", 0.085)
+	m.set_shader_parameter("dist_scale", 0.0016)
 	for root in [_model, _lod_model]:
 		if root == null or not is_instance_valid(root):
 			continue

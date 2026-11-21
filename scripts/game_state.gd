@@ -764,6 +764,10 @@ func apply_graphics() -> void:
 		if px != null and is_instance_valid(px):
 			px.call("set_native_preset", pixel_native)
 			px.call("set_enabled", art_style == 1)
+	# ... and so is each aircraft's pixel-art ink outline: put it on or take it off with the style
+	for ac in get_tree().get_nodes_in_group("aircraft"):
+		if ac != null and is_instance_valid(ac) and ac.has_method("refresh_art_style"):
+			ac.call("refresh_art_style")
 	var tod: Node = get_tree().root.get_node_or_null("TimeOfDay")
 	if tod and tod.get("sun") != null:
 		var sun: DirectionalLight3D = tod.get("sun")
