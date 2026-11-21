@@ -71,6 +71,8 @@ var era_date: String = ""          # ISO date of the current mission / campaign 
 var quality: int = 1  # 0 low, 1 medium, 2 high
 var shadows_enabled: bool = true
 var realistic_scenery: bool = true   # realistic (default) or classic cartoon scenery: toon_real vs toon shader, no ink outlines; applies on the next launch
+var art_style: int = 0               # 0 realistic (default), 1 pixel art (PROMPT-pixel-art.md): a screen pass over the 3D frame
+var pixel_native: int = 2            # pixel art grid: index into PixelArt.NATIVE_PRESETS (480x270 at 2); applies on the next launch
 var msaa_level: int = 2      # 0 = off, 2 = 2x, 4 = 4x
 var aniso_level: int = 3     # anisotropic texture filtering: 0 off, 1 = 2x, 2 = 4x, 3 = 8x, 4 = 16x
 var post_fx: int = 2         # post effects: 0 off, 1 medium (filmic tonemap, bloom, grade), 2 high (adds ambient occlusion, sun scatter)
@@ -230,6 +232,8 @@ func _load_settings() -> void:
 	outlines_enabled = cf.get_value("gfx", "outlines", outlines_enabled)
 	shadows_enabled = cf.get_value("gfx", "shadows", shadows_enabled)
 	realistic_scenery = cf.get_value("gfx", "realistic_scenery", realistic_scenery)
+	art_style = clampi(int(cf.get_value("gfx", "art_style", art_style)), 0, 1)
+	pixel_native = clampi(int(cf.get_value("gfx", "pixel_native", pixel_native)), 0, 3)
 	msaa_level = int(cf.get_value("gfx", "msaa", msaa_level))
 	aniso_level = clampi(int(cf.get_value("gfx", "aniso", aniso_level)), 0, 4)
 	post_fx = int(cf.get_value("gfx", "post_fx", post_fx))
@@ -363,6 +367,8 @@ func save_settings() -> void:
 	cf.set_value("gfx", "outlines", outlines_enabled)
 	cf.set_value("gfx", "shadows", shadows_enabled)
 	cf.set_value("gfx", "realistic_scenery", realistic_scenery)
+	cf.set_value("gfx", "art_style", art_style)
+	cf.set_value("gfx", "pixel_native", pixel_native)
 	cf.set_value("gfx", "msaa", msaa_level)
 	cf.set_value("gfx", "aniso", aniso_level)
 	cf.set_value("gfx", "post_fx", post_fx)
@@ -600,6 +606,10 @@ func set_graphic(key: String, value: Variant) -> void:
 			shadows_enabled = bool(value)
 		"realistic_scenery":
 			realistic_scenery = bool(value)
+		"art_style":
+			art_style = clampi(int(value), 0, 1)
+		"pixel_native":
+			pixel_native = clampi(int(value), 0, 3)
 		"player_heal":
 			player_heal = bool(value)
 		"pitch_ladder":
@@ -743,6 +753,11 @@ func apply_graphics() -> void:
 				vp.msaa_3d = Viewport.MSAA_8X
 		if effective_upscaler() != Upscaler.OFF:
 			vp.msaa_3d = Viewport.MSAA_DISABLED      # DLSS / FSR 2 do their own temporal anti-aliasing
+		if art_style == 1:
+			# Pixel art wants a hard-edged frame at the native grid size, so everything that blurs or
+			# resamples it is off here (see PROMPT-pixel-art.md 1.3). The pass itself is PixelArt.
+			vp.msaa_3d = Viewport.MSAA_DISABLED
+			vp.anisotropic_filtering_level = Viewport.ANISOTROPY_DISABLED
 	var tod: Node = get_tree().root.get_node_or_null("TimeOfDay")
 	if tod and tod.get("sun") != null:
 		var sun: DirectionalLight3D = tod.get("sun")

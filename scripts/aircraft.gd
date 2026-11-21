@@ -198,6 +198,39 @@ func _apply_team_outline() -> void:
 			mi.material_overlay = m
 
 
+## Pixel-art mode: give EVERY aircraft a hard ink silhouette (the player included), so the airframe
+## reads as a drawn sprite at 480x270 instead of a dark blob. The game's team outline skips the
+## player, which is exactly the aircraft the player is looking at most. See shaders/pixel/aircraft_ink.
+func _apply_pixel_ink() -> void:
+	if GameState.art_style != 1 or _model == null:
+		return
+	var m := ShaderMaterial.new()
+	m.shader = load("res://shaders/pixel/aircraft_ink.gdshader") as Shader
+	# The player gets a BRIGHT outline, not a dark one: the camouflage airframe is dark and the ground
+	# and sea are mid-tones, so a dark ink would swallow the aircraft instead of separating it (the
+	# first attempt did exactly that - it read as a solid black blob). AI aircraft keep dark ink, which
+	# separates them from the pale sky; their team colour comes from the game's own outline.
+	if player_controlled:
+		m.set_shader_parameter("ink_color", Color(0.96, 0.94, 0.86))   # palette cream, entry 11
+	else:
+		m.set_shader_parameter("ink_color", Color(0.09, 0.08, 0.11))
+	m.set_shader_parameter("thickness", 0.085 if player_controlled else 0.06)
+	m.set_shader_parameter("dist_scale", 0.0016 if player_controlled else 0.0011)
+	for root in [_model, _lod_model]:
+		if root == null or not is_instance_valid(root):
+			continue
+		for n in (root as Node3D).find_children("*", "MeshInstance3D", true, false):
+			var mi: MeshInstance3D = n as MeshInstance3D
+			if mi == null or String(mi.name).findn("disc") >= 0:
+				continue
+			# Keep the team colour as the overlay when it exists (AI aircraft), and put the ink on the
+			# next_pass so the two do not fight over the same slot.
+			if mi.material_overlay != null and not player_controlled:
+				mi.material_overlay.next_pass = m
+			else:
+				mi.material_overlay = m
+
+
 func _build_model() -> void:
 	var old: Node = get_node_or_null("Model")
 	if old:
@@ -215,6 +248,7 @@ func _build_model() -> void:
 	_contrail_pts.clear()
 	add_child(_model)
 	_apply_team_outline()
+	_apply_pixel_ink()
 	_prop = _model.find_child("Propeller", true, false) as Node3D
 	_prop_disc = _model.find_child("PropDisc", true, false) as Node3D
 	_prop_blades = _prop.find_child("Blades", true, false) as Node3D if _prop else null
@@ -287,6 +321,7 @@ func _build_lod_model() -> void:
 	_lod_box(fin, Vector3(c.x, c.y + bb.size.y * 0.26, bb.end.z - fin.z * 0.55), col)
 	_lod_model.visible = false
 	_apply_team_outline()      # the far boxes need the team colour too; the detailed model drops out beyond 1.8 km
+	_apply_pixel_ink()
 
 
 func _lod_box(size: Vector3, pos: Vector3, col: Color) -> void:

@@ -100,6 +100,9 @@ var _ov_t: float = 0.0
 
 var _respawn_timer: float = -1.0
 var _bail: BailOut     # bail-out (J held): the pilot on his parachute; see scripts/bail_out.gd
+var _pixel: PixelArt   # pixel-art screen pass (PROMPT-pixel-art.md); null until the HUD exists
+var _pixel_shot: String = ""   # --pixel-shot=path: save the pixel frame at 4x and quit
+var _pixel_frames: int = 200   # how many frames to let the scenery settle before --pixel-shot captures
 var _taxi: TaxiController = null   # taxi to the runway: guidance for the player, driving for AI / --taxi-test
 var _dispersal_done: bool = false  # the sortie's first spawn already used the dispersal (respawns start on the runway)
 var _menu: StartMenu
@@ -1803,6 +1806,13 @@ func start_game(cfg: Dictionary) -> void:
 	hud.visible = not _args.has("--nohud")      # debug: completely clean screenshots
 	add_child(hud)
 	hud.bind_aircraft(player)
+	# Pixel-art mode: a screen pass on layer 5, so it covers the 3D frame and leaves the HUD (layer 10)
+	# on top at full resolution. See PROMPT-pixel-art.md; --pixel forces it on for a run.
+	_pixel = PixelArt.new()
+	add_child(_pixel)
+	if GameState.art_style == 1 or _args.has("--pixel"):
+		_pixel.set_native_preset(GameState.pixel_native)
+		_pixel.set_enabled(true)
 	var gvis := GVision.new()
 	gvis.hud = hud
 	add_child(gvis)
@@ -3290,6 +3300,19 @@ func _parse_debug_args() -> void:
 			_want_cockpit = true
 			camera_rig.force_cockpit = true
 			camera_rig.set_cockpit(true)
+		elif a == "--pixel":            # debug: force pixel-art mode on (PROMPT-pixel-art.md)
+			GameState.art_style = 1
+			if _pixel != null:
+				_pixel.set_native_preset(GameState.pixel_native)
+				_pixel.set_enabled(true)
+		elif a.begins_with("--pixel-native="):   # debug: pixel-art grid, e.g. --pixel-native=480x270
+			var pn: PackedStringArray = a.substr(15).split("x")
+			if pn.size() == 2 and _pixel != null:
+				_pixel.set_native(Vector2i(int(pn[0]), int(pn[1])))
+				_pixel.set_enabled(true)
+		elif a.begins_with("--pixel-shot="):     # debug: save the frame at a 4x nearest upscale, then quit
+			_pixel_shot = a.substr(13)
+			_pixel_frames = _shot_frames       # share --frames=N so one settle covers both shots
 		elif a == "--bomber-demo":
 			_start_bomber_demo()
 		elif a.begins_with("--gunner="):   # debug: step into defensive gun position N (bombers only)
@@ -3584,9 +3607,12 @@ func _parse_debug_args() -> void:
 			get_tree().create_timer(secs).timeout.connect(func() -> void:
 				print("FPS ", Engine.get_frames_per_second(), " aircraft ", get_tree().get_nodes_in_group("aircraft").size())
 				get_tree().quit())
+	# --pixel-shot shares the --shot settle count so one --frames=N covers both pictures.
+	if _pixel_shot != "" and _pixel_frames == 200:
+		_pixel_frames = _shot_frames
 	# screenshot runs (--shot= / --tour=) capture with the upscaler off: DLSS / frame
 	# generation have no valid frame in --no-window runs and abort the save upstream
-	var want_capture: bool = _shot_path != ""
+	var want_capture: bool = _shot_path != "" or _pixel_shot != ""
 	for a in _args:
 		if a.begins_with("--tour=") or a.begins_with("--ui-shot="):
 			want_capture = true
@@ -3792,6 +3818,12 @@ func _physics_process(delta: float) -> void:
 		if _log_t > 0.5:
 			_log_t = 0.0
 			print("t=%.1f spd=%.1f alt=%.1f gnd=%s stall=%s pitch=%.1f thr=%.2f" % [Time.get_ticks_msec() / 1000.0, player.speed, player.altitude_agl, player.on_ground, player.stalled, rad_to_deg(player._pitch_angle()), player.throttle])
+	if _pixel_shot != "":
+		# --pixel-shot has its own frame counter so it works with or without --shot=...
+		_pixel_frames -= 1
+		if _pixel_frames == 0:
+			print("[pixel] capture, pass=%s" % ("on" if _pixel != null and _pixel.enabled else "off"))
+			_pixel_shot_save()
 	if _shot_path != "":
 		if _args.has("--plate"):      # story plate: no HUD or overlays in the picture
 			for c in get_children():
@@ -3818,6 +3850,17 @@ func _physics_process(delta: float) -> void:
 			get_tree().quit()
 	if _tour_active:
 		_tour_tick()
+
+
+## Pixel-art capture (--pixel-shot=path): save the frame resampled to the pixel grid at a 4x nearest
+## upscale, then quit. Needs --shot=... as well, which controls the settle frame count.
+func _pixel_shot_save() -> void:
+	if _pixel == null:
+		return
+	var path: String = ProjectSettings.globalize_path(_pixel_shot)
+	if not _pixel.save_upscaled(path, 4):
+		push_error("[pixel] could not save %s" % path)
+	get_tree().quit()
 
 
 ## Screenshot tour: read a JSON list of locations and save one PNG per stop in a
