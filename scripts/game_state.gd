@@ -65,7 +65,7 @@ var player_heal: bool = true   # the player's aircraft very slowly repairs itsel
 var show_pitch_ladder: bool = false   # pitch ladder drawn in the HUD
 var show_lead_marker: bool = false    # Options > Gameplay: the lead (aim-ahead) marker on a targeted aircraft; off by default
 var outline_near: float = 1300.0      # AI team outlines: fade in beyond this distance
-var outline_fade: float = 6500.0      # ... and gone beyond this distance
+var outline_fade: float = 12000.0      # ... and gone beyond this distance
 var player_side: String = "Allies"
 var era_date: String = ""          # ISO date of the current mission / campaign day ("" = no date): decides which airfields are liberated
 var quality: int = 1  # 0 low, 1 medium, 2 high
@@ -234,6 +234,8 @@ func _load_settings() -> void:
 	realistic_scenery = cf.get_value("gfx", "realistic_scenery", realistic_scenery)
 	art_style = clampi(int(cf.get_value("gfx", "art_style", art_style)), 0, 1)
 	art_style_saved = art_style
+	if OS.get_cmdline_user_args().has("--realistic"):   # debug: force Realistic for a run (settings.cfg keeps art_style_saved)
+		art_style = 0
 	msaa_level = int(cf.get_value("gfx", "msaa", msaa_level))
 	aniso_level = clampi(int(cf.get_value("gfx", "aniso", aniso_level)), 0, 4)
 	post_fx = int(cf.get_value("gfx", "post_fx", post_fx))
@@ -265,7 +267,7 @@ func _load_settings() -> void:
 	show_pitch_ladder = bool(cf.get_value("gameplay", "pitch_ladder", show_pitch_ladder))
 	show_lead_marker = bool(cf.get_value("gameplay", "lead_marker", show_lead_marker))
 	outline_near = clampf(float(cf.get_value("ui", "outline_near", outline_near)), 0.0, 5000.0)
-	outline_fade = clampf(float(cf.get_value("ui", "outline_fade", outline_fade)), outline_near + 1000.0, 15000.0)
+	outline_fade = clampf(float(cf.get_value("ui", "outline_fade", outline_fade)), outline_near + 1000.0, 25000.0)
 	completed_missions = cf.get_value("progress", "completed_missions", completed_missions)
 	var mg: Variant = cf.get_value("progress", "mission_grades", mission_grades)
 	mission_grades = mg if mg is Dictionary else {}
@@ -320,7 +322,7 @@ func _load_settings() -> void:
 ## Change the AI team-outline visibility window live (Video settings sliders).
 func set_outline_visibility(near_d: float, fade_d: float, save_now: bool = true) -> void:
 	outline_near = clampf(near_d, 0.0, 5000.0)
-	outline_fade = clampf(fade_d, outline_near + 1000.0, 15000.0)
+	outline_fade = clampf(fade_d, outline_near + 1000.0, 25000.0)
 	RenderingServer.global_shader_parameter_set("outline_near_start", outline_near)
 	RenderingServer.global_shader_parameter_set("outline_fade_end", outline_fade)
 	if save_now:
@@ -734,8 +736,9 @@ func apply_graphics() -> void:
 	var tod0: Node = get_tree().root.get_node_or_null("TimeOfDay")
 	if tod0 != null:
 		tod0.set("time_scale", float(TIME_SPEEDS[clampi(time_speed, 0, TIME_SPEEDS.size() - 1)]) / 3600.0)   # game hours per real second
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync_on else DisplayServer.VSYNC_DISABLED)
-	Engine.max_fps = fps_cap
+	var nv: bool = OS.get_cmdline_user_args().has("--no-vsync")   # debug / perf runs: uncapped frame rate, never saved
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED if nv or not vsync_on else DisplayServer.VSYNC_ENABLED)
+	Engine.max_fps = 0 if nv else fps_cap
 	var win: Window = get_window()
 	if win:
 		win.mode = Window.MODE_FULLSCREEN if fullscreen else Window.MODE_WINDOWED

@@ -39,15 +39,15 @@ void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
 }
 
-float lin_depth(vec2 uv, mat4 ip) {
-	float d = texture(depth_tex, uv).x;
+// Linear view depth from the depth texture. A perspective projection's inverse only needs the z / w rows
+// (they do not depend on x / y, jitter included), so this is two multiply-adds instead of a mat4 * vec4.
+float lin_depth(vec2 uv, vec4 zw) {
+	float d = textureLod(depth_tex, uv, 0.0).x;
 	if (d <= 0.000001) {
 		return 1.0e5;          // sky
 	}
-	vec4 v = ip * vec4(uv * 2.0 - 1.0, d, 1.0);
-	return -v.z / v.w;
+	return -(zw.x * d + zw.y) / (zw.z * d + zw.w);
 }
-
 float luma(vec3 c) {
 	return dot(c, vec3(0.2126, 0.7152, 0.0722));
 }
@@ -85,46 +85,51 @@ vec3 cel_light(vec3 c, float l_blur) {
 }
 
 void fragment() {
-	mat4 ip = INV_PROJECTION_MATRIX;
+	vec4 zw = vec4(INV_PROJECTION_MATRIX[2][2], INV_PROJECTION_MATRIX[3][2], INV_PROJECTION_MATRIX[2][3], INV_PROJECTION_MATRIX[3][3]);
 	vec2 uv = SCREEN_UV;
 	vec2 px = 1.0 / view_px;
 	vec3 c = textureLod(screen_tex, uv, 0.0).rgb;
-	float dc = lin_depth(uv, ip);
+	float dc = lin_depth(uv, zw);
 	bool is_sky = dc > 5.0e4;
 
 	float w = line_px * max(view_px.y / 1080.0, 0.5);
 	vec2 o = px * (w * 0.5);
 	vec2 o2 = o * 2.0;
 
-	float dl = lin_depth(uv - vec2(o.x, 0.0), ip);
-	float dr = lin_depth(uv + vec2(o.x, 0.0), ip);
-	float du = lin_depth(uv - vec2(0.0, o.y), ip);
-	float dd = lin_depth(uv + vec2(0.0, o.y), ip);
-	float dl2 = lin_depth(uv - vec2(o2.x, 0.0), ip);
-	float dr2 = lin_depth(uv + vec2(o2.x, 0.0), ip);
-	float du2 = lin_depth(uv - vec2(0.0, o2.y), ip);
-	float dd2 = lin_depth(uv + vec2(0.0, o2.y), ip);
-
 	float dcl = min(dc, 5.0e4);
-	// one-sided second difference: positive only when THIS pixel is the nearer side of a step, so the ink
-	// sits on the object, never on the sky behind it; zero on any flat plane however grazing
-	float e1 = max(dl + dr - 2.0 * dc, du + dd - 2.0 * dc);
-	float e2 = max(dl2 + dr2 - 2.0 * dc, du2 + dd2 - 2.0 * dc);
-	float e = max(e1, e2 * 0.7);
-	float edge = step(depth_thresh * dcl + 0.03, e);
-	edge *= 1.0 - smoothstep(line_near, line_far, dcl);
-
-	vec3 nc = texture(nr_tex, uv).xyz * 2.0 - 1.0;
-	vec3 nl = texture(nr_tex, uv - vec2(o2.x, 0.0)).xyz * 2.0 - 1.0;
-	vec3 nr = texture(nr_tex, uv + vec2(o2.x, 0.0)).xyz * 2.0 - 1.0;
-	vec3 nu = texture(nr_tex, uv - vec2(0.0, o2.y)).xyz * 2.0 - 1.0;
-	vec3 nd = texture(nr_tex, uv + vec2(0.0, o2.y)).xyz * 2.0 - 1.0;
-	float nd_max = max(max(1.0 - dot(nc, nl), 1.0 - dot(nc, nr)), max(1.0 - dot(nc, nu), 1.0 - dot(nc, nd)));
-	// only where the depth is continuous: a depth step is already inked above
-	float dsec = abs(dl + dr - 2.0 * dc) / max(dcl, 1.0) + abs(du + dd - 2.0 * dc) / max(dcl, 1.0);
-	float cont = 1.0 - smoothstep(0.004, 0.03, dsec);
-	float crease = step(normal_thresh, nd_max) * cont * (1.0 - smoothstep(normal_far * 0.35, normal_far, dcl));
-
+	float edge = 0.0;
+	float crease = 0.0;
+	// Ink only exists inside line_far, so every pixel beyond it (the sea and fields to the horizon, most of a
+	// flight frame) skips all the depth and normal taps: same result, a fraction of the texture reads.
+	if (dcl < line_far) {
+		float dl = lin_depth(uv - vec2(o.x, 0.0), zw);
+		float dr = lin_depth(uv + vec2(o.x, 0.0), zw);
+		float du = lin_depth(uv - vec2(0.0, o.y), zw);
+		float dd = lin_depth(uv + vec2(0.0, o.y), zw);
+		float dl2 = lin_depth(uv - vec2(o2.x, 0.0), zw);
+		float dr2 = lin_depth(uv + vec2(o2.x, 0.0), zw);
+		float du2 = lin_depth(uv - vec2(0.0, o2.y), zw);
+		float dd2 = lin_depth(uv + vec2(0.0, o2.y), zw);
+		// one-sided second difference: positive only when THIS pixel is the nearer side of a step, so the ink
+		// sits on the object, never on the sky behind it; zero on any flat plane however grazing
+		float e1 = max(dl + dr - 2.0 * dc, du + dd - 2.0 * dc);
+		float e2 = max(dl2 + dr2 - 2.0 * dc, du2 + dd2 - 2.0 * dc);
+		float e = max(e1, e2 * 0.7);
+		edge = step(depth_thresh * dcl + 0.03, e);
+		edge *= 1.0 - smoothstep(line_near, line_far, dcl);
+		if (dcl < normal_far) {      // creases are gone beyond normal_far: no normal taps there
+			vec3 nc = textureLod(nr_tex, uv, 0.0).xyz * 2.0 - 1.0;
+			vec3 nl = textureLod(nr_tex, uv - vec2(o2.x, 0.0), 0.0).xyz * 2.0 - 1.0;
+			vec3 nr = textureLod(nr_tex, uv + vec2(o2.x, 0.0), 0.0).xyz * 2.0 - 1.0;
+			vec3 nu = textureLod(nr_tex, uv - vec2(0.0, o2.y), 0.0).xyz * 2.0 - 1.0;
+			vec3 nd = textureLod(nr_tex, uv + vec2(0.0, o2.y), 0.0).xyz * 2.0 - 1.0;
+			float nd_max = max(max(1.0 - dot(nc, nl), 1.0 - dot(nc, nr)), max(1.0 - dot(nc, nu), 1.0 - dot(nc, nd)));
+			// only where the depth is continuous: a depth step is already inked above
+			float dsec = abs(dl + dr - 2.0 * dc) / max(dcl, 1.0) + abs(du + dd - 2.0 * dc) / max(dcl, 1.0);
+			float cont = 1.0 - smoothstep(0.004, 0.03, dsec);
+			crease = step(normal_thresh, nd_max) * cont * (1.0 - smoothstep(normal_far * 0.35, normal_far, dcl));
+		}
+	}
 	vec3 col;
 	if (is_sky) {
 		float lc = luma(c);

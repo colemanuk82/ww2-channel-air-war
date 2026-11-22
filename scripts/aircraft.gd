@@ -184,10 +184,15 @@ func _ready() -> void:
 func _apply_team_outline() -> void:
 	if player_controlled or _model == null:
 		return
+	if GameState.art_style == 1:      # cel: the team-coloured ink hull already marks the aircraft (thicker and opaque, it would cover this pass): skip the extra draw
+		_strip_team_outline()
+		return
 	var friendly: bool = team == GameState.player_side
 	var m := ShaderMaterial.new()
 	m.shader = load("res://shaders/team_outline.gdshader") as Shader
 	m.set_shader_parameter("outline_color", Color(1.0, 0.85, 0.1) if friendly else Color(1.0, 0.16, 0.1))
+	var m_lod: ShaderMaterial = m.duplicate() as ShaderMaterial      # the far stand-ins are boxes: inflate them as boxes (per-face normals leave no ring)
+	m_lod.set_shader_parameter("box_hull", true)
 	for root in [_model, _lod_model]:
 		if root == null or not is_instance_valid(root):
 			continue
@@ -195,7 +200,24 @@ func _apply_team_outline() -> void:
 			var mi: MeshInstance3D = n as MeshInstance3D
 			if mi == null or String(mi.name).findn("disc") >= 0:
 				continue
-			mi.material_overlay = m
+			mi.material_overlay = m_lod if root == _lod_model else m
+
+
+static var _ink_cache: Dictionary = {}     # one shared cel ink material per colour: every aircraft (and every mesh) uses the same instance
+
+
+func _strip_team_outline() -> void:
+	for root in [_model, _lod_model]:
+		if root == null or not is_instance_valid(root):
+			continue
+		for n in (root as Node3D).find_children("*", "MeshInstance3D", true, false):
+			var mi: MeshInstance3D = n as MeshInstance3D
+			if mi == null:
+				continue
+			var ov: Material = mi.material_overlay
+			var sm: ShaderMaterial = ov as ShaderMaterial
+			if sm != null and sm.shader != null and sm.shader.resource_path.ends_with("team_outline.gdshader"):
+				mi.material_overlay = null
 
 
 var _ink_mat: ShaderMaterial = null      # the last cel-style ink made for this aircraft (null = none yet)
@@ -206,6 +228,7 @@ var _ink_mat: ShaderMaterial = null      # the last cel-style ink made for this 
 ## Realistic - the player kept a cream outline in the realistic look.
 func refresh_art_style() -> void:
 	_remove_cel_ink()
+	_apply_team_outline()      # Realistic: put the team outline back; cel: take it off (the ink marks the team)
 	_apply_cel_ink()
 
 
@@ -256,18 +279,27 @@ func _apply_cel_ink() -> void:
 	gmat.set_shader_parameter("opacity", 0.0)
 	gmat.set_shader_parameter("rim_amount", 0.0)
 	gmat.set_shader_parameter("glint", 0.0)
-	var m := ShaderMaterial.new()
+	var ink_col: Color = Color(0.02, 0.02, 0.03)
+	if not player_controlled:
+		ink_col = Color(1.0, 0.85, 0.1) if team == GameState.player_side else Color(1.0, 0.16, 0.1)
+	var m: ShaderMaterial = _ink_cache.get(ink_col) as ShaderMaterial
+	if m == null:
+		m = ShaderMaterial.new()
+		m.shader = load("res://shaders/cel/cel_ink.gdshader") as Shader
+		m.set_shader_parameter("ink_color", ink_col)
+		m.set_shader_parameter("thickness", 0.06)
+		m.set_shader_parameter("dist_scale", 0.0034)
+		_ink_cache[ink_col] = m
+	var lod_key: String = str(ink_col) + "_lod"
+	var m_lod: ShaderMaterial = _ink_cache.get(lod_key) as ShaderMaterial
+	if m_lod == null:
+		m_lod = m.duplicate() as ShaderMaterial
+		m_lod.set_shader_parameter("box_hull", true)
+		m_lod.set_shader_parameter("dist_scale", 0.0016)      # the far boxes are tiny: a thinner ring than the detailed model
+		_ink_cache[lod_key] = m_lod
 	_ink_mat = m
-	m.shader = load("res://shaders/cel/cel_ink.gdshader") as Shader
 	# JSR-style ink: the player's aircraft gets a thick BLACK outline; AI aircraft are inked in their team
 	# colour (red enemy, yellow friendly), as thick as the player's, so they stay readable at range.
-	if player_controlled:
-		m.set_shader_parameter("ink_color", Color(0.02, 0.02, 0.03))
-	else:
-		var friendly: bool = team == GameState.player_side
-		m.set_shader_parameter("ink_color", Color(1.0, 0.85, 0.1) if friendly else Color(1.0, 0.16, 0.1))
-	m.set_shader_parameter("thickness", 0.06)
-	m.set_shader_parameter("dist_scale", 0.0034)
 	for root in [_model, _lod_model]:
 		if root == null or not is_instance_valid(root):
 			continue
@@ -283,10 +315,11 @@ func _apply_cel_ink() -> void:
 				continue
 			# Keep the team colour as the overlay when it exists (AI aircraft), and put the ink on the
 			# next_pass so the two do not fight over the same slot.
+			var ink: ShaderMaterial = m_lod if root == _lod_model else m
 			if mi.material_overlay != null and not player_controlled:
-				mi.material_overlay.next_pass = m
+				mi.material_overlay.next_pass = ink
 			else:
-				mi.material_overlay = m
+				mi.material_overlay = ink
 
 
 func _build_model() -> void:

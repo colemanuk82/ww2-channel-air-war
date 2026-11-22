@@ -109,7 +109,25 @@ a HUD toast and saves through `set_graphic`.
 * Debug: `--cel` forces it for a run (`--pixel` is the old alias), `--call-after=N:set_art_style:0|1`,
   `--cloudview=kind:nth:dist:dy` puts the camera next to a cloud. Tests: `_test_cel_style`, `_test_cel_ink`,
   `_test_art_style_key` (incl. "Realistic leaves every graphics setting at its saved value").
-## Occupation life (Phase 5, scripts/ground/occupation_life.gd)
+* **Aircraft range (both styles):** the detailed model swaps to the far stand-in boxes beyond 1.8 km (`Aircraft._update_lod`,
+  unchanged, the boxes are cheap); camera far is 48 km. The AI team outline (`shaders/team_outline.gdshader`, Realistic and
+  the Outline options) is now fog-free (the haze used to wash a far red / yellow outline into the sky), never ends before
+  16 km whatever the saved "Outline fade out" says (`OUTLINE_MIN_END`), and fades over the last 6 km instead of 2.5 km (no
+  pop); defaults 12 km, slider to 20 km, clamp 25 km. Root cause of the 'outline pops in too short': the far stand-ins are
+  BoxMeshes with per-face normals, so the normal-expanded hull left no ring (both styles). Their overlay materials now use
+  `box_hull` (inflate along sign(VERTEX)), and beyond 1.2-3.5 km the Realistic ring grows x1.5 and goes opaque (`v_far`). Hidden
+  shots (`--ac-line=2500;5000;8000;12000;16000;20000,2,bf109,Axis --wingmen=0`): before, no red at all past 2.5 km; now red
+  markers clear to ~12 km, small to 16-20 km, in both styles. Cel ink (`cel_ink.gdshader`) is fog-free already and its size clamp
+  (`max_dist`) went from 12 km to 24 km. Outline width stays ~1.3 px (Realistic) / the cel ink weight per side.
+* **Cel speed:** `cel_post.gdshader` skips every depth / normal tap beyond `line_far` (3.5 km) and normal taps beyond
+  `normal_far`, and reconstructs linear depth from the projection's z / w terms instead of a mat4 multiply (identical
+  image, far pixels - most of a flight frame - cost 1 colour + 1 depth tap). Aircraft ink materials are shared per colour
+  (`Aircraft._ink_cache`) and the redundant team-outline overlay is not built in cel (the opaque team-coloured ink hull covers
+  it; `refresh_art_style` puts it back on Realistic). `CelShade` writes `view_px` only when the window size changes.
+  Hawkinge, 1080p, uncapped, run 0 of each batch dropped (first run of a batch is ~3x slow on this PC): Realistic 72.0 fps,
+  Cel 75.3 fps, same hitch count.
+* Debug / perf flags: `--realistic` (force Realistic for a run, settings untouched), `--no-vsync` (uncapped), `--ac-line=DIST[,N[,model[,side]]]`
+  (N frozen AI aircraft DIST m ahead), `--perf=SECS:SETTLE` now also prints hitch33 / hitch50 / worst_ms / med_ms.## Occupation life (Phase 5, scripts/ground/occupation_life.gd)
 - German garrison in Axis-held towns of size 2 and up: two sentries either side of the town hall door (facing out, from the
   civic "townhall" entry's yaw), a two-man patrol across the square on High, and two sentries at the station (civic
   "station" entry). Made by OccupationLife.garrison, called from AirfieldPeople.town_plan with the same HouseMap, so

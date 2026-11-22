@@ -20,6 +20,7 @@ var enabled: bool = false
 
 var _quad: MeshInstance3D = null
 var _mat: ShaderMaterial = null
+var _last_px: Vector2 = Vector2.ZERO
 
 
 func _ready() -> void:
@@ -81,7 +82,9 @@ func _push_size() -> void:
 	var win: Window = get_window()
 	if win != null:
 		vs = Vector2(win.size)            # real pixels, not the UI-scaled canvas
-	_mat.set_shader_parameter("view_px", vs)
+	if vs != _last_px:      # a uniform write every frame re-uploads the material for nothing
+		_last_px = vs
+		_mat.set_shader_parameter("view_px", vs)
 
 
 func _process(_delta: float) -> void:

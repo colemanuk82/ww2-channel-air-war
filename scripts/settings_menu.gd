@@ -230,7 +230,7 @@ func _build_video_page() -> VBoxContainer:
 		GameState.set_graphic("outlines", i == 1))
 	_slider_metres(page, "Outline low range", GameState.outline_near, 0.0, 5000.0, func(v: float) -> void:
 		GameState.set_outline_visibility(v, GameState.outline_fade, false))
-	_slider_metres(page, "Outline fade out", GameState.outline_fade, 2000.0, 12000.0, func(v: float) -> void:
+	_slider_metres(page, "Outline fade out", GameState.outline_fade, 2000.0, 20000.0, func(v: float) -> void:
 		GameState.set_outline_visibility(GameState.outline_near, v, false))
 	_row(page, "Scenery look (next launch)", ["Realistic", "Classic cartoon"], 0 if GameState.realistic_scenery else 1, func(i: int) -> void:
 		GameState.set_graphic("realistic_scenery", i == 0))

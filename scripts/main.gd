@@ -2864,11 +2864,51 @@ var _perf_acc: Dictionary = {}
 
 
 var _rail_speed: float = 0.0
+var _acline: PackedStringArray = PackedStringArray()
+var _acline_nodes: Array = []
+var _acline_t: float = 0.0
 var _rail_t: float = 0.0
 var _rail_from: Vector3 = Vector3.ZERO
 var _rail_dir: Vector3 = Vector3.FORWARD
 var _rail_basis: Basis = Basis.IDENTITY
 
+
+## Debug (--ac-line=DIST[,N[,model[,side]]]): 3 s in, park N AI aircraft (pilots off) DIST metres ahead of the player,
+## a line abreast 120 m apart, and pin them there - for aircraft range / outline screenshots and timings.
+func _acline_step(delta: float) -> void:
+	_acline_t += delta
+	if player == null or not is_instance_valid(player):
+		return
+	var fwd: Vector3 = -player.global_transform.basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	if _acline_nodes.is_empty():
+		if _acline_t < 3.0:
+			return
+		var dists: PackedStringArray = String(_acline[0]).split(";")      # "3000;6000;9000": one group per distance, side by side
+		var cnt: int = int(_acline[1]) if _acline.size() > 1 else 3
+		var mid: String = String(_acline[2]) if _acline.size() > 2 else "bf109"
+		var side: String = String(_acline[3]) if _acline.size() > 3 else ("Axis" if GameState.player_side == "Allies" else "Allies")
+		var right := Vector3(-fwd.z, 0.0, fwd.x)
+		for g in dists.size():
+			var dist: float = float(dists[g])
+			var lat0: float = (float(g) - (dists.size() - 1) * 0.5) * dist * 0.07
+			for i in cnt:
+				var pos: Vector3 = player.global_position + fwd * dist + right * (lat0 + (float(i) - (cnt - 1) * 0.5) * 120.0)
+				var hd: float = WorldCoords.dir_to_heading(right)
+				var ac: Aircraft = AIFactory.spawn(player.get_parent(), mid, side, pos, hd, 60.0, 0.5)
+				var pl: AIPilot = AIFactory.pilot_of(ac)
+				if pl != null:
+					pl.enabled = false
+				_acline_nodes.append([ac, pos])
+		return
+	for e in _acline_nodes:
+		var ac2: Aircraft = e[0] as Aircraft
+		if is_instance_valid(ac2):
+			if int(_acline_t) != int(_acline_t - delta) and get_viewport().get_camera_3d() != null:
+				print("[ac-line] cam distance %.0f m, lod far shown %s, team %s, player_side %s" % [get_viewport().get_camera_3d().global_position.distance_to(ac2.global_position), str(ac2._lod_shown), ac2.team, GameState.player_side])
+			ac2.global_position = e[1]
+			ac2.velocity = Vector3.ZERO
 
 ## Debug (--rail=SPEED): pin the player to a straight level line so every perf run sees the same frames.
 func _rail_step(delta: float) -> void:
@@ -2926,6 +2966,14 @@ func _perf_step(delta: float) -> void:
 	for k in _perf_acc:
 		line += " %s=%.2f" % [k, float(_perf_acc[k]) / n]
 	line += " aircraft=%d" % get_tree().get_nodes_in_group("aircraft").size()
+	var h33: int = 0
+	var h50: int = 0
+	for d in _perf_dt:
+		if d > 0.0334:
+			h33 += 1
+		if d > 0.050:
+			h50 += 1
+	line += " hitch33=%d hitch50=%d worst_ms=%.0f med_ms=%.2f" % [h33, h50, float(sorted[n - 1]) * 1000.0, float(sorted[n / 2]) * 1000.0]
 	print(line)
 	if _args.has("--perf-dump"):
 		_perf_dump()
@@ -3581,6 +3629,8 @@ func _parse_debug_args() -> void:
 			_warp_forced = true
 			_set_sim_warp(int(a.substr(7)))
 			print("[warp] forced %s for this run (contact cancel disabled)" % GameState.SIM_WARP_NAMES[GameState.sim_warp_index()])
+		elif a.begins_with("--ac-line="):   # debug: --ac-line=DIST[,N[,model[,side]]] N frozen AI aircraft DIST m ahead of the player (range / outline shots)
+			_acline = a.substr(10).split(",")
 		elif a.begins_with("--rail="):   # debug: fly a fixed straight, level line at SPEED m/s (repeatable perf runs)
 			_rail_speed = float(a.substr(7))
 			_rail_from = player.global_position
@@ -3807,6 +3857,8 @@ func _physics_process(delta: float) -> void:
 		_stall_test_step(delta)
 	if _lift_test:
 		_lift_test_step(delta)
+	if _acline.size() > 0:
+		_acline_step(delta)
 	if _rail_speed > 0.0:
 		_rail_step(delta)
 	if _auto_takeoff:

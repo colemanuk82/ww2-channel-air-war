@@ -12,7 +12,8 @@ render_mode cull_front, unshaded, shadows_disabled, depth_draw_never, fog_disabl
 uniform vec4 ink_color : source_color = vec4(0.05, 0.05, 0.07, 1.0);
 uniform float thickness = 0.06;      // world units, roughly the width of the wingtip paint line
 uniform float dist_scale = 0.0011;   // grows with distance so it stays ~1 pixel on screen
-uniform float max_dist = 12000.0;     // clamp: past this the sprite is a few pixels anyway
+uniform float max_dist = 24000.0;     // clamp: past this the sprite is a few pixels anyway
+uniform bool box_hull = false;      // far stand-in boxes: inflate along sign(VERTEX) (per-face normals leave no ring)
 uniform float pixel_k = 1.0;         // 0 = off (same as the game's normal look)
 
 varying float v_px;
@@ -22,7 +23,7 @@ void vertex() {
 	v_px = 1.0;
 	// Cap the distance term so far aircraft do not grow a slab-like outline.
 	float grow = thickness + min(d, max_dist) * dist_scale;
-	VERTEX += NORMAL * grow * pixel_k;
+	VERTEX += (box_hull ? sign(VERTEX) : NORMAL) * grow * pixel_k;
 }
 
 void fragment() {
