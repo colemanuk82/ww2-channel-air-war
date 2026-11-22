@@ -72,6 +72,8 @@ func _ready() -> void:
 	close.custom_minimum_size = Vector2(236, 40)
 	add_child(close)
 	_refresh_buttons()
+	# a film viewer: A pauses, LB / RB (or D-pad left / right) step chapters, B closes (handled in _input below)
+	PadNav.screen(self, {"first": close, "a_label": "Pause", "b_label": "Close", "hints": [["LB", "Chapter"], ["RB", ""]]})
 
 
 func _goto(i: int) -> void:

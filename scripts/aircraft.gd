@@ -77,6 +77,11 @@ var throttle: float = 0.0
 var health: float = 100.0
 ## Set for AI aircraft from the start of the take-off roll until they have climbed to 50 m: no damage, no crash.
 var invulnerable: bool = false
+## Sortie setup practice aids (player only; the setup never sets them on AI). Infinite health: no damage from gunfire,
+## collisions, taxi bumps or hard landings, and no fire / structural kills -- but hitting the ground or water too hard
+## (or flying into an obstacle) still wrecks the aircraft, so a sortie can always end. Infinite ammo: see WeaponSystem.
+var infinite_health: bool = false
+var infinite_ammo: bool = false
 var _dmg_side: float = 0.0          # which way a damaged aircraft pulls (fixed per aircraft once it is hit)
 var boost_energy: float = 1.0
 # ---- engine heat (GameState.engine_heat_on): full throttle and boost heat the engine, low power and diving air cool it.
@@ -107,6 +112,7 @@ var bombs: int = 0
 var loadout_ammo: int = -1
 var loadout_bombs: int = -1
 var loadout_rockets: int = -1
+var torpedo_load: bool = false     # sortie loadout "Torpedoes" (stats.torpedoes > 0): bombs are replaced by air-dropped torpedoes
 var hit_radius: float = 8.0   # damage contract: sphere radius for hit tests (world units)
 var weapons: WeaponSystem
 var bombsight_only: bool = false   # bomber with a bombsight: no free impact-point aid in the chase view (set the sight instead)
@@ -389,6 +395,12 @@ func _build_model() -> void:
 	_contrail_nodes.clear()
 	_contrail_pts.clear()
 	add_child(_model)
+	if torpedo_load and stats.torpedoes > 0:
+		# torpedoes slung under the fuselage (Torp0 / Torp1; WeaponSystem hides one as it is dropped)
+		var tbody: Node3D = _model.find_child("Body", true, false) as Node3D
+		var tspec: Dictionary = ModelSpecs.get_spec(stats.model_id)
+		if tbody != null and not tspec.is_empty():
+			Weapons.TorpedoScript.fit_to_body(tbody, tspec, Weapons.TorpedoScript.type_for_model(stats.model_id), stats.torpedoes)
 	_apply_team_outline()
 	_apply_cel_ink()
 	_prop = _model.find_child("Propeller", true, false) as Node3D
@@ -614,6 +626,8 @@ func max_ammo() -> int:
 func max_bombs() -> int:
 	if stats == null:
 		return 0
+	if torpedo_load:
+		return stats.torpedoes       # the bomb key drops torpedoes (WeaponSystem._on_bomb); the count is the torpedoes carried
 	return stats.bombs if loadout_bombs < 0 else clampi(loadout_bombs, 0, stats.bombs)
 
 
@@ -893,7 +907,7 @@ func _check_collisions(delta: float) -> void:
 ## Number of men aboard (one parachute each when they bail out or the aircraft is shot down intact).
 func crew_count() -> int:
 	var key: String = String(stats.id) if stats != null else ""
-	var table: Dictionary = {"defiant": 2, "bf110": 2, "ju87": 2, "mosquito": 2, "blenheim": 3, "a20": 3, "ju52": 3,
+	var table: Dictionary = {"defiant": 2, "bf110": 2, "ju87": 2, "mosquito": 2, "blenheim": 3, "beaufort": 4, "a20": 3, "ju52": 3,
 		"c47": 4, "do17": 4, "ju88": 4, "he111": 5, "b25": 6, "b26": 6, "fw200": 6, "lancaster": 7}
 	for k in table:
 		if key.begins_with(k):
@@ -902,7 +916,7 @@ func crew_count() -> int:
 
 
 func take_damage(amount: float, source: Node = null) -> void:
-	if state != State.ALIVE or invulnerable:
+	if state != State.ALIVE or invulnerable or (infinite_health and player_controlled):
 		return
 	health = maxf(health - amount, 0.0)
 	if player_controlled:
@@ -943,7 +957,7 @@ var last_attacker: Node = null
 ## An engine or fuel fire has won: the aircraft is lost. `blow_up` sends it up in the air; otherwise it goes down
 ## burning. `fuse` is the seconds before the explosion (random when negative).
 func fire_kill(blow_up: bool, fuse: float = -1.0) -> void:
-	if state != State.ALIVE:
+	if state != State.ALIVE or (infinite_health and player_controlled):
 		return
 	health = 0.0
 	state = State.DYING
@@ -962,7 +976,7 @@ var breakup: String = ""      # "wing_l" / "wing_r" / "tail": the part that fail
 
 ## A wing or the tail has come off: the aircraft is lost, spinning (wing) or tumbling (tail) out of control.
 func start_breakup(part: String, source: Node = null) -> void:
-	if state != State.ALIVE:
+	if state != State.ALIVE or (infinite_health and player_controlled):
 		return
 	breakup = part
 	health = 0.0

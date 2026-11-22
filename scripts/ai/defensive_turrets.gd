@@ -33,6 +33,7 @@ const LAYOUTS := {
 	"b26": ["nose", "dorsal", "tail", "waist_l", "waist_r"],
 	"blenheim": ["dorsal", "ventral"],                             # twin dorsal turret + ventral gun
 	"a20": ["dorsal", "ventral"],
+	"beaufort": ["dorsal"],                                      # Bristol B.I dorsal turret (two .303)
 	"fw200": ["nose", "dorsal", "ventral", "waist_l", "waist_r"],
 	"ju87": ["tail"],                                              # single rear-firing gun
 }

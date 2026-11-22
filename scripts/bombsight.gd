@@ -362,6 +362,10 @@ func _process(delta: float) -> void:
 	if map_open:
 		if _follow:
 			_mc = Vector2(aircraft.global_position.x, aircraft.global_position.z)
+		# controller: the right stick (look up / down, otherwise only the camera) zooms the chart
+		var pad_zoom: float = Input.get_axis("look_up", "look_down")
+		if absf(pad_zoom) > 0.3 and _map_ui != null:
+			_zoom(exp(pad_zoom * delta * 1.6), _map_ui.size * 0.5)
 		_map_ui.queue_redraw()
 
 

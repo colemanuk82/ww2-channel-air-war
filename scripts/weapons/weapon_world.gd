@@ -205,8 +205,38 @@ var skip_serial: int = 0                  # counts bouncing bombs released (the 
 var last_skip: WeaponProjectile = null
 
 
-## For the camera: the newest bouncing bomb and whether it is still in flight.
+const TorpedoScript := preload("res://scripts/weapons/torpedo.gd")
+const MAX_TORPEDOES := 10
+var torpedoes: Array = []                 # live Torpedo nodes (flying, running, or showing the last of their wake)
+var last_torpedo: Node3D = null
+var _view_torpedo: bool = false           # the newest released weapon the camera should follow is a torpedo
+
+
+## Air-dropped torpedo (Beaufort / He 111). `alt_m` = metres above the sea at the drop. Returns the Torpedo node.
+func drop_torpedo(torp_id: String, pos: Vector3, vel: Vector3, team: String, source: Node, alt_m: float, roll_deg: float = 0.0) -> Node3D:
+	while torpedoes.size() >= MAX_TORPEDOES:
+		var old: Node = torpedoes.pop_front()
+		if is_instance_valid(old):
+			old.queue_free()
+	var t: Node3D = TorpedoScript.new()
+	t.name = "Torpedo"
+	add_child(t)
+	t.call("setup", torp_id, pos, vel, team, source, alt_m, roll_deg)
+	torpedoes.append(t)
+	last_torpedo = t
+	skip_serial += 1                      # starts the weapon cam (CameraRig follows skip_bomb_view)
+	_view_torpedo = true
+	FX.sfx("bomb_whistle", pos, -8.0, 0.4)
+	return t
+
+
+## For the camera: the newest bouncing bomb (or torpedo) and whether it is still in flight.
 func skip_bomb_view() -> Dictionary:
+	if _view_torpedo:
+		var tl: bool = last_torpedo != null and is_instance_valid(last_torpedo) and bool(last_torpedo.call("view_live"))
+		return {"serial": skip_serial, "live": tl, "pos": last_torpedo.global_position if tl else Vector3.ZERO,
+			"vel": (last_torpedo.get("vel") if int(last_torpedo.get("phase")) == 0 else Vector3(last_torpedo.get("heading")) * 20.0) if tl else Vector3.ZERO,
+			"skips": 0, "sunk": false, "dist": 38.0}
 	var live: bool = last_skip != null and _bombs.has(last_skip)
 	return {"serial": skip_serial, "live": live, "pos": last_skip.pos if live else Vector3.ZERO, "vel": last_skip.vel if live else Vector3.ZERO,
 		"skips": last_skip.skips if last_skip != null else 0, "sunk": live and last_skip.sunk}
@@ -225,6 +255,7 @@ func drop_bomb(pos: Vector3, vel: Vector3, team: String, source: Node, damage: f
 	if b.skipping:
 		skip_serial += 1
 		last_skip = b
+		_view_torpedo = false
 	b.node.visible = true
 	b.node.global_position = pos
 	FX.sfx("bomb_whistle", pos, -6.0, 0.4)

@@ -965,7 +965,7 @@ func _process(delta: float) -> void:
 	if (aircraft.weapon_mode == 2) != _weapon_prev or aircraft.weapon_mode != _weapon_mode_prev:
 		_weapon_prev = aircraft.weapon_mode == 2
 		_weapon_mode_prev = aircraft.weapon_mode
-		show_message("WEAPON: " + ["GUNS", "ROCKETS", "BOMBS"][aircraft.weapon_mode], 1.2)
+		show_message("WEAPON: " + ["GUNS", "ROCKETS", "TORPEDOES" if aircraft.torpedo_load else "BOMBS"][aircraft.weapon_mode], 1.2)
 	if terrain == null:
 		terrain = get_tree().get_first_node_in_group("terrain")
 	var alt_m: float = aircraft.get_altitude_m()

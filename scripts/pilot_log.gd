@@ -180,7 +180,7 @@ static func debug_run() -> bool:
 
 ## Record, then announce any promotion or decoration on the HUD and the radio. Returns the news.
 static func record_and_announce(side: String, changes: Dictionary, entry: String, hud: Node) -> Dictionary:
-	if debug_run():
+	if debug_run() or GameState.sortie_assists:      # practice aids (infinite health / ammo) earn nothing
 		return {"promoted": "", "awards": []}
 	var news: Dictionary = record(side, changes, entry)
 	var sd: String = "axis" if side == "Axis" else "allies"

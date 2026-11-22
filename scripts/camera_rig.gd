@@ -399,7 +399,8 @@ func _process(delta: float) -> void:
 				hv = Vector3(tf.x, 0.0, tf.z)
 			hv = hv.normalized()
 			var side: Vector3 = hv.cross(Vector3.UP).normalized()
-			var cam_p: Vector3 = _bomb_cam_pos + side * 18.0 + Vector3.UP * 3.5 - hv * 6.0
+			var cam_d: float = float(sv.get("dist", 18.0))      # a torpedo is followed from further off (v 38 m)
+			var cam_p: Vector3 = _bomb_cam_pos + side * cam_d + Vector3.UP * (3.5 if cam_d < 20.0 else 9.0) - hv * (6.0 if cam_d < 20.0 else 14.0)
 			chase_cam.global_transform = Transform3D(Basis.looking_at(_bomb_cam_pos + Vector3.UP * 0.5 - cam_p, Vector3.UP), cam_p)
 			chase_cam.fov = 60.0
 			return

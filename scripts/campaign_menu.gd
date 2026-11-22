@@ -25,6 +25,7 @@ func _ready() -> void:
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_root)
 	_rebuild()
+	PadNav.screen(self, {"back": func() -> void: closed.emit()})
 
 
 func _rebuild() -> void:
@@ -42,6 +43,8 @@ func _rebuild() -> void:
 		_build_new(center)
 	else:
 		_build_status(center)
+	if is_inside_tree() and PadNav.is_active():
+		PadNav.refocus(self, _fly if _fly != null and is_instance_valid(_fly) else null)
 
 
 func _build_new(parent: Control) -> void:

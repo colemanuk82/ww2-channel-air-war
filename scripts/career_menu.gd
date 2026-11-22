@@ -25,8 +25,10 @@ func _ready() -> void:
 	if not Career.state.is_empty() or Career.load_state():
 		if not (Career.state.get("pending", []) as Array).is_empty():
 			_play_pending.call_deferred()
+			PadNav.screen(self)
 			return
 	_rebuild()
+	PadNav.screen(self)
 
 
 func _rebuild() -> void:
@@ -43,6 +45,8 @@ func _rebuild() -> void:
 		_build_new(center)
 	else:
 		_build_status(center)
+	if is_inside_tree() and PadNav.is_active():
+		PadNav.refocus(self)
 
 
 ## After-mission pages from the last sortie, shown before the status page.

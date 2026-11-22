@@ -63,9 +63,44 @@ class MapView extends Control:
 	var _moved: float = 0.0
 	var _hover: String = ""
 
+	var _cyc: int = -1
+
 	func _init() -> void:
 		clip_contents = true
-		focus_mode = Control.FOCUS_NONE
+		focus_mode = Control.FOCUS_ALL     # reachable with the pad; PadNav gives it a stick-driven pointer
+
+	## Pad: LT / RT zoom about the pointer (same maths as the mouse wheel).
+	func pad_zoom(amount: float, at: Vector2) -> void:
+		var before: Vector2 = to_latlon(at)
+		zoom = clampf(zoom * exp(amount), 1.0, 24.0)
+		var after: Vector2 = to_screen(before.x, before.y)
+		center += (after - at) / _map_size()
+		_clamp()
+		queue_redraw()
+
+	## Pad: LB / RB jump to the previous / next airfield (west to east); returns the new pointer position.
+	func pad_cycle(dir: int, cursor: Vector2) -> Vector2:
+		if airfields.is_empty():
+			return cursor
+		var order: Array = airfields.duplicate()
+		order.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["lon"]) < float(b["lon"]))
+		if _cyc < 0:
+			var best: float = INF
+			for i in order.size():
+				var d: float = to_screen(float(order[i]["lat"]), float(order[i]["lon"])).distance_to(cursor)
+				if d < best:
+					best = d
+					_cyc = i
+			if dir > 0:
+				_cyc -= 1      # so the first RB press lands on the nearest one's successor, LB on its predecessor
+		_cyc = posmod(_cyc + dir, order.size())
+		var a: Dictionary = order[_cyc]
+		center = Vector2((float(a["lon"]) - FlightPlanner.LON_MIN) / (FlightPlanner.LON_MAX - FlightPlanner.LON_MIN), (FlightPlanner.LAT_MAX - float(a["lat"])) / (FlightPlanner.LAT_MAX - FlightPlanner.LAT_MIN))
+		zoom = maxf(zoom, 4.0)
+		_clamp()
+		_hover = str(a["id"])
+		queue_redraw()
+		return size * 0.5
 
 	func _aspect() -> float:
 		return float(tex.get_width()) / float(tex.get_height()) if tex != null else 2.05
@@ -169,7 +204,12 @@ class MapView extends Control:
 			draw_line(sp, sp + dirv * 46.0, Color(1.0, 0.85, 0.2), 3.0)
 			draw_line(sp + dirv * 46.0, sp + dirv * 38.0 + Vector2(-dirv.y, dirv.x) * 6.0, Color(1.0, 0.85, 0.2), 3.0)
 			draw_line(sp + dirv * 46.0, sp + dirv * 38.0 - Vector2(-dirv.y, dirv.x) * 6.0, Color(1.0, 0.85, 0.2), 3.0)
-		draw_string(font, Vector2(12, 24), "Wheel: zoom   Drag: pan   Click: choose start", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, 0.7))
+		var help: String = "Wheel: zoom   Drag: pan   Click: choose start"
+		if PadNav.using_pad:
+			help = "Right stick: move cursor   LT / RT: zoom   LB / RB: next airfield   A: choose start (hold A + stick: pan)"
+			if has_focus():
+				draw_rect(Rect2(Vector2(1.5, 1.5), size - Vector2(3, 3)), UIKit.ACCENT_HOT, false, 3.0)
+		draw_string(font, Vector2(12, 24), help, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 1, 1, 0.7))
 		draw_string(font, Vector2(size.x - 28, 24), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(1, 1, 1, 0.9))
 
 
@@ -198,6 +238,7 @@ func _ready() -> void:
 		_map.tex = load("res://data/heightmap/region_color.png") as Texture2D
 	_map.picked.connect(_on_picked)
 	hb.add_child(_map)
+	PadNav.pointer(_map)
 
 	var vb: VBoxContainer = UIKit.panel(hb)
 	(vb.get_parent().get_parent() as Control).custom_minimum_size = Vector2(400, 0)
@@ -263,6 +304,7 @@ func _ready() -> void:
 	vb.add_child(UIKit.button("Back", func() -> void: cancelled.emit(), 20))
 	_fly.disabled = true
 	_refresh()
+	PadNav.screen(self, {"first": _map, "hints": [["RS", "Cursor"], ["LT", "Zoom"], ["RT", ""], ["LB", "Airfield"], ["RB", ""]]})
 
 
 func _load_data() -> void:

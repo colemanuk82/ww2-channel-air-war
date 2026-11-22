@@ -45,6 +45,7 @@ func _ready() -> void:
 	_root.add_theme_constant_override("separation", 14)
 	center.add_child(_root)
 	_step_warning()
+	PadNav.screen(self)
 
 
 func _clear() -> void:
@@ -103,6 +104,7 @@ func _step_eula() -> void:
 	var dec := UIKit.button("Decline and quit", func() -> void: get_tree().quit(), 22)
 	dec.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(dec)
+	PadNav.refocus(self, acc)
 
 
 # ---- 3. optional DLSS download ----------------------------------------------------------------------------
@@ -137,6 +139,7 @@ func _step_dlss_or_finish() -> void:
 		done.emit(), 20)
 	never.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(never)
+	PadNav.refocus(self, yes)
 
 
 func _begin_download(row: HBoxContainer) -> void:
@@ -158,5 +161,6 @@ func _begin_download(row: HBoxContainer) -> void:
 			row.add_child(rb)
 		var cont := UIKit.button("Continue" if not ok else "Restart later", func() -> void: done.emit(), 20)
 		cont.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(cont))
+		row.add_child(cont)
+		PadNav.refocus(self, cont))
 	_installer.start()

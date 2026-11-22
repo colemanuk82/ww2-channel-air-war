@@ -64,6 +64,7 @@ func _ready() -> void:
 		var key: String = t[0]
 		var b := UIKit.button(String(t[1]), func() -> void: _show(key), 17)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.toggle_mode = true       # the open document's tab shows as pressed (not disabled, so the pad focus is never lost)
 		row.add_child(b)
 		_buttons[key] = b
 	_body = RichTextLabel.new()
@@ -78,13 +79,14 @@ func _ready() -> void:
 	box.add_child(_body)
 	box.add_child(UIKit.button("Back", func() -> void: closed.emit(), 18, true))
 	_show("credits")
+	PadNav.screen(self, {"first": _buttons["credits"] if _buttons.has("credits") else null})
 
 
 func _show(key: String) -> void:
 	_body.text = engine_text() if key == "engine" else text_for(key)
 	_body.scroll_to_line(0)
 	for k in _buttons.keys():
-		(_buttons[k] as Button).disabled = (k == key)
+		(_buttons[k] as Button).button_pressed = (k == key)
 
 
 func _unhandled_input(event: InputEvent) -> void:

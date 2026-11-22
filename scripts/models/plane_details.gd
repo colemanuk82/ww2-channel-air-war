@@ -35,6 +35,7 @@ const LOADOUT := {
 	"b25": {"bay": true},
 	"a20": {"bay": true},
 	"blenheim": {"bay": true},
+	"beaufort": {"bay": true},
 	"fw200": {"wing": [0.40]},
 	"p38": {"wing": [0.26]},
 }

@@ -60,7 +60,16 @@ class EdMap extends Control:
 
 	func _init() -> void:
 		clip_contents = true
-		focus_mode = Control.FOCUS_CLICK
+		focus_mode = Control.FOCUS_ALL      # clickable and reachable with the pad (PadNav gives it a stick pointer)
+
+	## Pad: LT / RT zoom about the pointer (same maths as the mouse wheel).
+	func pad_zoom(amount: float, at: Vector2) -> void:
+		var before: Vector2 = to_latlon(at)
+		zoom = clampf(zoom * exp(amount), 1.0, 60.0)
+		var after: Vector2 = to_screen(before.x, before.y)
+		center += (after - at) / _map_size()
+		_clamp()
+		queue_redraw()
 
 	func _aspect() -> float:
 		return float(tex.get_width()) / float(tex.get_height()) if tex != null else 2.05
@@ -346,6 +355,10 @@ func _ready() -> void:
 		dirty = open_path == ""
 	else:
 		_show_hub()
+	PadNav.screen(self, {
+		"first": func() -> Control: return _hub_list if _hub.visible else _map,
+		"hints": [["RS", "Cursor"], ["X", "Right-click"], ["LT", "Zoom"], ["RT", ""], ["LB", "Tab"], ["RB", ""]],
+	})
 
 
 func _say(text: String) -> void:
@@ -439,6 +452,8 @@ func _show_hub() -> void:
 	if not _hub_entries.is_empty():
 		_hub_list.select(0)
 	_hub_show_info()
+	if is_inside_tree() and PadNav.is_active():
+		PadNav.refocus(self, _hub_list)
 
 
 func _hub_sel() -> Dictionary:
@@ -542,6 +557,7 @@ func _build_editor() -> void:
 	var addm := MenuButton.new()
 	addm.text = "Add unit"
 	addm.flat = false
+	addm.focus_mode = Control.FOCUS_ALL      # a MenuButton is not keyboard / pad focusable by default
 	UIKit._style_button(addm, 16, false)
 	var pm: PopupMenu = addm.get_popup()
 	pm.add_theme_font_override("font", UIKit.font())
@@ -566,6 +582,7 @@ func _build_editor() -> void:
 	if ResourceLoader.exists("res://data/heightmap/region_color.png"):
 		_map.tex = load("res://data/heightmap/region_color.png") as Texture2D
 	hb.add_child(_map)
+	PadNav.pointer(_map)
 	var side := PanelContainer.new()
 	side.add_theme_stylebox_override("panel", UIKit.panel_style())
 	side.custom_minimum_size = Vector2(520, 0)
@@ -613,6 +630,8 @@ func _edit(d: Dictionary, p: String) -> void:
 	_map.zoom = 6.0
 	_map.look_at_latlon(float(st.get("lat", 51.1)), float(st.get("lon", 1.2)))
 	_rebuild_all()
+	if is_inside_tree() and PadNav.is_active():
+		PadNav.refocus(self, _map)
 
 
 func _rebuild_all() -> void:

@@ -42,10 +42,13 @@ var _taskings: CheckBox
 var _wingmen: OptionButton
 var _parking: OptionButton
 var _passing: CheckBox
+var _inf_health: CheckBox       # practice aids on the SORTIE page (player only)
+var _inf_ammo: CheckBox
 # Loadout: what the sortie carries. Values are the aircraft type's own limits, rebuilt when the aircraft changes.
 var _bombs: OptionButton
 var _rockets: OptionButton
 var _ammo: OptionButton
+var _torp: OptionButton            # "Torpedoes": No / Yes, only for types with stats.torpedoes > 0 (Beaufort, He 111)
 var _bombs_vals: Array = [0]
 var _rockets_vals: Array = [0]
 var _ammo_vals: Array = [0]
@@ -169,9 +172,19 @@ void fragment() {
 	_bombs = UIKit.option_field(loadout_row, "Bombs", ["0"], 70, 18, 54)
 	_rockets = UIKit.option_field(loadout_row, "Rockets", ["0"], 70, 18, 62)
 	_ammo = UIKit.option_field(loadout_row, "Ammo", ["0"], 86, 18, 48)
+	_torp = UIKit.option_field(loadout_row, "Torpedoes", ["No", "Yes"], 80, 18, 82)
+	_torp.tooltip_text = "Air-dropped torpedoes instead of bombs (Beaufort, He 111). Drop low and slow over the sea: too high or too fast and the torpedo breaks up or dives into the seabed."
 	_bombs.tooltip_text = "Bombs carried. Every bomb dropped makes the aircraft lighter."
 	_rockets.tooltip_text = "Rockets carried. Each pair fired makes the aircraft lighter."
 	_ammo.tooltip_text = "Gun rounds loaded. Running the guns dry makes the aircraft lighter."
+	# Practice aids (player only, off by default). With either on the sortie earns no pilot-log points / decorations.
+	var assist_row := HBoxContainer.new()
+	assist_row.add_theme_constant_override("separation", 24)
+	sortie.add_child(assist_row)
+	_inf_health = _assist_check("Infinite health", "Your aircraft takes no damage from gunfire, collisions or hard landings. Hitting the ground or water too hard still wrecks it. Sorties flown with this earn no pilot-log points or decorations.")
+	assist_row.add_child(_inf_health)
+	_inf_ammo = _assist_check("Infinite ammo", "Guns, bombs and rockets never run out. Sorties flown with this earn no pilot-log points or decorations.")
+	assist_row.add_child(_inf_ammo)
 
 	# --- START POINT (free flight) ---
 	var startpage := _new_page()
@@ -397,6 +410,7 @@ void fragment() {
 	_restore_last_sortie()
 	_show_page(_initial_page())
 	start.grab_focus()
+	PadNav.screen(self, {"first": start, "tabs": _step_page, "hints_at": "top_center"})      # LB / RB flip the SORTIE / START POINT / ... pages
 	# decorations not yet presented (earned in a sortie that ended in a hurry) are shown once the card has gone
 	get_tree().create_timer(5.5).timeout.connect(func() -> void:
 		if is_inside_tree() and not MedalCeremony.show_pending(self, "Allies"):
@@ -572,6 +586,22 @@ func _show_page(index: int) -> void:
 		(_nav_btns[i] as Button).button_pressed = i == index
 
 
+## LB / RB: previous / next page. Focus stays on the page buttons if it was there, else moves into the new page.
+func _step_page(dir: int) -> void:
+	var cur: int = 0
+	for i in _pages.size():
+		if (_pages[i] as Control).visible:
+			cur = i
+	var nxt: int = posmod(cur + dir, _pages.size())
+	var fo: Control = get_viewport().gui_get_focus_owner()
+	_show_page(nxt)
+	if fo != null and _nav_btns.has(fo):
+		return
+	PadNav.focus_first(_pages[nxt])
+	if get_viewport().gui_get_focus_owner() == null:
+		(_nav_btns[nxt] as Button).grab_focus()
+
+
 func _refresh_aircraft() -> void:
 	var side: String = _side.get_item_text(_side.selected)
 	_ids = AircraftCatalog.ids_for_side(side)
@@ -625,6 +655,10 @@ func _refresh_loadout() -> void:
 	_bombs.disabled = st.bombs <= 0
 	_rockets.disabled = st.rockets <= 0
 	_ammo.disabled = st.ammo <= 0
+	if _torp != null:
+		_torp.disabled = st.torpedoes <= 0
+		_torp.get_parent().visible = st.torpedoes > 0
+		_torp.select(1 if (st.torpedoes > 0 and String(st.id) == "beaufort") else 0)      # the Beaufort's job is the torpedo
 
 
 ## Fill one OptionButton with 0..cap (in rough steps), leaving the full load selected.
@@ -771,10 +805,16 @@ func _show_mission_list() -> void:
 			il.set_item_custom_fg_color(i, UIKit.TEXT_DIM)
 	if _mission.selected >= 0:
 		il.select(_mission.selected)
-	il.item_selected.connect(func(i: int) -> void:
+	# mouse click or A / Enter picks; moving the highlight with the D-pad / arrows must not close the list
+	var pick := func(i: int) -> void:
 		_mission.select(i)
 		_mission.item_selected.emit(i)
-		pp.queue_free())
+		pp.queue_free()
+		_mission.grab_focus.call_deferred()
+	il.item_clicked.connect(func(i: int, _pos: Vector2, btn: int) -> void:
+		if btn == MOUSE_BUTTON_LEFT:
+			pick.call(i))
+	il.item_activated.connect(func(i: int) -> void: pick.call(i))
 	pp.popup_hide.connect(func() -> void: pp.queue_free())
 	var w: int = maxi(int(_mission.size.x), 360)
 	var h: int = mini(_mission.item_count * 32 + 16, 420)
@@ -784,6 +824,7 @@ func _show_mission_list() -> void:
 	pp.popup(Rect2i(Vector2i(_mission.get_screen_position()) + Vector2i(0, int(_mission.size.y)), Vector2i(w, h)))
 	if _mission.selected >= 0:
 		il.ensure_current_is_visible()
+	il.grab_focus()
 
 
 ## Picking a historical mission sets the side and aircraft the mission was written for (you can still change the aircraft).
@@ -987,9 +1028,11 @@ func _show_welcome(root: Control) -> void:
 			if _mission.item_count > 0:
 				_mission.select(0)
 			_on_start(), 22, true))
-	row.add_child(UIKit.button("Skip, take me to the menu", func() -> void:
+	var skip_btn: Button = UIKit.button("Skip, take me to the menu", func() -> void:
 		FirstRun.mark_offered()
-		dim.queue_free(), 20))
+		dim.queue_free(), 20)
+	row.add_child(skip_btn)
+	PadNav.screen(dim, {"first": row.get_child(0), "back": func() -> void: skip_btn.pressed.emit()})
 
 
 func _on_start() -> void:
@@ -1035,6 +1078,7 @@ func _on_start() -> void:
 			"bombs": _selected_count(_bombs, _bombs_vals),
 			"rockets": _selected_count(_rockets, _rockets_vals),
 			"ammo": _selected_count(_ammo, _ammo_vals),
+			"torpedo": _torp != null and not _torp.disabled and _torp.selected == 1,
 		},
 	}
 	if (mode_id == "free" or mode_id == "dogfight") and _season != null and _season.selected < SEASONS.size():
@@ -1057,15 +1101,30 @@ func _on_start() -> void:
 		if not _plan.is_empty():
 			cfg.merge(_plan, true)      # map planner overrides spawn, scenario (mode), targets, enemy strength
 	cfg["cockpit_style"] = "interior" if _cockpit != null and _cockpit.selected == 1 and _cockpit_row.visible else "standard"
+	cfg["infinite_health"] = _inf_health != null and _inf_health.button_pressed
+	cfg["infinite_ammo"] = _inf_ammo != null and _inf_ammo.button_pressed
 	_remember_sortie(cfg)
 	start_requested.emit(cfg)
+
+
+## A styled CheckBox for the practice aids (same look as the other check boxes on the page).
+func _assist_check(text: String, tip: String) -> CheckBox:
+	var cb := CheckBox.new()
+	cb.text = text
+	cb.tooltip_text = tip
+	cb.add_theme_font_override("font", UIKit.font())
+	cb.add_theme_font_size_override("font_size", 17)
+	cb.add_theme_color_override("font_color", UIKit.TEXT)
+	cb.add_theme_color_override("font_hover_color", Color.WHITE)
+	cb.add_theme_color_override("font_focus_color", Color.WHITE)
+	return cb
 
 
 ## Remember the last SORTIE choices. Keep only what the menu can restore: the mode, aircraft,
 ## start point (spawn list or planner coordinates) and the mission where applicable.
 func _remember_sortie(cfg: Dictionary) -> void:
 	var rec: Dictionary = {}
-	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "start_parking", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style", "season"]:
+	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "start_parking", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style", "season", "infinite_health", "infinite_ammo"]:
 		if cfg.has(k):
 			rec[k] = cfg[k]
 	GameState.last_sortie = rec
@@ -1108,6 +1167,8 @@ func _restore_last_sortie() -> void:
 		_select_count(_bombs, _bombs_vals, int(lo.get("bombs", -1)))
 		_select_count(_rockets, _rockets_vals, int(lo.get("rockets", -1)))
 		_select_count(_ammo, _ammo_vals, int(lo.get("ammo", -1)))
+		if _torp != null and not _torp.disabled and lo.has("torpedo"):
+			_torp.select(1 if bool(lo["torpedo"]) else 0)
 	var sp: String = str(c.get("spawn", ""))
 	for i in _spawn_entries.size():
 		if str(_spawn_entries[i]["id"]) == sp:
@@ -1121,6 +1182,10 @@ func _restore_last_sortie() -> void:
 		_cockpit.select(1 if String(c["cockpit_style"]) in ["spitfire", "interior"] else 0)
 	if c.has("passing_flights"):
 		_passing.button_pressed = bool(c["passing_flights"])
+	if _inf_health != null:
+		_inf_health.button_pressed = bool(c.get("infinite_health", false))
+	if _inf_ammo != null:
+		_inf_ammo.button_pressed = bool(c.get("infinite_ammo", false))
 	if c.has("season") and _season != null:
 		_season.select(clampi(int(c["season"]), 0, SEASONS.size()))
 	if c.has("spawn_lat") or c.has("spawn_lon") or c.has("spawn_airfield"):

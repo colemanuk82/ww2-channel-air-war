@@ -55,6 +55,7 @@ var flight_assists: int = 0          # Options > Gameplay: 0 off, 1 auto-rudder,
 var auto_update_check: bool = false   # opt-in: ask GitHub for a newer release when the menu opens (once a day at most)
 var last_update_check: int = 0        # unix time of the last automatic check
 var start_parking: String = "dispersal"   # where a ground sortie starts: "dispersal" (taxi to the runway) or "runway"
+var sortie_assists: bool = false   # this sortie runs with infinite health / ammo (set by Main; not saved): no pilot-log credit
 var taxi_active: bool = false   # the player is taxiing (the R key then skips to the line-up, it does not toggle assist)
 var first_sortie_done: bool = false   # the one-off controls / bail-out hints have been shown
 var engine_heat_on: bool = true   # Options > Realism: engine overheating (player and AI)

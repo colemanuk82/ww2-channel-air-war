@@ -169,6 +169,7 @@ func _ready() -> void:
 	if not PAGES.has(want):
 		want = "video"
 	_show_page(want)
+	PadNav.screen(self, {"first": _tab_btns[want], "tabs": _step_tab, "hints_at": "top_left"})
 
 
 ## Small rounded bumper chip (LB / RB) for the tab row.
@@ -210,6 +211,17 @@ func _show_page(key: String) -> void:
 	for k in _tab_btns.keys():
 		(_tab_btns[k] as Button).button_pressed = k == key
 	_status.text = ""
+	# a page that was showing took the focus with it: put it on the page's tab so the pad keeps working
+	var fo: Control = get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	if is_inside_tree() and (fo == null or not fo.is_visible_in_tree()) and PadNav.using_pad:
+		(_tab_btns[key] as Button).grab_focus()
+
+
+## LB / RB (also from the hint bar): previous / next page.
+func _step_tab(dir: int) -> void:
+	var i: int = PAGES.find(_current_page)
+	_show_page(PAGES[posmod(i + dir, PAGES.size())])
+	(_tab_btns[_current_page] as Button).grab_focus()
 
 
 func _new_page() -> VBoxContainer:
@@ -284,7 +296,7 @@ func _build_render_page() -> VBoxContainer:
 
 ## V-sync on/off and a frame rate limiter: Off / presets / Custom (a number box, 20-1000 fps).
 func _frame_rate_rows(page: VBoxContainer) -> void:
-	_row(page, "V-sync", ["Off", "On"], 1 if GameState.vsync_on else 0, func(i: int) -> void:
+	var vs_ob: OptionButton = _row(page, "V-sync", ["Off", "On"], 1 if GameState.vsync_on else 0, func(i: int) -> void:
 		GameState.set_graphic("vsync", i == 1))
 	var items: Array = []
 	for c in GameState.FPS_CAPS:
@@ -304,6 +316,9 @@ func _frame_rate_rows(page: VBoxContainer) -> void:
 		spin.editable = i == custom_idx
 		GameState.set_graphic("fps_cap", int(spin.value) if i == custom_idx else int(GameState.FPS_CAPS[i])))
 	ob.get_parent().add_child(spin)
+	# the wide V-sync button above hides the narrow limiter dropdown from automatic focus search: link them explicitly
+	vs_ob.focus_neighbor_bottom = vs_ob.get_path_to(ob)
+	ob.focus_neighbor_top = ob.get_path_to(vs_ob)
 	spin.value_changed.connect(func(v: float) -> void:
 		if ob.selected == custom_idx:
 			GameState.set_graphic("fps_cap", int(v)))
@@ -1102,21 +1117,36 @@ const JOY_AXIS_NAMES := {
 func _start_listening_key(action: String) -> void:
 	_listening_action = action
 	_listen_kind = "key"
+	set_meta("pad_capture", true)
 	(_key_buttons[action] as Button).text = "Press a key..."
+	_listen_timeout(action)
 	_ctl_hint.visible = true
-	_ctl_hint.text = "Listening for %s - press a key (Esc cancels, Delete unbinds)." % action.replace("_", " ")
+	_ctl_hint.text = "Listening for %s - press a key (Esc cancels, Delete unbinds). On a gamepad: B or Start cancels." % action.replace("_", " ")
 
 
 func _start_listening(action: String, btn: Button) -> void:
 	_listening_action = action
 	_listen_kind = "pad"
+	set_meta("pad_capture", true)
 	btn.text = "Press a button..."
+	_listen_timeout(action)
 	_ctl_hint.visible = true
 	_ctl_hint.text = "Listening for %s - press a gamepad button or move a stick/trigger (Esc cancels, Delete unbinds)." % action
 
 
+## Controller in use: a binding prompt that nobody answers gives up after a few seconds instead of waiting forever.
+func _listen_timeout(action: String) -> void:
+	if not PadNav.using_pad:
+		return
+	get_tree().create_timer(8.0, true).timeout.connect(func() -> void:
+		if _listening_action == action:
+			_stop_listening())
+
+
 func _stop_listening() -> void:
 	_listening_action = ""
+	if has_meta("pad_capture"):
+		remove_meta("pad_capture")
 	_ctl_hint.text = "Click a key or gamepad binding, then press the new key / button.  Esc cancels,  Delete unbinds."
 	_listen_kind = "pad"
 	_refresh_bindings()
@@ -1168,10 +1198,9 @@ func _input(event: InputEvent) -> void:
 		if event is InputEventJoypadButton and (event as InputEventJoypadButton).pressed:
 			var bi: int = (event as InputEventJoypadButton).button_index
 			if bi == JOY_BUTTON_LEFT_SHOULDER or bi == JOY_BUTTON_RIGHT_SHOULDER:
-				var i: int = PAGES.find(_current_page)
-				_show_page(PAGES[posmod(i + (-1 if bi == JOY_BUTTON_LEFT_SHOULDER else 1), PAGES.size())])
+				_step_tab(-1 if bi == JOY_BUTTON_LEFT_SHOULDER else 1)
 				get_viewport().set_input_as_handled()
-			elif bi == JOY_BUTTON_B:
+			elif bi == JOY_BUTTON_B or bi == JOY_BUTTON_START:
 				_back()
 				get_viewport().set_input_as_handled()
 		if event is InputEventKey and (event as InputEventKey).pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
@@ -1191,6 +1220,11 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if _listen_kind == "key":
+		# waiting for a keyboard key: a gamepad button (B / Start) backs out, so a pad-only player is never stuck
+		if event is InputEventJoypadButton and (event as InputEventJoypadButton).pressed:
+			_stop_listening()
+			get_viewport().set_input_as_handled()
+			return
 		if event is InputEventKey and (event as InputEventKey).pressed and not (event as InputEventKey).echo:
 			var ke: InputEventKey = event
 			var act: String = _listening_action

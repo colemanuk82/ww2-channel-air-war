@@ -12,9 +12,20 @@ training film. The game design and data contracts are in `SPEC.md`.
 
 ## Engine and build
 
-* Godot **4.7.2-stable, double precision**, built from source in `F:\godot-std`
-  (`platform=windows precision=double optimize=speed use_static_cpp=yes angle=no`) with the camera-origin patch
-  described in `HANDOFF.md` (2026-10-24). The patch only matters for rendering, not for the headless tests.
+* Godot **4.7 branch head `c230cbeb6c3f`** (post-4.7.2 maintenance, 2026-11-22), **double precision**, built from
+  source in `F:\godot-std` (`platform=windows precision=double optimize=speed use_static_cpp=yes angle=no
+  debug_symbols=yes`, script `tools/cache/build_engine47.ps1`) with our 4 local patches (camera origin / variant,
+  `F:\godot-std\ww2_local_patches.diff`; see `HANDOFF.md` 2026-10-24) and **debug symbols**. Roll-back: the previous
+  4.7.2-stable binaries are in `F:\godot-std\bin\backup_4.7.2\`.
+* **Crash symbols:** the matching template exe + `.pdb` are archived in `build\symbols\c230cbeb6c3f\`.
+  Resolve WER fault offsets with `tools\cache\symaddr.ps1 -offsets 0x2a27e73` (defaults to the newest archive).
+  After installing the game run `tools\cache\install_symbols.ps1` to put the pdb beside the installed exe (the
+  installer never ships it); then Godot's crash handler writes a symbolised backtrace to
+  `%APPDATA%\Godot\app_userdata\WW2 Channel Air War\logs\godot.log` ("Program crashed"). The project sets
+  `application/run/flush_stdout_on_print=true` so the last log lines are on disk when it crashes.
+* **Forcing the crash scenario:** free flight, Axis, Bf 109G, night:
+  `--mode=free --side=Axis --aircraft=bf109g --time=night --flights-test --flights-kind=raid --flights-size=2
+  --flights-log`, plus `--kill-player-after=SECS` to be shot down after SECS (death / spectator transition).
 * Release: `tools/cache/ship.ps1 -msg "..."` bumps the version, builds, runs the tests, commits, pushes and makes
   the GitHub release (zip + Inno Setup installer). Only release when the owner asks.
 
@@ -89,6 +100,43 @@ Never open a visible game window on the developer's PC: everything with pictures
   for Folkestone's real layout (Folkestone gets 79, Boulogne 97 on High).
 
 * **Free-flight enemy flights with missions** (scripts/modes/enemy_flights.gd, owned by FreeFlightMode when ambient flights are on; replaces the old random two-fighter skirmish / stooging patrol): every 100-190 s (max 3 up) the other side's flight appears in the air about 11 km from the player, on the line from one of its real airfields to a real objective on the player's side (WorldPopulator.raid_targets + the player side's airfields), so flying on meets it. Missions: **raid** (bombers in vics + close escort + top-cover layer that stay with the lead bomber and widen their engage radius when a bomber is hit), **stuka** (Ju 87 attack on a Channel ship near the player, else a port / airfield; Axis only), **sweep** (fighter free hunt: route to an area, 4.5 km square patrol, home; the leader goes back to its route after every fight and the next fighter takes over if it dies), **recon** (one high aircraft over the target). All fly a waypoint route out, over the target (bombs fall) and home to their own airfield, and are tidied away when home and 12 km from the player (or 45 km / 25 min). Size odds 62 % small / 28 % medium / 10 % large (SIZE_ODDS; raid 3-4 / 6-9 / 12-18 bombers plus 2-4 / 4-6 / 8-10 fighters, sweep 2-4 / 6-8 / 10-12), cut down to the free AI slots (AIFactory.ai_room; free-flight AI_CAP 30 -> 40). Medium and large raids are announced by Control on the radio / HUD ("Large raid building, 20+ bandits, heading for Manston") and the player side's fighters are scrambled from the airfield nearest the target. Friendly flights you can join remain PassingFlights; SortieManager (airfield take-offs) is unchanged. Tests: _test_enemy_flights. Debug: --flights-test (first flight after 5 s), --flights-kind=raid|stuka|sweep|recon, --flights-size=0|1|2, --flights-every=SECS, --flights-timescale=N, --flights-log ([mission] lines: launch, status every 20 s, phase changes, resume, over).
+
+## Controller navigation (scripts/pad_nav.gd, autoload `PadNav`)
+Every menu is usable with a gamepad (generic JoyButton / JoyAxis, so Xbox, DualSense etc.); mouse and keyboard are unchanged.
+- **Mapping in menus**: D-pad / left stick = move focus (stick and D-pad auto-repeat 0.42 s then 0.11 s, jitter filtered);
+  A = ui_accept (press / toggle / open dropdown); B = back (ui_cancel; Start also backs out); LB / RB = previous / next tab or
+  page (Options tabs, sortie pages, mission-editor tabs) or previous / next marker on a map; left / right = change a slider
+  or SpinBox; right stick scrolls scroll areas and drives the map pointer; LT / RT zoom a map. In flight nothing changes:
+  B is still weapon toggle, A still fires; B only maps to ui_cancel while a menu is open, and a press a menu consumed never
+  leaks into a flight action. Start + B opens and closes pause.
+- **Shared helper**: a screen calls `PadNav.screen(self, {first, back, tabs, hints, hints_at, a_label, b_label})` when it opens
+  and `PadNav.unscreen(self)` when it closes. A screen stack makes the covered screen non-focusable
+  (`focus_behavior_recursive`), saves its focus and restores it on return (Options -> back lands on the "Options" button).
+  `PadNav.refocus(node, first)` after a rebuild; `PadNav.pointer(control)` registers a map for the virtual pointer.
+  ScrollContainers get `follow_focus` automatically. A hint bar (A Select / B Back / LB RB Page, drawn with `PadGlyph`, no
+  copied art) shows only after the pad is used; `hints_at` picks a free corner (bottom_right default, top_left, top_center).
+- **Look**: thick brass focus frame with warm fill on every control type (default theme set in PadNav, matching UIKit).
+- **Special cases**: maps (flight planner, mission editor, bombsight chart) get a virtual pointer (right stick, A = click,
+  X = right click) plus LB / RB marker cycling; key rebinding listens for a pad button too, B cancels it and an 8 s timeout
+  stops it getting stuck; LineEdit / TextEdit / SpinBox never trap the pad (D-pad up/down and B step out); the custom
+  mission list is picked with A (`item_activated`); MenuButton "Add unit" is focusable.
+- **Tests** (`tools/tests.gd::_test_pad_navigation`): input map, initial focus, reachability by `find_valid_focus_neighbor`
+  and B handled on StartMenu (all pages), Options (all tabs, rebind cancel), Pause (+Score), results, campaign, dam, legal,
+  logbook, donation, story, medal, legal gate, flight planner, mission editor, training film. Not testable without hardware:
+  real stick / D-pad repeat on a physical pad (the repeat is driven by tracked D-pad / stick state and was exercised with
+  synthetic events on the hidden desktop).
+
+## Practice aids (sortie setup)
+Two CheckBoxes on the StartMenu SORTIE page, off by default and remembered with the other sortie options (`last_sortie`):
+**Infinite health** and **Infinite ammo**. They reach `Main` as `config["infinite_health"/"infinite_ammo"]` and set
+`Aircraft.infinite_health / infinite_ammo` on the player only (AI ignore them).
+- Infinite health: `take_damage`, `fire_kill` and `start_breakup` do nothing for the player, so no gunfire, collision,
+  taxi-bump or hard-landing damage and no fire / structural kill. Hitting the ground, water or an obstacle too hard still
+  wrecks the aircraft (`_crash`), so a sortie can always end.
+- Infinite ammo: `WeaponSystem` leaves the player's rounds, bombs and rocket count untouched after firing / releasing.
+- With either on, `GameState.sortie_assists` is set: no pilot-log points / decorations (`PilotLog.record_and_announce`), no
+  historical-mission "done" mark; the results screen lists "Practice aids". Campaign / career sorties are built without the
+  flags, so their progress is unaffected. Test: `_test_practice_aids`.
 
 ## Art style: Realistic / Cel-shaded (scripts/cel_shade.gd, shaders/cel/)
 Options > Video > Art style. Index 0 = Realistic (default, byte-for-byte the old path: every cel hook is gated on

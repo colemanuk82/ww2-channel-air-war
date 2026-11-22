@@ -1781,12 +1781,20 @@ func start_game(cfg: Dictionary) -> void:
 	var loadout_v: Variant = config.get("loadout", null)
 	if loadout_v is Dictionary:
 		var loadout: Dictionary = loadout_v
+		if bool(loadout.get("torpedo", false)) and player.stats != null and player.stats.torpedoes > 0:
+			player.torpedo_load = true           # bombs are replaced by air-dropped torpedoes (Beaufort, He 111)
 		if loadout.has("bombs"):
 			player.loadout_bombs = int(loadout["bombs"])
 		if loadout.has("rockets"):
 			player.loadout_rockets = int(loadout["rockets"])
 		if loadout.has("ammo"):
 			player.loadout_ammo = int(loadout["ammo"])
+	if _args.has("--torpedoes") and player.stats != null and player.stats.torpedoes > 0:
+		player.torpedo_load = true           # debug flag: carry torpedoes whatever the loadout says
+	# Sortie setup practice aids (player only). With either on the sortie is not recorded in the pilot log.
+	player.infinite_health = bool(config.get("infinite_health", false))
+	player.infinite_ammo = bool(config.get("infinite_ammo", false))
+	GameState.sortie_assists = player.infinite_health or player.infinite_ammo
 	add_child(player)
 	if AircraftCatalog.is_bomber(aid):
 		CrewIntercom.attach(player)
@@ -2207,7 +2215,10 @@ func _on_mission_complete(success: bool, stats: Dictionary) -> void:
 	SortieResume.clear()          # the sortie is over: nothing left to resume
 	if _pause:
 		_pause.enabled = false
-	if success and String(config.get("mode", "")) == "historical":
+	if GameState.sortie_assists:
+		stats = stats.duplicate()
+		stats["practice_aids"] = " + ".join(PackedStringArray(([] if not bool(config.get("infinite_health", false)) else ["Infinite health"]) + ([] if not bool(config.get("infinite_ammo", false)) else ["Infinite ammo"])))
+	if success and String(config.get("mode", "")) == "historical" and not GameState.sortie_assists:
 		GameState.mark_mission_done(String(config.get("mission", "")))
 	if bool(config.get("campaign", false)):
 		stats = stats.duplicate()
@@ -3488,6 +3499,8 @@ func _parse_debug_args() -> void:
 				get_tree().create_timer(4.0).timeout.connect(func() -> void:
 					player.ammo = 0
 					player.weapons._check_ammo(player)))
+		elif a.begins_with("--torp-test"):   # debug: scripted torpedo drop on a moving ship with pictures (scripts/weapons/torp_test.gd); use with --torpedoes
+			(load("res://scripts/weapons/torp_test.gd") as GDScript).call("start", self, a)
 		elif a == "--plume-test":   # debug: bomb plumes in the sea ahead of the player every 4 s (water_plume visual check)
 			var pt := Timer.new()
 			pt.wait_time = 4.0
@@ -3569,6 +3582,10 @@ func _parse_debug_args() -> void:
 							mode.call("_cine_enter_flood"))      # the breach camera, as after a real run
 		elif a == "--crash":
 			get_tree().create_timer(1.0).timeout.connect(func() -> void: player.take_damage(500.0))
+		elif a.begins_with("--kill-player-after="):   # debug: shoot the player down after SECS (death / spectator transition repro)
+			get_tree().create_timer(float(a.substr(19))).timeout.connect(func() -> void:
+				if is_instance_valid(player):
+					player.take_damage(99999.0))
 		elif a == "--takeoff":
 			_auto_takeoff = true
 		elif a.begins_with("--cloudview="):   # kind:nth:distance  (0 cumulus 1 tower 2 strato 3 cirrus 4 alto 5 lens 6 castellanus 7 cirrocumulus 8 congestus 9 stratus, 99 largest)

@@ -239,7 +239,7 @@ func _update_aids() -> void:
 			_lead = best.global_position + rel_v * tt   # display point: where to point the nose
 			_has_lead = true
 	# --- bombsight (only while the bombs weapon is selected)
-	_bomb_show = aircraft.weapon_bombs and aircraft.bombs > 0 and not aircraft.on_ground and not aircraft.bombsight_only
+	_bomb_show = aircraft.weapon_bombs and not aircraft.torpedo_load and aircraft.bombs > 0 and not aircraft.on_ground and not aircraft.bombsight_only
 	if _bomb_show:
 		var vel: Vector3 = aircraft.velocity
 		if vel.length_squared() < 1.0:
@@ -272,6 +272,9 @@ func _draw_overlay() -> void:
 	if cam == null:
 		return
 	var st: AircraftStats = aircraft.stats
+	if aircraft.weapon_bombs and aircraft.torpedo_load:
+		_draw_torpedo_sight(cam)
+		return
 	if aircraft.weapon_bombs:
 		# Bombers with a proper bombsight only show a sight in the dedicated bombsight view (key N draws its
 		# own graticule); the HUD crosshair must not appear in the chase or cockpit views.
@@ -293,6 +296,73 @@ func _draw_overlay() -> void:
 					_c.draw_arc(lv, 9.0, 0.0, TAU, 20, COL_GUN, 2.0)
 					_c.draw_circle(lv, 1.8, COL_GUN)
 					_c.draw_line(t, lv, Color(COL_GUN, 0.35), 1.0)
+
+
+## Torpedo sight (light, era-fitting): the drop figures (height, speed, angle) against the weapon's limits, the spot
+## where a torpedo released now would enter the sea with its track, and a lead mark on the nearest enemy ship ahead
+## (the torpedo's own running speed against the ship's course and speed).
+func _draw_torpedo_sight(cam: Camera3D) -> void:
+	var tp: GDScript = Weapons.TorpedoScript
+	var tid: String = tp.type_for_model(aircraft.stats.model_id)
+	if tid == "":
+		tid = "mk12"
+	var vel: Vector3 = aircraft.velocity
+	if vel.length_squared() < 1.0:
+		vel = aircraft.get_forward() * aircraft.speed
+	var hs: float = Vector2(vel.x, vel.z).length()
+	var alt_m: float = maxf(aircraft.global_position.y, 0.0) / WorldCoords.VERTICAL_SCALE
+	var path_deg: float = rad_to_deg(atan2(vel.y / WorldCoords.VERTICAL_SCALE, maxf(hs, 0.1)))
+	var roll_deg: float = rad_to_deg(aircraft.global_transform.basis.get_euler().z)
+	var v: Dictionary = tp.evaluate_release(tid, alt_m, hs, path_deg, roll_deg, 40.0)
+	var good: bool = bool(v["ok"])
+	var col: Color = COL_HIT if (good and v["problems"].is_empty()) else (COL_BOMB if good else COL_TGT)
+	var font: Font = ThemeDB.fallback_font
+	var cx: float = _c.size.x * 0.5
+	var y0: float = _c.size.y * 0.80
+	var lim: Dictionary = tp.TYPES[tid]
+	_c.draw_string(font, Vector2(cx - 150.0, y0), "TORPEDO  %s   ALT %d m (max %d)   SPD %d km/h (max %d)" % [
+		String(v["status"]), int(alt_m), int(lim["max_alt"]), int(hs * 3.6), int(float(lim["max_speed"]) * 3.6)],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 15, col)
+	# entry point + track
+	var ent: Dictionary = tp.predict_entry(aircraft.global_position - aircraft.global_transform.basis.y * 1.5, vel)
+	var ep: Vector3 = ent["pos"]
+	var sp: Variant = _screen(ep)
+	if sp != null:
+		var p: Vector2 = sp
+		_c.draw_arc(p, 9.0, 0.0, TAU, 20, col, 2.0)
+		_c.draw_circle(p, 1.8, col)
+		var hd := Vector3(vel.x, 0.0, vel.z).normalized()
+		var far: Variant = _screen(ep + hd * 700.0)
+		if far != null:
+			_c.draw_line(p, far, Color(col, 0.55), 1.5)
+	# lead mark on the nearest enemy ship that lies ahead
+	var best: Node3D = null
+	var best_d: float = 3500.0
+	var fwd: Vector3 = aircraft.get_forward()
+	for n in get_tree().get_nodes_in_group("ship"):
+		var sh := n as Node3D
+		if sh == null or bool(sh.get("is_dead")) or String(sh.get("team")) == aircraft.team:
+			continue
+		var rel: Vector3 = sh.global_position - aircraft.global_position
+		var d: float = rel.length()
+		if d < best_d and rel.normalized().dot(fwd) > 0.5:
+			best_d = d
+			best = sh
+	if best != null:
+		var sv: Vector3 = -best.global_transform.basis.z.normalized() * float(best.get("speed")) if float(best.get("speed")) > 0.0 else Vector3.ZERO
+		var lead: Vector3 = tp.lead_point(tid, ep, best.global_position, sv, float(ent["t"]))
+		var bp: Variant = _screen(best.global_position)
+		if bp != null:
+			_c.draw_rect(Rect2((bp as Vector2) - Vector2(11, 11), Vector2(22, 22)), Color(COL_TGT, 0.8), false, 1.5)
+		if lead != Vector3.ZERO:
+			var lp: Variant = _screen(Vector3(lead.x, 0.0, lead.z))
+			if lp != null:
+				var l: Vector2 = lp
+				_c.draw_colored_polygon(PackedVector2Array([l + Vector2(0, -10), l + Vector2(10, 0), l + Vector2(0, 10), l + Vector2(-10, 0)]), Color(COL_GUN, 0.35))
+				_c.draw_polyline(PackedVector2Array([l + Vector2(0, -10), l + Vector2(10, 0), l + Vector2(0, 10), l + Vector2(-10, 0), l + Vector2(0, -10)]), COL_GUN, 2.0)
+				_c.draw_string(font, l + Vector2(14.0, 5.0), "AIM  %d m" % int(best_d), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, COL_GUN)
+		else:
+			_c.draw_string(font, Vector2(cx - 150.0, y0 + 20.0), "NO INTERCEPT: close the range", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, COL_BOMB)
 
 
 ## Fixed bombsight graticule (vertical + horizontal hairs with ticks) at the view centre.

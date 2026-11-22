@@ -95,6 +95,7 @@ func rearm() -> void:
 	rockets_left = aircraft.max_rockets()
 	aircraft.ammo = aircraft.max_ammo()
 	aircraft.bombs = aircraft.max_bombs()
+	sync_torpedo_visuals()
 	_warned_low = false
 	_warned_out = false
 
@@ -144,6 +145,8 @@ func _on_fire(a: Aircraft) -> void:
 		Weapons.fire_bullet(mp + d * 1.5, base_vel + d * st.gun_speed, a.team, a, per_bullet, tracer, life)
 		FX.muzzle_flash(m)
 	a.ammo = maxi(ammo0 - mini(2, n_fire), 0)
+	if a.player_controlled and a.infinite_ammo:
+		a.ammo = ammo0          # practice aid: the guns never run dry
 	if a.player_controlled:
 		_check_ammo(a)
 	var shot_sfx: String = ("gun:" + st.gun_sound) if st.gun_sound != "" else ("cannon" if st.gun_damage >= 2.0 else "gun")
@@ -178,19 +181,24 @@ func _on_bomb(a: Aircraft) -> void:
 	var basis: Basis = a.global_transform.basis
 	var want_rockets: bool = a.weapon_mode == 1 or (a.weapon_mode == 0 and a.bombs <= 0)   # AI bombers leave the mode at guns
 	if not want_rockets and a.bombs > 0:
-		a.bombs -= 1
+		if not (a.player_controlled and a.infinite_ammo):
+			a.bombs -= 1
 		_bomb_side = -_bomb_side
 		var pos: Vector3 = a.global_position - basis.y * 1.8 + basis.x * _bomb_side * 1.2
 		var vel: Vector3 = a.velocity
 		if vel.length_squared() < 1.0:
 			vel = a.get_forward() * a.speed
+		if a.torpedo_load:
+			_drop_torpedo(a, pos, vel)
+			return
 		if not a.player_controlled:
 			# AI release is never perfect: a slip or skid, a twitch on the stick, the wrong moment -- the bomb drifts
 			vel += Vector3(randf_range(-1.0, 1.0), randf_range(-0.6, 0.6), randf_range(-1.0, 1.0)) * AI_BOMB_SCATTER
 		Weapons.drop_bomb(pos, vel, a.team, a, st.bomb_damage, st.bomb_radius)
 	elif rockets_left > 0:
 		var n: int = mini(2, rockets_left)
-		rockets_left -= n
+		if not (a.player_controlled and a.infinite_ammo):
+			rockets_left -= n
 		var fwd: Vector3 = a.get_forward()
 		for i in n:
 			var side: float = -1.0 if i == 0 else 1.0
@@ -200,6 +208,43 @@ func _on_bomb(a: Aircraft) -> void:
 				# unguided rockets wander off the line of the nose (fin wobble, slip, a ragged salvo)
 				rdir = (fwd + Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * AI_ROCKET_SCATTER).normalized()
 			Weapons.fire_rocket(pos2, a.velocity + rdir * st.rocket_speed, a.team, a, st.rocket_damage, st.rocket_radius)
+
+
+## Shows the torpedoes still slung under the aircraft (Torp0, Torp1 ...) and hides the ones that have gone.
+func sync_torpedo_visuals() -> void:
+	if aircraft == null or not aircraft.torpedo_load:
+		return
+	for i in 4:
+		var n: Node3D = aircraft.find_child("Torp%d" % i, true, false) as Node3D
+		if n != null:
+			n.visible = i < aircraft.bombs
+
+
+## Release a torpedo from the fuselage roots (He 111: two, one each side; Beaufort: the one under the belly). The player's
+## own drop is judged on altitude, speed and angle (Torpedo.evaluate_release); a torpedo over land just drops.
+## With Infinite ammo the count is not reduced (done by the caller, as for bombs).
+func _drop_torpedo(a: Aircraft, pos: Vector3, vel: Vector3) -> void:
+	var tid: String = Weapons.TorpedoScript.type_for_model(a.stats.model_id)
+	if tid == "":
+		tid = "mk12"
+	var alt_m: float = maxf(a.global_position.y, 0.0) / WorldCoords.VERTICAL_SCALE
+	var roll_deg: float = rad_to_deg(a.global_transform.basis.get_euler().z)
+	var tpos: Vector3 = pos
+	if a.stats.torpedoes >= 2:
+		tpos = a.global_position - a.global_transform.basis.y * 1.2 + a.global_transform.basis.x * _bomb_side * 0.9
+	else:
+		tpos = a.global_position - a.global_transform.basis.y * 1.5
+	var tvel: Vector3 = vel + Vector3(0.0, -1.5, 0.0)
+	var t: Node3D = Weapons.drop_torpedo(tid, tpos, tvel, a.team, a, alt_m, roll_deg)
+	sync_torpedo_visuals()
+	if a.player_controlled and hud_overlay != null and t != null:
+		var v: Dictionary = t.get("verdict")
+		var msg: String = "TORPEDO AWAY"
+		match String(v.get("fate", "runs")):
+			"breaks_up": msg = "TORPEDO BROKE UP (%s)" % String(v.get("status", ""))
+			"dud": msg = "TORPEDO TOO DEEP: probable dud (%s)" % String(v.get("status", ""))
+			"porpoise": msg = "TORPEDO PORPOISING (%s)" % String(v.get("status", ""))
+		hud_overlay.flash(msg)
 
 
 ## Dogfight aim assist for the player: when an enemy sits close to the gun line, the guns converge on where it will be

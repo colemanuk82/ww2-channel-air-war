@@ -3,10 +3,10 @@ extends RefCounted
 ## Lookup of aircraft ids per side + helpers for loading AircraftStats.
 
 const ALLIED_FIGHTERS := ["spitfire", "spitfire_mkix", "spitfire_mkxiv", "hurricane", "defiant", "typhoon", "tempest", "mosquito", "p51", "p47", "p38"]
-const ALLIED_BOMBERS := ["lancaster", "b26", "blenheim", "b25", "a20", "c47"]
+const ALLIED_BOMBERS := ["lancaster", "b26", "blenheim", "beaufort", "b25", "a20", "c47"]
 const AXIS_FIGHTERS := ["bf109", "bf109f", "bf109g", "bf110", "fw190", "me262"]
 const AXIS_BOMBERS := ["ju87", "he111", "ju88", "do17", "ju52", "fw200"]
-const BOMBER_IDS := ["lancaster", "b26", "blenheim", "b25", "a20", "c47", "ju87", "he111", "ju88", "do17", "ju52", "fw200"]
+const BOMBER_IDS := ["lancaster", "b26", "blenheim", "beaufort", "b25", "a20", "c47", "ju87", "he111", "ju88", "do17", "ju52", "fw200"]
 
 
 static func ids_for_side(side: String) -> Array:

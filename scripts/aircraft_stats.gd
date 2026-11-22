@@ -34,6 +34,7 @@ extends Resource
 @export var max_health: float = 100.0
 @export var ammo: int = 600
 @export var bombs: int = 0
+@export var torpedoes: int = 0             # > 0: can carry air-dropped torpedoes instead of bombs (sortie loadout "Torpedoes")
 @export var gun_count: int = 8
 @export var fire_rate: float = 14.0
 

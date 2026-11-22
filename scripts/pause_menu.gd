@@ -88,8 +88,10 @@ func _show_score() -> void:
 		a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		hb.add_child(a)
 		hb.add_child(UIKit.label(r[1], 20))
-	var back := UIKit.button("Back", func() -> void: _score_panel.queue_free())
+	var panel_ref: Control = _score_panel
+	var back := UIKit.button("Back", func() -> void: panel_ref.queue_free())
 	vb.add_child(back)
+	PadNav.screen(_score_panel, {"first": back, "back": func() -> void: panel_ref.queue_free()})
 	back.grab_focus()
 
 
@@ -121,12 +123,15 @@ func set_open(open: bool) -> void:
 			warp_reset.call()          # 1x while paused; the row above re-arms it
 		if _warp_btn:
 			_warp_btn.text = _warp_text()
+		PadNav.screen(self, {"first": _resume_btn})
 		_resume_btn.grab_focus()
 	else:
+		PadNav.unscreen(self)
 		resume_requested.emit()
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if enabled and event.is_action_pressed("ui_cancel"):
+	# Start / B / Esc open and close the pause menu, but only from the menu itself (a sub-menu on top handles its own Back)
+	if enabled and event.is_action_pressed("ui_cancel") and (PadNav.top() == self or PadNav.top() == null):
 		set_open(not _root.visible)
 		get_viewport().set_input_as_handled()

@@ -8,25 +8,28 @@ extends Node
 ##   stuka   dive-bomber attack on Channel shipping (a ship near the player when there is one) or a port, escorted
 ##   sweep   a "free hunt" fighter sweep: out to a patrol area, a square patrol over it (it picks up the route
 ##           again after every fight), then home
+##   torpedo He 111 (Axis) / Beaufort (Allies) torpedo-bombers on a Channel ship: cruise out, come down to the sea,
+##           run in low and drop inside the height / speed limits, then turn away
 ##   recon   a single high aircraft over an objective and home
 ## Group size: mostly small (a pair to a schwarm), sometimes medium, now and then a large raid (SIZE_ODDS), cut
 ## down to what the AI budget (AIFactory.ai_room) allows. Every flight flies a waypoint route out, over the target
 ## (bombs fall there) and home to its own airfield, and is tidied away once it has left the player's sector.
 ## Medium and large raids are announced on the radio and the other side's fighters are scrambled against them.
 ## Owned by FreeFlightMode (ambient flights; cfg "ambient"). Data-driven: the tables below.
-## Debug: --flights-test (first flight after 5 s), --flights-kind=raid|stuka|sweep|recon, --flights-size=0|1|2,
+## Debug: --flights-test (first flight after 5 s), --flights-kind=raid|stuka|torpedo|sweep|recon, --flights-size=0|1|2,
 ## --flights-log ([mission] lines), --flights-every=SECS.
 
 enum Size { SMALL, MEDIUM, LARGE }
 
 const SIZE_ODDS: Array[float] = [0.62, 0.28, 0.10]            # small, medium, large
 ## Mission weights per side that flies them (the Allied side has no dive-bombers).
-const KIND_ODDS_AXIS := {"raid": 0.30, "stuka": 0.14, "sweep": 0.40, "recon": 0.16}
-const KIND_ODDS_ALLIED := {"raid": 0.40, "sweep": 0.46, "recon": 0.14}
+const KIND_ODDS_AXIS := {"raid": 0.28, "stuka": 0.12, "torpedo": 0.08, "sweep": 0.38, "recon": 0.14}
+const KIND_ODDS_ALLIED := {"raid": 0.36, "torpedo": 0.08, "sweep": 0.42, "recon": 0.14}
 ## Aircraft in the formation, by kind and size: [main min, main max, escort min, escort max].
 const COUNTS := {
 	"raid": [[3, 4, 2, 4], [6, 9, 4, 6], [12, 18, 8, 10]],
 	"stuka": [[3, 4, 2, 3], [6, 8, 3, 4], [10, 12, 5, 6]],
+	"torpedo": [[2, 3, 2, 3], [3, 5, 3, 4], [5, 6, 4, 5]],      # small groups, escorted (He 111 H-6 / Beaufort)
 	"sweep": [[2, 4, 0, 0], [6, 8, 0, 0], [10, 12, 0, 0]],
 	"recon": [[1, 1, 0, 0], [1, 1, 0, 0], [1, 1, 0, 0]],
 }
@@ -37,6 +40,8 @@ const DESPAWN_RANGE: float = 45000.0
 const MAX_AGE: float = 1500.0
 const BOMBER_ALT := [2400.0, 4300.0]
 const STUKA_ALT := [2000.0, 3000.0]
+const TORPEDO_ALT := [500.0, 800.0]    # cruise height; the attack comes down to the sea about 3 km out (AIPilot._run_torpedo_attack)
+const TORPEDO_STRIKE_RANGE: float = 6500.0   # the leader this close to the ship: every torpedo-bomber is sent in on it
 const SWEEP_ALT := [1800.0, 5200.0]
 const RECON_ALT := [5200.0, 6400.0]
 const ESCORT_CLOSE: int = 4            # this many escorts ride close, the rest fly top cover
@@ -288,11 +293,13 @@ func launch_next() -> Dictionary:
 	var kind: String = _forced_kind if _forced_kind != "" else pick_kind(enemy, randf())
 	if kind == "stuka" and enemy != "Axis":
 		kind = "raid"
+	if kind == "torpedo" and _find_ship() == null:
+		kind = "raid"                 # no ship of the player's side within reach
 	var cls: int = _forced_size if _forced_size >= 0 else size_class(randf())
 	var targets: Array = pop.raid_targets(side)
 	for a in pop.airfield_sites("RAF" if side == "Allies" else "Luftwaffe"):
 		targets.append({"id": a["id"], "name": str(a["name"]) + " airfield", "pos": a["pos"], "kind": "airfield"})
-	if kind == "stuka":
+	if kind == "stuka" or kind == "torpedo":
 		var ship: Node3D = _find_ship()
 		if ship != null:
 			targets = [{"id": "ship", "name": "Channel shipping", "pos": ship.global_position, "kind": "ship", "node": ship}]
@@ -338,11 +345,15 @@ func spawn_flight(kind: String, cls: int, pl: Dictionary) -> Dictionary:
 	match kind:
 		"raid": alt = clampf(pp.y + randf_range(200.0, 1200.0), BOMBER_ALT[0], BOMBER_ALT[1])
 		"stuka": alt = randf_range(STUKA_ALT[0], STUKA_ALT[1])
+		"torpedo": alt = randf_range(TORPEDO_ALT[0], TORPEDO_ALT[1])
 		"recon": alt = randf_range(RECON_ALT[0], RECON_ALT[1])
 		_: alt = clampf(pp.y + randf_range(-300.0, 900.0), SWEEP_ALT[0], SWEEP_ALT[1])
 	start.y = maxf(alt, GroundKit.ground_y(start.x, start.z) + 600.0)
 	var rt: Dictionary = build_route(start, tpos, home, alt, kind)
 	var route: Array[Vector3] = rt["pts"]
+	if kind == "torpedo":
+		route[int(rt["target_idx"])].y = 70.0
+		route[int(rt["target_idx"]) + 1].y = 120.0
 	var hdg: float = WorldCoords.dir_to_heading(Vector3(route[0].x - start.x, 0.0, route[0].z - start.z))
 	var f: Dictionary = {"kind": kind, "size": cls, "target": tgt, "tpos": tpos, "home": home, "alt": alt, "members": [], "bombers": [],
 		"escorts": [], "defenders": [], "leader": null, "form": null, "route": route, "target_idx": int(rt["target_idx"]),
@@ -350,8 +361,8 @@ func spawn_flight(kind: String, cls: int, pl: Dictionary) -> Dictionary:
 	flights.append(f)
 	launched += 1
 	match kind:
-		"raid", "stuka":
-			_spawn_bombers(f, int(cnt["main"]), int(cnt["escort"]), start, hdg, "ju87" if kind == "stuka" else "")
+		"raid", "stuka", "torpedo":
+			_spawn_bombers(f, int(cnt["main"]), int(cnt["escort"]), start, hdg, "ju87" if kind == "stuka" else (("he111" if enemy == "Axis" else "beaufort") if kind == "torpedo" else ""))
 		"sweep":
 			_spawn_sweep(f, int(cnt["main"]), start, hdg)
 		_:
@@ -359,7 +370,7 @@ func spawn_flight(kind: String, cls: int, pl: Dictionary) -> Dictionary:
 	f["what"] = _describe(f)
 	_announce(f)
 	_log("[mission] launch %s" % _summary(f))
-	if cls >= Size.MEDIUM and kind in ["raid", "stuka"]:
+	if cls >= Size.MEDIUM and kind in ["raid", "stuka", "torpedo"]:
 		_scramble_defenders(f)
 	return f
 
@@ -384,12 +395,13 @@ func _spawn_bombers(f: Dictionary, n_b: int, n_esc: int, start: Vector3, hdg: fl
 	for i in n_b:
 		var off: Vector3 = BomberFormation.slot_offset(i, 95.0)
 		var role: int = AIPilot.Role.BOMBER_LEADER if i == 0 else AIPilot.Role.BOMBER_FOLLOWER
-		var ac: Aircraft = AIFactory.spawn(world, bid, enemy, start + yaw * off, hdg, -1.0, difficulty, role)
+		var torp: bool = str(f["kind"]) == "torpedo"
+		var ac: Aircraft = AIFactory.spawn(world, bid, enemy, start + yaw * off, hdg, -1.0, difficulty, role, null, false, torp)
 		ac.add_to_group("bomber")
 		form.members.append(ac)
 		var p: AIPilot = AIFactory.pilot_of(ac)
 		p.bomb_target = ground_t
-		p.bomb_armed = true
+		p.bomb_armed = not torp
 		p.bomber_speed_k = 0.92
 		p.set_leader(null if i == 0 else form.members[0], off)
 		p.landed_ai.connect(form._on_member_landed)
@@ -523,6 +535,7 @@ func _describe(f: Dictionary) -> String:
 	match str(f["kind"]):
 		"raid": return "%d bombers and %d fighters for %s" % [n_main, (f["escorts"] as Array).size(), tn]
 		"stuka": return "%d dive-bombers and %d fighters on %s" % [n_main, (f["escorts"] as Array).size(), tn]
+		"torpedo": return "%d torpedo-bombers and %d fighters on %s" % [n_main, (f["escorts"] as Array).size(), tn]
 		"sweep": return "a sweep of %d fighters over %s" % [n_main, tn]
 	return "a reconnaissance aircraft over %s" % tn
 
@@ -625,12 +638,23 @@ func _update(f: Dictionary, dt: float) -> bool:
 		if ph != str(f["phase"]):
 			f["phase"] = ph
 			_log("[mission] %s %s -> %s (wp %d/%d, lead %.0f m alt, %.1f km from player, %d alive)" % [str(f["kind"]), str(f["target"]["name"]), ph, lp.wp_index, lp.waypoints.size(), lead.global_position.y, d / 1000.0, _alive(f["members"]).size()])
-			if ph == "home" and str(f["kind"]) in ["raid", "stuka"]:
+			if ph == "home" and str(f["kind"]) in ["raid", "stuka", "torpedo"]:
 				_log("[mission] %s bombs: %s" % [str(f["kind"]), _bombs_left(f)])
 		# a fighter flight whose leader finished a fight resumes its route instead of stooging about
 		if lp.role == AIPilot.Role.FIGHTER and lp.state == AIPilot.State.PATROL and lp.wp_index < lp.waypoints.size() and str(f["kind"]) != "":
 			lp.state = AIPilot.State.ROUTE
 			_log("[mission] %s resumes its route (wp %d)" % [str(f["kind"]), lp.wp_index])
+	# torpedo-bombers: once the leader is within strike range of the ship, every one goes in on it
+	if str(f["kind"]) == "torpedo" and not bool(f.get("struck", false)):
+		var tnode: Variant = (f["target"] as Dictionary).get("node")
+		if tnode != null and is_instance_valid(tnode) and not bool((tnode as Node).get("is_dead")):
+			if _flat(lead.global_position, (tnode as Node3D).global_position) < TORPEDO_STRIKE_RANGE:
+				f["struck"] = true
+				for b in _alive(f["bombers"]):
+					var bp: AIPilot = AIFactory.pilot_of(b)
+					if bp != null and (b as Aircraft).bombs > 0:
+						bp.set_strike(tnode as Node3D)
+				_log("[mission] torpedo-bombers attacking %s" % str(f["target"]["name"]))
 	# escorts: re-attach to the lead after a leader change, widen their reaction when the bombers are hit
 	if not (f["escorts"] as Array).is_empty():
 		var alert: bool = float(f["age"]) - float(f["alert_t"]) < 25.0

@@ -2,7 +2,7 @@ class_name ModelSpecs
 extends RefCounted
 ## Spec dictionaries for PlaneBuilder (metres, nose toward -Z). get_spec(id) returns {} if unknown.
 
-const IDS := ["hurricane", "typhoon", "mosquito", "p51", "p47", "bf109", "fw190", "me262", "lancaster", "b26", "ju87", "he111", "ju88", "bf110", "do17", "ju52", "fw200", "blenheim", "tempest", "p38", "defiant", "b25", "a20", "c47", "dh89"]
+const IDS := ["hurricane", "typhoon", "mosquito", "p51", "p47", "bf109", "fw190", "me262", "lancaster", "b26", "ju87", "he111", "ju88", "bf110", "do17", "ju52", "fw200", "blenheim", "tempest", "p38", "defiant", "b25", "a20", "c47", "dh89", "beaufort"]
 
 const RAF_TOP := Color(0.18, 0.28, 0.14)
 const RAF_PATCH := Color(0.33, 0.26, 0.16)
@@ -49,7 +49,33 @@ static func _spec_for(id: String) -> Dictionary:
 		"a20": return a20()
 		"c47": return c47()
 		"dh89": return dh89()
+		"beaufort": return beaufort()
 	return {}
+
+
+## Bristol Beaufort Mk I (Coastal Command torpedo bomber): 17.63 m span, 13.5 m long, two Taurus radials, deep
+## fuselage with a glazed nose, dorsal turret behind the wing, one torpedo slung under the belly (fitted by the
+## aircraft when the loadout is torpedoes, see Torpedo.fit_to_body). Coastal Command Temperate Sea scheme.
+static func beaufort() -> Dictionary:
+	return {
+		"scale": 1.1, "nation": "RAF", "outline": 0.02,
+		"colors": {"top": Color(0.20, 0.24, 0.25), "under": Color(0.73, 0.77, 0.66), "patch": Color(0.14, 0.17, 0.19)},
+		"fus": {"z0": -5.7, "z1": 7.8, "hw": 0.88, "hh": 1.2, "cy": 0.1, "profile": "bomber"},
+		"wing": {"root_x": 0.9, "half": 8.8, "y": -0.25, "dihedral": 0.15, "cr": 3.7, "ct": 1.7, "le_z": -1.6, "sweep": 0.12, "thick": 0.14},
+		"tail": {"z": 6.7, "span": 4.4, "cr": 2.0, "ct": 1.0, "y": 0.7},
+		"fin": {"z": 6.4, "y": 0.6, "h": 2.8, "cr": 2.4, "ct": 1.1},
+		"engines": [
+			{"x": -2.9, "y": -0.25, "z0": -3.7, "z1": 1.8, "r": 0.68, "prop_r": 1.75, "blades": 3},
+			{"x": 2.9, "y": -0.25, "z0": -3.7, "z1": 1.8, "r": 0.68, "prop_r": 1.75, "blades": 3}],
+		"canopies": [[[-5.7, 0.15, 0.15, 0.3], [-5.0, 0.6, 0.6, 0.65], [-3.9, 0.8, 0.75, 1.0], [-2.3, 0.7, 0.5, 1.25], [-0.9, 0.45, 0.3, 1.3]]],
+		"turret": {"pos": Vector3(0.0, 1.38, 1.9), "r": 0.62},
+		"extras": [],
+		"gear": {"x": 2.9, "y": -0.9, "z": -0.6, "len": 1.1, "r": 0.55},
+		"tail_wheel": [-0.5, 7.3],
+		"guns": [-0.7, -0.1, -4.6], "eye": Vector3(0, 1.1, -3.6),
+		"mark_z": 5.1, "mark_t": 0.8, "mark_size": 0.8, "wing_mark_size": 1.1,
+		"prop_tip": Color(0.1, 0.1, 0.1),
+	}
 
 
 static func hurricane() -> Dictionary:

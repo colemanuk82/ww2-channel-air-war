@@ -11,6 +11,7 @@ nation = "Luftwaffe"
 model_id = "he111"
 ammo = 4800
 bombs = 16
+torpedoes = 2
 gun_count = 5
 fire_rate = 10
 gear_height = 2.94

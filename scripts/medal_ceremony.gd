@@ -71,6 +71,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	add_to_group("medal_ceremony")
 	_next()
+	PadNav.screen(self, {"a_label": "Carry on", "b_label": "Skip"})
 
 
 func _next() -> void:

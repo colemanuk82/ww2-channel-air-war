@@ -27,7 +27,7 @@ static func ai_room(tree: SceneTree) -> int:
 	return 1000 if ai_cap <= 0 else maxi(0, ai_cap - ai_live(tree))
 
 
-static func spawn(parent: Node, stats_id: String, team: String, pos: Vector3, heading_deg: float, speed: float = -1.0, difficulty: float = 0.5, role: int = AIPilot.Role.FIGHTER, leader: Node3D = null, on_ground: bool = false) -> Aircraft:
+static func spawn(parent: Node, stats_id: String, team: String, pos: Vector3, heading_deg: float, speed: float = -1.0, difficulty: float = 0.5, role: int = AIPilot.Role.FIGHTER, leader: Node3D = null, on_ground: bool = false, torpedo: bool = false) -> Aircraft:
 	var packed: PackedScene = load(AIRCRAFT_SCENE)
 	var ac: Aircraft = packed.instantiate() as Aircraft
 	ac.stats = AircraftCatalog.load_stats(stats_id)
@@ -39,6 +39,7 @@ static func spawn(parent: Node, stats_id: String, team: String, pos: Vector3, he
 	ac.player_controlled = false
 	ac.team = team
 	ac.start_gear_down = on_ground
+	ac.torpedo_load = torpedo and ac.stats.torpedoes > 0       # a torpedo-bomber flight (EnemyFlights "torpedo")
 	parent.add_child(ac)
 	ac.reset_pose(pos, heading_deg, not on_ground, speed)
 	var pilot: AIPilot = AIPilot.attach(ac, role, difficulty)

@@ -65,6 +65,7 @@ func _ready() -> void:
 	cont.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(cont)
 	cont.grab_focus()
+	PadNav.screen(self, {"first": cont})
 
 
 func _unhandled_input(event: InputEvent) -> void:

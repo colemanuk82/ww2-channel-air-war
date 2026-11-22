@@ -38,6 +38,15 @@ var _bob_t: float = randf() * 10.0
 var _len: float = 30.0
 var _beam: float = 4.0
 var _aa_cd: float = 0.0
+# torpedo damage: a hit floods the hull on that side, so the ship lists towards it and slows; a ship that dies of one
+# rolls well over, trims by the bow and goes right under (see torpedo_hit / _process)
+var _torp_hit: bool = false
+var _torp_hits: int = 0
+var _list_sign: float = 1.0          # rotation.z sign that lowers the side that was hit
+var _list_target: float = 0.0        # rad, magnitude of the list of a living ship
+var _list_cur: float = 0.0
+var _sink_secs: float = 20.0
+var _foam_t: float = 0.0
 
 ## Warships carry light anti-aircraft guns only (pom-poms and Oerlikons). Rounds per second by hull type. The rounds
 ## are weak: a single flyby does little, but a fighter that stays in range for a while gets hurt.
@@ -265,10 +274,26 @@ func _process(delta: float) -> void:
 	delta = minf(delta, 0.1)
 	_bob_t += delta
 	if is_dead:
-		_sink = minf(_sink + delta / 20.0, 1.0)
-		global_position.y = lerpf(0.0, -_len * 0.22 * scale.y, _sink)
-		rotation.z = lerpf(0.0, deg_to_rad(22.0), _sink)
-		rotation.x = lerpf(0.0, deg_to_rad(-6.0), _sink)
+		_sink = minf(_sink + delta / _sink_secs, 1.0)
+		if _torp_hit:
+			# torpedoed: the hull rolls over towards the hit side (ease-in), the bow drops and the ship goes under
+			var e: float = _sink * _sink * (3.0 - 2.0 * _sink)
+			global_position.y = lerpf(0.0, -_len * 0.5 * scale.y, _sink * _sink)
+			rotation.z = lerpf(0.0, deg_to_rad(40.0) * _list_sign, e)
+			rotation.x = lerpf(0.0, deg_to_rad(-12.0), e)
+			if _sink < 0.9:
+				_foam_t -= delta
+				if _foam_t <= 0.0:
+					_foam_t = 0.6
+					# air and oil boiling up along the waterline
+					for k in 3:
+						var fp: Vector3 = global_position + global_transform.basis * Vector3(randf_range(-0.5, 0.5) * _beam, 0.0, randf_range(-0.5, 0.5) * _len) * scale.x
+						FX.puffs.spawn(Vector3(fp.x, 0.3, fp.z), Vector3(randf_range(-0.5, 0.5), randf_range(0.4, 1.0), randf_range(-0.5, 0.5)), randf_range(2.0, 3.5), 1.5, 4.5,
+							Color(0.92, 0.95, 0.97, 0.55), Color(0.85, 0.9, 0.93, 0.0), 0.3, 0.0, 0.6)
+		else:
+			global_position.y = lerpf(0.0, -_len * 0.22 * scale.y, _sink)
+			rotation.z = lerpf(0.0, deg_to_rad(22.0), _sink)
+			rotation.x = lerpf(0.0, deg_to_rad(-6.0), _sink)
 		if _wake:
 			_wake.visible = false
 		if _sink >= 1.0 and is_instance_valid(_intact) and _intact.visible:
@@ -321,7 +346,8 @@ func _step(delta: float, snap: bool) -> void:
 		p += side * lat * _lat_k
 	global_position = Vector3(p.x, 0.1 + sin(_bob_t * 1.4) * 0.12, p.z)
 	rotation.y = _yaw
-	rotation.z = sin(_bob_t * 0.9) * 0.012
+	_list_cur = move_toward(_list_cur, _list_target * _list_sign, maxf(delta, 0.0) * 0.04)
+	rotation.z = sin(_bob_t * 0.9) * 0.012 + _list_cur
 
 
 ## Light anti-aircraft fire at the nearest enemy aircraft in range: tracer rounds with a wide spread, the cooldown set
@@ -350,8 +376,27 @@ func _tick_aa(delta: float) -> void:
 	Weapons.fire_bullet(from + dir * 2.0, dir * 420.0, team, self, AA_DAMAGE, true, 2.2)
 
 
+## An air-launched torpedo detonated against the hull at `hit_pos` (world). Heavy damage (several hits for the big ships);
+## a ship that survives lists towards the hit side and slows, one that dies rolls over and goes under (see _process).
+func torpedo_hit(dmg: float, hit_pos: Vector3, src: Node = null) -> void:
+	if is_dead:
+		return
+	_torp_hit = true
+	_torp_hits += 1
+	_list_sign = -1.0 if to_local(hit_pos).x >= 0.0 else 1.0
+	_list_target = deg_to_rad(minf(4.0 + 5.0 * float(_torp_hits), 20.0))
+	speed *= 0.5
+	if speed < 1.5:
+		speed = 0.0
+	_sink_secs = 30.0
+	take_damage(dmg, src)
+
+
 func _on_destroyed(_killer: Node) -> void:
 	speed = 0.0
+	if _torp_hit:
+		_sink_secs = 30.0
+		_list_cur = 0.0
 	if is_instance_valid(_intact):
 		for n in _intact.find_children("*", "MeshInstance3D", true, false):
 			(n as MeshInstance3D).material_overlay = null

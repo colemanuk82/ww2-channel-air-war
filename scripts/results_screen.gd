@@ -70,6 +70,7 @@ func _build(success: bool, stats: Dictionary) -> void:
 	vb.add_child(UIKit.button("Back to menu", func() -> void: menu_requested.emit()))
 	vb.add_child(UIKit.button("Quit game", func() -> void: quit_requested.emit()))
 	b1.grab_focus()
+	PadNav.screen(self, {"first": b1})
 	for gm in get_tree().get_nodes_in_group("game_music"):
 		gm.call("fade_out_and_stop")
 	# victory music for a successful mission (assets/music/victory/<allies|axis>.mp3)

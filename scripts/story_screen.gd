@@ -67,6 +67,7 @@ func _ready() -> void:
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	vb.add_child(_hint)
 	_next()
+	PadNav.screen(self, {"a_label": "Continue", "b_label": "Skip story"})
 
 
 func _process(delta: float) -> void:

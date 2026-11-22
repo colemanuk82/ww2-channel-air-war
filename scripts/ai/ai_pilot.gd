@@ -491,6 +491,9 @@ func _run_strike(delta: float) -> void:
 	var flat: float = Vector2(to.x, to.z).length()
 	_thr = 0.9
 	if role == Role.BOMBER_LEADER or role == Role.BOMBER_FOLLOWER:
+		if ac.torpedo_load:
+			_run_torpedo_attack(delta, tg, flat)
+			return
 		if ac.bombs <= 0 or flat < 200.0:
 			_end_strike()
 			return
@@ -499,6 +502,70 @@ func _run_strike(delta: float) -> void:
 		_dir = Vector3(to.x, 0.0, to.z).normalized()
 		return
 	_run_fighter_strike(delta, tg)
+
+
+## Torpedo attack (Beaufort / He 111 with a torpedo loadout) on a ship: come down to the sea well out, run in low and
+## slow at the ship along the line that leads it (Torpedo.lead_point: the torpedo's running speed against the ship's
+## course), release inside the weapon's height / speed limits at about 700-1000 m, then turn away. Pilots misjudge the
+## lead a little (accuracy), so some torpedoes miss. A release that never gets inside the limits is not made.
+## _strike_phase 0 = run in, 2 = turning away.
+func _run_torpedo_attack(delta: float, tg: Node3D, flat: float) -> void:
+	var tp: GDScript = Weapons.TorpedoScript
+	var tid: String = tp.type_for_model(ac.stats.model_id)
+	if tid == "":
+		tid = "mk12"
+	var lim: Dictionary = tp.TYPES[tid]
+	var pos: Vector3 = ac.global_position
+	var to: Vector3 = tg.global_position - pos
+	var flat_dir: Vector3 = Vector3(to.x, 0.0, to.z) / maxf(flat, 1.0)
+	if _strike_phase == 2:
+		# break away: hard turn off the track and climb a little, then back to the route
+		_strike_extend -= delta
+		var away: Vector3 = Vector3(-flat_dir.x, 0.0, -flat_dir.z).rotated(Vector3.UP, deg_to_rad(55.0 if _strike_err.x >= 0.0 else -55.0))
+		_dir = Vector3(away.x, 0.12, away.z).normalized()
+		_thr = 1.0
+		if _strike_extend <= 0.0 or flat > 2600.0:
+			_end_strike()
+		return
+	if ac.bombs <= 0:
+		_end_strike()
+		return
+	var sv: Vector3 = Vector3.ZERO
+	var tsp: Variant = tg.get("speed")
+	if tsp != null and float(tsp) > 0.1:
+		sv = -tg.global_transform.basis.z.normalized() * float(tsp)
+	var hv := Vector3(ac.velocity.x, 0.0, ac.velocity.z)
+	var hs: float = hv.length()
+	var fall_t: float = sqrt(2.0 * maxf(ac.global_position.y, 20.0) / (9.8 * WorldCoords.VERTICAL_SCALE))
+	var entry: Vector3 = pos + flat_dir * hs * fall_t * 0.95
+	entry.y = 0.0
+	var lead: Vector3 = tp.lead_point(tid, entry, tg.global_position, sv * _strike_lead_k, fall_t)
+	if lead == Vector3.ZERO:
+		lead = tg.global_position
+	lead += _strike_err * 0.6
+	var aim: Vector3 = Vector3(lead.x - entry.x, 0.0, lead.z - entry.z)
+	var aim_dir: Vector3 = aim.normalized() if aim.length() > 1.0 else flat_dir
+	# height: down to about 60% of the weapon's drop ceiling over the last few km; speed: eased back inside the limit
+	var want_alt_m: float = float(lim["max_alt"]) * 0.65
+	var want_y: float = want_alt_m * WorldCoords.VERTICAL_SCALE + clampf((flat - 2600.0) * 0.12, 0.0, 700.0)
+	var climb: float = clampf((want_y - pos.y) / 260.0, -0.3, 0.2)
+	_dir = Vector3(aim_dir.x, climb, aim_dir.z).normalized()
+	var spd_ok: bool = hs <= float(lim["max_speed"]) * 0.97
+	_thr = 0.4 if (flat < 2800.0 and not spd_ok) else (0.55 if flat < 2800.0 else 0.9)
+	var alt_m: float = pos.y / WorldCoords.VERTICAL_SCALE
+	var ang: float = Vector3(ac.get_forward().x, 0.0, ac.get_forward().z).normalized().angle_to(aim_dir)
+	var drop_range: float = 760.0 + 120.0 * float(_strike_pass)
+	if flat < drop_range and flat > 450.0 and ang < 0.13 and alt_m <= float(lim["max_alt"]) and alt_m >= 6.0 and spd_ok:
+		ac.bomb_requested.emit(ac)
+		_strike_pass += 1
+		_strike_phase = 2
+		_strike_extend = 14.0
+		if DEBUG_STRIKE:
+			print("[strike] %s torpedo away at %.0f m, %.0f m high, %.0f km/h" % [ac.name, flat, alt_m, hs * 3.6])
+	elif flat < 380.0:
+		_strike_phase = 2                  # no clean drop: overshot, break away
+		_strike_extend = 8.0
+		_end_strike()
 
 
 ## A fresh attack pass: every pilot misjudges a little, the poorer ones more, so the bombs, rockets and bullets land
@@ -671,7 +738,7 @@ func _ground_strike(delta: float) -> void:
 	# for an opportunistic strike (this used to walk every damageable node, every aircraft, every frame).
 	var bomber: bool = role == Role.BOMBER_LEADER or role == Role.BOMBER_FOLLOWER
 	if bomber:
-		if ac.bombs <= 0:
+		if ac.bombs <= 0 or ac.torpedo_load:       # torpedoes are only dropped on a planned low attack (_run_torpedo_attack)
 			return
 	elif ac.stats.rockets <= 0 or _salvos >= ac.stats.rockets / 2:
 		return

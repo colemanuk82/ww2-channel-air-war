@@ -53,6 +53,7 @@ func _ready() -> void:
 	box.add_child(UIKit.button("Back", func() -> void: _close(), 18))
 	_show("Allies")
 	_play_voice()
+	PadNav.screen(self)
 
 
 func _show(side: String) -> void:

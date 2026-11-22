@@ -96,6 +96,8 @@ func _ready() -> void:
 	_test_weapon_targets_left_tree()
 	_test_combat_audio()
 	_test_controls_ui()
+	await _test_pad_navigation()
+	_test_practice_aids()
 	print("\nTESTS %s  (%d passed, %d failed)" % ["FAILED" if _failed > 0 else "OK", _passed, _failed])
 	get_tree().quit(1 if _failed > 0 else 0)
 
@@ -4115,3 +4117,480 @@ func _test_enemy_flights() -> void:
 	me.queue_free()
 	ef.queue_free()
 	AIFactory.ai_cap = cap_before
+
+
+# ================================================================== controller navigation (PadNav)
+## Every menu / overlay screen is built headless and checked for: registered with PadNav, an initial focus, every visible
+## enabled Button / Slider / OptionButton / CheckBox / SpinBox reachable by walking focus neighbours from it, and B
+## (a real InputEventJoypadButton) backing out. User files the menus may touch are saved and restored around it.
+const _PAD_FILES := ["settings.cfg", "career.json", "campaign.json", "pilot_log.cfg"]
+
+
+func _pad_backup() -> Dictionary:
+	var out: Dictionary = {}
+	for f in _PAD_FILES:
+		var p: String = "user://" + String(f)
+		out[p] = FileAccess.get_file_as_bytes(p) if FileAccess.file_exists(p) else null
+	return out
+
+
+func _pad_restore(bk: Dictionary) -> void:
+	for p in bk.keys():
+		if bk[p] == null:
+			continue
+		var f: FileAccess = FileAccess.open(String(p), FileAccess.WRITE)
+		if f != null:
+			f.store_buffer(bk[p])
+			f.close()
+
+
+func _pad_button(btn: int, pressed: bool) -> void:
+	var e := InputEventJoypadButton.new()
+	e.button_index = btn
+	e.pressed = pressed
+	Input.parse_input_event(e)
+
+
+func _pad_tap(btn: int) -> void:
+	_pad_button(btn, true)
+	await get_tree().process_frame
+	_pad_button(btn, false)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+
+func _pad_axis(axis: int, value: float) -> void:
+	var e := InputEventJoypadMotion.new()
+	e.axis = axis
+	e.axis_value = value
+	Input.parse_input_event(e)
+
+
+func _pad_frames(n: int = 4) -> void:
+	for i in n:
+		await get_tree().process_frame
+
+
+func _pad_hit(hit: Array) -> void:
+	hit[0] = true
+
+
+## A flag that turns true when the screen emits any of its own (script-defined) signals: closed, cancelled, ...
+func _pad_watch(menu: Object) -> Array:
+	var hit: Array = [false]
+	for s in menu.get_signal_list():
+		if ClassDB.class_has_signal(menu.get_class(), String(s["name"])):
+			continue
+		var argc: int = (s["args"] as Array).size()
+		menu.connect(String(s["name"]), Callable(self, "_pad_hit").bind(hit).unbind(argc))
+	return hit
+
+
+func _pad_targets(menu: Node) -> Array:
+	var out: Array = []
+	for c in menu.find_children("*", "Control", true, false):
+		var ctl: Control = c
+		if not ctl.is_visible_in_tree():
+			continue
+		var t: Control = null
+		if ctl is SpinBox:
+			t = (ctl as SpinBox).get_line_edit()
+		elif ctl is Button or ctl is Slider:
+			t = ctl
+		if t == null or t.get_focus_mode_with_override() == Control.FOCUS_NONE:
+			continue
+		if t is BaseButton and (t as BaseButton).disabled:
+			continue
+		out.append(t)
+	return out
+
+
+func _pad_reach(start: Control) -> Dictionary:
+	var seen: Dictionary = {start: true}
+	var queue: Array = [start]
+	while not queue.is_empty():
+		var c: Control = queue.pop_front()
+		for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+			var n: Control = c.find_valid_focus_neighbor(side)
+			if n != null and not seen.has(n):
+				seen[n] = true
+				queue.append(n)
+	return seen
+
+
+func _pad_name(c: Control) -> String:
+	if c is Button:
+		return "'%s'" % (c as Button).text
+	return c.get_class() + ":" + String(c.name)
+
+
+## Initial focus inside `menu`, then every visible enabled control reachable from it.
+func _pad_check_reach(label: String, menu: Node, need_focus: bool = true) -> void:
+	var fo: Control = get_viewport().gui_get_focus_owner()
+	var ok: bool = fo != null and menu.is_ancestor_of(fo) or fo == menu
+	if need_focus:
+		_check(ok, "%s: opens with a focused control" % label)
+	if fo == null or not ok:
+		return
+	var seen: Dictionary = _pad_reach(fo)
+	var missing: PackedStringArray = []
+	for t in _pad_targets(menu):
+		if not seen.has(t):
+			missing.append(_pad_name(t))
+			for sd in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
+				var nb: Control = t.find_valid_focus_neighbor(sd)
+				print("      unreachable ", _pad_name(t), " rect=", t.get_global_rect(), " side ", sd, " -> ", _pad_name(nb) if nb != null else "none", " ", nb.get_global_rect() if nb != null else "", " seen=", seen.has(nb))
+	_check(missing.is_empty(), "%s: every control is reachable by pad focus (unreachable: %s)" % [label, ", ".join(missing.slice(0, 6))])
+
+
+func _pad_screen_test(label: String, menu: Node, cancels: bool = true, need_focus: bool = true) -> void:
+	await _pad_frames(5)
+	_check(PadNav.top() == menu, "%s: registered as the top PadNav screen" % label)
+	_pad_check_reach(label, menu, need_focus)
+	if cancels:
+		var hit: Array = _pad_watch(menu)
+		await _pad_tap(JOY_BUTTON_B)
+		_check(hit[0] or not is_instance_valid(menu) or menu.is_queued_for_deletion() or PadNav.top() != menu, "%s: B backs out" % label)
+
+
+func _pad_free(n: Variant) -> void:
+	if is_instance_valid(n):
+		(n as Node).queue_free()
+	get_tree().paused = false
+
+
+## Sortie setup practice aids: infinite health / infinite ammo apply to the player's aircraft only.
+func _test_practice_aids() -> void:
+	print("-- infinite health / infinite ammo")
+	var p := Aircraft.new()
+	add_child(p)
+	p.player_controlled = true
+	p.infinite_health = true
+	p.health = 100.0
+	p.take_damage(500.0)
+	_check(p.health == 100.0 and p.state == Aircraft.State.ALIVE, "infinite health: gunfire / collision damage does nothing to the player")
+	p.fire_kill(true)
+	p.start_breakup("tail")
+	_check(p.state == Aircraft.State.ALIVE and p.health == 100.0, "infinite health: no fire or structural kill")
+	var ai := Aircraft.new()
+	add_child(ai)
+	ai.infinite_health = true          # the flag is ignored for AI aircraft
+	ai.infinite_ammo = true
+	ai.health = 100.0
+	ai.take_damage(30.0)
+	_check(ai.health < 100.0, "infinite health never protects an AI aircraft")
+	var ctl := Aircraft.new()
+	add_child(ctl)
+	ctl.player_controlled = true
+	ctl.health = 100.0
+	ctl.take_damage(30.0)
+	_check(ctl.health < 100.0, "with the box off the player takes damage as before")
+	# ammunition: bombs, rockets and gun rounds stay at their loaded value
+	var st := AircraftStats.new()
+	p.stats = st
+	ctl.stats = st
+	ai.stats = st
+	var ws := WeaponSystem.new()
+	add_child(ws)
+	var muz := Node3D.new()
+	p.add_child(muz)
+	ws._muzzles = [muz]
+	ws.aircraft = p
+	p.infinite_ammo = true
+	p.ammo = 500
+	ws._on_fire(p)
+	_check(p.ammo == 500, "infinite ammo: firing the guns leaves the rounds at 500 (got %d)" % p.ammo)
+	p.bombs = 4
+	p.weapon_mode = 2
+	ws._on_bomb(p)
+	_check(p.bombs == 4, "infinite ammo: dropping a bomb keeps the count (got %d)" % p.bombs)
+	ctl.bombs = 4
+	ctl.weapon_mode = 2
+	ws._on_bomb(ctl)
+	_check(ctl.bombs == 3, "with the box off a bomb release uses one (got %d)" % ctl.bombs)
+	ws.queue_free()
+	p.queue_free()
+	ai.queue_free()
+	ctl.queue_free()
+
+
+func _test_pad_navigation() -> void:
+	print("-- controller navigation: focus, reachability and back on every menu")
+	var bk: Dictionary = _pad_backup()
+	var root: Node = self
+	# --- input map: menu actions on the pad, flight actions left alone
+	var has_a: bool = false
+	for e in InputMap.action_get_events("ui_accept"):
+		has_a = has_a or (e is InputEventJoypadButton and (e as InputEventJoypadButton).button_index == JOY_BUTTON_A)
+	_check(has_a, "ui_accept is the A button")
+	var dpad_ok: bool = false
+	var stick_ok: bool = false
+	for e in InputMap.action_get_events("ui_down"):
+		dpad_ok = dpad_ok or (e is InputEventJoypadButton and (e as InputEventJoypadButton).button_index == JOY_BUTTON_DPAD_DOWN)
+		stick_ok = stick_ok or (e is InputEventJoypadMotion and (e as InputEventJoypadMotion).axis == JOY_AXIS_LEFT_Y)
+	_check(dpad_ok and stick_ok, "ui_down is the D-pad and the left stick")
+	var has_start: bool = false
+	for e in InputMap.action_get_events("ui_cancel"):
+		has_start = has_start or (e is InputEventJoypadButton and (e as InputEventJoypadButton).button_index == JOY_BUTTON_START)
+	_check(has_start, "ui_cancel is Start (pause / back)")
+	var b_in_cancel := func() -> bool:
+		for e in InputMap.action_get_events("ui_cancel"):
+			if e is InputEventJoypadButton and (e as InputEventJoypadButton).button_index == JOY_BUTTON_B:
+				return true
+		return false
+	_check(not PadNav.is_active() and not b_in_cancel.call(), "in flight (no menu open) B is not a menu action")
+	var wt_b: bool = false
+	for e in InputMap.action_get_events("weapon_toggle"):
+		wt_b = wt_b or (e is InputEventJoypadButton and (e as InputEventJoypadButton).button_index == JOY_BUTTON_B)
+	_check(wt_b, "flight: B is still the weapon toggle")
+
+	# --- start menu: focus, reach on every page, pad moves focus, one step per stick push, LB / RB flip pages, B does nothing
+	var sm := StartMenu.new()
+	root.add_child(sm)
+	await _pad_frames(6)
+	_check(PadNav.top() == sm, "start menu: registered as the top PadNav screen")
+	_check(b_in_cancel.call(), "a menu is open: B is ui_cancel")
+	for pi in StartMenu.PAGES.size():
+		sm._show_page(pi)
+		await _pad_frames(3)
+		var nav: Control = sm._nav_btns[pi]
+		nav.grab_focus()
+		_pad_check_reach("start menu page %s" % StartMenu.PAGES[pi], sm)
+	sm._show_page(0)
+	await _pad_frames(2)
+	sm._nav_btns[0].grab_focus()
+	await _pad_tap(JOY_BUTTON_RIGHT_SHOULDER)
+	_check(sm._pages[1].visible and not sm._pages[0].visible, "start menu: RB flips to the next page")
+	await _pad_tap(JOY_BUTTON_LEFT_SHOULDER)
+	_check(sm._pages[0].visible, "start menu: LB flips back")
+	sm._nav_btns[0].grab_focus()
+	var before: Control = get_viewport().gui_get_focus_owner()
+	await _pad_tap(JOY_BUTTON_DPAD_DOWN)
+	_check(get_viewport().gui_get_focus_owner() != before and get_viewport().gui_get_focus_owner() != null, "start menu: D-pad down moves the focus")
+	var f1: Control = get_viewport().gui_get_focus_owner()
+	_pad_axis(JOY_AXIS_LEFT_Y, 1.0)
+	await _pad_frames(2)
+	_pad_axis(JOY_AXIS_LEFT_Y, 0.8)       # a jittering held stick must not walk the focus further
+	await _pad_frames(2)
+	_pad_axis(JOY_AXIS_LEFT_Y, 1.0)
+	await _pad_frames(2)
+	var f2: Control = get_viewport().gui_get_focus_owner()
+	_pad_axis(JOY_AXIS_LEFT_Y, 0.0)
+	await _pad_frames(2)
+	var steps: Control = f1.find_valid_focus_neighbor(SIDE_BOTTOM)
+	_check(f2 == steps, "start menu: a held left stick moves the focus exactly one step")
+	var hit_sm: Array = _pad_watch(sm)
+	await _pad_tap(JOY_BUTTON_B)
+	_check(is_instance_valid(sm) and PadNav.top() == sm and not hit_sm[0], "start menu: B on the top level does nothing")
+
+	# --- a sub-menu on top of the start menu takes the focus, and the opener gets it back
+	var opener: Control = null
+	for b in sm.find_children("*", "Button", true, false):
+		if (b as Button).text == "Options" and (b as Button).is_visible_in_tree():
+			opener = b
+	_check(opener != null, "start menu: has an Options button")
+	if opener != null:
+		opener.grab_focus()
+		opener.pressed.emit()
+		await _pad_frames(6)
+		var sets: Node = PadNav.top()
+		_check(sets is SettingsMenu, "options: opens as the top screen over the start menu")
+		_check(sm._nav_btns[0].get_focus_mode_with_override() == Control.FOCUS_NONE, "options: the menu underneath cannot take focus")
+		if sets is SettingsMenu:
+			var sett: SettingsMenu = sets
+			for key in SettingsMenu.PAGES:
+				sett._show_page(String(key))
+				await _pad_frames(3)
+				sett._tab_btns[String(key)].grab_focus()
+				_pad_check_reach("options page %s" % key, sett)
+			sett._show_page("video")
+			sett._tab_btns["video"].grab_focus()
+			await _pad_tap(JOY_BUTTON_RIGHT_SHOULDER)
+			_check(sett._current_page == "render", "options: RB switches to the next page")
+			await _pad_tap(JOY_BUTTON_LEFT_SHOULDER)
+			_check(sett._current_page == "video", "options: LB switches back")
+			# key rebinding with only a pad: a keyboard prompt is cancelled by B, a pad prompt by the timeout / any button
+			sett._show_page("controls")
+			sett._start_listening_key("gear")
+			await _pad_frames(2)
+			_check(sett._listening_action == "gear", "controls: waiting for a key")
+			await _pad_tap(JOY_BUTTON_B)
+			_check(sett._listening_action == "", "controls: B cancels the wait for a keyboard key (no stuck prompt)")
+			sett._show_page("video")
+			await _pad_tap(JOY_BUTTON_B)
+			await _pad_frames(4)
+			_check(not is_instance_valid(sett) or sett.is_queued_for_deletion(), "options: B closes it")
+			await _pad_frames(4)
+			_check(PadNav.top() == sm, "options closed: the start menu is the top screen again")
+			_check(get_viewport().gui_get_focus_owner() == opener, "options closed: focus returns to the Options button")
+	sm.queue_free()
+	await _pad_frames(4)
+	_check(not PadNav.is_active() and not b_in_cancel.call(), "all menus closed: B is a flight button again")
+
+	# --- pause menu (sub-menu back stack: Start / B must not close the pause menu while a sub-menu is up)
+	var pm := PauseMenu.new()
+	root.add_child(pm)
+	await _pad_frames(3)
+	pm.set_open(true)
+	await _pad_frames(5)
+	_check(PadNav.top() == pm and get_viewport().gui_get_focus_owner() == pm._resume_btn, "pause menu: opens focused on Resume")
+	_pad_check_reach("pause menu", pm)
+	var score_btn: Control = null
+	for b in pm.find_children("*", "Button", true, false):
+		if (b as Button).text == "Score" and (b as Button).is_visible_in_tree():
+			score_btn = b
+	if score_btn != null:
+		score_btn.grab_focus()
+		score_btn.pressed.emit()
+		await _pad_frames(5)
+		_check(PadNav.top() != pm, "pause menu: Score opens on top")
+		await _pad_tap(JOY_BUTTON_START)
+		await _pad_frames(4)
+		_check(pm.is_open() and PadNav.top() == pm, "pause menu: Start closes the sub-menu first, not the pause menu")
+		_check(get_viewport().gui_get_focus_owner() == score_btn, "pause menu: focus returns to the Score button")
+	await _pad_tap(JOY_BUTTON_START)
+	_check(not pm.is_open(), "pause menu: Start closes it (and opens it in flight)")
+	pm.set_open(true)
+	await _pad_frames(4)
+	await _pad_tap(JOY_BUTTON_B)
+	_check(not pm.is_open(), "pause menu: B closes it")
+	_pad_free(pm)
+
+	# --- the other screens
+	var rs: Node = ResultsScreen.show_results(root, true, {"score": 120, "kills": 2, "time": 300.0})
+	await _pad_screen_test("results screen", rs, false)
+	_pad_free(rs)
+	await _pad_frames(2)
+
+	var cm := CampaignMenu.new()
+	root.add_child(cm)
+	await _pad_screen_test("campaign menu", cm)
+	_pad_free(cm)
+	await _pad_frames(2)
+
+	var dm := DamCampaignMenu.new()
+	var dlayer := CanvasLayer.new()
+	root.add_child(dlayer)
+	dlayer.add_child(dm)
+	await _pad_screen_test("dam busters menu", dm)
+	dlayer.queue_free()
+	await _pad_frames(2)
+
+	var lg := LegalMenu.new()
+	var llayer := CanvasLayer.new()
+	root.add_child(llayer)
+	llayer.add_child(lg)
+	await _pad_screen_test("credits and legal", lg)
+	llayer.queue_free()
+	await _pad_frames(2)
+
+	var lb := LogbookMenu.new()
+	var blayer := CanvasLayer.new()
+	root.add_child(blayer)
+	blayer.add_child(lb)
+	await _pad_screen_test("logbook", lb)
+	blayer.queue_free()
+	await _pad_frames(2)
+
+	var dp := DonationPrompt.new()
+	root.add_child(dp)
+	await _pad_screen_test("donation prompt", dp)
+	_pad_free(dp)
+	await _pad_frames(2)
+
+	var st: Node = StoryScreen.play(root, [{"kind": "text", "title": "T", "text": "Body text."}, {"kind": "text", "title": "U", "text": "More."}])
+	await _pad_screen_test("story screen", st, true, false)
+	_pad_free(st)
+	await _pad_frames(2)
+
+	var md := MedalCeremony.new()
+	md.side = "Allies"
+	md._queue = ["mid"]
+	root.add_child(md)
+	await _pad_screen_test("medal ceremony", md)
+	_pad_free(md)
+	await _pad_frames(2)
+
+	var gate := LegalGate.new()
+	root.add_child(gate)
+	await _pad_frames(4)
+	_check(PadNav.top() == gate, "legal gate: registered")
+	gate._step_eula()
+	await _pad_frames(6)
+	_pad_check_reach("licence agreement", gate)
+	_pad_free(gate)
+	await _pad_frames(2)
+
+	var fp := FlightPlanner.new()
+	root.add_child(fp)
+	await _pad_frames(6)
+	_check(PadNav.top() == fp and get_viewport().gui_get_focus_owner() == fp._map, "flight planner: opens with the map focused")
+	_pad_check_reach("flight planner", fp)
+	# pointer: LB / RB jump to an airfield, A picks it (this is the map click a mouse does)
+	PadNav._set_pad(true)
+	_check(PadNav._pointers.has(fp._map), "flight planner: the map has a pad pointer")
+	await _pad_tap(JOY_BUTTON_RIGHT_SHOULDER)
+	await _pad_frames(2)
+	await _pad_tap(JOY_BUTTON_A)
+	await _pad_frames(3)
+	_check(not fp._sel.is_empty() and str(fp._sel.get("airfield", "")) != "", "flight planner: LB/RB + A chooses an airfield on the map (%s)" % str(fp._sel.get("airfield", "")))
+	_check(not fp._fly.disabled, "flight planner: FLY is enabled after choosing")
+	var cancel_hit: Array = _pad_watch(fp)
+	await _pad_tap(JOY_BUTTON_B)
+	_check(cancel_hit[0], "flight planner: B backs out")
+	PadNav._set_pad(false)
+	_pad_free(fp)
+	await _pad_frames(2)
+
+	var ed := MissionEditor.new()
+	root.add_child(ed)
+	await _pad_frames(6)
+	_check(PadNav.top() == ed and get_viewport().gui_get_focus_owner() == ed._hub_list, "mission editor: opens on the mission list")
+	_pad_check_reach("mission editor list", ed)
+	ed._edit(MissionDoc.new_doc("Allies"), "")
+	await _pad_frames(6)
+	_check(get_viewport().gui_get_focus_owner() == ed._map and PadNav._pointers.has(ed._map), "mission editor: the map has focus and a pad pointer")
+	_pad_check_reach("mission editor", ed)
+	ed._tabs.current_tab = 0
+	var tab_before: int = ed._tabs.current_tab
+	await _pad_tap(JOY_BUTTON_RIGHT_SHOULDER)
+	_check(ed._tabs.current_tab == tab_before + 1, "mission editor: RB switches the side-panel tab")
+	_pad_free(ed)
+	await _pad_frames(2)
+
+	var film := TrainingFilm.new()
+	var flayer := CanvasLayer.new()
+	root.add_child(flayer)
+	flayer.add_child(film)
+	await _pad_screen_test("training film", film)
+	flayer.queue_free()
+	await _pad_frames(2)
+
+	# --- text fields do not trap the pad
+	var tf := Control.new()
+	tf.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var tvb := VBoxContainer.new()
+	tf.add_child(tvb)
+	var tb1 := Button.new()
+	tb1.text = "above"
+	tvb.add_child(tb1)
+	var tle := LineEdit.new()
+	tvb.add_child(tle)
+	var tb2 := Button.new()
+	tb2.text = "below"
+	tvb.add_child(tb2)
+	root.add_child(tf)
+	PadNav.screen(tf)
+	await _pad_frames(5)
+	tle.grab_focus()
+	await _pad_tap(JOY_BUTTON_DPAD_DOWN)
+	_check(get_viewport().gui_get_focus_owner() == tb2, "text field: D-pad down leaves it")
+	tle.grab_focus()
+	await _pad_tap(JOY_BUTTON_B)
+	_check(get_viewport().gui_get_focus_owner() == tb1, "text field: B leaves it")
+	tf.queue_free()
+	await _pad_frames(3)
+
+	_pad_restore(bk)
+	get_tree().paused = false
+	PadNav._set_pad(false)

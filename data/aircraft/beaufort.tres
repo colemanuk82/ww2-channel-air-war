@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="AircraftStats" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/aircraft_stats.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "beaufort"
+display_name = "Bristol Beaufort Mk I"
+side = "Allies"
+nation = "RAF"
+model_id = "beaufort"
+ammo = 3000
+bombs = 4
+torpedoes = 1
+gun_count = 3
+fire_rate = 9
+gear_height = 2.83
+engine_sound = "radial_mercury"
+engine_count = 2
+gun_sound = "browning303"
+max_speed = 116.1
+stall_speed = 38.2
+boost_bonus = 37.2
+accel = 4.1
+decel = 3.5
+pitch_rate_deg = 41
+roll_rate_deg = 59
+yaw_rate_deg = 14
+bank_turn_rate = 0.57
+rate_response = 3.6
+max_health = 270
+radius = 15

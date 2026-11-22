@@ -48,6 +48,7 @@ func _ready() -> void:
 	box.add_child(_fly)
 	box.add_child(UIKit.button("Back", func() -> void: closed.emit(), 18))
 	_rebuild()
+	PadNav.screen(self, {"first": _fly})
 
 
 func _rebuild() -> void:

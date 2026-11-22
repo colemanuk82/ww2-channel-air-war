@@ -140,6 +140,7 @@ static func panel(parent: Control) -> VBoxContainer:
 	# a tall panel scrolls instead of running off the screen (focus and the mouse wheel both scroll it)
 	var sc := ScrollContainer.new()
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.follow_focus = true
 	m.add_child(sc)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 10)
@@ -169,8 +170,9 @@ static func _style_button(b: Button, size: int, primary: bool) -> void:
 	n.border_color = Color(PANEL_EDGE, 0.7)
 	var h := _box(hot_bg, ACCENT, 1)
 	h.border_width_left = 6
-	var f := _box(hot_bg, ACCENT_HOT, 2)
-	f.border_width_left = 6
+	var f := _box(hot_bg.lightened(0.08), ACCENT_HOT, 3)      # focus: clearly visible on a TV (thick brass frame)
+	f.border_width_left = 9
+	f.set_expand_margin_all(2.0)
 	var p := _box(Color(0.3, 0.24, 0.1, 1.0), ACCENT, 1)
 	p.border_width_left = 6
 	b.add_theme_stylebox_override("normal", n)
@@ -179,7 +181,7 @@ static func _style_button(b: Button, size: int, primary: bool) -> void:
 	b.add_theme_stylebox_override("focus", f)
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT if not primary else HORIZONTAL_ALIGNMENT_CENTER
 	b.mouse_entered.connect(func() -> void:
-		if b.focus_mode != Control.FOCUS_NONE:
+		if b.get_focus_mode_with_override() != Control.FOCUS_NONE:
 			b.grab_focus())
 
 
@@ -199,7 +201,9 @@ static func _style_option(ob: OptionButton, size: int) -> void:
 	ob.add_theme_color_override("font_focus_color", Color.WHITE)
 	ob.add_theme_stylebox_override("normal", _box(FIELD, Color(PANEL_EDGE, 0.35), 1))
 	ob.add_theme_stylebox_override("hover", _box(Color(0.18, 0.17, 0.13, 1.0), ACCENT, 1))
-	ob.add_theme_stylebox_override("focus", _box(Color(0.18, 0.17, 0.13, 1.0), ACCENT_HOT, 2))
+	var of := _box(Color(0.2, 0.18, 0.13, 1.0), ACCENT_HOT, 3)
+	of.set_expand_margin_all(2.0)
+	ob.add_theme_stylebox_override("focus", of)
 	ob.add_theme_stylebox_override("pressed", _box(Color(0.25, 0.21, 0.12, 1.0), ACCENT, 1))
 	var pm: PopupMenu = ob.get_popup()
 	pm.add_theme_font_override("font", font())
@@ -209,7 +213,9 @@ static func _style_option(ob: OptionButton, size: int) -> void:
 	pm.add_theme_stylebox_override("panel", _box(Color(0.07, 0.075, 0.07, 0.98), PANEL_EDGE, 1))
 	var hv := _box(ACCENT, ACCENT, 0)
 	pm.add_theme_stylebox_override("hover", hv)
-	ob.mouse_entered.connect(func() -> void: ob.grab_focus())
+	ob.mouse_entered.connect(func() -> void:
+		if ob.get_focus_mode_with_override() != Control.FOCUS_NONE:
+			ob.grab_focus())
 
 
 ## Row with a left caption and an OptionButton; returns the OptionButton.

@@ -36,6 +36,9 @@ SKY = (0.73, 0.76, 0.62)
 OCEAN_GREY = (0.37, 0.39, 0.40)
 MED_SEA_GREY = (0.56, 0.58, 0.59)
 NIGHT = (0.10, 0.10, 0.11)
+# Coastal Command Temperate Sea scheme (1940-42): Extra Dark Sea Grey / Dark Slate Grey over Sky
+DARK_SLATE_GREY = (0.24, 0.28, 0.29)
+EXTRA_DARK_SEA_GREY = (0.16, 0.18, 0.20)
 # Luftwaffe (RLM)
 RLM02 = (0.50, 0.49, 0.39)
 RLM65 = (0.56, 0.65, 0.70)
@@ -79,6 +82,8 @@ SCHEMES = {
     "spitfire_raf": dict(RAF_1940, seed=1.0),
     "hurricane_raf": dict(RAF_1940, seed=2.0, wear=0.7),
     "blenheim_raf": dict(RAF_1940, seed=3.0, scale=2.4),
+    # Beaufort, Coastal Command: Dark Slate Grey / Extra Dark Sea Grey disruptive upper surfaces, Sky sides and undersides
+    "beaufort_raf": dict(RAF_1940, top1=EXTRA_DARK_SEA_GREY, top2=DARK_SLATE_GREY, under=SKY, demarc=-0.05, scale=2.6, seed=41.0, wear=0.75),
     # Defiant night fighter: Special Night overall
     "defiant_raf": dict(BASE, pattern="plain", top1=NIGHT, top2=NIGHT, under=NIGHT, demarc=-1.5, fade=0.05, seed=4.0),
     # 1944 Day Fighter Scheme (Ocean Grey / Dark Green over Medium Sea Grey), Sky tail band
