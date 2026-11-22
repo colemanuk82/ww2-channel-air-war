@@ -29,14 +29,39 @@ Any suggestions or feedback? Let me know!
 | 🌍 **Real-scale Europe** | England, the Channel, France, Belgium, the Netherlands and the Rhineland. Real airfields, towns, rivers, rail and ports. |
 | ✈️ **Two sides, two dozen aircraft** | Spitfire, Hurricane, Typhoon, Mustang, Lancaster and more for the Allies. Bf 109, Fw 190, Stuka, Me 262 and more for the Axis. Each one flies differently. |
 | ⚔️ **Fly it your way** | Dogfights, bombing runs, ground attack, escorts, sweeps and dynamic missions in free flight. |
-| 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds, rain squalls, searchlights and flak at night. |
+| 🌦️ **Dawn to midnight, clear to storm** | Weather and time of day change everything: fog banks, volumetric clouds, rain squalls, searchlights and flak at night. Press **T** to step through eight parts of the day, each at a random time. |
 | 🧑‍✈️ **Bail out and live** | Where you land decides your fate: rescued, rowed out of the Channel, or taken prisoner. |
 | 🌡️ **Realism options** | Engine overheating with its own HEAT gauge, and G-forces that grey out your vision and can knock you out. Enemy pilots suffer too. On by default, switch off any time in Options > Realism. |
 | 🛠️ **Build your own missions** | A built-in Mission Editor: place flights, convoys, ships, flak and real targets on the map, draw their routes, set objectives and script what happens with triggers, then fly it. [More below](#%EF%B8%8F-mission-editor). |
 | 🗓️ **The map follows the war** | Choose your sortie date and the ground changes with it: bomb damage that builds up through the Blitz and the bombing of Germany, the 1944 invasion build-up, Normandy after D-Day, flooded valleys, the Westwall, and bridges that fall on the day they did. Bocage, open fields, polders and the Weald, with the seasons on the farmland. |
-| 🏕️ **A living wartime map** | 116 real airfields in RAF and Luftwaffe styles, with gun pits, blast pens and dispersals. Wired army camps packed with tanks under camouflage nets, tent lines, ammo bays and fuel dumps. |
+| 🏕️ **A living wartime map** | 116 real airfields in RAF and Luftwaffe styles, with gun pits, blast pens and dispersals. Wired army camps packed with tanks under camouflage nets, tent lines, ammo bays and fuel dumps. Airfields have worn grass and footpaths, perimeter fences and guard towers. |
+| 👷 **Living airfields** | Hundreds of life-size, animated ground crew on every field: mechanics on work stands at the engines, crowds waving along the take-off run, a dressing station with medics, stretcher parties and period ambulances, a football kickabout and men stopping for a smoke. Everyone dives flat when enemy aircraft come over. |
+| 🏘️ **Towns, farms and troops** | Townspeople, police, ARP wardens and the Home Guard in English streets, queueing, cycling and pushing prams; French civilians, gendarmes and German sentries across the Channel. Farm work that follows the seasons, with horse teams, carts, ploughs, tractors and harvest stooks. Anti-aircraft and searchlight crews, checkpoints, coastal patrols and convoy halts on both sides. |
+| 🔥 **The ground reacts** | Crowds gather at crash sites while a fire engine and an ambulance arrive, the Home Guard rounds up downed pilots, and people wave at your low passes, or scatter when you open fire. |
+| 🎨 **Two art styles** | Realistic, or a bold cel-shaded look inspired by *Jet Set Radio* and the *Dragon Ball* games: ink outlines, flat bright colour and anime clouds. Press **F7** to switch mid-flight (Options > Video > Art style). |
 | 🎵 **Soundtrack** | 25 royalty-free orchestral and big-band tracks, separate Allied and Axis victory music, or import your own MP3, OGG or WAV tracks (Options > Music) and fly to your own playlist. |
 | 💸 **Free. Really.** | No ads, no accounts, no microtransactions. If you enjoy it, tell me what you think. |
+
+## 🌍 A living world
+
+The airfields, towns and fields are full of people going about the war.
+
+| | |
+|---|---|
+| ![Mechanics on work stands at the engines of a parked bomber, ground crew chatting by it](docs/promo/world/mechanics.jpg) | ![Ground crew passing a football on the airfield grass](docs/promo/world/football.jpg) |
+| ![A queue on a terraced street in Folkestone](docs/promo/world/town_queue.jpg) | ![Anti-aircraft gun crew standing at ease by their sandbagged pit](docs/promo/world/gun_crew.jpg) |
+| ![Harvest: a Land Army girl drives the hay cart past stooks and forkers](docs/promo/world/harvest.jpg) | ![A ploughman and his two-horse team in a November field](docs/promo/world/plough.jpg) |
+| ![French farm workers in blue smocks and berets hoeing a spring field](docs/promo/world/french_farm.jpg) | |
+
+## 🎨 Realistic or cel-shaded
+
+Pick the look in **Options > Video > Art style**, or press **F7** in flight to flip between them.
+
+| Realistic | Cel-shaded |
+|---|---|
+| ![The same sky over the Channel in the realistic style](docs/promo/world/real_clouds.jpg) | ![The same sky in the cel-shaded style: flat white cumulus with ink edges over a deep blue sea](docs/promo/world/cel_clouds.jpg) |
+| ![Cel-shaded: a low pass over inked brick terraces](docs/promo/world/cel_town.jpg) | ![Cel-shaded: patchwork fields from the air](docs/promo/world/cel_farm.jpg) |
+| ![Cel-shaded: a Hurricane on the grass at Hawkinge under anime clouds](docs/promo/world/cel_hawkinge.jpg) | |
 
 ## 🎮 Play it in 3 steps
 
