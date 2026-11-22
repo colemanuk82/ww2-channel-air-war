@@ -193,14 +193,19 @@ func _apply_team_outline() -> void:
 	m.set_shader_parameter("outline_color", Color(1.0, 0.85, 0.1) if friendly else Color(1.0, 0.16, 0.1))
 	var m_lod: ShaderMaterial = m.duplicate() as ShaderMaterial      # the far stand-ins are boxes: inflate them as boxes (per-face normals leave no ring)
 	m_lod.set_shader_parameter("box_hull", true)
+	var m_prop: ShaderMaterial = m.duplicate() as ShaderMaterial      # prop parts are metres from the camera: draw their outline after the cloud volumes (priority 20 / 21)
+	m_prop.render_priority = PROP_OVERLAY_PRIORITY
 	for root in [_model, _lod_model]:
 		if root == null or not is_instance_valid(root):
 			continue
 		for n in (root as Node3D).find_children("*", "MeshInstance3D", true, false):
 			var mi: MeshInstance3D = n as MeshInstance3D
-			if mi == null or String(mi.name).findn("disc") >= 0:
+			if mi == null or _skips_overlay(mi):
 				continue
-			mi.material_overlay = m_lod if root == _lod_model else m
+			if root == _lod_model:
+				mi.material_overlay = m_lod
+			else:
+				mi.material_overlay = m_prop if _in_prop(mi) else m
 
 
 static var _ink_cache: Dictionary = {}     # one shared cel ink material per colour: every aircraft (and every mesh) uses the same instance
@@ -265,7 +270,41 @@ func _remove_cel_ink() -> void:
 
 static func _is_ink(m: Material) -> bool:
 	var sm: ShaderMaterial = m as ShaderMaterial
-	return sm != null and sm.shader != null and sm.shader.resource_path.ends_with("cel/cel_ink.gdshader")
+	return sm != null and sm.shader != null and (sm.shader.resource_path.ends_with("cel/cel_ink.gdshader") or sm.has_meta("cel_ink_prop"))
+
+
+## Render priority of the prop's outline / ink overlays: above the cloud volumes (20) and shafts (21), so a far cloud never paints over the prop's edge.
+const PROP_OVERLAY_PRIORITY: int = 30
+
+## Meshes that never take the team outline / cel ink: the translucent blur disc and its tip ring (a hull around a see-through ring is an opaque halo that distant clouds then cover).
+func _skips_overlay(mi: MeshInstance3D) -> bool:
+	return String(mi.name).findn("disc") >= 0 or String(mi.name) == "TipRing"
+
+
+## True for the blades / spinner (anything under a node called Propeller*).
+func _in_prop(n: Node) -> bool:
+	var p: Node = n
+	while p != null and p != self:
+		if String(p.name).begins_with("Propeller"):
+			return true
+		p = p.get_parent()
+	return false
+
+
+## Cel ink for the prop: the same material, but writing depth. The ink is opaque with depth_draw_never, so the cloud
+## volumes (which stop at the scene depth) ran straight over the ink around the blades; with depth written they stop at it.
+static var _prop_ink_cache: Dictionary = {}
+func _prop_ink(base: ShaderMaterial) -> ShaderMaterial:
+	var key: Color = base.get_shader_parameter("ink_color") as Color
+	var pm: ShaderMaterial = _prop_ink_cache.get(key) as ShaderMaterial
+	if pm == null:
+		pm = base.duplicate() as ShaderMaterial
+		var sh := Shader.new()
+		sh.code = base.shader.code.replace("depth_draw_never", "depth_draw_opaque")
+		pm.shader = sh
+		pm.set_meta("cel_ink_prop", true)      # _is_ink() cannot tell it by shader path (runtime shader)
+		_prop_ink_cache[key] = pm
+	return pm
 
 
 ## Cel-shaded style: give EVERY aircraft a thick ink silhouette (the player included; the game's team
@@ -289,6 +328,7 @@ func _apply_cel_ink() -> void:
 		m.set_shader_parameter("ink_color", ink_col)
 		m.set_shader_parameter("thickness", 0.06)
 		m.set_shader_parameter("dist_scale", 0.0034)
+		m.set_shader_parameter("soft_near", 0.0 if player_controlled else 1.0)
 		_ink_cache[ink_col] = m
 	var lod_key: String = str(ink_col) + "_lod"
 	var m_lod: ShaderMaterial = _ink_cache.get(lod_key) as ShaderMaterial
@@ -305,7 +345,7 @@ func _apply_cel_ink() -> void:
 			continue
 		for n in (root as Node3D).find_children("*", "MeshInstance3D", true, false):
 			var mi: MeshInstance3D = n as MeshInstance3D
-			if mi == null or String(mi.name).findn("disc") >= 0:
+			if mi == null or _skips_overlay(mi):
 				continue
 			if _is_glass_mesh(mi):
 				gmat.next_pass = null
@@ -316,6 +356,8 @@ func _apply_cel_ink() -> void:
 			# Keep the team colour as the overlay when it exists (AI aircraft), and put the ink on the
 			# next_pass so the two do not fight over the same slot.
 			var ink: ShaderMaterial = m_lod if root == _lod_model else m
+			if root != _lod_model and _in_prop(mi):
+				ink = _prop_ink(m)
 			if mi.material_overlay != null and not player_controlled:
 				mi.material_overlay.next_pass = ink
 			else:
@@ -804,6 +846,8 @@ func _obstacle_check(delta: float) -> void:
 		speed = 0.0
 		if _bump_cd <= 0.0:
 			_bump_cd = 2.0
+			if player_controlled:
+				print("[obstacle] taxi bump on %s at (%.0f, %.0f), health %.0f" % [String((hit["node"] as Node).name), position.x, position.z, health])
 			_impact_shake = 0.5
 			take_damage(15.0)
 		return
@@ -1940,6 +1984,8 @@ func _explode_in_air() -> void:
 
 
 var _prop_blurred: bool = false
+var _dbg_prop_blur: bool = OS.get_cmdline_user_args().has("--prop-blur")
+var _dbg_prop_printed: bool = false
 
 
 func _update_visuals(delta: float) -> void:
@@ -1952,6 +1998,21 @@ func _update_visuals(delta: float) -> void:
 		# frame and strobe, which reads as the whole aircraft shaking (loudest in the cockpit view, where
 		# the prop fills the screen). Past the limit the translucent PropDisc carries the prop instead.
 		var blur: bool = AircraftModels.prop_blur(rate, minf(delta, 1.0 / 30.0), _prop_blurred)
+		if _dbg_prop_blur and state != State.DEAD:     # debug (--prop-blur): always draw the blur disc, whatever the frame rate, and strong enough to judge its draw order against the clouds
+			blur = true
+			var dmi: MeshInstance3D = _prop_disc as MeshInstance3D
+			if dmi != null and dmi.material_override is ShaderMaterial:
+				(dmi.material_override as ShaderMaterial).set_shader_parameter("strength", 0.9)
+			var rmi: MeshInstance3D = dmi.find_child("TipRing", false, false) as MeshInstance3D if dmi != null else null
+			if rmi != null and rmi.material_override is StandardMaterial3D:      # make the rim ring obvious; --ring-old puts it back at the pre-fix priority 0
+				(rmi.material_override as StandardMaterial3D).albedo_color = Color(1.0, 0.9, 0.0, 0.9)
+				if OS.get_cmdline_user_args().has("--ring-old"):
+					(rmi.material_override as StandardMaterial3D).render_priority = 0
+			if not _dbg_prop_printed and dmi != null and player_controlled:
+				_dbg_prop_printed = true
+				for n in dmi.find_children("*", "MeshInstance3D", true, false) + [dmi]:
+					var q: MeshInstance3D = n as MeshInstance3D
+					print("[prop-dbg] %s override=%s prio=%d overlay=%s layers=%d vis=%s" % [q.name, q.material_override, (q.material_override.render_priority if q.material_override else -999), q.material_overlay, q.layers, q.is_visible_in_tree()])
 		_prop_blurred = blur
 		if _prop_blades:
 			_prop_blades.visible = not blur

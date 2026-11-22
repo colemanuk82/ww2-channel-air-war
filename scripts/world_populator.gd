@@ -1,4 +1,4 @@
-﻿class_name WorldPopulator
+class_name WorldPopulator
 extends Node3D
 ## Streams all ground-war + scenery content around the player (never the whole map at once).
 ##   var wp := WorldPopulator.populate(world_root, terrain, airfields_dict)   # call from main._ready() after the
@@ -3550,9 +3550,9 @@ func _dress_triangle(container: Node3D, af: Airfield, axf: Transform3D, y: float
 	_props(container, "ammo", _bunker_bank_mesh(), banks, team, 6)
 	# E-pens and boundary markers are filled by the raf_fighter layout builder (empty for the other styles)
 	if not af.pens_local.is_empty():
-		container.add_child(Scatter.multi(AirfieldAssets.e_pen(), _to_world(axf, af.pens_local), 5000.0))
+		container.add_child(Scatter.multi(AirfieldAssets.e_pen(), af.off_taxi_routes(_to_world(axf, af.pens_local), 18.0), 5000.0))
 	if not af.markers_local.is_empty():
-		container.add_child(Scatter.multi(AirfieldAssets.boundary_marker(), _to_world(axf, af.markers_local), 2200.0))
+		container.add_child(Scatter.multi(AirfieldAssets.boundary_marker(), af.off_taxi_routes(_to_world(axf, af.markers_local), 6.0), 2200.0))
 
 
 ## Luftwaffe fliegerhorst: parked aircraft on the dispersals and apron, a row of curved-roof hangars, tents
@@ -3737,11 +3737,11 @@ func _dress_grass_station(container: Node3D, af: Airfield, axf: Transform3D, y: 
 		xf.append(Transform3D(b, Vector3(pad.x, y + 0.4, pad.z)))
 	ParkedAircraft.place(container, xf, team, af)
 	if not af.pens_local.is_empty():
-		container.add_child(Scatter.multi(AirfieldAssets.e_pen(), _to_world(axf, af.pens_local), 5000.0))
+		container.add_child(Scatter.multi(AirfieldAssets.e_pen(), af.off_taxi_routes(_to_world(axf, af.pens_local), 18.0), 5000.0))
 	if not af.nets_local.is_empty():
-		container.add_child(Scatter.multi(AirfieldAssets.camo_net(team), _to_world(axf, af.nets_local), 3500.0))
+		container.add_child(Scatter.multi(AirfieldAssets.camo_net(team), af.off_taxi_routes(_to_world(axf, af.nets_local), 16.0), 3500.0))
 	if not af.markers_local.is_empty():
-		container.add_child(Scatter.multi(AirfieldAssets.boundary_marker(), _to_world(axf, af.markers_local), 2200.0))
+		container.add_child(Scatter.multi(AirfieldAssets.boundary_marker(), af.off_taxi_routes(_to_world(axf, af.markers_local), 6.0), 2200.0))
 	if not af.trees_local.is_empty():
 		_add_boundary_trees(container, af, axf)
 	if lw:

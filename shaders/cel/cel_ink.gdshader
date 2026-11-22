@@ -14,6 +14,7 @@ uniform float thickness = 0.06;      // world units, roughly the width of the wi
 uniform float dist_scale = 0.0011;   // grows with distance so it stays ~1 pixel on screen
 uniform float max_dist = 24000.0;     // clamp: past this the sprite is a few pixels anyway
 uniform bool box_hull = false;      // far stand-in boxes: inflate along sign(VERTEX) (per-face normals leave no ring)
+uniform float soft_near = 0.0;       // 1 = team-coloured AI ink: thinner under ~6 km, ramping up with distance (the player's black ink keeps its full weight)
 uniform float pixel_k = 1.0;         // 0 = off (same as the game's normal look)
 
 varying float v_px;
@@ -23,6 +24,7 @@ void vertex() {
 	v_px = 1.0;
 	// Cap the distance term so far aircraft do not grow a slab-like outline.
 	float grow = thickness + min(d, max_dist) * dist_scale;
+	grow *= mix(1.0, mix(0.4, 1.0, smoothstep(1500.0, 6000.0, d)), soft_near);   // v4.31: team-coloured (AI) ink is thin up close, full size from ~6 km
 	VERTEX += (box_hull ? sign(VERTEX) : NORMAL) * grow * pixel_k;
 }
 

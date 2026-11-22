@@ -114,8 +114,13 @@ static func _build(e: Dictionary) -> void:
 		var mm: MultiMesh = (n as MultiMeshInstance3D).multimesh
 		var ab: AABB = mm.mesh.get_aabb()
 		var g: Transform3D = n.global_transform
-		for i in mm.instance_count:
-			items.append([g * mm.get_instance_transform(i), ab])
+		if n.has_meta("obstacle_xforms"):          # headless tests (see Scatter.multi): the world transforms it was built from
+			var pg: Transform3D = (n.get_parent() as Node3D).global_transform if n.get_parent() is Node3D else Transform3D.IDENTITY
+			for t in (n.get_meta("obstacle_xforms") as Array):
+				items.append([pg * (t as Transform3D), ab])
+		else:
+			for i in mm.instance_count:
+				items.append([g * mm.get_instance_transform(i), ab])
 	elif n is AirfieldProp:
 		var ap: AirfieldProp = n
 		for t in ap._xf:
@@ -156,6 +161,32 @@ static func _build(e: Dictionary) -> void:
 	e["grid"] = grid
 
 
+## Every obstacle within `clear` metres of a spawn spot or of a route polyline (sampled every 2 m), for an aircraft whose
+## wheels stand at the route's height. Returns {"<node name>@(x,z)": samples touched}; {} when the way is clear.
+## Used by the spawn keep-clear test and Main's --spawn-audit (the game itself only bumps at 1.2 m).
+static func scan_route(spawn: Vector3, route: PackedVector3Array, clear: float, gear_height: float) -> Dictionary:
+	_next_resolve = 0
+	var out: Dictionary = {}
+	var pts: Array = [spawn]
+	for i in range(1, route.size()):
+		var a: Vector3 = route[i - 1]
+		var b: Vector3 = route[i]
+		var n: int = int(a.distance_to(b) / 2.0) + 1
+		for k in n + 1:
+			pts.append(a.lerp(b, float(k) / float(n)))
+	for p in pts:
+		var q: Vector3 = p
+		var h: Dictionary = hit(q, clear, q.y - gear_height * 0.55, q.y + 1.0, true)
+		if not h.is_empty():
+			var nd: Node3D = h["node"] as Node3D
+			var at: Vector3 = h["at"]
+			var hf: Vector2 = h["half"]
+			var inst: String = str((nd as MultiMeshInstance3D).multimesh.instance_count) if nd is MultiMeshInstance3D else "-"
+			var key: String = "%s of %d (%s inst, %d surfaces) item (%.0f,%.0f) %.0fx%.0f m, %.1f m high" % [nd.name, nd.get_instance_id() % 1000, inst, ((nd as MultiMeshInstance3D).multimesh.mesh.get_surface_count() if nd is MultiMeshInstance3D else 0), at.x, at.z, hf.x * 2.0, hf.y * 2.0, at.y]
+			out[key] = int(out.get(key, 0)) + 1
+	return out
+
+
 ## The first obstacle a body at `pos` touches: within `reach` metres sideways of its footprint and with the body's
 ## underside (`bottom`) below its top and its top (`top_y`) above its base. Returns {} when clear, else
 ## {"top": height of the obstacle, "node": the scenery node}.
@@ -193,5 +224,5 @@ static func hit(pos: Vector3, reach: float, bottom: float, top_y: float, include
 			var lx: float = dx * data[o + 2] + dz * data[o + 3]
 			var lz: float = -dx * data[o + 3] + dz * data[o + 2]
 			if absf(lx) < data[o + 4] + reach and absf(lz) < data[o + 5] + reach:
-				return {"top": data[o + 7], "node": n}
+				return {"top": data[o + 7], "node": n, "at": Vector3(data[o], data[o + 7], data[o + 1]), "half": Vector2(data[o + 4], data[o + 5])}
 	return {}

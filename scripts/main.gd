@@ -2516,6 +2516,27 @@ func _dispersal_start(af: Airfield, route: PackedVector3Array, yaw0: float) -> v
 		print("[taxi-test] driving the player from the dispersal, %d legs" % route.size())
 
 
+## Debug (--spawn-audit): once the field has been dressed (~20 s), list every scenery object (Obstacles) within reach of the
+## player's spawn spot and of the taxi route from it to the runway, then log position / speed / health once a second.
+## AUDIT_CLEAR is the sideways clearance the spawn needs (the aircraft's wings); the game itself only tests 1.2 m.
+const AUDIT_CLEAR: float = 3.0
+
+func _spawn_audit_step(delta: float) -> void:
+	if player == null or not is_instance_valid(player):
+		return
+	_audit_t += delta
+	if not _audit_checked and _audit_t > 20.0:
+		_audit_checked = true
+		var af: Airfield = airfields.get(GameState.start_airfield)
+		if af != null:
+			var route: PackedVector3Array = _taxi_route_for(af).get("route", PackedVector3Array())
+			var hits: Dictionary = Obstacles.scan_route(route[0] if route.size() > 0 else player.global_position, route, AUDIT_CLEAR, player.stats.gear_height)
+			print("[spawn-audit] %s (%s) team %s: %d obstacle(s) on the spawn / route: %s" % [af.airfield_name, af.style, af.team, hits.size(), str(hits.keys())])
+	if _audit_t >= _audit_next:
+		_audit_next = _audit_t + 1.0
+		print("[spawn-audit] t=%.0f pos=(%.0f, %.0f) speed=%.1f health=%.0f ground=%s" % [_audit_t, player.global_position.x, player.global_position.z, player.speed, player.health, str(player.on_ground)])
+
+
 func _on_taxi_done() -> void:
 	var af: Airfield = airfields.get(GameState.start_airfield)
 	if af != null:
@@ -2864,6 +2885,7 @@ var _perf_acc: Dictionary = {}
 
 
 var _rail_speed: float = 0.0
+var _rail_pitch: float = 0.0
 var _acline: PackedStringArray = PackedStringArray()
 var _acline_nodes: Array = []
 var _acline_t: float = 0.0
@@ -2915,7 +2937,8 @@ func _rail_step(delta: float) -> void:
 	if player == null or not is_instance_valid(player):
 		return
 	_rail_t += delta
-	player.global_transform = Transform3D(_rail_basis, _rail_from + _rail_dir * _rail_speed * _rail_t)
+	var rb: Basis = _rail_basis.rotated(_rail_basis.x.normalized(), deg_to_rad(_rail_pitch))   # --rail-pitch=DEG: nose-up still frames (prop vs sky shots)
+	player.global_transform = Transform3D(rb, _rail_from + _rail_dir * _rail_speed * _rail_t)
 	player.velocity = _rail_dir * _rail_speed
 	player.speed = _rail_speed
 
@@ -3329,6 +3352,10 @@ func _process(delta: float) -> void:
 var _shot_path: String = ""
 var _shot_frames: int = 200
 var _auto_takeoff: bool = false
+var _spawn_audit: bool = false
+var _audit_t: float = 0.0
+var _audit_next: float = 0.0
+var _audit_checked: bool = false
 var _log_t: float = 0.0
 
 # ---- screenshot tour: one process, many locations. See _tour_begin().
@@ -3441,6 +3468,11 @@ func _parse_debug_args() -> void:
 		elif a.begins_with("--hawkinge"):
 			GameState.start_airfield = "hawkinge"
 			_spawn_player()
+		elif a.begins_with("--start-af="):   # debug: start on this airfield (an id from the airfield records, e.g. marck), on the ground like a normal sortie
+			GameState.start_airfield = a.substr(11)
+			_spawn_player()
+		elif a == "--spawn-audit":   # debug: log what stands on the spawn and its taxi route, and the player's health / speed (see _spawn_audit_step)
+			_spawn_audit = true
 		elif a.begins_with("--at="):
 			var f: PackedStringArray = a.substr(5).split(",")
 			var wp: Vector3 = WorldCoords.latlon_to_world(float(f[0]), float(f[1]))
@@ -3631,6 +3663,8 @@ func _parse_debug_args() -> void:
 			print("[warp] forced %s for this run (contact cancel disabled)" % GameState.SIM_WARP_NAMES[GameState.sim_warp_index()])
 		elif a.begins_with("--ac-line="):   # debug: --ac-line=DIST[,N[,model[,side]]] N frozen AI aircraft DIST m ahead of the player (range / outline shots)
 			_acline = a.substr(10).split(",")
+		elif a.begins_with("--rail-pitch="):
+			_rail_pitch = float(a.substr(13))
 		elif a.begins_with("--rail="):   # debug: fly a fixed straight, level line at SPEED m/s (repeatable perf runs)
 			_rail_speed = float(a.substr(7))
 			_rail_from = player.global_position
@@ -3861,6 +3895,8 @@ func _physics_process(delta: float) -> void:
 		_acline_step(delta)
 	if _rail_speed > 0.0:
 		_rail_step(delta)
+	if _spawn_audit:
+		_spawn_audit_step(delta)
 	if _auto_takeoff:
 		Input.action_press("throttle_up")
 		if player.speed > 46.0:

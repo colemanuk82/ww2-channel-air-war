@@ -677,9 +677,13 @@ static func multi(mesh: Mesh, xforms: Array, vis_end: float = 0.0, register_obst
 	mi.multimesh = mm
 	mi.position = c
 	var pad := Vector3(60.0, 60.0, 60.0)
-	mi.custom_aabb = AABB(lo - c - pad, (hi - lo) + pad * 2.0)
+	if not xforms.is_empty():
+		mi.custom_aabb = AABB(lo - c - pad, (hi - lo) + pad * 2.0)
 	mi.cast_shadow = scenery_shadow_mode()
 	if register_obstacle:
+		if DisplayServer.get_name() == "headless":
+			# the headless (dummy) renderer keeps no MultiMesh instance transforms: the tests read the footprints from here
+			mi.set_meta("obstacle_xforms", xforms)
 		Obstacles.register(mi)
 	if vis_end > 0.0:
 		vis_end *= vis_scale

@@ -1410,6 +1410,27 @@ func _dispersal(pos: Vector3, ang: float, mat: Material, earth: Material) -> voi
 		_add_box(pivot, Vector3(4.0, 6.0, 9.0), Vector3(bx, 3.0, bz), earth, -a)
 
 
+## The same world transforms without those standing within `margin` m of a taxi-out flight route: the dispersal spots the
+## player and his wingmen spawn on (a route starts on its spot) and the grass legs from them to the taxiway. Camouflage
+## nets, blast pens and the like are solid (Obstacles): one over the spawn spot holds the aircraft dead against it.
+func off_taxi_routes(xforms: Array, margin: float) -> Array:
+	if taxi_flight_routes.is_empty():
+		return xforms
+	var xf: Transform3D = global_transform if is_inside_tree() else transform
+	var inv: Transform3D = xf.affine_inverse()
+	var out: Array = []
+	for t in xforms:
+		var lp: Vector3 = inv * (t as Transform3D).origin
+		var near: bool = false
+		for r in taxi_flight_routes:
+			if route_distance(r, lp) < margin:
+				near = true
+				break
+		if not near:
+			out.append(t)
+	return out
+
+
 ## World positions of the dispersal pens for the dressing (parked aircraft, crews): every pen but the taxi-out flight's.
 func dispersal_world_points() -> Array:
 	# works before the field is in the scene tree too (its parent container sits at the world origin)

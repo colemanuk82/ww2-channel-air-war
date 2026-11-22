@@ -119,6 +119,32 @@ a HUD toast and saves through `set_graphic`.
   shots (`--ac-line=2500;5000;8000;12000;16000;20000,2,bf109,Axis --wingmen=0`): before, no red at all past 2.5 km; now red
   markers clear to ~12 km, small to 16-20 km, in both styles. Cel ink (`cel_ink.gdshader`) is fog-free already and its size clamp
   (`max_dist`) went from 12 km to 24 km. Outline width stays ~1.3 px (Realistic) / the cel ink weight per side.
+* **Close-range team markers (v4.31):** the red / yellow AI outline is thin and soft up close and only grows with
+  distance, so the on-screen size stays about 1-2 px: `team_outline.gdshader` ring x0.35 at <1.5 km rising to full at 6 km,
+  alpha 0.22 at 300 m rising to 0.5 at 3 km, the heavy far styling (x1.5 ring, alpha 0.95) builds up over 3-6 km (was
+  1.2-3.5 km), so 8-20 km is unchanged; the cel ink of AI aircraft (`cel_ink.gdshader`, `soft_near` = 1 for non-player
+  aircraft) is x0.4 under 1.5 km rising to x1 at 6 km. The player's black ink is unchanged.
+* **Spawn keep-clear (v4.31):** root cause of 'Axis spawn inside ground assets, plane stuck and dying': the dispersal pad
+  (`taxi_flight_routes[0]`, where the player spawns) is also where `WorldPopulator` scattered Luftwaffe E-pens, camo nets and
+  boundary markers, and `AirfieldFurniture` put revetment banks, flare-path lamps and dummy aircraft; solid scenery registers
+  in `Obstacles`, and a ground bump at under 9 m/s stops the aircraft dead and costs 15 health per 2 s. All of those now go
+  through `Airfield.off_taxi_routes(xforms, margin)`, which drops anything within `margin` of a taxi-flight polyline (pens 18 m,
+  nets 16 m, markers 6 m, revetments 12 m, lamps 5 m, dummies 14 m). Check: `tools/tests.gd` `_test_spawn_clear` builds every
+  real airfield record (both sides) plus every layout / style for RAF and Luftwaffe and walks every taxi route and a runway
+  start with `Obstacles.scan_route(spawn, route, 3.0 m, gear)`; it failed before the fix and passes now. Headless has no
+  MultiMesh instance data, so `Scatter.multi` stores the transforms in the `obstacle_xforms` meta only when headless (the
+  obstacle index reads it). Debug flags: `--start-af=<id>` (spawn the player at that airfield), `--spawn-audit` (prints
+  `[spawn-audit]` clearance and a once-a-second pos / speed / health line; taxi bumps print `[obstacle] taxi bump`),
+  `--prop-blur` (force the prop blur disc, for shots).
+* **Prop edge vs clouds (v4.31):** root cause of 'distant clouds draw over the edge of the prop': the soft-edged rim ring of the blur
+  disc (`AircraftModels._add_tip_ring`, used by the Spitfire and the builder aircraft) had material render priority 0, while the
+  cloud volumes are 20 (shafts 21) - transparent objects sort by priority first, so every cloud was drawn over the ring. It is now 40
+  like the disc (`prop_blur`, priority 40, depth_draw_never). The ring (a child called TipRing, which the `*disc*` name filter missed)
+  also took the cel ink hull / team outline overlay; `Aircraft._skips_overlay` now leaves it out, and the blades / spinner get their
+  outline at `PROP_OVERLAY_PRIORITY` 30 (team outline) or a depth-writing ink variant (`_prop_ink`, cel) so clouds stop at them. Proof
+  (hidden desktop, Spitfire, nose up 20 deg, `--prop-blur --rail-pitch=20 --cloudview=99:0:2500:900`, rim ring forced bright, `--ring-old`
+  = the old priority 0): `build/perf/ring_old_cock_real.jpg` / `ring_old_cock_cel.jpg` (ring cut by clouds) vs `ring_new_cock_real.jpg` /
+  `ring_new_cock_cel.jpg` (unbroken). Debug flags: `--rail-pitch=DEG` (nose-up still frames with `--rail`), `--ring-old`.
 * **Cel speed:** `cel_post.gdshader` skips every depth / normal tap beyond `line_far` (3.5 km) and normal taps beyond
   `normal_far`, and reconstructs linear depth from the projection's z / w terms instead of a mat4 multiply (identical
   image, far pixels - most of a flight frame - cost 1 colour + 1 depth tap). Aircraft ink materials are shared per colour

@@ -40,8 +40,8 @@ static func dress(container: Node3D, af: Airfield, axf: Transform3D, y: float, t
 	if af.style == "night_fighter":
 		_night_ops(container, axf, y, team)
 	_dumps(container, axf, y, team, rng, L)
-	_flare_path(container, axf, y, L, af.style == "night_fighter")
-	_dummies(container, axf, y, team, rng, L)
+	_flare_path(container, axf, y, L, af.style == "night_fighter", af)
+	_dummies(container, axf, y, team, rng, L, af)
 
 
 static func _world(axf: Transform3D, local: Vector3, yaw: float) -> Transform3D:
@@ -79,6 +79,7 @@ static func _revetments(container: Node3D, af: Airfield, axf: Transform3D, y: fl
 		if af.near_paved(bt.origin, 4.0) or af.near_paved(bt.origin + ax, 4.0) or af.near_paved(bt.origin - ax, 4.0):
 			continue
 		banks.append(bt)
+	banks = af.off_taxi_routes(banks, 12.0)
 	if not banks.is_empty():
 		container.add_child(Scatter.multi(AirfieldAssets.revetment(team), banks, 5000.0))
 
@@ -225,7 +226,7 @@ static func _watch_office(container: Node3D, axf: Transform3D, y: float, L: floa
 
 ## The flare path: a row of Chance lights parallel to (and clear of) the runway, with a dark lamp-light strip.
 ## A night-fighter field (`dense`) packs the row tighter and adds a second row outboard for the night circuits.
-static func _flare_path(container: Node3D, axf: Transform3D, y: float, L: float, dense: bool = false) -> void:
+static func _flare_path(container: Node3D, axf: Transform3D, y: float, L: float, dense: bool = false, af: Airfield = null) -> void:
 	var yaw_deg: float = rad_to_deg(axf.basis.get_euler().y)
 	GroundKit.box(container, Vector3(2.4, 0.2, L * 0.9), axf * Vector3(112.0, 0.12, 0.0), COL_TRACK, Vector3(0.0, yaw_deg, 0.0), false)
 	var n: int = int(L / (55.0 if dense else 75.0))
@@ -237,16 +238,20 @@ static func _flare_path(container: Node3D, axf: Transform3D, y: float, L: float,
 		for i in n + 1:
 			var z2: float = -L * 0.45 + float(i) * (L * 0.9 / float(maxi(n, 1)))
 			lights.append(_world(axf, Vector3(148.0, 0.0, z2), 0.0))
+	if af != null:
+		lights = af.off_taxi_routes(lights, 5.0)      # a taxi-out route crosses the flare path: no lamp on the line the aircraft rolls
 	if not lights.is_empty():
 		container.add_child(Scatter.multi(AirfieldAssets.chance_light(), lights, 2500.0))
 
 
 ## A few dummy aircraft on the far grass (the plywood silhouettes that drew strafing runs).
-static func _dummies(container: Node3D, axf: Transform3D, y: float, team: String, rng: RandomNumberGenerator, L: float) -> void:
+static func _dummies(container: Node3D, axf: Transform3D, y: float, team: String, rng: RandomNumberGenerator, L: float, af: Airfield = null) -> void:
 	var xf: Array = []
 	for i in 4:
 		var z: float = -60.0 + float(i) * 40.0 + rng.randf_range(-6.0, 6.0)
 		xf.append(_world(axf, Vector3(210.0 + rng.randf_range(-10.0, 10.0), 0.0, z), rng.randf_range(-0.4, 0.4)))
+	if af != null:
+		xf = af.off_taxi_routes(xf, 14.0)
 	if not xf.is_empty():
 		container.add_child(Scatter.multi(AirfieldAssets.dummy_aircraft(team), xf, 4200.0))
 

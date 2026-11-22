@@ -202,6 +202,7 @@ static func _add_tip_ring(disc: MeshInstance3D) -> void:
 	rm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	rm.cull_mode = BaseMaterial3D.CULL_DISABLED
+	rm.render_priority = 40      # after the cloud volumes (20 / 21): at priority 0 a distant cloud was drawn over this rim ring, i.e. over the edge of the prop
 	ring.material_override = rm
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	disc.add_child(ring)          # same axis as the disc cylinder, so it lies in the disc plane

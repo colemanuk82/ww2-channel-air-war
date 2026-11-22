@@ -59,6 +59,7 @@ func _ready() -> void:
 	_test_rail_drama()
 	_test_airfield_furniture()
 	_test_airfield_styles()
+	await _test_spawn_clear()
 	_test_taxi_graph()
 	_test_oil_fuel()
 	_test_aircraft_industry()
@@ -1965,6 +1966,86 @@ func _test_airfield_furniture() -> void:
 	container.free()
 	remove_child(af)
 	af.free()
+
+
+## Spawn keep-clear: every airfield layout, built and dressed exactly the way the game builds it (WorldPopulator._build_airfield,
+## the Luftwaffe kitchen and wagons, people, pens, nets and parked aircraft included) for BOTH sides, must leave the player's
+## spawn spot and the taxi routes out of the dispersals clear of anything solid (Obstacles). The game bumps at 1.2 m and
+## stops the aircraft dead against what it touches (a field with a net or a pen on the pad was a start the player could not roll from),
+## so the check here uses 3 m, wings and all.
+func _test_spawn_clear() -> void:
+	print("-- spawn keep-clear (every airfield style, both sides)")
+	var wp := WorldPopulator.new()
+	wp._sync_build = true
+	add_child(wp)
+	var grass_id: String = "grass_test"      # (no real field is listed as plain "grass": any id the hash sends there will do)
+	for gi in 200:
+		if Airfield.style_for("gx%d" % gi) == "grass":
+			grass_id = "gx%d" % gi
+			break
+	var ids: Array = [["manston_t", "manston", ""], ["rg", Airfield.RAF_GRASS_IDS[0], ""], ["lwf", Airfield.LW_FIELD_IDS[0], ""], ["grass", grass_id, ""],
+		["cross", Airfield.CROSS_IDS[0], ""], ["par", Airfield.PARALLEL_IDS[0], ""], ["fwd", Airfield.FORWARD_IDS[0], ""]]
+	for st in Airfield.STYLE_KEYS:
+		ids.append([st, "test_" + String(st), String(st)])
+	var checked: int = 0
+	var fails: Array = []
+	# the synthetic cases (each layout, each side) then every real airfield record as it is in data/locations.json
+	var cases: Array = []
+	for e in ids:
+		for side in ["RAF", "Luftwaffe"]:
+			var id0: String = "sc_%s_%s" % [e[0], side]
+			var d0 := {"id": id0, "name": id0, "side": side, "heading_deg": 70.0, "runway_len_m": 1500, "lat": 51.0, "lon": 1.0}
+			if String(e[2]) != "":
+				d0["style"] = e[2]
+			cases.append([id0, String(e[1]) if String(e[2]) == "" else id0, d0])
+	var fa := FileAccess.open("res://data/locations.json", FileAccess.READ)
+	if fa != null:
+		var recs: Variant = (JSON.parse_string(fa.get_as_text()) as Dictionary).get("airfields", [])
+		for rv in recs:
+			var rd: Dictionary = rv
+			cases.append(["rec_" + str(rd["id"]), str(rd["id"]), rd])
+	for cs in cases:
+		var id: String = cs[0]
+		var d: Dictionary = cs[2]
+		if true:
+			Obstacles.clear()
+			var s := {"id": cs[1], "key": id, "data": d, "existing": null, "pos": WorldCoords.latlon_to_world(float(d.get("lat", 51.0)), float(d.get("lon", 1.0))), "y": 0.0}
+			var container: Node3D = await wp._build_airfield(s)
+			if container == null:
+				fails.append("%s: no container" % id)
+				continue
+			add_child(container)
+			var af: Airfield = null
+			for c in container.find_children("*", "Airfield", true, false):
+				af = c as Airfield
+			if af == null or af.taxi_flight_routes.is_empty():
+				fails.append("%s: no airfield / taxi flight" % id)
+				container.free()
+				continue
+			var routes: Array = []
+			for r in af.taxi_flight_routes:
+				var w := PackedVector3Array()
+				for p in (r as PackedVector3Array):
+					w.append(af.global_transform * Vector3(p.x, 1.0, p.z))
+				routes.append(w)
+			# the runway start (fast-start modes and respawns): the threshold and the first 700 m of the take-off run
+			var rdir: Vector3 = WorldCoords.heading_to_dir(af.heading_deg)
+			rdir.y = 0.0
+			var rthr: Vector3 = af.get_threshold_position()
+			rthr.y = 1.0
+			routes.append(PackedVector3Array([rthr, rthr + rdir.normalized() * 700.0]))
+			for ri in routes.size():
+				var w2: PackedVector3Array = routes[ri]
+				var hits: Dictionary = Obstacles.scan_route(w2[0], w2, 3.0, 1.2)
+				checked += 1
+				if not hits.is_empty():
+					fails.append("%s (%s, %s) %s: %s at spawn (%.0f,%.0f); field origin (%.0f,%.0f) heading %.0f, runway %.0f x %.0f m, threshold (%.0f,%.0f)" % [id, af.style, af.team, "runway start" if ri == routes.size() - 1 else "taxi route %d" % ri, str(hits.keys()), w2[0].x, w2[0].z, af.global_position.x, af.global_position.z, af.heading_deg, af.runway_length, af.runway_width, rthr.x, rthr.z])
+			remove_child(container)
+			container.free()
+	wp.queue_free()
+	Obstacles.clear()
+	_check(checked >= 40, "the spawn check covered every layout and side (%d routes)" % checked)
+	_check(fails.is_empty(), "nothing solid stands on a spawn spot or its taxi route; found: %s" % "; ".join(PackedStringArray(fails)))
 
 
 ## P5: the new airfield styles. For each style a small Airfield is built and dressed the way
