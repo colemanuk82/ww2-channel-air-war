@@ -86,6 +86,7 @@ func _ready() -> void:
 	_test_harbour_war()
 	_test_town_people()
 	_test_farm_people()
+	_test_enemy_flights()
 	_test_military_people()
 	_test_war_reactions()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
@@ -3976,3 +3977,141 @@ func _test_cel_ink() -> void:
 			_check(mi.material_overlay == null, "the player's aircraft has no overlay at all in Realistic")
 		ac.queue_free()
 	GameState.art_style = restore
+
+
+## Free-flight enemy flights (scripts/modes/enemy_flights.gd): every flight has a mission with a real target, sizes follow the
+## odds and the AI budget, escorts are attached to the bombers, and a flight past its target turns for home and is tidied away.
+func _test_enemy_flights() -> void:
+	print("-- enemy flights: missions, group sizes, targets, escorts, going home")
+	var EF = EnemyFlights
+	# size odds: 62 / 28 / 10 per cent
+	var n: Array = [0, 0, 0]
+	for i in 1000:
+		n[EF.size_class(float(i) / 1000.0)] += 1
+	_check(n[0] == 620 and n[1] == 280 and n[2] == 100, "size odds are 62%% small, 28%% medium, 10%% large (%s)" % str(n))
+	# mission odds: the Axis fly dive-bomber attacks, the Allies do not; every kind appears
+	var ka: Dictionary = {}
+	var kb: Dictionary = {}
+	for i in 1000:
+		var r: float = (float(i) + 0.5) / 1000.0
+		var a: String = EF.pick_kind("Axis", r)
+		var b: String = EF.pick_kind("Allies", r)
+		ka[a] = int(ka.get(a, 0)) + 1
+		kb[b] = int(kb.get(b, 0)) + 1
+	_check(ka.has("raid") and ka.has("stuka") and ka.has("sweep") and ka.has("recon"), "the Axis fly raids, Stuka attacks, sweeps and recon (%s)" % str(ka))
+	_check(kb.has("raid") and kb.has("sweep") and kb.has("recon") and not kb.has("stuka"), "the Allies fly raids, sweeps and recon, no dive-bomber attacks")
+	# counts: inside the table, never over the room, large raids really are large
+	var counts_ok: bool = true
+	for kind in EF.COUNTS:
+		for cls in 3:
+			var c: Array = (EF.COUNTS[kind] as Array)[cls]
+			for k in 30:
+				var d: Dictionary = EF.counts_for(kind, cls, 100)
+				if int(d["main"]) < int(c[0]) or int(d["main"]) > int(c[1]) or int(d["escort"]) < int(c[2]) or int(d["escort"]) > int(c[3]):
+					counts_ok = false
+				for room in [0, 3, 7, 12, 20]:
+					var d2: Dictionary = EF.counts_for(kind, cls, room)
+					if int(d2["main"]) + int(d2["escort"]) > room:
+						counts_ok = false
+	_check(counts_ok, "group sizes stay inside the table and never exceed the free AI slots")
+	_check(EF.max_total("raid", EF.Size.LARGE) >= 20 and EF.max_total("raid", EF.Size.LARGE) <= 30, "a large raid is 20-30 aircraft at most (%d)" % EF.max_total("raid", EF.Size.LARGE))
+	_check(int(EF.counts_for("raid", EF.Size.LARGE, 12)["cls"]) < EF.Size.LARGE, "a large raid shrinks when the AI budget has no room for it")
+	_check(int(EF.counts_for("sweep", EF.Size.SMALL, 40)["main"]) <= 4 and int(EF.counts_for("recon", EF.Size.LARGE, 40)["main"]) == 1, "small flights are 2-4 fighters, recon is a single aircraft")
+	# planning: a start on the origin -> target line, a run to the target, near the player
+	var player_pos := Vector3(0.0, 1500.0, 0.0)
+	var targets: Array = [{"id": "a", "name": "Manston airfield", "pos": Vector3(12000.0, 0.0, 22000.0), "kind": "airfield"}]
+	var origins: Array = [{"id": "o", "name": "Calais", "pos": Vector3(30000.0, 0.0, -60000.0)}]
+	var pl: Dictionary = EF.plan(player_pos, targets, origins)
+	_check(not pl.is_empty() and Vector2((pl["start"] as Vector3).x, (pl["start"] as Vector3).z).length() < EF.MAX_START, "a flight is planned within reach of the player")
+	if not pl.is_empty():
+		var st: Vector3 = pl["start"]
+		_check(Vector2(st.x - 12000.0, st.z - 22000.0).length() >= 8000.0, "the planned start leaves at least 8 km to the target")
+	_check(EF.plan(Vector3(900000.0, 0.0, 0.0), targets, origins).is_empty() and EF.plan(player_pos, targets, []).is_empty(), "no plan when the player is far from everything or there is no origin airfield")
+	# routes: over the target, then home
+	for kind in ["raid", "stuka", "recon", "sweep"]:
+		var home := Vector3(30000.0, 0.0, -60000.0)
+		var tp := Vector3(12000.0, 0.0, 22000.0)
+		var rt: Dictionary = EF.build_route(Vector3(20000.0, 3000.0, -30000.0), tp, home, 3000.0, kind)
+		var pts: Array = rt["pts"]
+		var ti: int = int(rt["target_idx"])
+		var last: Vector3 = pts[pts.size() - 1]
+		var over: bool = false
+		for q in pts.slice(0, ti + 1):
+			if Vector2(q.x - tp.x, q.z - tp.z).length() < 4600.0:
+				over = true
+		_check(over and ti < pts.size() - 1 and Vector2(last.x - home.x, last.z - home.z).length() < 1.0, "%s route goes over the target and ends at the home airfield (%d waypoints)" % [kind, pts.size()])
+	_check(EF.phase_of(2, 5) == "outbound" and EF.phase_of(5, 5) == "target" and EF.phase_of(6, 5) == "home", "mission phase follows the leader's waypoint")
+	var slots: Dictionary = {}
+	for i in 12:
+		slots[str(EF.fighter_slot(i))] = true
+	var eslots: Dictionary = {}
+	for i in 10:
+		eslots[str(EF.escort_slot(i))] = true
+	_check(slots.size() == 12 and eslots.size() == 10 and EF.escort_slot(5).y > EF.escort_slot(0).y + 200.0, "sweep and escort slots are distinct, top cover rides higher")
+	# a real large raid and a real sweep, spawned into the test world
+	var cap_before: int = AIFactory.ai_cap
+	AIFactory.ai_cap = 0
+	var me: Aircraft = AIFactory.spawn(self, "spitfire", "Allies", player_pos, 0.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
+	me.player_controlled = true
+	var ef := EnemyFlights.new()
+	add_child(ef)
+	ef.setup(self, me, null, "Allies", 0.5)
+	var f: Dictionary = ef.spawn_flight("raid", EF.Size.LARGE, pl)
+	_check(not f.is_empty() and (f["bombers"] as Array).size() >= 12 and (f["escorts"] as Array).size() >= 8, "a large raid is %d bombers and %d escorts" % [(f["bombers"] as Array).size(), (f["escorts"] as Array).size()])
+	var lead: Aircraft = f["leader"]
+	var lp: AIPilot = AIFactory.pilot_of(lead)
+	var attached: bool = true
+	for e in f["escorts"]:
+		var ep: AIPilot = AIFactory.pilot_of(e)
+		if ep.leader != lead or ep.role != AIPilot.Role.WINGMAN or (e as Aircraft).team != "Axis":
+			attached = false
+	_check(attached, "every escort is a wingman of the lead bomber")
+	var targets_ok: bool = true
+	for b in f["bombers"]:
+		var bp: AIPilot = AIFactory.pilot_of(b)
+		if not bp.bomb_armed or Vector2(bp.bomb_target.x - 12000.0, bp.bomb_target.z - 22000.0).length() > 1.0 or (b as Aircraft).team != "Axis":
+			targets_ok = false
+	_check(targets_ok and lp.waypoints.size() == (f["route"] as Array).size() and lp.state == AIPilot.State.ROUTE, "the bombers carry the target and the leader flies the route")
+	# the bombers are hit: the escorts widen their reaction
+	f["alert_t"] = f["age"]
+	ef._update(f, 1.0)
+	var any_esc: AIPilot = AIFactory.pilot_of((f["escorts"] as Array)[0])
+	_check(any_esc.engage_radius >= 8000.0, "escorts react when the bombers are attacked")
+	# leader shot down: a bomber takes over, the escorts follow the new leader
+	lead.state = Aircraft.State.DEAD
+	ef._update(f, 1.0)
+	var nl: Aircraft = f["leader"]
+	_check(nl != lead and nl.state == Aircraft.State.ALIVE and AIFactory.pilot_of((f["escorts"] as Array)[0]).leader == nl, "a new lead bomber is chosen and the escorts re-attach")
+	# past the target the flight turns for home, then is tidied away once far from the player
+	var np: AIPilot = AIFactory.pilot_of(nl)
+	np.wp_index = int(f["target_idx"]) + 1
+	ef._update(f, 1.0)
+	_check(str(f["phase"]) == "home", "past its target the flight heads home")
+	me.global_position = Vector3(90000.0, 1500.0, 90000.0)
+	np.wp_index = np.waypoints.size()
+	var alive: bool = ef._update(f, 1.0)
+	_check(not alive, "a flight that has got home and left the player's sector is removed")
+	# a sweep keeps to its route after a fight
+	me.global_position = player_pos
+	var fs: Dictionary = ef.spawn_flight("sweep", EF.Size.MEDIUM, pl)
+	var sl: AIPilot = AIFactory.pilot_of(fs["leader"])
+	_check((fs["members"] as Array).size() >= 6 and sl.state == AIPilot.State.ROUTE, "a medium sweep is 6-8 fighters on a route")
+	sl.state = AIPilot.State.PATROL      # a fight ended
+	ef._update(fs, 1.0)
+	_check(sl.state == AIPilot.State.ROUTE, "a sweep leader goes back to its route after a fight")
+	var dead_lead: Aircraft = fs["leader"]
+	dead_lead.state = Aircraft.State.DEAD
+	ef._update(fs, 1.0)
+	_check(fs["leader"] != dead_lead and AIFactory.pilot_of(fs["leader"]).role == AIPilot.Role.FIGHTER and AIFactory.pilot_of(fs["leader"]).waypoints.size() == (fs["route"] as Array).size(), "a sweep's next fighter takes over the route")
+	var fr: Dictionary = ef.spawn_flight("recon", EF.Size.SMALL, pl)
+	_check((fr["members"] as Array).size() == 1, "recon is one aircraft")
+	for a in get_tree().get_nodes_in_group("aircraft"):
+		if a != me and a is Aircraft and (a as Aircraft).team == "Axis":
+			(a as Node).queue_free()
+	for fl in [f, fs, fr]:
+		var fm: Variant = fl.get("form")
+		if fm != null and is_instance_valid(fm):
+			(fm as Node).queue_free()
+	me.queue_free()
+	ef.queue_free()
+	AIFactory.ai_cap = cap_before

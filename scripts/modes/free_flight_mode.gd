@@ -8,13 +8,12 @@ extends ModeBase
 var ambient_dogfights: bool = false
 var side: String = "Allies"
 var difficulty: float = 0.4
-var _t: float = 10.0            # set in start(): first skirmish after a few quiet minutes
-var _ambient: Array[Aircraft] = []
 var taskings: bool = false
 var tasking_interval: float = 600.0
 var ops: OpsRoom
 var passing_on: bool = true       # friendly flights you come across and can join (PassingFlights)
 var passing: PassingFlights
+var flights: EnemyFlights         # the other side's flights, each with a mission (ambient flights on)
 
 
 func configure(cfg: Dictionary) -> void:
@@ -33,19 +32,23 @@ func configure(cfg: Dictionary) -> void:
 
 
 ## Most AI aircraft alive at once in free flight (all dynamic traffic shares it; wingmen count too).
-const AI_CAP: int = 30
+const AI_CAP: int = 40
 
 
 func start() -> void:
 	super.start()
 	AIFactory.ai_cap = AI_CAP
 	objective_updated.emit("Free flight")
-	_t = randf_range(90.0, 150.0)
 	if ambient_dogfights:
 		var sm := SortieManager.new()
 		sm.name = "SortieManager"
 		world.add_child(sm)
 		sm.setup(world, player, hud, difficulty, 4.0 if OS.get_cmdline_user_args().has("--sortie-test") else SortieManager.FIRST_DELAY)
+	if ambient_dogfights and player is Aircraft:
+		flights = EnemyFlights.new()
+		flights.name = "EnemyFlights"
+		add_child(flights)
+		flights.setup(world, player as Aircraft, hud, side, difficulty)
 	if taskings and player is Aircraft:
 		ops = OpsRoom.new()
 		ops.name = "OpsRoom"
@@ -69,6 +72,9 @@ func stop() -> void:
 	if ops != null and is_instance_valid(ops):
 		ops.queue_free()
 	ops = null
+	if flights != null and is_instance_valid(flights):
+		flights.queue_free()
+	flights = null
 	if passing != null and is_instance_valid(passing):
 		passing.queue_free()
 	passing = null
@@ -112,66 +118,5 @@ func _process(delta: float) -> void:
 	super._process(delta)
 	if ops != null and is_instance_valid(ops):
 		ops.set_process(running)
-	if not running or not ambient_dogfights or player == null or not is_instance_valid(player):
-		return
-	_t -= delta
-	if _t > 0.0:
-		return
-	_t = randf_range(120.0, 210.0)
-	var alive: Array[Aircraft] = []
-	for a in _ambient:
-		if is_instance_valid(a) and a.state == Aircraft.State.ALIVE:
-			alive.append(a)
-	_ambient = alive
-	if _ambient.size() > 6 or AIFactory.ai_room(get_tree()) < 4:
-		return
-	_spawn_skirmish()
-
-
-func _spawn_skirmish() -> void:
-	var other: String = AircraftCatalog.opposite(side)
-	var center: Vector3 = player.global_position + WorldCoords.heading_to_dir(randf() * 360.0) * randf_range(9000.0, 14000.0)
-	center.y = maxf(player.global_position.y + randf_range(-100.0, 300.0), 700.0)
-	var friend_pool: Array = AircraftCatalog.fighters_for_side(side).filter(func(i: String) -> bool: return i != "me262")
-	var foe_pool: Array = AircraftCatalog.fighters_for_side(other).filter(func(i: String) -> bool: return i != "me262")
-	# Not every encounter is a scrap already in progress: often you come across an enemy patrol flying
-	# on its own, not yet locked onto anyone, and can bounce it before it sees you.
-	if randf() < 0.5:
-		_spawn_patrol(center, other, foe_pool)
-		return
-	for i in 2:
-		var off: Vector3 = Vector3(-500.0 + 150.0 * i, 0, 0)
-		var f: Aircraft = AIFactory.spawn(world, friend_pool[randi() % friend_pool.size()], side, center + off, 90.0, -1.0, difficulty)
-		var e: Aircraft = AIFactory.spawn(world, foe_pool[randi() % foe_pool.size()], other, center - off, 270.0, -1.0, difficulty)
-		for a in [f, e]:
-			var p: AIPilot = AIFactory.pilot_of(a)
-			p.detect_range = 4500.0      # normal visual range: they fight each other unless the player joins in
-			(a as Aircraft).crashed.connect(func(x: Aircraft, _r: String) -> void: _free_later(x, 2.5))
-			_ambient.append(a)
-			AIFactory.add_marker(hud, a, Color(0.3, 0.75, 1.0) if a == f else Color(1.0, 0.25, 0.2))
-
-
-## A pair (or a single) of enemy fighters stooging around on patrol, unaware of the player until he closes in.
-func _spawn_patrol(center: Vector3, team: String, pool: Array) -> void:
-	var n: int = randi_range(1, 2)
-	var hdg: float = randf() * 360.0
-	var yaw: Basis = Basis.looking_at(WorldCoords.heading_to_dir(hdg), Vector3.UP)
-	for i in n:
-		var off: Vector3 = yaw * Vector3((float(i) - 0.5 * float(n - 1)) * 130.0, 0.0, float(i) * 80.0)
-		var a: Aircraft = AIFactory.spawn(world, pool[randi() % pool.size()], team, center + off, hdg, -1.0, difficulty)
-		var p: AIPilot = AIFactory.pilot_of(a)
-		p.patrol_center = center
-		p.patrol_alt = center.y
-		p.patrol_radius = randf_range(1800.0, 3200.0)
-		p.detect_range = 3000.0      # eyes out, but not already in a fight until the player gets close
-		a.crashed.connect(func(x: Aircraft, _r: String) -> void: _free_later(x, 2.5))
-		_ambient.append(a)
-		AIFactory.add_marker(hud, a, Color(1.0, 0.25, 0.2))
-
-
-func _free_later(a: Aircraft, t: float) -> void:
-	if not is_instance_valid(a):
-		return
-	await a.get_tree().create_timer(t).timeout
-	if is_instance_valid(a):
-		a.queue_free()
+	if flights != null and is_instance_valid(flights):
+		flights.set_process(running)

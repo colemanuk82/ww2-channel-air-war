@@ -88,6 +88,8 @@ Never open a visible game window on the developer's PC: everything with pictures
   street grid (420 m districts, 34 m blocks, `town_plan` -> `_grid_people`); tests require >= 30 townspeople on High
   for Folkestone's real layout (Folkestone gets 79, Boulogne 97 on High).
 
+* **Free-flight enemy flights with missions** (scripts/modes/enemy_flights.gd, owned by FreeFlightMode when ambient flights are on; replaces the old random two-fighter skirmish / stooging patrol): every 100-190 s (max 3 up) the other side's flight appears in the air about 11 km from the player, on the line from one of its real airfields to a real objective on the player's side (WorldPopulator.raid_targets + the player side's airfields), so flying on meets it. Missions: **raid** (bombers in vics + close escort + top-cover layer that stay with the lead bomber and widen their engage radius when a bomber is hit), **stuka** (Ju 87 attack on a Channel ship near the player, else a port / airfield; Axis only), **sweep** (fighter free hunt: route to an area, 4.5 km square patrol, home; the leader goes back to its route after every fight and the next fighter takes over if it dies), **recon** (one high aircraft over the target). All fly a waypoint route out, over the target (bombs fall) and home to their own airfield, and are tidied away when home and 12 km from the player (or 45 km / 25 min). Size odds 62 % small / 28 % medium / 10 % large (SIZE_ODDS; raid 3-4 / 6-9 / 12-18 bombers plus 2-4 / 4-6 / 8-10 fighters, sweep 2-4 / 6-8 / 10-12), cut down to the free AI slots (AIFactory.ai_room; free-flight AI_CAP 30 -> 40). Medium and large raids are announced by Control on the radio / HUD ("Large raid building, 20+ bandits, heading for Manston") and the player side's fighters are scrambled from the airfield nearest the target. Friendly flights you can join remain PassingFlights; SortieManager (airfield take-offs) is unchanged. Tests: _test_enemy_flights. Debug: --flights-test (first flight after 5 s), --flights-kind=raid|stuka|sweep|recon, --flights-size=0|1|2, --flights-every=SECS, --flights-timescale=N, --flights-log ([mission] lines: launch, status every 20 s, phase changes, resume, over).
+
 ## Art style: Realistic / Cel-shaded (scripts/cel_shade.gd, shaders/cel/)
 Options > Video > Art style. Index 0 = Realistic (default, byte-for-byte the old path: every cel hook is gated on
 `GameState.art_style == 1`), index 1 = **Cel-shaded** (the old "Pixel art" slot, same saved index; pixel grid, dither and
@@ -123,7 +125,10 @@ a HUD toast and saves through `set_graphic`.
   distance, so the on-screen size stays about 1-2 px: `team_outline.gdshader` ring x0.35 at <1.5 km rising to full at 6 km,
   alpha 0.22 at 300 m rising to 0.5 at 3 km, the heavy far styling (x1.5 ring, alpha 0.95) builds up over 3-6 km (was
   1.2-3.5 km), so 8-20 km is unchanged; the cel ink of AI aircraft (`cel_ink.gdshader`, `soft_near` = 1 for non-player
-  aircraft) is x0.4 under 1.5 km rising to x1 at 6 km. The player's black ink is unchanged.
+  aircraft) is x0.4 under 1.5 km rising to x1 at 6 km.
+* **Thinner player ink (v4.31+):** the player's black cel ink is about 37% of its old width at every distance, including the
+  LOD boxes and the prop ink (`PLAYER_INK_WIDTH` = 0.375 in `aircraft.gd`, applied through the `width_scale` uniform of
+  `cel_ink.gdshader`). AI team ink is unchanged (`width_scale` 1.0). Realistic has no player outline, so nothing changed there.
 * **Spawn keep-clear (v4.31):** root cause of 'Axis spawn inside ground assets, plane stuck and dying': the dispersal pad
   (`taxi_flight_routes[0]`, where the player spawns) is also where `WorldPopulator` scattered Luftwaffe E-pens, camo nets and
   boundary markers, and `AirfieldFurniture` put revetment banks, flare-path lamps and dummy aircraft; solid scenery registers

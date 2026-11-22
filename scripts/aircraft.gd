@@ -307,6 +307,9 @@ func _prop_ink(base: ShaderMaterial) -> ShaderMaterial:
 	return pm
 
 
+## Width of the player's black cel ink, as a fraction of the ring it had before (shaders/cel/cel_ink.gdshader width_scale).
+const PLAYER_INK_WIDTH: float = 0.375
+
 ## Cel-shaded style: give EVERY aircraft a thick ink silhouette (the player included; the game's team
 ## outline skips the player). See shaders/cel/cel_ink.gdshader.
 func _apply_cel_ink() -> void:
@@ -329,6 +332,9 @@ func _apply_cel_ink() -> void:
 		m.set_shader_parameter("thickness", 0.06)
 		m.set_shader_parameter("dist_scale", 0.0034)
 		m.set_shader_parameter("soft_near", 0.0 if player_controlled else 1.0)
+		# the player's black ink is thinned to ~37% of its old width (all distances, the LOD boxes and the prop ink copy it);
+		# AI team ink keeps width_scale 1.0
+		m.set_shader_parameter("width_scale", PLAYER_INK_WIDTH if player_controlled else 1.0)
 		_ink_cache[ink_col] = m
 	var lod_key: String = str(ink_col) + "_lod"
 	var m_lod: ShaderMaterial = _ink_cache.get(lod_key) as ShaderMaterial
@@ -358,8 +364,11 @@ func _apply_cel_ink() -> void:
 			var ink: ShaderMaterial = m_lod if root == _lod_model else m
 			if root != _lod_model and _in_prop(mi):
 				ink = _prop_ink(m)
-			if mi.material_overlay != null and not player_controlled:
-				mi.material_overlay.next_pass = ink
+			var ov: Material = mi.material_overlay
+			if ov == ink or (ov != null and ov.next_pass == ink):
+				continue      # already inked (re-applied): chaining it again would make ink its own next_pass
+			if ov != null and not player_controlled and not _is_ink(ov):
+				ov.next_pass = ink
 			else:
 				mi.material_overlay = ink
 
