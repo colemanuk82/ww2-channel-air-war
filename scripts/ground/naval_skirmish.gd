@@ -446,6 +446,7 @@ func _make_attackers(types: Array, team: String, at: Vector3, toward: Vector3) -
 		var sh: GroundShip = GroundShip.create(t, team, null, 0.0, float(GroundShip.TYPES[t]["speed"]))
 		sh.display_name = {"eboat": "S-boot", "mtb": "MTB", "destroyer": "Destroyer"}.get(t, t.capitalize())
 		sh.set_meta("skirmish_spawn", true)
+		sh.set_meta("gm_event", self)       # ground target markers (ground_marks.gd)
 		var off: float = (float(i) - float(types.size() - 1) * 0.5) * 110.0
 		sh.position = at + perp * off - dirv * absf(off) * 0.3
 		sh.rotation.y = yaw_of(dirv)

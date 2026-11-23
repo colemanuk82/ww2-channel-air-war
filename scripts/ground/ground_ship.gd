@@ -254,19 +254,10 @@ func _post_ready() -> void:
 ## Same red (enemy) / yellow (friendly) outline the AI aircraft get, but it carries further because
 ## ships are usually seen from altitude.
 func _apply_team_outline() -> void:
+	# v4.37: the ship outline is now managed by GroundMarks (shared cached materials, Options > Gameplay > Ground target
+	# markers, enemy ships in range and ships of an active engagement); nothing is put on at build time any more.
 	if team == "Neutral" or not is_instance_valid(_intact):
 		return
-	var friendly: bool = team == GameState.player_side
-	var m := ShaderMaterial.new()
-	m.shader = load("res://shaders/team_outline.gdshader") as Shader
-	m.set_shader_parameter("outline_color", Color(1.0, 0.85, 0.1) if friendly else Color(1.0, 0.16, 0.1))
-	m.set_shader_parameter("thickness", 0.12)
-	m.set_shader_parameter("dist_scale", 0.0011)
-	m.set_shader_parameter("fade_start", 2500.0)
-	m.set_shader_parameter("fade_end", 9000.0)
-	m.set_shader_parameter("strength", 0.6)
-	for n in _intact.find_children("*", "MeshInstance3D", true, false):
-		(n as MeshInstance3D).material_overlay = m
 	if route != null and route.length > 1.0:
 		_step(0.0, true)
 

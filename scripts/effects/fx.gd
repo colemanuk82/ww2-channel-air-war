@@ -315,6 +315,23 @@ func stack_smoke(pos: Vector3, size: float, holder: Node3D) -> FXEmitter:
 	return e
 
 
+## Coloured signal smoke column (ground target markers); lasts `duration` seconds.
+func marker_smoke(pos: Vector3, col: Color = Color(1.0, 0.72, 0.08), duration: float = 90.0) -> FXEmitter:
+	var e: FXEmitter = _add_emitter(FXEmitter.Kind.MARKER, pos, null, Vector3.ZERO, 5.0, duration)
+	e.tint = col
+	var wm: Node = get_node_or_null("/root/WeatherManager")
+	if wm != null and wm.has_method("get_wind"):
+		var w: Vector3 = wm.call("get_wind", pos)
+		e.drift = Vector3(w.x, 0.0, w.z).limit_length(7.0) * 0.55
+	return e
+
+
+## A big muzzle flash and puff that reads from a distance (tank / gun fire seen from the air).
+func gun_flash(pos: Vector3, size: float = 6.0) -> void:
+	_spawn_star(pos, size, 0.2, Color(1.0, 0.6, 0.15), Color(1.0, 0.95, 0.7), 6.0)
+	puffs.spawn(pos, Vector3(0.0, 1.5, 0.0) + _rv(0.5), 2.4, size * 0.3, size * 0.9, Color(0.75, 0.72, 0.68, 0.5), Color(0.8, 0.8, 0.8, 0.0), 1.0, 0.0, 0.3)
+
+
 ## Burning building: flames plus a tall black smoke plume, both bound to `holder` (stopped when it leaves the tree).
 ## Returns the emitters so the caller can stop() them.
 func blaze(holder: Node3D, size: float = 1.0, plume: float = 1.0, smoke_on: bool = true) -> Array:

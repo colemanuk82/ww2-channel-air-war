@@ -2,7 +2,7 @@ class_name FXEmitter
 extends RefCounted
 ## Persistent smoke / fire emitter driven by the FX autoload. Call stop() to end it.
 
-enum Kind { COLUMN, FIRE, TRAIL_SMOKE, TRAIL_FIRE, STACK, BLAZE, PLUME, PILLAR }
+enum Kind { COLUMN, FIRE, TRAIL_SMOKE, TRAIL_FIRE, STACK, BLAZE, PLUME, PILLAR, MARKER }
 
 var kind: int = Kind.COLUMN
 var pos: Vector3
@@ -14,6 +14,7 @@ var dark: float = 0.5          # 0 light grey .. 1 black (trails)
 var smoke_on: bool = true      # city fires switch this off on 80% of their fires
 var drift: Vector3 = Vector3(2.0, 0.0, 0.8)   # STACK: how far the wind leans the plume
 var aux: FXParticles           # PILLAR: pool for the flames at its foot
+var tint: Color = Color(1.0, 0.72, 0.08)   # MARKER: the colour of the signal smoke
 var remain: float = 20.0       # < 0 = until stop()
 var total: float = 20.0
 var active: bool = true
@@ -58,6 +59,8 @@ func update(delta: float, puffs: FXParticles) -> bool:
 			interval = 0.11     # dense enough that the puffs overlap into one column, not a string of beads
 		Kind.PILLAR:
 			interval = 0.11
+		Kind.MARKER:
+			interval = 0.2
 	_acc += delta
 	var loops: int = 0
 	while _acc >= interval and loops < 4:
@@ -125,6 +128,10 @@ func _emit(p: Vector3, puffs: FXParticles, fade: float) -> void:
 			if aux != null and _tick % 2 == 0:
 				aux.spawn(p + _jit(s * 0.2) * Vector3(1, 0.3, 1), Vector3(0.0, s * 1.6, 0.0) + _jit(s * 0.25), 0.8, s * 0.55, s * 0.18,
 					Color(1.0, 0.78, 0.22, 1.0), Color(0.95, 0.22, 0.04, 0.0), 0.2, 0.0, 0.5)
+		Kind.MARKER:
+			# coloured signal smoke (yellow = enemy here, white = our line): a bright column that rises ~60 m and drifts
+			puffs.spawn(p + _jit(s * 0.1), Vector3(drift.x * 0.4, 7.0, drift.z * 0.4) + _jit(0.5), 14.0, s * 0.3, s * 2.2,
+				Color(tint.r, tint.g, tint.b, 0.85 * fade), Color(tint.r, tint.g, tint.b, 0.0), 0.35, 0.0, 0.12)
 		Kind.TRAIL_FIRE:
 			puffs.spawn(p + _jit(s * 0.1), _jit(1.5), 0.35, s * 0.7, s * 0.15,
 				Color(1.0, 0.8, 0.2, 1.0), Color(0.95, 0.25, 0.05, 0.0), 0.2, 0.0, 0.0)

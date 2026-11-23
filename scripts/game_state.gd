@@ -65,6 +65,7 @@ var heat_level: int = 2           # 0 off, 1 low, 2 medium (default), 3 high
 var player_heal: bool = true   # the player's aircraft very slowly repairs itself in flight
 var show_pitch_ladder: bool = false   # pitch ladder drawn in the HUD
 var show_lead_marker: bool = false    # Options > Gameplay: the lead (aim-ahead) marker on a targeted aircraft; off by default
+var ground_markers: int = 2           # Options > Gameplay "Ground target markers": 0 off, 1 smoke only, 2 outlines + smoke (HUD brackets while support is requested), 3 full (scripts/ground/ground_marks.gd)
 var outline_near: float = 1300.0      # AI team outlines: fade in beyond this distance
 var outline_fade: float = 12000.0      # ... and gone beyond this distance
 var player_side: String = "Allies"
@@ -267,6 +268,7 @@ func _load_settings() -> void:
 	g_effects_on = g_level > 0
 	show_pitch_ladder = bool(cf.get_value("gameplay", "pitch_ladder", show_pitch_ladder))
 	show_lead_marker = bool(cf.get_value("gameplay", "lead_marker", show_lead_marker))
+	ground_markers = clampi(int(cf.get_value("gameplay", "ground_markers", ground_markers)), 0, 3)
 	outline_near = clampf(float(cf.get_value("ui", "outline_near", outline_near)), 0.0, 5000.0)
 	outline_fade = clampf(float(cf.get_value("ui", "outline_fade", outline_fade)), outline_near + 1000.0, 25000.0)
 	completed_missions = cf.get_value("progress", "completed_missions", completed_missions)
@@ -400,6 +402,7 @@ func save_settings() -> void:
 	cf.set_value("realism", "g_level", g_level)
 	cf.set_value("gameplay", "pitch_ladder", show_pitch_ladder)
 	cf.set_value("gameplay", "lead_marker", show_lead_marker)
+	cf.set_value("gameplay", "ground_markers", ground_markers)
 	cf.set_value("ui", "outline_near", outline_near)
 	cf.set_value("ui", "outline_fade", outline_fade)
 	cf.set_value("progress", "completed_missions", completed_missions)
@@ -617,6 +620,8 @@ func set_graphic(key: String, value: Variant) -> void:
 			show_pitch_ladder = bool(value)
 		"lead_marker":
 			show_lead_marker = bool(value)
+		"ground_markers":
+			ground_markers = clampi(int(value), 0, 3)
 		"msaa":
 			msaa_level = int(value)
 		"aniso":

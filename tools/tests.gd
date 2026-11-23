@@ -98,6 +98,7 @@ func _ready() -> void:
 	_test_land_battles()
 	_test_cross_channel_guns()
 	_test_ground_support_markers()
+	_test_ground_markers()
 	_test_war_period()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	_test_report_link()
@@ -3949,6 +3950,139 @@ func _support_hud_stub() -> Node:
 	scr.source_code = "extends Node\nvar marks: Array = []\nfunc register_support_marker(n) -> void:\n\tif not marks.has(n):\n\t\tmarks.append(n)\nfunc unregister_support_marker(n) -> void:\n\tmarks.erase(n)\n"
 	scr.reload()
 	return scr.new()
+
+
+func _gm_overlay(n: Node) -> Material:
+	for c in (n.get("_intact") as Node).find_children("*", "MeshInstance3D", true, false):
+		return (c as MeshInstance3D).material_overlay
+	return null
+
+
+## Every mesh of the unit carries the shared outline material of this team / style.
+func _gm_has(n: Node, enemy: bool, cel: bool) -> bool:
+	var GM = preload("res://scripts/ground/ground_marks.gd")
+	var cnt: int = 0
+	for c in (n.get("_intact") as Node).find_children("*", "MeshInstance3D", true, false):
+		var mi: MeshInstance3D = c as MeshInstance3D
+		cnt += 1
+		if mi.material_overlay != GM.mat(enemy, mi.mesh is BoxMesh, cel):
+			return false
+	return cnt > 0
+
+
+## Ground target markers (scripts/ground/ground_marks.gd): outlines on the units of an active battle (enemy red / friendly
+## yellow, shared cached materials), the option, the HUD bracket list (capped, enemies only), marker smoke, minimap dots.
+func _test_ground_markers() -> void:
+	print("-- ground target markers")
+	var GM = preload("res://scripts/ground/ground_marks.gd")
+	var LBT = preload("res://scripts/ground/land_battle.gd")
+	var LB = preload("res://scripts/ground/land_battles.gd")
+	var keep_mode: int = GameState.ground_markers
+	var keep_art: int = GameState.art_style
+	var keep_side: String = GameState.player_side
+	LBT.land_fn = func(x: float, _z: float) -> bool:
+		return x < 0.0
+	GameState.player_side = "Allies"
+	GameState.art_style = 0
+	GameState.set_graphic("ground_markers", 99)
+	_check(GameState.ground_markers == 3, "the option clamps to 0..3")
+	GameState.set_graphic("ground_markers", 2)
+	var pp := Vector3(-3000.0, 300.0, 0.0)
+	var b = LBT.new()
+	b.manual = true
+	b.setup("raid", Vector3(-3000.0, 0.0, 0.0), Vector2(1, 0), "Allies", 11, "1942-08-17")
+	add_child(b)
+	for i in 10:       # more enemy vehicles than the HUD list takes
+		var xv: GroundVehicle = GroundVehicle.create("panzer3", "Axis", null, 0.0, 0.0, "idle")
+		xv.set_meta("gm_event", b)
+		xv.position = Vector3(-3000.0 + float(i) * 20.0, 0.0, 120.0)
+		b.add_child(xv)
+	GM.update(get_tree(), pp, 1.0, true)
+	var en_ok: bool = true
+	var fr_ok: bool = true
+	var mats: Dictionary = {}
+	var n_en: int = 0
+	for u in b.units:
+		mats[_gm_overlay(u.node)] = true
+		if u.team == "Axis":
+			n_en += 1
+			if not _gm_has(u.node, true, false):
+				en_ok = false
+		elif not _gm_has(u.node, false, false):
+			fr_ok = false
+	_check(n_en >= 5 and en_ok, "enemy vehicles of an active battle get the shared enemy outline material (%d)" % n_en)
+	_check(fr_ok, "friendly vehicles of the battle get the friendly outline material")
+	_check(mats.size() <= 2, "one shared material per team, not one per vehicle (%d)" % mats.size())
+	_check(GM.mat(true, true, false).get_shader_parameter("outline_color") != GM.mat(false, true, false).get_shader_parameter("outline_color"), "enemy and friendly outline colours differ")
+	GameState.art_style = 1
+	GM.update(get_tree(), pp, 1.0, true)
+	var cel_ov: Material = _gm_overlay(b.units[0].node)
+	_check(cel_ov != null and _gm_has(b.units[0].node, b.units[0].team != "Allies", true) and (cel_ov as ShaderMaterial).shader.resource_path.ends_with("cel_ink.gdshader"), "Cel style: the cel ink material takes over")
+	GameState.art_style = 0
+	GM.update(get_tree(), pp, 1.0, true)
+	# HUD list
+	GameState.set_graphic("ground_markers", 3)
+	GM.update(get_tree(), pp, 1.0, true)
+	var sorted_ok: bool = true
+	var enemies_only: bool = true
+	for i in GM.marks.size():
+		var mk: Array = GM.marks[i]
+		if (mk[0] as Node).get("team") == "Allies":
+			enemies_only = false
+		if i > 0 and float(mk[1]) < float((GM.marks[i - 1] as Array)[1]):
+			sorted_ok = false
+	_check(GM.marks.size() == GM.MAX_MARKS and sorted_ok and enemies_only, "HUD marker list: enemies only, nearest first, capped at %d (%d)" % [GM.MAX_MARKS, GM.marks.size()])
+	_check(GM.hud_active(false) and GM.dots_active(false), "Full: brackets and minimap dots whenever a fight is near")
+	var has_f: bool = false
+	var has_e: bool = false
+	for dd in GM.dots:
+		if bool((dd as Array)[1]):
+			has_e = true
+		else:
+			has_f = true
+	_check(has_e and has_f and GM.dots.size() <= GM.MAX_DOTS, "minimap dots: enemy and friendly units of the fight (%d)" % GM.dots.size())
+	GameState.set_graphic("ground_markers", 2)
+	GM.update(get_tree(), pp, 1.0, true)
+	_check(not GM.hud_active(false) and GM.hud_active(true) and GM.dots_active(false), "Outlines + smoke: brackets only while support is requested")
+	# far away: no outline on enemies beyond the range
+	GM.update(get_tree(), Vector3(-3000.0 + 20000.0, 300.0, 0.0), 1.0, true)
+	_check(not GM.has_outline(b.units[0].node) and GM.marks.is_empty() and GM.dots.is_empty() and not GM.near_event, "nothing is outlined or listed 20 km away")
+	# Off / Smoke only: outlines removed
+	GM.update(get_tree(), pp, 1.0, true)
+	_check(GM.has_outline(b.units[0].node), "outlines are back when the player is near again")
+	GameState.set_graphic("ground_markers", 1)
+	GM.update(get_tree(), pp, 1.0, true)
+	var gone: bool = true
+	for u in b.units:
+		if GM.has_outline(u.node) or _gm_overlay(u.node) != null:
+			gone = false
+	_check(gone and GM.marks.is_empty() and not GM.hud_active(true) and not GM.dots_active(true), "Smoke only: no outlines, brackets or dots")
+	GameState.set_graphic("ground_markers", 0)
+	var n0: int = GM.smoke_made
+	_check(GM.battle_smoke(b, "Allies") == 0 and GM.smoke_made == n0, "Off: no marker smoke either")
+	# marker smoke on a support call
+	GameState.set_graphic("ground_markers", 2)
+	var dir = LB.new()
+	dir.say_radio = false
+	dir.side = "Allies"
+	add_child(dir)
+	var s0: int = GM.smoke_made
+	var bb = dir.spawn_battle("raid", Vector3(-3000.0, 0.0, 0.0), "1942-08-17")
+	bb.manual = true
+	var pair_ok: bool = GM.smoke_made == s0 + 2 and GM.smoke_log.size() >= 2
+	if pair_ok:
+		var c_enemy: Color = (GM.smoke_log[GM.smoke_log.size() - 2] as Array)[1]
+		var c_own: Color = (GM.smoke_log[GM.smoke_log.size() - 1] as Array)[1]
+		pair_ok = c_enemy.r > 0.9 and c_enemy.b < 0.3 and c_own.b > 0.8
+	_check(pair_ok, "a support call pops yellow smoke on the enemy and white on the own line (%d made)" % (GM.smoke_made - s0))
+	_check(bb.has_meta("gm_smoke_at") and float(bb.get_meta("gm_smoke_at")) >= 60.0, "the smoke is refreshed every 60-100 s")
+	dir.free()
+	b.free()
+	LBT.land_fn = Callable()
+	GameState.ground_markers = keep_mode
+	GameState.art_style = keep_art
+	GameState.player_side = keep_side
+	GM.update(get_tree(), pp, 1.0, true)
 
 
 ## Ground-support requests on the minimap: a land battle's air-support call puts a ring on the battle centre (one, however

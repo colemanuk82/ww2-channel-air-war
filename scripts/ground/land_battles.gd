@@ -14,6 +14,7 @@ extends Node
 ## Built without class_name (a new class_name needs an editor import first); load it with preload.
 
 const LandBattle := preload("res://scripts/ground/land_battle.gd")
+const GroundMarks := preload("res://scripts/ground/ground_marks.gd")
 
 const Tempo := preload("res://scripts/modes/activity_tempo.gd")     # lulls hold back new battles; Busy / Quiet scale the gap
 const FIRST_DELAY: float = 75.0
@@ -221,6 +222,8 @@ func _housekeeping(delta: float) -> void:
 			battles.remove_at(i)
 		else:
 			var d: float = Vector2(player.global_position.x - b.centre.x, player.global_position.z - b.centre.z).length()
+			if not b.ended and b.has_meta("gm_smoke_at") and b.age >= float(b.get_meta("gm_smoke_at")):
+				_marker_smoke(b, d)       # refresh the marker smoke every 60-100 s while support is wanted
 			if d > FREE_DIST or (b.ended and b.age - b.end_age > KEEP_AFTER_END and d > 4500.0) or b.age > 1500.0:
 				b.queue_free()
 				battles.remove_at(i)
@@ -352,6 +355,7 @@ func _on_losing(team: String, b: Node3D) -> void:
 ## Minimap: a "ground support requested" ring at the battle centre (same style as the naval fights). The anchor is a
 ## child of the battle, so it goes with the battle; it is unregistered when the battle ends (_drop_support).
 func _support_mark(b: Node3D) -> void:
+	_marker_smoke(b)
 	if hud == null or not is_instance_valid(hud) or not hud.has_method("register_support_marker"):
 		return
 	var a: Node3D = b.get_node_or_null("SupportMark") as Node3D
@@ -364,6 +368,17 @@ func _support_mark(b: Node3D) -> void:
 	else:
 		a.position = b.centre
 	hud.call("register_support_marker", a)
+
+
+## Friendly troops pop marker smoke (yellow on the enemy, white on their own line) when support is requested and refresh it.
+func _marker_smoke(b: Node3D, player_dist: float = -1.0) -> void:
+	var pd: float = player_dist
+	if pd < 0.0 and player != null and is_instance_valid(player):
+		pd = Vector2(player.global_position.x - b.centre.x, player.global_position.z - b.centre.z).length()
+	b.set_meta("gm_smoke_at", b.age + rng.randf_range(60.0, 100.0))
+	if pd > 14000.0:
+		return
+	GroundMarks.battle_smoke(b, side)
 
 
 func _drop_support(b: Node3D) -> void:

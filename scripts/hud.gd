@@ -7,6 +7,7 @@ extends CanvasLayer
 ##   hud.register_minimap_marker(node3d, color)    # dots on the minimap (auto-removed when freed)
 ##   hud.set_readout_extra("AMMO 600")             # extra line in the bottom-left panel
 
+const GroundMarks := preload("res://scripts/ground/ground_marks.gd")
 const BOMBER_MERGE_DIST: float = 1500.0     # bombers closer than this (world units) share one minimap icon
 const MAP_RANGE: float = 22000.0     # world units from centre to edge of the minimap
 const MAP_RES: int = 256             # internal map texture resolution
@@ -1018,6 +1019,7 @@ func _process(delta: float) -> void:
 	_stall_lbl.text = "PULL UP"
 	_stall_lbl.visible = false   # no on-screen PULL UP text
 	_damage_callouts()
+	GroundMarks.update(get_tree(), aircraft.global_position, delta)     # outlines, bracket list and minimap dots, 10 Hz
 	_hints.visible = GameState.show_hints and GameState.show_hud
 	_inst.queue_redraw()
 	_radio.queue_redraw()
@@ -1537,7 +1539,98 @@ func _draw_aim() -> void:
 		return
 	if GameState.show_pitch_ladder:
 		_draw_ladder()
+	_draw_ground_marks()
 	# (no hit-confirm cross: _draw_hit_marker is kept but no longer drawn)
+
+
+func _support_live() -> bool:
+	for n in _support_marks:
+		if is_instance_valid(n):
+			return true
+	return false
+
+
+## Ground target markers (scripts/ground/ground_marks.gd): red corner brackets over the nearest enemy units of a fight
+## (distance on the nearest and on the one nearest the crosshair), small yellow ticks over friendly units, and an edge arrow
+## with the distance towards each requested-support spot that is off screen.
+func _draw_ground_marks() -> void:
+	if not GroundMarks.hud_active(_support_live()):
+		return
+	var vs: Vector2 = _aim.size
+	var inner := Rect2(Vector2(24, 24), vs - Vector2(48, 48))
+	var col: Color = GameState.accessible_color(ENEMY_COL)
+	var ap: Vector3 = aircraft.global_position
+	var sel: int = -1
+	var best: float = 1.0e9
+	var cen: Vector2 = vs * 0.5
+	for i in GroundMarks.marks.size():
+		var nd: Node3D = (GroundMarks.marks[i] as Array)[0] as Node3D
+		if not is_instance_valid(nd) or camera.is_position_behind(nd.global_position):
+			continue
+		var dc: float = camera.unproject_position(nd.global_position).distance_to(cen)
+		if dc < best:
+			best = dc
+			sel = i
+	var labelled_first: bool = false
+	for i in GroundMarks.marks.size():
+		var nd: Node3D = (GroundMarks.marks[i] as Array)[0] as Node3D
+		if not is_instance_valid(nd) or bool(nd.get("is_dead")):
+			continue
+		var wp: Vector3 = nd.global_position + Vector3(0, 3.0, 0)
+		if camera.is_position_behind(wp):
+			continue
+		var sp: Vector2 = camera.unproject_position(wp)
+		if not inner.has_point(sp):
+			continue
+		var d: float = ap.distance_to(nd.global_position)
+		var s: float = clampf(2600.0 / maxf(d, 200.0), 7.0, 18.0)
+		var arm: float = s * 0.5
+		for c in [Vector2(-1, -1), Vector2(1, -1), Vector2(-1, 1), Vector2(1, 1)]:
+			var corner: Vector2 = sp + c * s
+			_aim.draw_line(corner, corner - Vector2(c.x * arm, 0), Color(0, 0, 0, 0.7), 3.5)
+			_aim.draw_line(corner, corner - Vector2(0, c.y * arm), Color(0, 0, 0, 0.7), 3.5)
+			_aim.draw_line(corner, corner - Vector2(c.x * arm, 0), Color(col, 0.9), 1.6)
+			_aim.draw_line(corner, corner - Vector2(0, c.y * arm), Color(col, 0.9), 1.6)
+		if i == sel or not labelled_first:
+			labelled_first = true
+			_txt(_aim, "%.1f km" % (d * WorldCoords.HORIZ_COMPRESSION / 1000.0) if d >= 1000.0 else "%d m" % int(d), sp + Vector2(0, s + 16.0), 12, Color(col, 0.95), 1)
+	# friendly units of the fight: a small subtle tick, never red
+	var fcol: Color = GameState.accessible_color(FRIEND_COL)
+	var nf: int = 0
+	for dd in GroundMarks.dots:
+		if bool((dd as Array)[1]) or nf >= 12:
+			continue
+		var fn: Node3D = (dd as Array)[0] as Node3D
+		if not is_instance_valid(fn) or bool(fn.get("is_dead")) or ap.distance_to(fn.global_position) > 4000.0:
+			continue
+		var fw: Vector3 = fn.global_position + Vector3(0, 4.0, 0)
+		if camera.is_position_behind(fw):
+			continue
+		var fp: Vector2 = camera.unproject_position(fw)
+		if inner.has_point(fp):
+			nf += 1
+			_aim.draw_colored_polygon(PackedVector2Array([fp + Vector2(-4, -6), fp + Vector2(4, -6), fp + Vector2(0, 0)]), Color(fcol, 0.55))
+	# off-screen battle centres: an arrow on the screen edge
+	var na: int = 0
+	for sm in _support_marks:
+		if not is_instance_valid(sm) or na >= 3:
+			continue
+		var cw: Vector3 = (sm as Node3D).global_position
+		if not camera.is_position_behind(cw) and inner.has_point(camera.unproject_position(cw)):
+			continue
+		na += 1
+		var loc: Vector3 = camera.global_transform.affine_inverse() * cw
+		var dv := Vector2(loc.x, -loc.y)
+		if dv.length() < 0.001:
+			dv = Vector2(0, -1)
+		dv = dv.normalized()
+		var half: Vector2 = vs * 0.5 - Vector2(48, 48)
+		var k: float = minf(half.x / maxf(absf(dv.x), 0.001), half.y / maxf(absf(dv.y), 0.001))
+		var ep: Vector2 = cen + dv * k
+		var sv := Vector2(-dv.y, dv.x)
+		var oc := Color(1.0, 0.45, 0.2)
+		_aim.draw_colored_polygon(PackedVector2Array([ep + dv * 12.0, ep - dv * 7.0 + sv * 9.0, ep - dv * 7.0 - sv * 9.0]), Color(oc, 0.85))
+		_txt(_aim, "%d km" % int(round(Vector2(cw.x - ap.x, cw.z - ap.z).length() * WorldCoords.HORIZ_COMPRESSION / 1000.0)), ep - dv * 26.0 + Vector2(0, 5), 12, Color(oc, 0.95), 1)
 
 
 ## White cross when your rounds land, a larger red one when you destroy the target.
@@ -1820,6 +1913,17 @@ func _draw_minimap() -> void:
 					_minimap.draw_circle(mpp, 3.0, GameState.accessible_color(m[1]))
 	# ground support requested (land battle centres, naval attacks, the guns' batteries): ring + blades, clamped at the edge
 	_draw_support_marks(rect, to_map)
+	# enemy (red) and friendly (yellow) units of a nearby fight: small dots
+	if GroundMarks.dots_active(_support_live()):
+		for dd in GroundMarks.dots:
+			var dn: Node3D = (dd as Array)[0] as Node3D
+			if not is_instance_valid(dn) or bool(dn.get("is_dead")):
+				continue
+			var dmp: Vector2 = to_map.call(dn.global_position)
+			if not rect.grow(-3.0).has_point(dmp):
+				continue
+			_minimap.draw_circle(dmp, 3.0, Color(0, 0, 0, 0.75))
+			_minimap.draw_circle(dmp, 2.0, GameState.accessible_color(ENEMY_COL if bool((dd as Array)[1]) else FRIEND_COL))
 	# the current objective (mode nav_point): a pulsing diamond, or an arrow on the frame edge with the
 	# distance when it lies off the chart (Ops Room taskings are often 20-50 km out)
 	var gm: Node = get_tree().get_first_node_in_group("game_mode")

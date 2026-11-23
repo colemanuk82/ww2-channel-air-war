@@ -12,6 +12,7 @@ signal losing(team: String)
 signal finished(winner: String)
 signal friendly_hit(what: String)
 
+const GroundMarks := preload("res://scripts/ground/ground_marks.gd")
 const MAN: float = 1.036                # AirfieldPeople.MAN (SCALE * HEIGHT_M / FIG_H)
 const RUN_SPD: float = 3.6              # mesh metres a second of a rifle squad's bound (about 3.7 m/s)
 const TRACER_MAX: int = 56
@@ -257,6 +258,7 @@ func _add_vehicle(vtype: String, team: String, p: Vector2, face: Vector2, role: 
 		u.dmg_hi = float((g["dmg"] as Array)[1])
 	u.fire_t = rng.randf_range(1.5, 6.0)
 	u.mg_t = rng.randf_range(1.0, 4.0)
+	v.set_meta("gm_event", self)             # ground target markers (ground_marks.gd): part of an active battle
 	add_child(v)
 	v.destroyed.connect(_on_destroyed.bind(u))
 	units.append(u)
@@ -666,6 +668,9 @@ func _muzzle(u: Unit, aim: Vector3) -> void:
 	if tip != null and _fx_cost(1.0):
 		GroundKit.explosion(tip.global_position, 0.2)
 		GroundKit.sparks(tip.global_position)
+	if tip != null and near and _pdist > 450.0 and GroundMarks.mode() >= GroundMarks.SMOKE and _budget >= 0.5:
+		_budget -= 0.5
+		GroundKit.fx_call("gun_flash", [tip.global_position, GroundMarks.flash_size(_pdist)])   # a flash that reads at range
 	_sfx("cannon", u.pos(), -2.0, 0.1)
 
 

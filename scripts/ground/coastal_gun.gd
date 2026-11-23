@@ -56,6 +56,7 @@ static func create(p_kind: String, p_team: String, p_battery: String, p_index: i
 	g._yaw_lim = deg_to_rad(float(cfg["yaw_lim"]))
 	g.display_name = "Heavy gun %d" % (p_index + 1)
 	g.heading_deg = p_heading
+	g.set_meta("gm_event", true)    # ground target markers (ground_marks.gd): a battery is an event of its own
 	g.position = Vector3(world_pos.x, GroundKit.ground_y(world_pos.x, world_pos.z), world_pos.z)
 	g.rotation.y = -deg_to_rad(p_heading)
 	return g

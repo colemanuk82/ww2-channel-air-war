@@ -15,6 +15,7 @@ uniform float dist_scale = 0.0011;   // grows with distance so it stays ~1 pixel
 uniform float max_dist = 24000.0;     // clamp: past this the sprite is a few pixels anyway
 uniform bool box_hull = false;      // far stand-in boxes: inflate along sign(VERTEX) (per-face normals leave no ring)
 uniform float soft_near = 0.0;       // 1 = team-coloured AI ink: thinner under ~6 km, ramping up with distance (the player's black ink keeps its full weight)
+uniform vec2 range_m = vec2(0.0);    // ground units (GroundMarks): ring fades in from range_m.x and out towards range_m.y (metres); (0, 0) = always on
 uniform float pixel_k = 1.0;         // 0 = off (same as the game's normal look)
 uniform float width_scale = 1.0;     // scales the whole ring (all distances, LOD boxes, prop ink): the player's black ink is set to 0.375; 1.0 = unchanged
 
@@ -26,6 +27,10 @@ void vertex() {
 	// Cap the distance term so far aircraft do not grow a slab-like outline.
 	float grow = thickness + min(d, max_dist) * dist_scale;
 	grow *= mix(1.0, mix(0.4, 1.0, smoothstep(1500.0, 6000.0, d)), soft_near);   // v4.31: team-coloured (AI) ink is thin up close, full size from ~6 km
+	if (range_m.y > 0.0) {
+		// the ring shrinks to nothing (hidden behind the hull) outside the range: no pop
+		grow *= smoothstep(range_m.x, range_m.x + 300.0, d) * (1.0 - smoothstep(range_m.y - 2000.0, range_m.y, d));
+	}
 	VERTEX += (box_hull ? sign(VERTEX) : NORMAL) * grow * width_scale * pixel_k;
 }
 

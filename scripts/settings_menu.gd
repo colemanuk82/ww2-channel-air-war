@@ -401,6 +401,9 @@ func _build_gameplay_page() -> VBoxContainer:
 		GameState.set_graphic("pitch_ladder", i == 1))
 	_row(page, "Lead marker on targets", ["Off", "On"], 1 if GameState.show_lead_marker else 0, func(i: int) -> void:
 		GameState.set_graphic("lead_marker", i == 1))
+	var gm_row := _row(page, "Ground target markers", ["Off", "Smoke only", "Outlines + smoke", "Full"], GameState.ground_markers, func(i: int) -> void:
+		GameState.set_graphic("ground_markers", i))
+	gm_row.tooltip_text = "Helps you find enemy tanks, guns and ships.\nSmoke only: friendly troops pop marker smoke.\nOutlines + smoke: red / yellow outlines on units in a fight, and HUD brackets while air support is requested.\nFull: brackets whenever a fight is within 8 km."
 	_row(page, "Control hints", ["Off", "On"], 1 if GameState.show_hints else 0, func(i: int) -> void:
 		GameState.set_graphic("show_hints", i == 1))
 	_row(page, "Camera shake", ["Normal", "Reduced"], 1 if GameState.reduce_shake else 0, func(i: int) -> void:
