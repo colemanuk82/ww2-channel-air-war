@@ -197,8 +197,8 @@ func _refocus_later(node: Node) -> void:
 	_focus_new(node)
 
 
-func _focus_new(node: Node) -> void:
-	if not is_instance_valid(node) or not node.is_inside_tree() or top() != node:
+func _focus_new(node) -> void:      # untyped: a deferred call can arrive after the screen was freed
+	if not is_instance_valid(node) or not (node as Node).is_inside_tree() or top() != node:
 		return
 	var fo: Control = get_viewport().gui_get_focus_owner()
 	if fo != null and fo.is_queued_for_deletion():

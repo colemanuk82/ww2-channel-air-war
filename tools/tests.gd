@@ -33,6 +33,7 @@ func _ready() -> void:
 	_test_cel_style()
 	_test_cel_ink()
 	_test_art_style_key()
+	_test_battle_ruins()
 	_test_map_editor_transform()
 	_test_edit_history()
 	_test_map_editor_edits()
@@ -87,8 +88,13 @@ func _ready() -> void:
 	_test_town_people()
 	_test_farm_people()
 	_test_enemy_flights()
+	_test_torpedoes()
+	_test_naval_skirmish()
 	_test_military_people()
 	_test_war_reactions()
+	_test_land_battles()
+	_test_cross_channel_guns()
+	_test_war_period()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	_test_report_link()
 	_test_gameplay_additions()
@@ -3705,6 +3711,135 @@ func _test_war_vehicles() -> void:
 	kc.free()
 	kb.free()
 
+## Land battles (scripts/ground/land_battles.gd, land_battle.gd): the scenario fits the date and ground, sites are land
+## clear of airfields and of each other, every scenario spawns its forces with the right teams on land, a hit destroys a
+## vehicle and leaves a wreck, the battle ends, men fall (and friendly casualties are counted), and the air-support call
+## goes out (and a second one when the player's side is being overrun).
+func _test_land_battles() -> void:
+	print("-- land battles: scenarios, sites, units, hits, wrecks, ending, air-support call")
+	var LB = preload("res://scripts/ground/land_battles.gd")
+	var LBT = preload("res://scripts/ground/land_battle.gd")
+	LBT.land_fn = func(x: float, _z: float) -> bool:
+		return x < 0.0
+	_check(LB.scenario_for("1940-05-21", "Axis") == "arras" and LB.scenario_for("1942-08-17", "Axis") == "raid" and LB.scenario_for("1944-06-20", "Axis") == "normandy", "French ground: Arras before 25 June 1940, a Dieppe-style raid 1940-43, Normandy after")
+	_check(LB.scenario_for("1940-08-15", "Allies") == "sealion" and LB.scenario_for("1942-08-17", "Allies") == "" and LB.scenario_for("1940-08-15", "Allies", false) == "", "English ground: only the 1940-41 Sea Lion what-if (switchable off), none in 1942")
+	_check(is_equal_approx(LB.next_delay(0.0), LB.GAP_MIN) and is_equal_approx(LB.next_delay(1.0), LB.GAP_MAX) and LB.GAP_MIN >= 240.0 and LB.MAX_ACTIVE <= 2, "battles are occasional: 4-9 minutes apart, two at most")
+	_check(LBT.scenario("raid", "1942-08-17")["a_tanks"][0] == "churchill" and LBT.scenario("raid", "1941-03-01")["a_tanks"][0] == "matilda", "Churchills only from mid-1942, Matildas / Valentines before")
+	var types_ok: bool = true
+	for k in LBT.SCENARIOS:
+		var d: Dictionary = LBT.scenario(k, "1942-08-17")
+		for key in ["a_tanks", "a_guns", "a_trucks", "d_tanks", "d_guns", "d_trucks"]:
+			for t in (d[key] as Array):
+				if not GroundVehicle.TYPES.has(t) or (key.ends_with("tanks") and not LBT.GUNS.has(t)) or (key.ends_with("guns") and not LBT.GUNS.has(t)):
+					types_ok = false
+	_check(types_ok, "every scenario vehicle is a known GroundVehicle type with gun data")
+	# sites: land, clear of airfields, spaced, in range
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var afs: Array = [Vector3(-6000.0, 0.0, 0.0)]
+	var from := Vector3(-9000.0, 0.0, 2000.0)
+	var sites_ok: bool = true
+	var found: int = 0
+	for i in 40:
+		var s: Dictionary = LB.pick_site(from, Vector2(1, 0), afs, [], rng)
+		if s.is_empty():
+			continue
+		found += 1
+		var sp: Vector3 = s["pos"]
+		var dist: float = Vector2(sp.x - from.x, sp.z - from.z).length()
+		if not LB.site_ok(sp, afs, []) or sp.x >= 0.0 or Vector2(sp.x + 6000.0, sp.z).length() < LB.AIRFIELD_CLEAR or dist < LB.RANGE_MIN - 1.0 or dist > LB.RANGE_MAX + 1.0:
+			sites_ok = false
+	_check(found >= 30 and sites_ok, "sites are found on land, in range and clear of airfields (%d / 40)" % found)
+	_check(not LB.site_ok(Vector3(500.0, 0.0, 0.0), [], []) and not LB.site_ok(Vector3(-6200.0, 0.0, 300.0), afs, []) and not LB.site_ok(Vector3(-2000.0, 0.0, 6000.0), afs, [Vector3(-2000.0, 0.0, 9000.0)]) and LB.site_ok(Vector3(-2000.0, 0.0, 6000.0), afs, []), "no site in the sea, on an airfield or within 9 km of another battle")
+	var ad: Vector2 = LB.attack_dir(Vector3(-1800.0, 0.0, 0.0), true, rng)
+	_check(ad.x > 0.5, "a landing comes from the sea (%s)" % str(ad))
+	# every scenario: forces, teams, land, hits, wrecks, the end
+	for k in LBT.SCENARIOS:
+		var sc: Dictionary = LBT.scenario(k, "1942-08-17")
+		var b = LBT.new()
+		b.manual = true
+		b.setup(k, Vector3(-3000.0, 0.0, 0.0), LB.attack_dir(Vector3(-3000.0, 0.0, 0.0), bool(sc["beach"]), rng), "Allies", 11, "1942-08-17")
+		add_child(b)
+		var want_att: int = (sc["a_tanks"] as Array).size() + (sc["a_guns"] as Array).size() + (sc["a_trucks"] as Array).size()
+		var want_def: int = (sc["d_tanks"] as Array).size() + (sc["d_guns"] as Array).size() + (sc["d_trucks"] as Array).size()
+		var n_att: int = 0
+		var n_def: int = 0
+		var teams_ok: bool = true
+		var land_ok: bool = true
+		for u in b.units:
+			if u.team == sc["att"]:
+				n_att += 1
+			elif u.team == sc["def"]:
+				n_def += 1
+			if not u.node.is_in_group("damageable") or not u.node.is_in_group("team_" + u.team) or u.node.team != u.team:
+				teams_ok = false
+			if u.node.global_position.x >= 0.0:
+				land_ok = false
+		_check(n_att == want_att and n_def == want_def, "%s: %d attacking and %d defending vehicles (%d / %d)" % [k, want_att, want_def, n_att, n_def])
+		_check(teams_ok and land_ok, "%s: vehicles are damageable targets of the right team and stand on land" % k)
+		var sq_ok: bool = b.squads.size() == int(sc["a_squads"]) + int(sc["d_squads"])
+		for s in b.squads:
+			if s.n < 5 or s.team != sc["att"] and s.team != sc["def"]:
+				sq_ok = false
+		_check(sq_ok, "%s: infantry squads of both sides (%d)" % [k, b.squads.size()])
+		var total0: int = b.armour_alive(sc["att"]) + b.armour_alive(sc["def"])
+		# a hit destroys a defender and leaves a wreck
+		var victim = null
+		for u in b.units:
+			if u.team == sc["def"] and u.role == "tank":
+				victim = u
+				break
+		victim.node.take_damage(5000.0, null)
+		_check(not victim.alive and victim.node.is_dead and victim.node.is_in_group("destroyed_target") and victim.node.get_node("Wreck").visible and not victim.node.get_node("Intact").visible and b.armour_alive(sc["def"]) == int(b.armour0[sc["def"]]) - 1, "%s: a hit destroys a tank, hides it and leaves a wreck" % k)
+		var steps: int = 0
+		while not b.ended and steps < 4200:
+			b.tick(0.25)
+			steps += 1
+		_check(b.ended and (b.winner == sc["att"] or b.winner == sc["def"]), "%s: the battle ends with a winner after %d s (%s)" % [k, int(b.age), b.winner])
+		var wrecks: int = 0
+		for u in b.units:
+			if not u.alive and u.node.is_dead and u.node.get_node("Wreck").visible:
+				wrecks += 1
+		_check(wrecks >= 1 and b.armour_alive(sc["att"]) + b.armour_alive(sc["def"]) <= total0 and b.shells_fired > 5, "%s: tanks fought and burnt out (%d wrecks, %d shells)" % [k, wrecks, b.shells_fired])
+		_check(b.ruin_calls >= 1, "%s: BattleDamage.ruin_area was called for the site (guarded when absent)" % k)
+		b.free()
+	# the men fall, friendly casualties of the player's side are counted
+	var fb = LBT.new()
+	fb.manual = true
+	fb.setup("raid", Vector3(-3000.0, 0.0, 0.0), Vector2(1, 0), "Allies", 3, "1942-08-17")
+	add_child(fb)
+	var own = null
+	for s in fb.squads:
+		if s.team == "Allies":
+			own = s
+			break
+	var n0: int = own.n
+	var killed: int = fb.casualties_near(Vector3(fb.squad_centre(own).x, 0.0, fb.squad_centre(own).y), 40.0, 1.0, true, "Allies")
+	_check(killed >= 1 and own.n < n0 and fb.friendly_fire == killed and fb.men_killed_by_player == killed and fb._co_n >= killed, "men fall, and the player's side's casualties count as friendly fire (%d)" % killed)
+	fb.free()
+	# the director: the radio call, the second call when overrun, pins and stats
+	var dir = LB.new()
+	dir.say_radio = false
+	dir.side = "Allies"
+	add_child(dir)
+	var bb = dir.spawn_battle("raid", Vector3(-3000.0, 0.0, 0.0), "1942-08-17")
+	bb.manual = true
+	_check(dir.calls.size() == 1 and "air support" in str(dir.calls[0]) and "Churchills" in str(dir.calls[0]), "a new battle is announced: '%s'" % str(dir.calls[0] if dir.calls.size() > 0 else ""))
+	_check(dir.map_pins().size() == 1, "the battle has a chart pin")
+	for u in bb.units:
+		if u.team == "Allies" and u.role != "truck":
+			u.node.die(null)
+	_check(dir.calls.size() == 2 and "overrun" in str(dir.calls[1]), "when the player's side is being overrun a second call goes out")
+	var dir2 = LB.new()
+	dir2.say_radio = false
+	dir2.side = "Axis"
+	add_child(dir2)
+	dir2.spawn_battle("raid", Vector3(-3000.0, 0.0, 0.0), "1942-08-17")
+	_check(dir2.calls.size() == 1 and "Churchills" in str(dir2.calls[0]) and "air support" in str(dir2.calls[0]), "the Axis player is called to the same battle against the Churchills")
+	dir.free()
+	dir2.free()
+	LBT.land_fn = Callable()
+
 ## Phase 2 (scripts/ground/farm_people.gd): life on the farms and in the fields. The new kinds and the farm wardrobe encode
 ## in INSTANCE_CUSTOM.w without renumbering the old ones, the number of work parties follows the quality setting and the
 ## month, each season has its own work, and nobody (and no prop or stook) is planned on a road-free spot that is not
@@ -3981,6 +4116,226 @@ func _test_cel_ink() -> void:
 	GameState.art_style = restore
 
 
+## Air-dropped torpedoes: release limits, arming, run figures, a hit on a ship, the AI mission and infinite ammo.
+func _test_torpedoes() -> void:
+	print("-- torpedoes")
+	var T = Weapons.TorpedoScript
+	_check(T.type_for_model("beaufort") == "mk12" and T.type_for_model("he111") == "ltf5b" and T.type_for_model("spitfire") == "", "Beaufort carries the Mk XII, He 111 the LT F5b, nothing else a torpedo")
+	for id in ["mk12", "ltf5b"]:
+		var t: Dictionary = T.TYPES[id]
+		var ok: Dictionary = T.evaluate_release(id, 0.5 * (float(t["min_alt"]) + float(t["max_alt"])), 0.5 * (float(t["min_speed"]) + float(t["max_speed"])), -2.0)
+		_check(bool(ok["ok"]) and ok["fate"] == "runs" and ok["status"] == "OK", "%s: a drop inside the limits runs normally" % id)
+		var hi: Dictionary = T.evaluate_release(id, float(t["max_alt"]) * 1.3, float(t["max_speed"]) * 0.8, -2.0)
+		_check(not bool(hi["ok"]) and hi["status"] == "TOO HIGH" and hi["fate"] != "runs", "%s: too high is flagged and does not run clean (%s)" % [id, hi["fate"]])
+		var fast: Dictionary = T.evaluate_release(id, float(t["max_alt"]) * 0.5, float(t["max_speed"]) * 1.4, -2.0)
+		_check(fast["status"] == "TOO FAST" and fast["fate"] == "breaks_up", "%s: far too fast breaks up" % id)
+		var bad: Dictionary = T.evaluate_release(id, float(t["max_alt"]) * 2.0, float(t["max_speed"]), -2.0)
+		_check(bad["fate"] == "breaks_up", "%s: far too high breaks up" % id)
+		var shallow: Dictionary = T.evaluate_release(id, float(t["max_alt"]) * 1.1, 0.5 * (float(t["min_speed"]) + float(t["max_speed"])), -2.0, 0.0, 7.0)
+		_check(shallow["fate"] != "runs", "%s: a marginal drop into shallow water does not run clean" % id)
+		_check(float(t["arm"]) > 100.0 and float(t["range"]) > float(t["arm"]) * 5.0 and float(t["run_speed"]) > 10.0 and float(t["run_speed"]) < 30.0, "%s: arming run, range and run speed are sane" % id)
+	# entry prediction and lead: a ship crossing ahead gets an aim point ahead of it
+	var pe: Dictionary = T.predict_entry(Vector3(0.0, 300.0, 0.0), Vector3(0.0, -4.0, 70.0))
+	_check(float(pe["t"]) > 5.0 and (pe["pos"] as Vector3).z > 200.0 and absf((pe["pos"] as Vector3).y) < 1.0, "the entry point is ahead of the drop, at the sea surface")
+	var lp: Vector3 = T.lead_point("mk12", Vector3(0.0, 50.0, 0.0), Vector3(900.0, 0.0, 900.0), Vector3(10.0, 0.0, 0.0), 6.0)
+	_check(lp.x > 900.0, "the lead point is ahead of a crossing ship")
+	# a torpedo hit sinks a ship: heavy damage, list, slow
+	var rp: RoutePath = RoutePath.from_points(PackedVector3Array([Vector3(0.0, 0.0, 0.0), Vector3(0.0, 0.0, 6000.0)]))
+	var ship: GroundShip = GroundShip.create("freighter", "Axis", rp, 0.0, -1.0)
+	add_child(ship)
+	var h0: float = ship.health
+	var sp0: float = ship.speed
+	ship.torpedo_hit(float(T.TYPES["mk12"]["damage"]), ship.global_position, null)
+	_check(ship.health < h0 * 0.8 or ship.is_dead, "a torpedo does heavy damage to a ship (%.0f -> %.0f)" % [h0, ship.health])
+	_check(ship.speed < sp0 or ship.is_dead, "a torpedoed ship slows")
+	remove_child(ship)
+	ship.free()
+	# the aircraft: Beaufort has one, He 111 two; torpedo loads count torpedoes, not bombs; infinite ammo keeps them
+	var bf: Aircraft = AIFactory.spawn(self, "beaufort", "Allies", Vector3(0.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.BOMBER_LEADER, null, false, true)
+	_check(bf != null and bf.torpedo_load and bf.max_bombs() == 1, "a Beaufort torpedo load is one torpedo")
+	var he: Aircraft = AIFactory.spawn(self, "he111", "Axis", Vector3(2000.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.BOMBER_LEADER, null, false, true)
+	_check(he != null and he.torpedo_load and he.max_bombs() == 2, "an He 111 torpedo load is two torpedoes")
+	var sp: Aircraft = AIFactory.spawn(self, "spitfire", "Allies", Vector3(4000.0, 1500.0, 0.0), 90.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false, true)
+	_check(sp != null and not sp.torpedo_load, "an aircraft that cannot carry a torpedo never gets a torpedo load")
+	_check("infinite_ammo" in bf, "aircraft carry the infinite-ammo flag the torpedo drop respects")
+	for a in [bf, he, sp]:
+		if a != null:
+			a.queue_free()
+	# the AI mission
+	var ea: Dictionary = {}
+	var el: Dictionary = {}
+	for i in 1000:
+		var r: float = (float(i) + 0.5) / 1000.0
+		ea[EnemyFlights.pick_kind("Axis", r)] = true
+		el[EnemyFlights.pick_kind("Allies", r)] = true
+	_check(ea.has("torpedo") and el.has("torpedo"), "both sides fly torpedo missions")
+	var tc: Array = EnemyFlights.COUNTS["torpedo"]
+	_check(tc.size() == 3 and int(tc[0][0]) >= 2 and int(tc[2][1]) <= 8 and int(tc[0][2]) >= 1, "torpedo flights are small and escorted")
+
+
+## Naval skirmishes (scripts/ground/naval_skirmish.gd): engagement odds and cooldown, opposing ships in range fight and
+## same-side ships do not, bracketing, hits damage and sink, one radio call per engagement, the fight ends, torpedoes.
+func _test_naval_skirmish() -> void:
+	print("-- naval skirmishes")
+	var N = NavalSkirmish
+	# who can engage whom, and how often
+	_check(N.can_engage("destroyer", "Allies", "freighter", "Axis", 2500.0), "an armed ship engages an enemy merchant in gun range")
+	_check(not N.can_engage("destroyer", "Allies", "destroyer", "Allies", 500.0), "ships of the same side never engage each other")
+	_check(not N.can_engage("destroyer", "Allies", "freighter", "Axis", 9000.0), "out of gun range: no engagement")
+	_check(not N.can_engage("freighter", "Allies", "collier", "Axis", 300.0), "two unarmed merchants do not fight")
+	_check(not N.can_engage("eboat", "Axis", "freighter", "Neutral", 300.0), "neutral ships are left alone")
+	_check(N.engage_chance(800.0, 3000.0, 100.0, false) == 0.0, "no engagement during the cooldown")
+	_check(N.engage_chance(5000.0, 3000.0, 0.0, false) == 0.0, "no engagement beyond reach")
+	var p_day: float = N.engage_chance(1500.0, 3000.0, 0.0, false)
+	_check(p_day > 0.0 and p_day < 0.2, "the chance per scan is small, so fights are occasional (%.3f)" % p_day)
+	_check(N.engage_chance(1500.0, 3000.0, 0.0, true) > p_day, "night attacks are likelier")
+	_check(N.engage_chance(500.0, 3000.0, 0.0, false) > p_day, "closer ships are likelier to open fire")
+	_check(N.COOLDOWN.x >= 300.0 and N.FIRST_DELAY.x >= 120.0, "cooldowns keep the engagements occasional")
+	# bracketing: dispersion shrinks salvo by salvo, and so the hits come
+	var s0: float = N.spread("destroyer", 2000.0, 0)
+	var s3: float = N.spread("destroyer", 2000.0, 3)
+	_check(s0 > s3 * 2.0 and s3 > 5.0, "gunfire bracketing: dispersion %.0f m on the first salvo, %.0f m on the fourth" % [s0, s3])
+	_check(N.hit_probability(s3, 36.0) > N.hit_probability(s0, 36.0) * 2.0, "bracketed fire hits far more often")
+	# scenarios: E-boats vs British convoys, MTBs / destroyers vs German convoys
+	var seen: Dictionary = {}
+	for i in 40:
+		var sc: Dictionary = N.pick_scenario("Allies", i % 2 == 0, true, float(i) / 40.0, float(i % 7) / 7.0)
+		_check(sc["att_team"] == "Axis" and not (sc["types"] as Array).is_empty(), "a British convoy is attacked by the Axis")
+		for t in sc["types"]:
+			seen[t] = true
+			_check(GroundShip.TYPES.has(t) and N.is_armed(t), "attacker type %s exists and is armed" % t)
+		var sx: Dictionary = N.pick_scenario("Axis", i % 2 == 0, false, float(i) / 40.0, float(i % 7) / 7.0)
+		_check(sx["att_team"] == "Allies", "a German convoy is attacked by the Allies")
+		for t2 in sx["types"]:
+			seen[t2] = true
+	_check(seen.has("eboat") and seen.has("mtb") and seen.has("destroyer"), "E-boats, MTBs and destroyers all appear")
+	var ct: String = N.call_text(true, "Peewit", "E-boats", "Dungeness", 95, 6, "Allies")
+	_check(ct.contains("Peewit") and ct.contains("E-boats") and ct.contains("Dungeness") and ct.contains("support"), "the call names the convoy, the attackers, the place and asks for support")
+	_check(N.call_text(false, "MTB 102", "", "Calais", 120, 4, "Allies").contains("air support"), "friendly boats attacking also ask for air support")
+	_check(N.place_name(WorldCoords.latlon_to_world(50.93, 1.0)) == "Dungeness", "the nearest landmark is named")
+	var bm: ArrayMesh = ShipModels.build("eboat", false, 28.0, 4.4)
+	_check(bm != null and bm.get_surface_count() > 0, "the fast-boat model builds")
+	# a simulated engagement: E-boats against a convoy escort and a merchant
+	N.all_water = true       # the test terrain is dry land
+	var mgr := NavalSkirmish.new()
+	mgr.radio_enabled = false
+	mgr.self_drive = true
+	add_child(mgr)
+	var pl := Node3D.new()
+	add_child(pl)
+	mgr.player = pl
+	var rp: RoutePath = RoutePath.from_points(PackedVector3Array([Vector3(-4000.0, 0.0, 0.0), Vector3(8000.0, 0.0, 0.0)]))
+	var dd: GroundShip = GroundShip.create("destroyer", "Allies", rp, 4000.0, 7.0)
+	var fr: GroundShip = GroundShip.create("freighter", "Allies", rp, 3800.0, 7.0)
+	fr.wrap = true
+	dd.wrap = true
+	mgr.add_child(dd)
+	mgr.add_child(fr)
+	var boats: Array = []
+	for i in 2:
+		var b: GroundShip = GroundShip.create("eboat", "Axis", null, 0.0, 24.0)
+		b.position = Vector3(300.0 * float(i), 0.0, -1500.0)
+		mgr.add_child(b)
+		boats.append(b)
+	mgr.cooldown = 0.0
+	var e: Dictionary = mgr.start_engagement(boats, [dd, fr], "E-boats", true)
+	_check(int(e["calls"]) == 1 and mgr.engagements.size() == 1, "the radio call is made once, when the engagement starts")
+	_check(boats[0].skirmish == mgr and dd.skirmish == mgr and fr.skirmish == null, "armed ships are driven by the engagement, merchants keep their route")
+	_check(fr.wander > 40.0, "a merchant scatters (weaves) while under attack")
+	_check(mgr.cooldown > 100.0, "the cooldown starts when the engagement does")
+	mgr._announce(e)
+	_check(int(e["calls"]) == 1, "the call is never repeated for the same engagement")
+	for i in 600:
+		mgr.step(0.1)
+	_check(mgr.engagements.size() <= 1 and int(e["calls"]) == 1, "still one call after a long fight")
+	var fired: int = 0
+	for c in mgr._ctl.values():
+		for k in (c["salvo"] as Dictionary).values():
+			fired += int(k)
+	_check(fired > 0 or bool(e["done"]), "the ships opened fire (%d salvos still tracked)" % fired)
+	_check(bool(e["done"]) or float(e["age"]) < 160.0, "an engagement ends by itself after 150 s at most")
+	mgr.cleanup()
+	for sx2 in boats + [dd, fr]:
+		sx2.get_parent().remove_child(sx2)
+		sx2.free()
+	# opposing ships in range engage, same-side ships never do
+	var mgr2 := NavalSkirmish.new()
+	mgr2.radio_enabled = false
+	mgr2.player = pl
+	add_child(mgr2)
+	var a1: GroundShip = GroundShip.create("destroyer", "Allies", null, 0.0, 7.0)
+	var a2: GroundShip = GroundShip.create("trawler", "Allies", null, 0.0, 7.0)
+	a1.position = Vector3(5000.0, 0.0, 5000.0)
+	a2.position = Vector3(5300.0, 0.0, 5000.0)
+	mgr2.add_child(a1)
+	mgr2.add_child(a2)
+	mgr2.cooldown = 0.0
+	for i in 300:
+		mgr2._scan()
+	_check(mgr2.engagements.is_empty(), "ships of the same side in range never start a fight")
+	var x1: GroundShip = GroundShip.create("eboat", "Axis", null, 0.0, 24.0)
+	x1.position = Vector3(5900.0, 0.0, 5000.0)
+	mgr2.add_child(x1)
+	mgr2.cooldown = 50.0
+	for i in 300:
+		mgr2._scan()
+	_check(mgr2.engagements.is_empty(), "nothing starts during the cooldown")
+	mgr2.cooldown = 0.0
+	for i in 400:
+		mgr2._scan()
+		if not mgr2.engagements.is_empty():
+			break
+	_check(not mgr2.engagements.is_empty(), "opposing ships in gun range do start a fight, with some probability")
+	mgr2.cleanup()
+	# hits damage and sink; misses do not
+	var mgr3 := NavalSkirmish.new()
+	mgr3.radio_enabled = false
+	mgr3.player = pl
+	add_child(mgr3)
+	var v1: GroundShip = GroundShip.create("trawler", "Allies", null, 0.0, 7.0)
+	var v2: GroundShip = GroundShip.create("eboat", "Axis", null, 0.0, 24.0)
+	v1.position = Vector3(-6000.0, 0.0, 6000.0)
+	v2.position = Vector3(-6000.0, 0.0, 5000.0)
+	mgr3.add_child(v1)
+	mgr3.add_child(v2)
+	var e3: Dictionary = mgr3.start_engagement([v2], [v1], "E-boats", true)
+	var hp0: float = v1.health
+	mgr3._impact({"to": v1.global_position + Vector3(400.0, 0.0, 0.0), "dmg": 30.0, "plume": 2.0, "src": v2, "team": "Axis", "big": false})
+	_check(v1.health == hp0, "a shell that lands 400 m away does no damage")
+	mgr3._impact({"to": v1.global_position, "dmg": 30.0, "plume": 2.0, "src": v2, "team": "Axis", "big": false})
+	_check(v1.health < hp0 and not v1.is_dead, "a shell that hits damages the ship (%.0f -> %.0f)" % [hp0, v1.health])
+	mgr3._impact({"to": v1.global_position, "dmg": 500.0, "plume": 2.0, "src": v2, "team": "Axis", "big": false})
+	_check(v1.is_dead, "enough hits sink it")
+	mgr3._impact({"to": v2.global_position, "dmg": 500.0, "plume": 2.0, "src": v1, "team": "Allies", "big": false})
+	for i in 4:
+		mgr3.step(0.2)
+	_check(bool(e3["done"]) and v2.skirmish == null, "the engagement ends when one side is gone, and the ships are released")
+	mgr3.cleanup()
+	# a torpedo from a fast boat hits and cripples a merchant
+	var mgr4 := NavalSkirmish.new()
+	mgr4.radio_enabled = false
+	mgr4.player = pl
+	add_child(mgr4)
+	var m1: GroundShip = GroundShip.create("freighter", "Allies", null, 0.0, 5.0)
+	var m2: GroundShip = GroundShip.create("eboat", "Axis", null, 0.0, 24.0)
+	m1.position = Vector3(0.0, 0.0, -9000.0)
+	m2.position = Vector3(-500.0, 0.0, -9000.0)
+	mgr4.add_child(m1)
+	mgr4.add_child(m2)
+	mgr4.start_engagement([m2], [m1], "E-boats", true)
+	mgr4._launch_torpedo(m2, m1.global_position)
+	var hm: float = m1.health
+	for i in 600:
+		mgr4._step_torps(0.1)
+		if m1.health < hm:
+			break
+	_check(m1.health < hm or m1.is_dead, "a torpedo from an E-boat hits a merchant")
+	mgr4.cleanup()
+	N.all_water = false
+	for n in [mgr, mgr2, mgr3, mgr4, pl]:
+		n.queue_free()
+
+
 ## Free-flight enemy flights (scripts/modes/enemy_flights.gd): every flight has a mission with a real target, sizes follow the
 ## odds and the AI budget, escorts are attached to the bombers, and a flight past its target turns for home and is tidied away.
 func _test_enemy_flights() -> void:
@@ -4182,7 +4537,8 @@ func _pad_watch(menu: Object) -> Array:
 		if ClassDB.class_has_signal(menu.get_class(), String(s["name"])):
 			continue
 		var argc: int = (s["args"] as Array).size()
-		menu.connect(String(s["name"]), Callable(self, "_pad_hit").bind(hit).unbind(argc))
+		var cb: Callable = Callable(self, "_pad_hit").bind(hit)
+		menu.connect(String(s["name"]), cb.unbind(argc) if argc > 0 else cb)
 	return hit
 
 
@@ -4359,6 +4715,7 @@ func _test_pad_navigation() -> void:
 	sm._show_page(0)
 	await _pad_frames(2)
 	sm._nav_btns[0].grab_focus()
+	_check(sm._period.is_visible_in_tree() and sm._period.focus_mode != Control.FOCUS_NONE and _pad_reach(sm._nav_btns[0]).has(sm._period), "start menu: the War period selector is reachable by pad focus like the other sortie controls")
 	await _pad_tap(JOY_BUTTON_RIGHT_SHOULDER)
 	_check(sm._pages[1].visible and not sm._pages[0].visible, "start menu: RB flips to the next page")
 	await _pad_tap(JOY_BUTTON_LEFT_SHOULDER)
@@ -4594,3 +4951,336 @@ func _test_pad_navigation() -> void:
 	_pad_restore(bk)
 	get_tree().paused = false
 	PadNav._set_pad(false)
+
+
+func _test_battle_ruins() -> void:
+	print("-- battle ruins: BattleDamage scars ruin houses in the radius, persist, scale with intensity and clear")
+	var keep_era: String = EraClock.current()
+	EraClock.set_date("1940-08-01")
+	WarDamage.refresh()
+	BattleDamage.clear()
+	var c: Vector3 = WorldCoords.latlon_to_world(51.20, 0.50)
+	_check(WarDamage.level_at(c.x, c.z) == 0.0 and not BattleDamage.scar_at(c), "no dated damage and no scar at the test spot")
+	var street: Callable = func() -> Array:
+		var l: Array = [[], []]
+		for i in 400:
+			(l[1] as Array).append(Transform3D(Basis.IDENTITY.scaled(Vector3(8, 7, 9)), c + Vector3(float(i % 20 - 10) * 14.0, 3.0, float(i / 20 - 10) * 14.0)))
+		return l
+	var run: Callable = func() -> Dictionary:
+		var lists: Array = street.call()
+		var ruins: Array = [[], []]
+		WarDamage.apply_to_houses(lists, ruins, WarDamage.areas_near(Vector2(c.x, c.z) - Vector2(900, 900), 1800.0))
+		var outside_ruined: int = 0
+		for v in 2:
+			for t in (ruins[v] as Array):
+				if Vector2((t as Transform3D).origin.x - c.x, (t as Transform3D).origin.z - c.z).length() >= 120.0:
+					outside_ruined += 1
+		return {"ruined": (ruins[0] as Array).size() + (ruins[1] as Array).size(), "kept": (lists[0] as Array).size() + (lists[1] as Array).size(), "outside_ruined": outside_ruined}
+	var before: Dictionary = run.call()
+	_check(int(before["ruined"]) == 0 and int(before["kept"]) == 400, "without a scar nothing is ruined")
+	BattleDamage.ruin_area(c, 120.0, 1.0, 5)
+	_check(BattleDamage.scar_at(c) and BattleDamage.scar_at(c + Vector3(100, 0, 0)), "scar_at is true inside the radius")
+	_check(not BattleDamage.scar_at(c + Vector3(500, 0, 0)) and BattleDamage.scar_at(c + Vector3(500, 0, 0), 400.0), "scar_at is false outside, and the radius argument widens it")
+	var hi: Dictionary = run.call()
+	_check(int(hi["ruined"]) > 20, "ruin_area ruins houses in the radius (%d of 400)" % int(hi["ruined"]))
+	_check(int(hi["outside_ruined"]) == 0, "no house outside the radius is ruined")
+	var again: Dictionary = run.call()
+	_check(int(again["ruined"]) == int(hi["ruined"]) and int(again["kept"]) == int(hi["kept"]), "the scar persists: a tile built later is ruined the same way")
+	WarDamage.refresh()
+	_check(WarDamage.level_at(c.x, c.z) > 0.2, "the scar survives a war-date refresh")
+	BattleDamage.ruin_area(c + Vector3(10, 0, 5), 100.0, 1.0, 9)
+	_check(BattleDamage.scar_count() == 1, "calling ruin_area again from the same spot folds into the same scar")
+	BattleDamage.clear()
+	_check(BattleDamage.scar_count() == 0 and not BattleDamage.scar_at(c) and WarDamage.level_at(c.x, c.z) == 0.0, "clear() forgets every scar")
+	var cleared: Dictionary = run.call()
+	_check(int(cleared["ruined"]) == 0, "after clear() the houses are intact again")
+	BattleDamage.ruin_area(c, 120.0, 0.3, 5)
+	var lo: Dictionary = run.call()
+	BattleDamage.clear()
+	_check(int(lo["ruined"]) > 0 and int(lo["ruined"]) < int(hi["ruined"]), "intensity scales the count (0.3: %d, 1.0: %d)" % [int(lo["ruined"]), int(hi["ruined"])])
+	BattleDamage.ruin_area(c, 120.0, 0.0, 5)
+	_check(BattleDamage.scar_count() == 0, "intensity 0 makes no scar")
+	var far: Vector3 = c + Vector3(3000, 0, 0)
+	BattleDamage.crater(far, 6.0)
+	_check(BattleDamage.scar_at(far) and not BattleDamage.scar_at(far + Vector3(80, 0, 0)) and WarDamage.level_at(far.x, far.z) == 0.0, "a crater is a scar but ruins no houses")
+	BattleDamage.clear()
+	for v in 2:
+		var rm: ArrayMesh = WarDamage.ruin_mesh(v)
+		_check(rm.get_surface_count() > 0 and rm.get_surface_count() <= 6, "the gutted-shell mesh %d still builds (%d surfaces)" % [v, rm.get_surface_count()])
+	for mname in ["crater_mesh", "scorch_mesh", "rubble_mesh", "wall_mesh", "chimney_mesh", "barn_frame_mesh"]:
+		var dm: ArrayMesh = BattleDamage.call(mname)
+		_check(dm != null and dm.get_surface_count() > 0, "debris mesh %s builds" % mname)
+	BattleDamage.ruin_area(c, 200.0, 1.0, 11)
+	var row: Dictionary = BattleDamage._scars[0]
+	var sn: Node3D = BattleDamage.build_scar_node(row)
+	add_child(sn)
+	BattleDamage.add_smoke_and_fires(row, sn)
+	_check(sn.get_child_count() >= 1, "a scar node builds its debris, smoke and fires (%d children)" % sn.get_child_count())
+	sn.queue_free()
+	BattleDamage.clear()
+	EraClock.set_date(keep_era)
+	WarDamage.refresh()
+
+
+## Cross-Channel guns (scripts/ground/{gun_shelling,coastal_battery,coastal_gun}.gd, scripts/modes/gun_batteries_mode.gd):
+## battery sites on the Pas-de-Calais coast, shells honouring their flight time, impacts at the target, silencing,
+## the mission objective / results, the free-flight radio hook.
+func _test_cross_channel_guns() -> void:
+	print("-- cross-Channel guns")
+	# sites: real places on land on the French coast, in range of what they shell, models and data present
+	_check(GunShelling.SITES.size() >= 3, "three battery sites (Gris-Nez, Wimereux, Calais railway guns)")
+	for id in GunShelling.site_ids():
+		var s: Dictionary = GunShelling.SITES[id]
+		var cls: int = LandCover.class_at(GunShelling.site_pos(id).x, GunShelling.site_pos(id).z)
+		_check(cls > 0 and cls != 80, "%s stands on land (land cover class %d)" % [id, cls])
+		_check(float(s["lat"]) > 50.7 and float(s["lat"]) < 51.0 and float(s["lon"]) > 1.5 and float(s["lon"]) < 1.9, "%s is on the Pas-de-Calais coast" % id)
+		for tid in (s["targets"] as Array):
+			var d: float = Vector2(GunShelling.site_pos(id).x - GunShelling.target_pos(tid).x, GunShelling.site_pos(id).z - GunShelling.target_pos(tid).z).length()
+			_check(d > 15000.0 and d < float(GunShelling.MAX_RANGE[str(s["kind"])]), "%s -> %s is %.1f km: across the Channel and within range" % [id, tid, d / 1000.0])
+		_check(MissionBrief.has_place(id), "%s is in locations.json" % id)
+	var ft: float = GunShelling.flight_time(34000.0)
+	_check(ft > 60.0 and ft < 130.0 and GunShelling.flight_time(44000.0) > ft, "a shell at 34 km is in the air %.0f s (more than a minute, less than two), longer for more range" % ft)
+	_check(GunShelling.silence_at(4) == 3 and GunShelling.silence_at(3) == 2 and GunShelling.silence_at(2) == 2 and GunShelling.silence_at(1) == 1, "a battery is silenced at three quarters of its guns")
+	# simulation: guns fire at a target in range, the shell lands after its flight time on target
+	var gs: GunShelling = GunShelling.ensure(self)
+	gs.reset_all()
+	gs.force_target = "dover_harbour"
+	var landed: Array = []
+	var fired: Array = []
+	gs.shell_landed.connect(func(p: Vector3, tid: String, bid: String, wet: bool) -> void: landed.append([p, tid, bid, wet]))
+	gs.gun_fired.connect(func(bid: String, gi: int, aim: Vector3, fl: float) -> void: fired.append([bid, gi, aim, fl, gs.t]))
+	var bid1: String = "battery_grosser_kurfurst"
+	gs.start([bid1], 4.0)
+	for i in 8:
+		gs.step(1.0)
+	_check(gs.active and fired.size() >= 1 and int(gs.stats["fired"]) >= 1, "an active battery fires at a target in range (%d rounds in 8 s)" % fired.size())
+	_check(gs.shells_in_flight() == fired.size() and landed.is_empty(), "the shells are still in the air: the flight time is honoured")
+	var f0: Array = fired[0]
+	var t_fire: float = float(f0[4])
+	var flight: float = float(f0[3])
+	_check(flight > 55.0 and flight < 140.0, "first round: flight time %.0f s" % flight)
+	var dt_left: float = t_fire + flight - gs.t
+	while dt_left > 2.0:
+		gs.step(1.0)
+		dt_left -= 1.0
+	_check(not landed.any(func(l: Array) -> bool: return l[2] == bid1 and (l[0] as Vector3).distance_to(f0[2]) < 1.0), "the first shell has not landed 2 s before its time")
+	for i in 4:
+		gs.step(1.0)
+	var mine: Array = landed.filter(func(l: Array) -> bool: return (l[0] as Vector3).distance_to(Vector3(f0[2].x, l[0].y, f0[2].z)) < 1.0)
+	_check(mine.size() == 1, "the shell lands at its aim point after about its flight time (%d landings there)" % mine.size())
+	var tp: Vector3 = GunShelling.target_pos("dover_harbour")
+	_check(not landed.is_empty() and Vector2((landed[0][0] as Vector3).x - tp.x, (landed[0][0] as Vector3).z - tp.z).length() < 700.0, "shells land on the target (Dover harbour), within the battery's dispersion")
+	_check(int(gs.stats["landed"]) == landed.size() and int(gs.stats["on_town"]) >= 1 and int(gs.town_hits.get("dover_harbour", 0)) >= 1, "landings are counted against the town")
+	var bd: Node = get_tree().root.get_node_or_null("BattleDamage")
+	if bd != null and bd.has_method("scar_at"):
+		var lp: Vector3 = landed[0][0]
+		_check(bool(bd.call("scar_at", lp, 60.0)), "a shell in a town leaves a BattleDamage scar")
+	# gun models: slewing, firing picture, hardness
+	var bat: CoastalBattery = CoastalBattery.create(bid1, "Axis")
+	add_child(bat)
+	_check(bat.guns.size() == 4 and bat.magazines.size() == 2 and bat.tower != null, "the Gris-Nez battery has 4 casemated guns, 2 ammunition bunkers and a fire-control tower")
+	var rb: CoastalBattery = CoastalBattery.create("battery_k5_coquelles", "Axis")
+	add_child(rb)
+	_check(rb.guns.size() == 2 and (rb.guns[0] as CoastalGun).gkind == "railway", "the Calais site has 2 railway guns")
+	var g0: CoastalGun = bat.guns[0]
+	g0.set_aim(GunShelling.target_pos("dover_town"))
+	for i in 120:
+		g0._process(1.0)
+	_check(g0.is_laid(), "a gun slews and elevates on to its target")
+	g0.fire_visual()
+	_check(g0.fired_count == 1 and g0._recoil > 0.5, "firing recoils the barrel")
+	var hp0: float = g0.health
+	for i in 100:
+		g0.take_damage(9.0, null)
+	_check(g0.health > hp0 * 0.5 and not g0.is_dead, "a casemate shrugs off cannon fire (%.0f of %.0f hp left after 100 hits)" % [g0.health, hp0])
+	g0.take_damage(140.0, null)
+	g0.take_damage(140.0, null)
+	g0.take_damage(140.0, null)
+	_check(g0.is_dead and not gs.gun_alive(bid1, 0), "three bomb hits destroy the gun and the shelling record knows")
+	# silence: battery destroyed signal and objective state, shelling stops
+	var down: Array = []
+	bat.destroyed.connect(func(_n: Node, _k: Node) -> void: down.append(true))
+	var fc_before: bool = gs.fc_alive(bid1)
+	(bat.tower as GroundTarget).die(null)
+	_check(fc_before and not gs.fc_alive(bid1), "the fire-control post going down is recorded (the guns shoot wild)")
+	_check(not bat.is_destroyed() and gs.alive_count(bid1) == 3, "one gun down: the battery fights on")
+	bat.kill_gun(1)
+	_check(not bat.is_destroyed() and not gs.is_silenced(bid1), "two guns down of four: not yet silenced")
+	bat.kill_gun(2)
+	_check(gs.is_silenced(bid1) and bat.is_destroyed() and down.size() == 1, "three of four guns down: the battery is silenced and its objective completes")
+	var fired_n: int = int(gs.stats["fired"])
+	var in_air: int = gs.shells_in_flight()
+	for i in 400:
+		gs.step(1.0)
+	_check(int(gs.stats["fired"]) == fired_n and gs.shells_in_flight() == 0, "a silenced battery stops firing (shells already away still land)")
+	# the other batteries keep firing until they are silenced too
+	gs.start(["battery_friedrich_august"], 2.0)
+	var fa_before: int = int(gs.stats["fired"])
+	for i in 80:
+		gs.step(1.0)
+	_check(int(gs.stats["fired"]) > fa_before and gs.any_firing(), "an unsilenced battery fires on")
+	for i in 3:
+		gs.kill_gun("battery_friedrich_august", i)
+	_check(not gs.any_firing(), "with every listed battery silenced nothing is firing")
+	# mission: data, objective, results
+	var m: Dictionary = HistoricalMissions.get_mission("gun_batteries_1940")
+	_check(not m.is_empty() and bool(m.get("gun_mission", false)) and str((m["roles"] as Dictionary)["Allies"]) == "strike", "mission 'Silence the Guns: Cap Gris-Nez' is in the historical list for the RAF")
+	var m2: Dictionary = HistoricalMissions.get_mission("gun_batteries_railway")
+	_check(not m2.is_empty() and bool(m2.get("gun_mission", false)), "mission 'The Gun Line: Calais Railway Guns' is in the historical list")
+	var hm: HistoricalMissions = HistoricalMissions.create("gun_batteries_1940", "Allies")
+	_check(hm.role == "strike" and HistoricalMissions.briefing_for("gun_batteries_1940", "Allies").contains("Gris-Nez"), "the briefing names the batteries")
+	var mode: GunBatteriesMode = GunBatteriesMode.create_guns([bid1, "battery_friedrich_august"], "Allies")
+	mode.shelling = gs
+	var gst: Dictionary = mode.gun_stats()
+	_check(int(gst["guns_total"]) == 7 and int(gst["guns_destroyed"]) == 6 and int(gst["batteries_silenced"]) == 2, "results count guns destroyed (%d/%d) and batteries silenced (%d)" % [gst["guns_destroyed"], gst["guns_total"], gst["batteries_silenced"]])
+	var rs: Dictionary = mode._stats()
+	_check(rs.has("guns_destroyed") and rs.has("shells_on_town") and rs.has("town_spared") and (rs["notes"] as Array).size() == 3, "the result stats carry guns, shells and whether the town was spared")
+	gs.stats["on_town"] = 2
+	_check(bool(mode.gun_stats()["town_spared"]), "few shells on the town: the town was spared")
+	gs.stats["on_town"] = 30
+	_check(not bool(mode.gun_stats()["town_spared"]) and str((mode._notes(mode.gun_stats()) as Array)[2]).contains("pounding"), "many shells on the town: it was not spared, and the debrief says so")
+	mode.free()
+	# a mission that is lost / not completed: batteries standing -> not silenced
+	gs.reset_all()
+	_check(gs.alive_count(bid1) == 4 and not gs.is_silenced(bid1) and gs.guns_alive_total() == 9, "reset: every gun stands again for a new sortie")
+	# free-flight hook: after a while Control radios that Dover is under shellfire, then the shelling starts
+	var keep_era: String = GameState.era_date
+	GameState.era_date = "1940-09-10"
+	var fake := Node3D.new()
+	add_child(fake)
+	fake.global_position = GunShelling.target_pos("dover_town") + Vector3(5000, 800, 0)
+	gs.enable_ambient(fake, null, 0.5)
+	for i in 4:
+		gs._process(0.5)
+	_check(gs.active and gs.any_firing(), "the free-flight event starts the bombardment (radio call to the player)")
+	gs.disable_ambient()
+	gs.stop()
+	GameState.era_date = "1950-01-01"
+	_check(not GunShelling.era_ok(), "no shelling outside the cross-Channel gun era")
+	GameState.era_date = keep_era
+	fake.queue_free()
+	bat.queue_free()
+	rb.queue_free()
+	gs.queue_free()
+
+
+func _test_war_period() -> void:
+	print("-- war period: dates, aircraft per period, AI picks, Any keeps the old behaviour")
+	var keep_active: String = WarPeriod.active
+	WarPeriod.active = "any"
+	_check(WarPeriod.IDS == ["any", "early", "mid", "late"] and WarPeriod.menu_labels().size() == 4, "war period: Any / custom + early / mid / late")
+	# every period gives dates inside its range (and inside the chosen season's months)
+	var ranges: Dictionary = {"early": ["1940-05-10", "1941-12-31"], "mid": ["1942-01-01", "1943-12-31"], "late": ["1944-01-01", "1945-04-30"]}
+	for p in ranges:
+		var bad: int = 0
+		var bad_season: int = 0
+		for i in 300:
+			var d: String = WarPeriod.random_date(p)
+			if d < ranges[p][0] or d > ranges[p][1] or WarPeriod.of_date(d) != p:
+				bad += 1
+			var ds: String = WarPeriod.random_date(p, [12, 1, 2])
+			if not int(ds.substr(5, 2)) in [12, 1, 2] or ds < ranges[p][0] or ds > ranges[p][1]:
+				bad_season += 1
+		_check(bad == 0, "war period %s: every random date lies in %s .. %s (%d outside)" % [p, ranges[p][0], ranges[p][1], bad])
+		_check(bad_season == 0, "war period %s: a chosen season still applies (%d outside winter)" % [p, bad_season])
+	_check(WarPeriod.random_date("any") == "" and WarPeriod.date_in("any", "1943-01-01") and not WarPeriod.date_in("early", "1943-01-01"), "war period: Any gives no date of its own")
+	# aircraft lists: only types in service, all of them real, never empty
+	var late_only: Array = ["tempest", "spitfire_mkxiv", "p51", "me262", "b25"]
+	var early_only: Array = ["defiant", "bf109", "spitfire"]
+	for side in ["Allies", "Axis"]:
+		var full: Array = AircraftCatalog.ids_for_side(side)
+		_check(AircraftCatalog.ids_for_side_period(side, "any") == full, "%s: Any / custom keeps the whole list" % side)
+		for p in ["early", "mid", "late"]:
+			var ids: Array = AircraftCatalog.ids_for_side_period(side, p)
+			var in_service: Array = WarPeriod.IN_SERVICE[p][side]
+			var stray: Array = ids.filter(func(a: String) -> bool: return not in_service.has(a))
+			var fake: Array = in_service.filter(func(a: String) -> bool: return not full.has(a) or not ResourceLoader.exists("res://data/aircraft/%s.tres" % a))
+			_check(not ids.is_empty() and stray.is_empty() and fake.is_empty(), "%s %s: the list holds only aircraft in service then, all of them in the game (stray %s, unknown %s)" % [side, p, str(stray), str(fake)])
+			var fighters: int = ids.filter(func(a: String) -> bool: return not AircraftCatalog.is_bomber(a)).size()
+			_check(fighters >= 2, "%s %s: at least two fighters to choose from" % [side, p])
+	_check(not AircraftCatalog.ids_for_side_period("Allies", "early").any(func(a: String) -> bool: return a in late_only) and not AircraftCatalog.ids_for_side_period("Axis", "early").has("me262"), "early war: no Tempest, Mustang, Spitfire XIV, Me 262 or B-25")
+	_check(not AircraftCatalog.ids_for_side_period("Allies", "late").any(func(a: String) -> bool: return a in early_only) and not AircraftCatalog.ids_for_side_period("Axis", "late").has("bf109"), "late war: no Defiant, Spitfire I or Bf 109 E")
+	_check(AircraftCatalog.ids_for_side_period("Allies", "mid").has("typhoon") and not AircraftCatalog.ids_for_side_period("Allies", "mid").has("tempest") and AircraftCatalog.ids_for_side_period("Axis", "mid").has("bf109g"), "mid war: Typhoon and Bf 109 G yes, Tempest no")
+	# closest fit: kept when it fits, else the same role
+	_check(WarPeriod.closest_fit("spitfire", AircraftCatalog.ids_for_side("Allies"), "Allies", "mid") == "spitfire", "closest fit: the current aircraft stays when it fits the period")
+	var near: String = WarPeriod.closest_fit("spitfire", AircraftCatalog.ids_for_side("Allies"), "Allies", "late")
+	_check(near == "spitfire_mkix" and WarPeriod.closest_fit("defiant", AircraftCatalog.ids_for_side("Allies"), "Allies", "late") != "defiant" and not AircraftCatalog.is_bomber(WarPeriod.closest_fit("defiant", AircraftCatalog.ids_for_side("Allies"), "Allies", "late")), "closest fit: a Spitfire I becomes the Spitfire IX in late war, a fighter stays a fighter (%s)" % near)
+	_check(AircraftCatalog.is_bomber(WarPeriod.closest_fit("blenheim", AircraftCatalog.ids_for_side("Allies"), "Allies", "late")), "closest fit: a bomber stays a bomber")
+	# AI picks follow the active period, for both sides
+	for p in ["early", "mid", "late"]:
+		WarPeriod.active = p
+		for side in ["Allies", "Axis"]:
+			var ok_ids: Array = WarPeriod.IN_SERVICE[p][side]
+			var wrong: Array = []
+			for i in 60:
+				for pool in [AircraftCatalog.fighters_for_side(side), AircraftCatalog.bombers_for_side(side)]:
+					var pick: String = str(pool[randi() % pool.size()])
+					if not ok_ids.has(pick):
+						wrong.append(pick)
+			_check(wrong.is_empty(), "AI picks %s / %s are in period (wrong: %s)" % [p, side, str(wrong.slice(0, 4))])
+		# the dogfight waves
+		var df := DogfightMode.new()
+		var dwrong: Array = []
+		for es in ["Axis", "Allies"]:
+			df.enemy_side = es
+			for w in range(1, 7):
+				for id in df._enemy_pool(w):
+					if not WarPeriod.IN_SERVICE[p][es].has(id):
+						dwrong.append(id)
+		_check(dwrong.is_empty(), "dogfight waves %s use in-period types (wrong: %s)" % [p, str(dwrong.slice(0, 4))])
+		df.free()
+		# the backup flight picks by the date, which lies in the period
+		var keep_date: String = GameState.era_date
+		var bc := BackupCaller.new()
+		var bwrong: Array = []
+		for dd in [WarPeriod.random_date(p), WarPeriod.first_day(p), WarPeriod.last_day(p)]:
+			GameState.era_date = dd
+			for team in ["Allies", "Axis"]:
+				for i in 25:
+					var t: String = bc._fighter_type(team)
+					if not WarPeriod.IN_SERVICE[p][team].has(t):
+						bwrong.append("%s@%s" % [t, dd])
+		GameState.era_date = keep_date
+		bc.free()
+		_check(bwrong.is_empty(), "backup flights %s: types by date are in period (wrong: %s)" % [p, str(bwrong.slice(0, 4))])
+	# Any keeps today's behaviour: nothing is filtered
+	WarPeriod.active = "any"
+	_check(AircraftCatalog.fighters_for_side("Axis") == AircraftCatalog.AXIS_FIGHTERS and AircraftCatalog.bombers_for_side("Allies") == AircraftCatalog.ALLIED_BOMBERS and AircraftCatalog.fighters_for_side("Allies").has("tempest"), "Any / custom: the AI pools are the full lists as before")
+	# the menu: selector present, restores, hidden for historical missions, aircraft follows the period
+	var saved_last: Dictionary = GameState.last_sortie.duplicate(true)
+	GameState.last_sortie = {}
+	var sm := StartMenu.new()
+	add_child(sm)
+	_check(sm._period != null and sm._period.item_count == 4 and sm._period.selected == 0 and sm._ids == AircraftCatalog.ids_for_side("Allies"), "menu: War period selector starts on Any / custom with the full aircraft list")
+	var mode_free: int = sm._mode_ids.find("free")
+	sm._mode.select(mode_free)
+	sm._refresh_mode()
+	_check(sm._period_row.visible, "menu: the selector is shown for free flight")
+	sm._aircraft.select(sm._ids.find("tempest"))
+	sm._period.select(1)
+	sm._on_period_selected(1)
+	var shown_ids: Array = sm._ids
+	_check(not shown_ids.has("tempest") and shown_ids.all(func(a: String) -> bool: return WarPeriod.IN_SERVICE["early"]["Allies"].has(a)), "menu: choosing Early war limits the aircraft list to early types")
+	_check(sm._ids[sm._aircraft.selected] != "tempest" and sm._period_note.visible, "menu: an aircraft that does not fit is replaced by the closest fit, and the change is shown")
+	sm._aircraft.select(sm._ids.find("hurricane"))
+	sm._period.select(2)
+	sm._on_period_selected(2)
+	_check(sm._ids[sm._aircraft.selected] == "hurricane" and not sm._period_note.visible, "menu: the current aircraft stays when it fits the new period")
+	sm._period.select(3)
+	sm._on_period_selected(3)
+	_check(sm._ids[sm._aircraft.selected] != "hurricane" and sm._ids.has("tempest"), "menu: Late war drops the Hurricane and offers the Tempest")
+	var got: Array = []
+	sm.start_requested.connect(func(cfg: Dictionary) -> void: got.append(cfg))
+	sm._on_start()
+	var cfg0: Dictionary = got[0] if not got.is_empty() else {}
+	_check(str(cfg0.get("war_period", "")) == "late" and WarPeriod.of_date(str(cfg0.get("era_date", ""))) == "late" and WarPeriod.IN_SERVICE["late"]["Allies"].has(str(cfg0.get("aircraft", ""))), "menu: Take off carries war_period late, a late-war date and an in-service aircraft (%s %s)" % [str(cfg0.get("era_date", "")), str(cfg0.get("aircraft", ""))])
+	_check(str(GameState.last_sortie.get("war_period", "")) == "late" and not GameState.last_sortie.has("art_style"), "menu: the war period is remembered with the last sortie (art_style untouched)")
+	# a fixed-date mission hides the selector and keeps the full roster
+	sm._mode.select(sm._mode_ids.find("historical"))
+	sm._refresh_mode()
+	_check(not sm._period_row.visible and sm._period_id() == "any", "menu: historical missions hide the selector (they keep their own date)")
+	remove_child(sm)      # leave the tree at once so PadNav no longer counts it as an open menu
+	sm.free()
+	GameState.last_sortie = saved_last
+	WarPeriod.active = keep_active
+	GameState.save_settings()

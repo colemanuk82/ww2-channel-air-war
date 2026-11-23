@@ -149,7 +149,7 @@ func configure(cfg: Dictionary) -> void:
 			g.teleport = teleport
 			inner = g
 		_:
-			var b := BombingMode.new()
+			var b: BombingMode = GunBatteriesMode.new() if bool(mission.get("gun_mission", false)) else BombingMode.new()
 			icfg["targets"] = objs
 			icfg["no_fighters"] = bool(mission.get("no_fighters", false))
 			b.teleport = teleport

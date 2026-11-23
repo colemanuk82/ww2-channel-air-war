@@ -226,7 +226,7 @@ func _enemy_pool(w: int) -> Array:
 			p.append("fw190")
 		if w >= 4:
 			p.append("me262")
-		return p
+		return WarPeriod.substitute(p, enemy_side)       # period-appropriate when a war period is chosen
 	var q: Array = ["spitfire", "hurricane"]
 	if w >= 2:
 		q.append("p51")
@@ -234,7 +234,7 @@ func _enemy_pool(w: int) -> Array:
 		q.append("typhoon")
 	if w >= 4:
 		q.append("p47")
-	return q
+	return WarPeriod.substitute(q, enemy_side)
 
 
 func _spawn_bombers(center: Vector3, base_heading: float, count: int) -> void:

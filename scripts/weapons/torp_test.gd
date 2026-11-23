@@ -18,6 +18,7 @@ var ship_type: String = "destroyer"
 var ship_speed: float = 6.0
 var out_dir: String = "F:/ww2_dlss/build/fix"
 var miss: bool = false
+var _last_tor_pos: Vector3 = Vector3.ZERO
 var shots: Array = ["aircraft", "hud", "entry", "wake", "hit", "hit2", "sink", "cam"]
 var _driving: bool = false
 var _t: float = 0.0
@@ -185,11 +186,22 @@ func _run() -> void:
 		await get_tree().physics_frame
 	player.bomb_requested.emit(player)
 	var tor: Node3D = Weapons.last_torpedo
+	_last_tor_pos = tor.global_position
 	_log("drop at t=%.2f alt=%.1f m: verdict %s" % [_t, player.get_altitude_m(), str(tor.get("verdict"))])
 	# the weapon cam (follows the torpedo from the side) a moment after the release
 	_cam_on = false
 	await _wait(1.3)
 	await _shot("cam")
+	if not is_instance_valid(tor):
+		# a torpedo that broke up on release is already gone: picture the place and finish
+		_log("torpedo already gone (broke up / dud) -> %s" % str(Weapons.last_torpedo))
+		_use_cam(_last_tor_pos + side * 45.0 + Vector3(0, 18.0, 0), _last_tor_pos)
+		await _wait(0.5)
+		await _shot("hit")
+		_result = {"outcome": "gone", "ship_health": _ship.health, "ship_dead": _ship.is_dead, "run": 0.0}
+		_log("RESULT " + str(_result))
+		get_tree().quit(0)
+		return
 	# entry
 	var guard: int = 0
 	while int(tor.get("phase")) == 0 and guard < 600:

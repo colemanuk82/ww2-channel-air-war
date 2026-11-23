@@ -55,6 +55,11 @@ static func build(stype: String, allies: bool, length: float, beam: float) -> Ar
 		"landing_craft":
 			_hull(b, length, beam, 0.9, 1.4, 0.35, Color(0.34, 0.37, 0.30), Color(0.30, 0.32, 0.26))
 			_landing_craft(b, length, beam)
+		"eboat", "mtb":
+			# S-boot (Axis, grey-green) or Vosper MTB / MGB (Allies, dark grey): low, sharp, fast
+			var fc: Color = Color(0.46, 0.50, 0.50) if allies else Color(0.40, 0.44, 0.44)
+			_hull(b, length, beam, 0.8, 1.0, 0.05, fc, DECK)
+			_fast_boat(b, length, beam, fc, stype == "eboat")
 		_:
 			_hull(b, length, beam, 1.0, 1.1, 0.12, Color(0.30, 0.32, 0.38) if allies else Color(0.22, 0.25, 0.30), DECK)
 			_fishing_boat(b, length, beam)
@@ -255,6 +260,21 @@ static func _trawler(b: TownModels.MB, length: float, beam: float, tc: Color) ->
 	_turret(b, 0.0, deck + 0.9, -length * 0.5 + 3.2, 0.8, 1, 2.0, tc.darkened(0.2))
 	b.box(-beam * 0.30, beam * 0.30, deck, deck + 0.5, length * 0.5 - 5.0, length * 0.5 - 1.0, tc.darkened(0.2), true)
 	_boat(b, 0.0, deck + 0.0, length * 0.5 - 3.0, 3.0, tc.darkened(0.25))
+
+
+## Fast attack craft (NavalSkirmish): small bridge, a gun forward and aft, torpedo tubes on the foredeck.
+static func _fast_boat(b: TownModels.MB, length: float, beam: float, fc: Color, eboat: bool) -> void:
+	var deck: float = 1.0
+	var bow: float = -length * 0.5
+	b.box(-beam * 0.32, beam * 0.32, deck, deck + 1.1, bow + length * 0.30, bow + length * 0.52, fc.lightened(0.10), true, fc.darkened(0.1))
+	b.box(-beam * 0.22, beam * 0.22, deck + 1.1, deck + 1.7, bow + length * 0.34, bow + length * 0.48, fc.lightened(0.14), true)
+	_mast(b, 0.0, deck + 1.7, bow + length * 0.50, 3.2, fc.darkened(0.3))
+	_turret(b, 0.0, deck, bow + length * 0.16, 0.55, 1, 1.4, fc.darkened(0.15))
+	_turret(b, 0.0, deck, length * 0.5 - length * 0.14, 0.5, 1, 1.2, fc.darkened(0.15), -1.0)
+	if eboat:
+		for tx in [-0.5, 0.5]:
+			b.box(tx - 0.16, tx + 0.16, deck + 0.1, deck + 0.4, bow + 1.0, bow + length * 0.30, DARK, true)
+	b.box(-beam * 0.2, beam * 0.2, deck, deck + 0.35, length * 0.5 - length * 0.34, length * 0.5 - length * 0.24, fc.darkened(0.25), true)
 
 
 static func _ferry(b: TownModels.MB, length: float, beam: float) -> void:

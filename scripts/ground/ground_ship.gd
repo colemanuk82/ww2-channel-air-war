@@ -13,6 +13,9 @@ const TYPES := {
 	"cruiser": {"hp": 520.0, "r": 28.0, "pts": 600, "len": 52.0, "beam": 6.2, "speed": 13.0},
 	"battleship": {"hp": 900.0, "r": 34.0, "pts": 1000, "len": 70.0, "beam": 9.0, "speed": 11.0},
 	"ferry": {"hp": 150.0, "r": 18.0, "pts": 250, "len": 40.0, "beam": 7.0, "speed": 9.0},
+	# fast attack craft (NavalSkirmish): S-boot (Axis) and MTB / MGB (Allies)
+	"eboat": {"hp": 60.0, "r": 8.0, "pts": 180, "len": 28.0, "beam": 4.4, "speed": 24.0},
+	"mtb": {"hp": 50.0, "r": 7.0, "pts": 160, "len": 22.0, "beam": 4.0, "speed": 22.0},
 }
 
 ## Ships under way are drawn larger than their nominal size so they read from the air at the game's
@@ -50,7 +53,10 @@ var _foam_t: float = 0.0
 
 ## Warships carry light anti-aircraft guns only (pom-poms and Oerlikons). Rounds per second by hull type. The rounds
 ## are weak: a single flyby does little, but a fighter that stays in range for a while gets hurt.
-const AA_RATE: Dictionary = {"destroyer": 1.2, "cruiser": 1.6, "battleship": 1.1, "trawler": 0.7}
+const AA_RATE: Dictionary = {"destroyer": 1.2, "cruiser": 1.6, "battleship": 1.1, "trawler": 0.7, "eboat": 0.8, "mtb": 0.7}
+## NavalSkirmish (scripts/ground/naval_skirmish.gd) drives a ship that is in an engagement: set to the manager while
+## engaged (it calls drive(ship, delta) each frame instead of the route stepping), null otherwise.
+var skirmish: Object = null
 const AA_RANGE: float = 900.0
 const AA_DAMAGE: float = 0.6
 
@@ -312,6 +318,9 @@ func _process(delta: float) -> void:
 	delta = minf(_lod_acc, 0.1 * float(_lod_skip))
 	_lod_acc = 0.0
 	_tick_aa(delta)
+	if skirmish != null and is_instance_valid(skirmish):
+		skirmish.call("drive", self, delta)
+		return
 	if route != null and route.length > 1.0 and speed > 0.0:
 		_step(delta, false)
 	else:

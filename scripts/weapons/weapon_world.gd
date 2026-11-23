@@ -423,6 +423,7 @@ func explode_at(pos: Vector3, radius: float, damage: float, team: String, source
 	else:
 		FX.explosion(pos, radius * 0.85)
 		FX.crater(pos, radius * 0.45)
+		BattleDamage.on_blast(pos, radius)            # a lasting crater, and in a town a ruined patch round the hit
 		if radius >= 15.0:
 			FX.smoke_column(pos, radius * 0.18, 10.0)
 		FX.dust(pos, radius * 0.5)

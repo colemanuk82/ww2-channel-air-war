@@ -1,4 +1,4 @@
-{
+﻿{
  "airfields": [
   {
    "id": "biggin_hill",
@@ -4105,6 +4105,33 @@
    "type": "bridge",
    "lat": 49.2447,
    "lon": -0.2748,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_grosser_kurfurst",
+   "name": "Batterie Grosser Kurfuerst (Cap Gris-Nez)",
+   "type": "heavy_battery",
+   "lat": 50.862,
+   "lon": 1.612,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_friedrich_august",
+   "name": "Batterie Friedrich August (Wimereux)",
+   "type": "heavy_battery",
+   "lat": 50.790,
+   "lon": 1.620,
+   "side_owner": "Axis",
+   "in_bounds": true
+  },
+  {
+   "id": "battery_k5_coquelles",
+   "name": "K5 railway guns (Coquelles, Calais)",
+   "type": "heavy_battery",
+   "lat": 50.929,
+   "lon": 1.806,
    "side_owner": "Axis",
    "in_bounds": true
   },

@@ -44,14 +44,27 @@ static func rows() -> Array:
 ## Recompute the live areas for the current EraClock date. Call on the main thread before tiles are (re)built.
 static func refresh() -> void:
 	load_data()
-	_live.clear()
+	var nl: Array = []
 	for r in _rows:
 		var rd: Dictionary = r
 		var lvl: float = float(rd.get("level", 0.0)) * level_ramp(str(rd.get("from", "")), str(rd.get("full", "")))
 		if lvl <= 0.01:
 			continue
 		var p: Vector3 = WorldCoords.latlon_to_world(float(rd["lat"]), float(rd["lon"]))
-		_live.append([Vector2(p.x, p.z), float(rd.get("radius_m", 800.0)), lvl])
+		nl.append([Vector2(p.x, p.z), float(rd.get("radius_m", 800.0)), lvl])
+	_base = nl
+	_live = nl + _battle
+
+
+## Session battle scars (BattleDamage): [Vector2 centre, radius, level] rows added to the dated areas. The live list
+## is replaced, never edited in place, so tile jobs on worker threads keep reading a consistent array.
+static var _base: Array = []
+static var _battle: Array = []
+
+
+static func set_battle(list: Array) -> void:
+	_battle = list.duplicate()
+	_live = _base + _battle
 
 
 ## 0 before the first raid, rising to 1 on the `full` date. A raid on the first day already shows: the first night
@@ -163,19 +176,41 @@ static func ruin_mesh(v: int) -> ArrayMesh:
 	var t: float = 0.07
 	var parts: Array = []
 	# front and back walls in three broken segments each (different heights), side walls in two
-	var segs: Array = [[-0.33, 0.34, 1.0, 0.78], [0.0, 0.32, 0.62, 1.0], [0.33, 0.34, 0.86, 0.55]]
+	# (five broken stretches each, a tall remnant and a low one, a different order in each variant)
+	var front_h: Array = [1.0, 0.92, 0.66, 0.38, 0.22] if v == 0 else [0.48, 0.84, 1.0, 0.58, 0.30]
+	var back_h: Array = [0.30, 0.56, 0.90, 1.0, 0.62] if v == 0 else [0.88, 0.60, 0.26, 0.50, 0.80]
 	for sz in [-1.0, 1.0]:
-		for s in segs:
-			var hh: float = float(s[2]) if sz < 0.0 else float(s[3])
+		var hl: Array = front_h if sz < 0.0 else back_h
+		for si in 5:
+			var hh: float = float(hl[si])
+			var xc: float = -0.4 + 0.2 * float(si)
 			var y: float = -0.5 + hh * 0.5
-			parts.append(GroundKit.box_part(Vector3(float(s[1]), hh, t), Vector3(float(s[0]), y, sz * (0.5 - t * 0.5)), brick, Vector3.ZERO, false))
-			parts.append(GroundKit.box_part(Vector3(float(s[1]) * 1.01, 0.06, t * 1.1), Vector3(float(s[0]), -0.5 + hh - 0.03, sz * (0.5 - t * 0.5)), soot, Vector3.ZERO, false))
-			if hh > 0.6:
-				parts.append(GroundKit.box_part(Vector3(float(s[1]) * 0.55, 0.14, t * 1.2), Vector3(float(s[0]), -0.5 + hh * 0.62, sz * (0.5 - t * 0.5)), hole, Vector3.ZERO, false))
+			parts.append(GroundKit.box_part(Vector3(0.202, hh, t), Vector3(xc, y, sz * (0.5 - t * 0.5)), brick, Vector3.ZERO, false))
+			parts.append(GroundKit.box_part(Vector3(0.206, 0.05, t * 1.1), Vector3(xc, -0.5 + hh - 0.025, sz * (0.5 - t * 0.5)), soot, Vector3.ZERO, false))
+			if hh > 0.55:
+				parts.append(GroundKit.box_part(Vector3(0.11, 0.17, t * 1.25), Vector3(xc, -0.5 + hh * 0.6, sz * (0.5 - t * 0.5)), hole, Vector3.ZERO, false))
+	# side walls: the standing one keeps a jagged gable (stepped slices peaking in the middle, the roof line the
+	# rafters left), the other is knocked down in broken steps
 	for sx in [-1.0, 1.0]:
-		var hs: float = 0.9 if (sx < 0.0) == (v == 0) else 0.6
-		parts.append(GroundKit.box_part(Vector3(t, hs, 1.0 - t * 2.0), Vector3(sx * (0.5 - t * 0.5), -0.5 + hs * 0.5, 0.0), brick, Vector3.ZERO, false))
-		parts.append(GroundKit.box_part(Vector3(t * 1.1, 0.06, 1.0 - t * 2.0), Vector3(sx * (0.5 - t * 0.5), -0.5 + hs - 0.03, 0.0), soot, Vector3.ZERO, false))
+		var gable: bool = (sx < 0.0) == (v == 0)
+		var heights: Array = [0.36, 0.54, 0.74, 0.92, 1.04, 0.86, 0.64, 0.46, 0.28] if gable else [0.22, 0.46, 0.30, 0.62, 0.40, 0.18]
+		var sl: float = (1.0 - t * 2.0) / float(heights.size())
+		for si in heights.size():
+			var hs: float = float(heights[si])
+			var zc: float = -0.5 + t + sl * (float(si) + 0.5)
+			var wx: float = sx * (0.5 - t * 0.5)
+			parts.append(GroundKit.box_part(Vector3(t, hs, sl * 1.005), Vector3(wx, -0.5 + hs * 0.5, zc), brick, Vector3.ZERO, false))
+			parts.append(GroundKit.box_part(Vector3(t * 1.1, 0.05, sl * 1.01), Vector3(wx, -0.5 + hs - 0.025, zc), soot, Vector3.ZERO, false))
+			if gable and si in [2, 6]:
+				parts.append(GroundKit.box_part(Vector3(t * 1.25, 0.16, sl * 0.5), Vector3(wx, -0.5 + hs * 0.55, zc), hole, Vector3.ZERO, false))   # window hole
+		if gable:
+			# fireplace and flue running up the gable, black with soot
+			parts.append(GroundKit.box_part(Vector3(t * 1.8, 0.62, 0.10), Vector3(sx * (0.5 - t * 0.9), -0.5 + 0.31, 0.12), soot, Vector3.ZERO, false))
+	# charred roof timbers hanging from the standing gable into the shell, and one spilled out into the street
+	parts.append(GroundKit.box_part(Vector3(0.04, 0.04, 0.55), Vector3(-0.30 if v == 0 else 0.30, -0.18, -0.05), soot, Vector3(0, 0, 0) + Vector3(-28, 0, 0), false))
+	parts.append(GroundKit.box_part(Vector3(0.04, 0.04, 0.42), Vector3(-0.18 if v == 0 else 0.18, -0.30, 0.12), soot, Vector3(22, 14, 0), false))
+	parts.append(GroundKit.box_part(Vector3(0.36, 0.12, 0.16), Vector3(0.12, -0.44, 0.58), rubble, Vector3(0, 12, 0), false))        # rubble spilling out over the pavement
+	parts.append(GroundKit.box_part(Vector3(0.05, 0.05, 0.34), Vector3(-0.15, -0.40, 0.60), soot, Vector3(0, 35, 8), false))
 	parts.append(GroundKit.box_part(Vector3(0.84, 0.05, 0.84), Vector3(0.0, -0.47, 0.0), soot, Vector3.ZERO, false))          # burnt floor
 	parts.append(GroundKit.box_part(Vector3(0.62, 0.22, 0.55), Vector3(0.08, -0.38, 0.06), rubble, Vector3(0, 18, 8), false))   # rubble heap
 	parts.append(GroundKit.box_part(Vector3(0.40, 0.14, 0.38), Vector3(-0.18, -0.40, -0.14), rubble.darkened(0.15), Vector3(0, -25, -6), false))

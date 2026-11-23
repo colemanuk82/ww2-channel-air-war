@@ -16,7 +16,7 @@ file_logging/max_log_files=8
 [application]
 
 config/name="WW2 Channel Air War"
-config/version="4.33"
+config/version="4.34"
 run/main_scene="res://scenes/main.tscn"
 run/flush_stdout_on_print=true
 config/features=PackedStringArray("4.3", "Forward Plus")
@@ -37,6 +37,7 @@ AudioManager="*res://scripts/audio_manager.gd"
 SaveSystem="*res://scripts/save_system.gd"
 FX="*res://scripts/effects/fx.gd"
 Weapons="*res://scripts/weapons/weapon_world.gd"
+BattleDamage="*res://scripts/ground/battle_damage.gd"
 Radio="*res://scripts/radio.gd"
 PadNav="*res://scripts/pad_nav.gd"
 

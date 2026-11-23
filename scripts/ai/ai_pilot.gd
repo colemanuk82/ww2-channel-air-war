@@ -555,7 +555,10 @@ func _run_torpedo_attack(delta: float, tg: Node3D, flat: float) -> void:
 	var alt_m: float = pos.y / WorldCoords.VERTICAL_SCALE
 	var ang: float = Vector3(ac.get_forward().x, 0.0, ac.get_forward().z).normalized().angle_to(aim_dir)
 	var drop_range: float = 760.0 + 120.0 * float(_strike_pass)
-	if flat < drop_range and flat > 450.0 and ang < 0.13 and alt_m <= float(lim["max_alt"]) and alt_m >= 6.0 and spd_ok:
+	# never drop onto land or the beach: the entry point must be sea
+	var terr: Node = ac.get_tree().get_first_node_in_group("terrain") if ac.is_inside_tree() else null
+	var sea_ok: bool = terr == null or not terr.has_method("is_water_at") or bool(terr.call("is_water_at", entry))
+	if flat < drop_range and flat > 450.0 and ang < 0.13 and alt_m <= float(lim["max_alt"]) and alt_m >= 6.0 and spd_ok and sea_ok:
 		ac.bomb_requested.emit(ac)
 		_strike_pass += 1
 		_strike_phase = 2

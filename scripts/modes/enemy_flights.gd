@@ -470,6 +470,7 @@ func _spawn_sweep(f: Dictionary, n: int, start: Vector3, hdg: float) -> void:
 
 func _spawn_recon(f: Dictionary, start: Vector3, hdg: float) -> void:
 	var ids: Array = ["ju88", "bf110"] if enemy == "Axis" else ["spitfire", "blenheim"]
+	ids = WarPeriod.filter_or_all(ids, enemy)       # recon types in service in the chosen war period
 	var rid: String = str(ids[randi() % ids.size()])
 	var a: Aircraft = AIFactory.spawn(world, rid, enemy, start, hdg, -1.0, difficulty, AIPilot.Role.FIGHTER)
 	var p: AIPilot = AIFactory.pilot_of(a)

@@ -1738,6 +1738,9 @@ func start_game(cfg: Dictionary) -> void:
 	var side: String = String(config.get("side", "Allies"))
 	GameState.player_side = side
 	GameState.era_date = String(config.get("era_date", ""))
+	# war period (free flight / dogfight only): narrows the AI aircraft pools to the types in service then; every
+	# other mission keeps its own fixed date and the full roster
+	WarPeriod.active = String(config.get("war_period", "any")) if String(config.get("mode", "")) in ["free", "dogfight"] and WarPeriod.valid(String(config.get("war_period", "any"))) else "any"
 	for a in _args:
 		if a.begins_with("--date="):   # debug: force the war date (YYYY-MM-DD) for screenshots / perf runs
 			GameState.era_date = a.substr(7)
@@ -2215,6 +2218,9 @@ func _on_mission_complete(success: bool, stats: Dictionary) -> void:
 	SortieResume.clear()          # the sortie is over: nothing left to resume
 	if _pause:
 		_pause.enabled = false
+	if WarPeriod.active != WarPeriod.ANY:
+		stats = stats.duplicate()
+		stats["war_period"] = WarPeriod.label(WarPeriod.active) + ((", " + GameState.era_date) if GameState.era_date != "" else "")
 	if GameState.sortie_assists:
 		stats = stats.duplicate()
 		stats["practice_aids"] = " + ".join(PackedStringArray(([] if not bool(config.get("infinite_health", false)) else ["Infinite health"]) + ([] if not bool(config.get("infinite_ammo", false)) else ["Infinite ammo"])))
@@ -3499,8 +3505,12 @@ func _parse_debug_args() -> void:
 				get_tree().create_timer(4.0).timeout.connect(func() -> void:
 					player.ammo = 0
 					player.weapons._check_ammo(player)))
+		elif a.begins_with("--ruin-test="):   # debug: stage a ruined area: --ruin-test=<lat,lon | town:id>[,radius[,delay s[,intensity]]] (BattleDamage.debug_start)
+			BattleDamage.debug_start(self, a)
 		elif a.begins_with("--torp-test"):   # debug: scripted torpedo drop on a moving ship with pictures (scripts/weapons/torp_test.gd); use with --torpedoes
 			(load("res://scripts/weapons/torp_test.gd") as GDScript).call("start", self, a)
+		elif a.begins_with("--guns-test"):   # debug: cross-Channel guns pictures (scripts/ground/guns_test.gd); use with --mode=historical --mission=gun_batteries_1940
+			(load("res://scripts/ground/guns_test.gd") as GDScript).call("start", self, a)
 		elif a == "--plume-test":   # debug: bomb plumes in the sea ahead of the player every 4 s (water_plume visual check)
 			var pt := Timer.new()
 			pt.wait_time = 4.0

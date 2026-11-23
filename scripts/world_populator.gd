@@ -1029,6 +1029,45 @@ func _drop_tile(k: Vector2i) -> bool:
 	return hit
 
 
+var _replace_tiles: Dictionary = {}   # Vector2i -> true: a built tile being re-made (battle scar), swapped when ready
+
+
+## A battle scar (BattleDamage) now covers the circle (pos, r): re-make what was built under it so the ruins show.
+## Built tiles keep standing until their replacement is scattered on a worker (no bare patch); tiles that are only
+## cached or still being scattered are dropped (they rebuild with the scar in place); town sites are rebuilt from
+## their stored layout. The terrain's rubble / scorch zone is refreshed. Returns the number of tiles and sites touched.
+func battle_refresh(pos: Vector3, r: float) -> int:
+	var n: int = 0
+	var lo := Vector2i(floori((pos.x - r) / TILE), floori((pos.z - r) / TILE))
+	var hi := Vector2i(floori((pos.x + r) / TILE), floori((pos.z + r) / TILE))
+	for kz in range(lo.y, hi.y + 1):
+		for kx in range(lo.x, hi.x + 1):
+			var k := Vector2i(kx, kz)
+			if _tiles.has(k) and is_instance_valid(_tiles[k]):
+				for i in range(_tile_jobs.size() - 1, -1, -1):
+					var jb: Dictionary = _tile_jobs[i]
+					if jb["k"] == k:
+						_orphan_flat.append([int(jb["task"]), [null]])     # scattered before the scar: throw it away
+						_tile_jobs.remove_at(i)
+				_replace_tiles[k] = true
+				_start_tile_job(k)
+				n += 1
+			elif _drop_tile(k):
+				n += 1
+	for s in _sites:
+		if not str(s["key"]).begins_with("city_"):
+			continue
+		var sp: Vector3 = s["pos"]
+		if Vector2(sp.x - pos.x, sp.z - pos.z).length() < r + 2500.0:
+			var nd: Variant = s["node"]
+			if nd != null and is_instance_valid(nd):
+				_free_site(s)
+				n += 1
+	if terrain != null and terrain.has_method("set_zone_group"):
+		terrain.call("set_zone_group", "damage", WarDamage.zones())
+	return n
+
+
 ## The scenery tile keys (Vector2i, tile size `tile`) under every remove circle that differs between
 ## `old_rows` and `new_rows` (MapEdits remove rows, matched by id): new circles, deleted circles, and both
 ## the old and the new place of a moved / resized / retargeted one. Bounding box against the tile grid,
@@ -2693,6 +2732,17 @@ func _stream_tiles() -> void:
 		var jk: Vector2i = jb["k"]
 		var res: Dictionary = jb["res"]
 		var jc := Vector2((float(jk.x) + 0.5) * TILE, (float(jk.y) + 0.5) * TILE)
+		if _replace_tiles.has(jk):
+			# a battle scar re-made this tile: the old one goes now, the new one goes in below
+			_replace_tiles.erase(jk)
+			if _tiles.has(jk):
+				var old_t: Node = _tiles[jk]
+				_tiles.erase(jk)
+				if is_instance_valid(old_t):
+					old_t.queue_free()
+			if _tile_cache.has(jk):
+				((_tile_cache[jk] as Dictionary)["node"] as Node).free()
+				_tile_cache.erase(jk)
 		if int(jb.get("gen", 0)) == _tile_gen and not _tiles.has(jk) and res.has("data") and jc.distance_to(Vector2(fp.x, fp.z)) < TILE_RADIUS + TILE:
 			# the scattered trees / houses go in now; roads, rivers, pylons, canals and railways follow over the
 			# next frames (see _advance_finishing), so no single frame carries a whole tile
@@ -4362,6 +4412,8 @@ func _build_target(s: Dictionary) -> Node3D:
 	var main: Node = null
 	var wrecked: bool = _destroyed.has(id)
 	match type:
+		"heavy_battery":
+			main = _build_heavy_battery(container, id, team, wrecked)
 		"convoy_route":
 			main = _build_convoy_target(container, id, d, team)
 		_:
@@ -4428,6 +4480,13 @@ func _build_target(s: Dictionary) -> Node3D:
 	return container
 
 
+## Cross-Channel heavy battery (casemated guns or railway guns, flak, bunkers): scripts/ground/coastal_battery.gd.
+func _build_heavy_battery(container: Node3D, id: String, team: String, wrecked: bool) -> Node:
+	var b: CoastalBattery = CoastalBattery.create(id, team)
+	b.populator = self
+	b.start_wrecked = wrecked
+	container.add_child(b)
+	return b
 func _moor_ships(container: Node3D, pos: Vector3, team: String, heading: float) -> void:
 	var fwd: Vector3 = WorldCoords.heading_to_dir(heading)
 	var side := Vector3(-fwd.z, 0, fwd.x)

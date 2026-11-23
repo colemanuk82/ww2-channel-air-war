@@ -25,6 +25,10 @@ var _diff: OptionButton
 var _weather: OptionButton
 var _time: OptionButton
 var _season: OptionButton
+var _period: OptionButton          # War period (free flight / dogfight): Any / Early / Mid / Late war
+var _period_row: Control
+var _period_note: Label
+var _list_period: String = "any"   # the period the aircraft list was last built for
 var _spawn: OptionButton
 var _spawn_row: Control
 var _spawn_note: Label
@@ -138,6 +142,15 @@ void fragment() {
 	sortie.add_child(UIKit.label("SORTIE", 14, UIKit.TEXT_DIM, true))
 	# Side first, aircraft directly beneath it; the rest packed into compact rows.
 	_side = UIKit.option_field(sortie, "Side", ["Allies", "Axis"], 150, 18)
+	# War period (free flight / dogfight): picks a day in that part of the war and the aircraft in service then
+	_period = UIKit.option_field(sortie, "War period", WarPeriod.menu_labels(), 320, 18)
+	_period.tooltip_text = "Early war (1939-41), Mid war (1942-43) or Late war (1944-45): the sortie date is drawn from that period (your Season choice still applies), the aircraft list and the AI aircraft are limited to types in service then. Any / custom keeps the free choice. Historical missions keep their own date."
+	_period_row = _period.get_parent()
+	_period.item_selected.connect(_on_period_selected)
+	_period_note = UIKit.label("", 14, UIKit.ACCENT)
+	_period_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_period_note.visible = false
+	sortie.add_child(_period_note)
 	_aircraft = UIKit.option_field(sortie, "Aircraft", [], 320, 18)
 	_info = UIKit.label("", 15, UIKit.TEXT_DIM)
 	sortie.add_child(_info)
@@ -604,14 +617,54 @@ func _step_page(dir: int) -> void:
 
 func _refresh_aircraft() -> void:
 	var side: String = _side.get_item_text(_side.selected)
-	_ids = AircraftCatalog.ids_for_side(side)
+	var per: String = _period_id()
+	var prev_id: String = str(_ids[_aircraft.selected]) if _aircraft.selected >= 0 and _aircraft.selected < _ids.size() else ""
+	var full: Array = AircraftCatalog.ids_for_side(side)
+	_ids = AircraftCatalog.ids_for_side_period(side, per)      # only the types in service in the chosen war period
 	_aircraft.clear()
 	for id in _ids:
 		var st: AircraftStats = AircraftCatalog.load_stats(id)
 		_aircraft.add_item(st.display_name + (" (bomber)" if AircraftCatalog.is_bomber(id) else ""))
-	_aircraft.select(0)
+	var pick: int = 0
+	var moved: bool = false
+	if per != "any" and prev_id != "":
+		if _ids.has(prev_id):
+			pick = _ids.find(prev_id)       # the current choice still fits the period
+		elif full.has(prev_id):
+			var near: String = WarPeriod.closest_fit(prev_id, full, side, per)
+			pick = maxi(_ids.find(near), 0)
+			moved = true
+			if _period_note != null:
+				_period_note.text = "%s was not in service then: %s selected instead." % [AircraftCatalog.display_name(prev_id), AircraftCatalog.display_name(str(_ids[pick]))]
+	if _period_note != null:
+		_period_note.visible = moved
+	_list_period = per
+	_aircraft.select(pick)
 	_refresh_info()
 	_refresh_loadout()
+
+
+## The war period in force for the sortie being set up: only free flight and dogfights take one.
+func _period_id() -> String:
+	if _period == null or _mode == null or _mode_ids.is_empty() or _mode.selected < 0 or _mode.selected >= _mode_ids.size():
+		return "any"
+	if not str(_mode_ids[_mode.selected]) in ["free", "dogfight"]:
+		return "any"
+	return str(WarPeriod.IDS[clampi(_period.selected, 0, WarPeriod.IDS.size() - 1)])
+
+
+func _on_period_selected(_i: int) -> void:
+	_refresh_aircraft()
+	_period_brief()
+
+
+## The briefing page names the war period (and its flavour) for free flight and dogfights.
+func _period_brief() -> void:
+	if _mode == null or _mode_ids.is_empty() or not str(_mode_ids[_mode.selected]) in ["free", "dogfight"]:
+		return
+	var id: String = str(_mode_ids[_mode.selected])
+	var line: String = WarPeriod.brief_line(_period_id())
+	_desc.text = ModeRegistry.description(id) + (("\n\n" + line) if line != "" else "")
 
 
 func _refresh_spawns() -> void:
@@ -865,6 +918,9 @@ func _refresh_mode() -> void:
 	_plan_hint.visible = free
 	_spawn_note.visible = not free
 	_mission_row.visible = id == "historical" or id == "training" or id == "patrol" or id == "dambuster" or id == "pow_escape" or id == "airborne"
+	_period_row.visible = id == "free" or id == "dogfight"      # historical / campaign missions keep their own date
+	if _period_id() != _list_period:
+		_refresh_aircraft()
 	_fill_missions(id)
 	if id == "dambuster":
 		_desc.text = str(DamCampaign.DAYS[clampi(maxi(_mission.selected, 0), 0, DamCampaign.count() - 1)]["brief"]) + DamCampaign.STEER_NOTE
@@ -882,6 +938,7 @@ func _refresh_mode() -> void:
 		_desc.text = brief if brief != "" else ModeRegistry.description(id)
 	else:
 		_desc.text = ModeRegistry.description(id)
+		_period_brief()
 
 
 func _open_campaign() -> void:
@@ -1081,7 +1138,12 @@ func _on_start() -> void:
 			"torpedo": _torp != null and not _torp.disabled and _torp.selected == 1,
 		},
 	}
-	if (mode_id == "free" or mode_id == "dogfight") and _season != null and _season.selected < SEASONS.size():
+	var wp: String = _period_id()
+	if wp != "any":
+		# war period: a day in that stretch of the war (inside the chosen season when one is set)
+		cfg["war_period"] = wp
+		cfg["era_date"] = WarPeriod.random_date(wp, SEASONS[_season.selected][1] if _season != null and _season.selected < SEASONS.size() else [])
+	elif (mode_id == "free" or mode_id == "dogfight") and _season != null and _season.selected < SEASONS.size():
 		cfg["era_date"] = _random_war_date(SEASONS[_season.selected][1])      # a day of the war in the chosen season
 	elif (mode_id == "free" or mode_id == "dogfight") and not cfg.has("era_date") and _random_date_ok():
 		cfg["era_date"] = _random_war_date()      # a random day of the war, so the ground and the airfields change too
@@ -1124,9 +1186,12 @@ func _assist_check(text: String, tip: String) -> CheckBox:
 ## start point (spawn list or planner coordinates) and the mission where applicable.
 func _remember_sortie(cfg: Dictionary) -> void:
 	var rec: Dictionary = {}
-	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "start_parking", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style", "season", "infinite_health", "infinite_ammo"]:
+	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "start_parking", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style", "season", "war_period", "infinite_health", "infinite_ammo"]:
 		if cfg.has(k):
 			rec[k] = cfg[k]
+	if not cfg.has("war_period"):
+		# explicit "any" after choosing Any / custom; a mission that fixes its own date leaves the earlier choice alone
+		rec["war_period"] = "any" if str(cfg.get("mode", "")) in ["free", "dogfight"] else str(GameState.last_sortie.get("war_period", "any"))
 	GameState.last_sortie = rec
 	GameState.save_settings()
 
@@ -1137,6 +1202,8 @@ func _restore_last_sortie() -> void:
 	var c: Dictionary = GameState.last_sortie
 	if c.is_empty():
 		return
+	if c.has("war_period") and _period != null:
+		_period.select(maxi(WarPeriod.IDS.find(str(c["war_period"])), 0))      # before the aircraft list is rebuilt
 	var side: String = str(c.get("side", "Allies"))
 	_side.select(0 if side == "Allies" else 1)
 	_refresh_aircraft()

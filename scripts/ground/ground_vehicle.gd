@@ -22,6 +22,13 @@ const TYPES := {
 	"tug": {"hp": 30.0, "r": 4.0, "pts": 40, "armor": 1.0},          # aircraft tractor
 	"firetender": {"hp": 40.0, "r": 6.0, "pts": 50, "armor": 1.0},
 	"bombcart": {"hp": 30.0, "r": 5.0, "pts": 70, "armor": 1.0},     # tractor with two bomb trolleys
+	# land battles (scripts/ground/land_battle.gd): 1940-42 armour and anti-tank guns
+	"churchill": {"hp": 110.0, "r": 8.0, "pts": 180, "armor": 0.45},  # Churchill III (Dieppe 1942)
+	"matilda": {"hp": 100.0, "r": 7.0, "pts": 160, "armor": 0.4},     # Matilda II, very heavily armoured
+	"valentine": {"hp": 80.0, "r": 7.0, "pts": 130, "armor": 0.6},
+	"panzer3": {"hp": 85.0, "r": 7.2, "pts": 150, "armor": 0.6},
+	"pz38t": {"hp": 70.0, "r": 6.5, "pts": 120, "armor": 0.7},        # Czech-built Panzer 38(t)
+	"pak": {"hp": 35.0, "r": 4.5, "pts": 90, "armor": 0.9},           # 3.7 cm / 5 cm anti-tank gun
 }
 
 var vtype: String = "sherman"
@@ -90,6 +97,18 @@ func _build_intact(root: Node3D) -> void:
 			_build_tank(c, 5.8, 2.6, 0.9, 1.0, 0.0, false)
 		"panzer4":
 			_build_tank(c, 5.9, 2.8, 0.9, 1.0, 1.0, true)
+		"churchill":
+			_build_tank(c, 7.3, 3.1, 1.15, 1.0, 0.5, false)
+		"matilda":
+			_build_tank(c, 5.6, 2.6, 0.95, 0.9, 0.2, true)
+		"valentine":
+			_build_tank(c, 5.4, 2.6, 0.9, 0.9, 0.3, false)
+		"panzer3":
+			_build_tank(c, 5.4, 2.9, 0.9, 0.95, 0.6, false)
+		"pz38t":
+			_build_tank(c, 4.6, 2.4, 0.85, 0.85, 0.3, false)
+		"pak":
+			_build_gun(c)
 		"tiger":
 			_build_tank(c, 7.0, 3.6, 1.1, 1.1, 1.8, true)
 		"truck":

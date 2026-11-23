@@ -15,12 +15,19 @@ static func ids_for_side(side: String) -> Array:
 	return ALLIED_FIGHTERS + ALLIED_BOMBERS
 
 
+## Fighters / bombers of a side. While a war period is active (WarPeriod.active, free flight and dogfight only) the
+## list is narrowed to the types in service then, so every AI pick that goes through here is period-appropriate.
 static func fighters_for_side(side: String) -> Array:
-	return AXIS_FIGHTERS if side == "Axis" else ALLIED_FIGHTERS
+	return WarPeriod.filter_or_all(AXIS_FIGHTERS if side == "Axis" else ALLIED_FIGHTERS, side)
 
 
 static func bombers_for_side(side: String) -> Array:
-	return AXIS_BOMBERS if side == "Axis" else ALLIED_BOMBERS
+	return WarPeriod.filter_or_all(AXIS_BOMBERS if side == "Axis" else ALLIED_BOMBERS, side)
+
+
+## The side's aircraft that were in service in a war period ("any" = every one), for the menu's aircraft list.
+static func ids_for_side_period(side: String, period: String) -> Array:
+	return WarPeriod.filter_or_all(ids_for_side(side), side, period)
 
 
 static func default_fighter(side: String) -> String:
