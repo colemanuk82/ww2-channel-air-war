@@ -626,6 +626,48 @@ func register_minimap_marker(n: Node3D, color: Color) -> void:
 	_markers.append([n, color])
 
 
+## Ground-support requests (land battles, naval attacks, the cross-Channel batteries): a pulsing ring with crossed
+## blades on the minimap, clamped to the chart edge with a bearing arrow when it lies beyond the chart.
+var _support_marks: Array = []
+
+func register_support_marker(n: Node3D) -> void:
+	if n != null and is_instance_valid(n) and not _support_marks.has(n):
+		_support_marks.append(n)
+
+
+func unregister_support_marker(n: Node) -> void:
+	for i in range(_support_marks.size() - 1, -1, -1):
+		if not is_instance_valid(_support_marks[i]) or _support_marks[i] == n:
+			_support_marks.remove_at(i)
+
+
+func _draw_support_marks(rect: Rect2, to_map: Callable) -> void:
+	var oc := Color(1.0, 0.45, 0.2)
+	var pulse: float = 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.008)
+	var ctr: Vector2 = rect.get_center()
+	for n in _support_marks:
+		if not is_instance_valid(n):
+			continue
+		var mp: Vector2 = to_map.call((n as Node3D).global_position)
+		if rect.grow(-8.0).has_point(mp):
+			var r0: float = 7.0 + 2.0 * pulse
+			_minimap.draw_arc(mp, r0, 0.0, TAU, 28, Color(0, 0, 0, 0.8), 3.0)
+			_minimap.draw_arc(mp, r0, 0.0, TAU, 28, Color(oc, 0.6 + 0.4 * pulse), 2.0)
+			var s: float = 4.0
+			_minimap.draw_line(mp + Vector2(-s, -s), mp + Vector2(s, s), Color(0, 0, 0, 0.8), 3.0)
+			_minimap.draw_line(mp + Vector2(s, -s), mp + Vector2(-s, s), Color(0, 0, 0, 0.8), 3.0)
+			_minimap.draw_line(mp + Vector2(-s, -s), mp + Vector2(s, s), Color(oc, 0.95), 1.5)
+			_minimap.draw_line(mp + Vector2(s, -s), mp + Vector2(-s, s), Color(oc, 0.95), 1.5)
+		elif mp.distance_to(ctr) > 1.0:
+			# beyond the chart: an arrow on the frame edge pointing the way
+			var dv: Vector2 = (mp - ctr).normalized()
+			var half: Vector2 = rect.size * 0.5 - Vector2(10, 10)
+			var k: float = minf(half.x / maxf(absf(dv.x), 0.001), half.y / maxf(absf(dv.y), 0.001))
+			var ep: Vector2 = ctr + dv * k
+			var sv := Vector2(-dv.y, dv.x)
+			_minimap.draw_colored_polygon(PackedVector2Array([ep + dv * 7.0, ep - dv * 4.0 + sv * 5.5, ep - dv * 4.0 - sv * 5.5]), Color(oc, 0.7 + 0.3 * pulse))
+
+
 func _label(text: String, size: int = 18, col: Color = TEXT_COL) -> Label:
 	var l := UIKit.label(text, size, col)
 	l.add_theme_constant_override("outline_size", 4)
@@ -1776,6 +1818,8 @@ func _draw_minimap() -> void:
 					_plane_icon(_minimap, mpp, Vector2(af3.x, af3.z).normalized(), 1.0, GameState.accessible_color(m[1]), (n as Node3D).is_in_group("bomber"))
 				else:
 					_minimap.draw_circle(mpp, 3.0, GameState.accessible_color(m[1]))
+	# ground support requested (land battle centres, naval attacks, the guns' batteries): ring + blades, clamped at the edge
+	_draw_support_marks(rect, to_map)
 	# the current objective (mode nav_point): a pulsing diamond, or an arrow on the frame edge with the
 	# distance when it lies off the chart (Ops Room taskings are often 20-50 km out)
 	var gm: Node = get_tree().get_first_node_in_group("game_mode")

@@ -537,7 +537,7 @@ func step(delta: float) -> void:
 		_scan_frame()
 
 
-func _drv_off(drv: Node) -> float:
+func _drv_off(drv: Variant) -> float:       # untyped: a streamed-out tile's Driver is freed; a typed Node param would deref it
 	return float(drv.get("_off")) if drv != null and is_instance_valid(drv) else 0.0
 
 
@@ -744,8 +744,10 @@ func scan_at(pp: Vector3, agl: float, ptm: String, firing: bool) -> void:
 	var waved: int = 0
 	var ran: int = 0
 	for node in _mms:
+		if not is_instance_valid(node):      # _mms is cached for 2 s: streamed-out people tiles are freed meanwhile
+			continue                         # (checked before the cast: a cast of a freed object crashes release builds)
 		var mi := node as MultiMeshInstance3D
-		if mi == null or not is_instance_valid(mi) or not mi.is_inside_tree() or mi.multimesh == null:
+		if mi == null or not mi.is_inside_tree() or mi.multimesh == null:
 			continue
 		var bb: AABB = mi.multimesh.custom_aabb
 		var gp: Vector3 = mi.global_position

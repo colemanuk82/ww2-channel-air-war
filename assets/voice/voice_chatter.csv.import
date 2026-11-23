@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://j4tyjpxkb5rr"
+
+[deps]
+
+files=["res://assets/voice/voice_chatter.side.translation", "res://assets/voice/voice_chatter.speaker.translation", "res://assets/voice/voice_chatter.voice.translation", "res://assets/voice/voice_chatter.line.translation", "res://assets/voice/voice_chatter.speak.translation", "res://assets/voice/voice_chatter.direction.translation"]
+
+source_file="res://assets/voice/voice_chatter.csv"
+dest_files=["res://assets/voice/voice_chatter.side.translation", "res://assets/voice/voice_chatter.speaker.translation", "res://assets/voice/voice_chatter.voice.translation", "res://assets/voice/voice_chatter.line.translation", "res://assets/voice/voice_chatter.speak.translation", "res://assets/voice/voice_chatter.direction.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

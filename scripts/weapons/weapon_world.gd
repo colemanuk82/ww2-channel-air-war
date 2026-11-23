@@ -312,7 +312,7 @@ func _refresh_targets(full: bool) -> void:
 			_tr[_nt] = float(r) if r != null else 3.0
 			_nt += 1
 	for i in _nt:
-		var nd2: Node3D = _tn[i]
+		var nd2: Variant = _tn[i]       # untyped: a target freed since the last full refresh must reach is_instance_valid
 		if is_instance_valid(nd2) and nd2.is_inside_tree():     # one taken out of the world since the full refresh has no position
 			_tp[i] = nd2.global_position
 		else:
@@ -475,7 +475,7 @@ func _step_bullets(delta: float) -> void:
 			var k: int = _find_hit(p0, p1, _bteam[i], bs, bonus, hit_t)
 			if k >= 0:
 				var hp: Vector3 = p0.lerp(p1, hit_t[0])
-				var nd: Node3D = _tn[k]
+				var nd: Variant = _tn[k]        # untyped: may have been freed since the last full refresh
 				if is_instance_valid(nd) and nd.has_method("take_damage"):
 					if nd is Aircraft:
 						(nd as Aircraft)._pending_hit = hp       # where it struck, for holes and part damage

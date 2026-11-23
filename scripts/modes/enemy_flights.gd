@@ -20,6 +20,7 @@ extends Node
 ## --flights-log ([mission] lines), --flights-every=SECS.
 
 enum Size { SMALL, MEDIUM, LARGE }
+const Tempo := preload("res://scripts/modes/activity_tempo.gd")     # the activity tempo: busy spells and natural lulls
 
 const SIZE_ODDS: Array[float] = [0.62, 0.28, 0.10]            # small, medium, large
 ## Mission weights per side that flies them (the Allied side has no dive-bombers).
@@ -55,6 +56,14 @@ var difficulty: float = 0.5
 var flights: Array = []                # {kind, size, target, tpos, home, members, bombers, escorts, defenders, leader, form, route, target_idx, phase, age, alert_t, done}
 var launched: int = 0
 var log_on: bool = false
+var tempo = null                       # Tempo instance: lulls hold back new flights (see activity_tempo.gd)
+var radio_on: bool = true              # the "plots building" cue at the end of a lull (off in tests)
+var lull_launches_blocked: int = 0     # launch attempts held back by a lull (tests / log)
+var lull_end_text: bool = true         # the text radio cue when a lull ends; a voice hook can set this false and play its own line
+
+## Tempo API (for the radio voice lines): connect to these, or poll is_lull().
+signal lull_started(length: float)     # a lull begins: no new hostile flights / events for about `length` seconds
+signal lull_ended(broken: bool)        # it is over (broken = a big raid cut it short); a launch follows shortly
 
 var _t: float = 70.0
 var _tick_t: float = 0.0
@@ -76,6 +85,12 @@ func setup(p_world: Node, p_player: Aircraft, p_hud: Node, p_side: String, p_dif
 	if _args.has("--flights-test"):
 		_t = 5.0
 	for a in _args:
+		if a.begins_with("--activity="):
+			Tempo.level = Tempo.sanitize(a.substr(11))
+	tempo = Tempo.new()
+	tempo.begin()
+	_log("[tempo] level %s (night %s, bad weather %s): first busy spell %.0f s" % [Tempo.level, str(Tempo.night), str(Tempo.bad_weather), tempo.t_left])
+	for a in _args:
 		if a.begins_with("--flights-kind="):
 			_forced_kind = a.substr(15)
 		elif a.begins_with("--flights-size="):
@@ -88,12 +103,18 @@ func setup(p_world: Node, p_player: Aircraft, p_hud: Node, p_side: String, p_dif
 
 # ------------------------------------------------------------------ pure planning (static: unit-tested)
 
-static func size_class(r: float) -> int:
-	if r < SIZE_ODDS[0]:
+static func size_class(r: float, level: String = "normal") -> int:
+	var odds: Array = SIZE_ODDS if level == "normal" else Tempo.size_odds(level)
+	if r < odds[0]:
 		return Size.SMALL
-	if r < SIZE_ODDS[0] + SIZE_ODDS[1]:
+	if r < odds[0] + odds[1]:
 		return Size.MEDIUM
 	return Size.LARGE
+
+
+## Most flights up at once: Quiet 2, Normal 3, Busy 4 (the AI budget still caps what actually spawns).
+static func max_flights() -> int:
+	return int(Tempo.param(Tempo.level, "max_flights"))
 
 
 static func kind_odds(flying_side: String) -> Dictionary:
@@ -268,15 +289,58 @@ func _process(delta: float) -> void:
 	if _tick_t <= 0.0:
 		_tick_t = 1.0
 		_tick(1.0)
+	if tempo != null and _can_spawn():
+		_tempo_step(delta)
 	_t -= delta
 	if _t > 0.0:
 		return
-	_t = _every if _every > 0.0 else randf_range(100.0, 190.0)
-	if flights.size() >= MAX_FLIGHTS or not _can_spawn():
+	if tempo != null and tempo.lull:
+		_t = 5.0                  # a lull: nothing new launches (flights already up carry on)
+		lull_launches_blocked += 1
+		return
+	_t = (_every if _every > 0.0 else randf_range(100.0, 190.0)) * (1.0 if _every > 0.0 else Tempo.launch_scale())
+	if flights.size() >= max_flights() or not _can_spawn():
 		_t = 10.0                 # not now (still on the ground, many flights up): look again soon
 		_log("[mission] no launch now (%d flights, spawn ok %s)" % [flights.size(), str(_can_spawn())])
 		return
 	launch_next()
+
+
+func is_lull() -> bool:
+	return tempo != null and bool(tempo.lull)
+
+
+## Advance the tempo (only while the player is airborne); announce / react to the start and end of a lull.
+func _tempo_step(dt: float) -> void:
+	var ev: String = tempo.advance(dt)
+	if ev == "":
+		return
+	if ev == "lull":
+		_log("[tempo] t=%.0f lull begins, %.0f s (%d flights still up)" % [tempo.elapsed, tempo.lull_len, flights.size()])
+		lull_started.emit(tempo.lull_len)
+		return
+	var was_broken: bool = ev == "broken"
+	_log("[tempo] t=%.0f lull ends (%s) after %.0f s" % [tempo.elapsed, "broken by a big raid" if was_broken else "natural", float((tempo.history.back() as Dictionary)["len"])])
+	lull_ended.emit(was_broken)
+	if was_broken:
+		launch_next(Size.LARGE, "raid")        # the big raid that cuts the lull
+		_t = randf_range(60.0, 100.0)
+	else:
+		_t = minf(_t, randf_range(25.0, 60.0))      # activity picks up soon after the all-clear
+		_lull_over_cue()
+
+
+## Light text radio cue at the end of a natural lull (optional; a voice line may replace it).
+func _lull_over_cue() -> void:
+	if not radio_on or not lull_end_text or player == null or not is_instance_valid(player):
+		return
+	# a recorded lull_end call (scripts/radio_chatter.gd) replaces the text-only one; its own text is the subtitle
+	var vl: Array = Radio.pick_line("lull_end")
+	if not vl.is_empty():
+		Radio.say(String(vl[0]), String(vl[1]), Radio.Kind.CONTROL, 1.0, String(vl[2]))
+		return
+	var places: Array = ["Calais", "Boulogne", "Cap Gris-Nez"] if enemy == "Axis" else ["Dover", "the Thames estuary", "Manston"]
+	Radio.say("Control", "%s, Control. Plots building over %s." % [Radio.callsign_of(player), str(places[randi() % places.size()])], Radio.Kind.CONTROL, 1.0)
 
 
 func _can_spawn() -> bool:
@@ -286,16 +350,16 @@ func _can_spawn() -> bool:
 
 
 ## Choose a mission and size and start it. Returns the flight record ({} if nothing could be placed).
-func launch_next() -> Dictionary:
+func launch_next(min_cls: int = -1, want_kind: String = "") -> Dictionary:
 	var pop: WorldPopulator = WorldPopulator.instance
 	if pop == null or not is_instance_valid(pop):
 		return {}
-	var kind: String = _forced_kind if _forced_kind != "" else pick_kind(enemy, randf())
+	var kind: String = _forced_kind if _forced_kind != "" else (want_kind if want_kind != "" else pick_kind(enemy, randf()))
 	if kind == "stuka" and enemy != "Axis":
 		kind = "raid"
 	if kind == "torpedo" and _find_ship() == null:
 		kind = "raid"                 # no ship of the player's side within reach
-	var cls: int = _forced_size if _forced_size >= 0 else size_class(randf())
+	var cls: int = _forced_size if _forced_size >= 0 else maxi(size_class(randf(), Tempo.level), min_cls)
 	var targets: Array = pop.raid_targets(side)
 	for a in pop.airfield_sites("RAF" if side == "Allies" else "Luftwaffe"):
 		targets.append({"id": a["id"], "name": str(a["name"]) + " airfield", "pos": a["pos"], "kind": "airfield"})
@@ -701,4 +765,5 @@ func _remove(f: Dictionary, quiet: bool) -> void:
 
 
 func _exit_tree() -> void:
+	Tempo.lulling = false          # never leave the shared lull flag set for the next sortie
 	flights.clear()

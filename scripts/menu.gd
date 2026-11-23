@@ -42,6 +42,9 @@ var _plan_label: Label
 var _plan_btn: Button
 var _plan_hint: Label
 var _ambient: CheckBox
+const ActivityTempo := preload("res://scripts/modes/activity_tempo.gd")
+var _activity: OptionButton          # Enemy activity (free flight): Quiet / Normal / Busy
+var _activity_row: Control
 var _taskings: CheckBox
 var _wingmen: OptionButton
 var _parking: OptionButton
@@ -226,6 +229,11 @@ void fragment() {
 	_ambient.add_theme_color_override("font_hover_color", Color.WHITE)
 	_ambient.add_theme_color_override("font_focus_color", Color.WHITE)
 	startpage.add_child(_ambient)
+	# Enemy activity (free flight): how often the air war goes quiet (scripts/modes/activity_tempo.gd)
+	_activity = UIKit.option_field(startpage, "Enemy activity", ActivityTempo.LABELS, 150, 18, 150)
+	_activity.select(ActivityTempo.index_of(ActivityTempo.DEFAULT))
+	_activity.tooltip_text = "Quiet: long lulls and sparse contacts. Normal: a varied tempo with the odd quiet spell. Busy: rare, short lulls and more action (bigger groups, more ground and sea fights). Needs the ambient air war."
+	_activity_row = _activity.get_parent()
 	# dynamic free flight: the Ops Room radios a new target every 10 minutes, with a waypoint (OpsRoom)
 	_taskings = CheckBox.new()
 	_taskings.text = "Ops Room taskings (a new target on the radio every 10 minutes)"
@@ -911,6 +919,7 @@ func _refresh_mode() -> void:
 	var id: String = _mode_ids[_mode.selected]
 	var free: bool = id == "free"
 	_ambient.visible = free
+	_activity_row.visible = free
 	_taskings.visible = free
 	_spawn_row.visible = free
 	_plan_btn.visible = free
@@ -1131,6 +1140,7 @@ func _on_start() -> void:
 		"time": TIMES[_time.selected] if _time.selected < TIMES.size() else TIMES[randi() % TIMES.size()],
 		"ambient": _ambient.button_pressed,
 		"taskings": _taskings.button_pressed and mode_id == "free",
+		"activity": ActivityTempo.IDS[clampi(_activity.selected, 0, ActivityTempo.IDS.size() - 1)] if mode_id == "free" else ActivityTempo.DEFAULT,
 		"loadout": {
 			"bombs": _selected_count(_bombs, _bombs_vals),
 			"rockets": _selected_count(_rockets, _rockets_vals),
@@ -1189,6 +1199,10 @@ func _remember_sortie(cfg: Dictionary) -> void:
 	for k in ["side", "mode", "aircraft", "mission", "spawn", "wingmen", "passing_flights", "start_parking", "spawn_lat", "spawn_lon", "spawn_airfield", "spawn_airborne", "spawn_alt", "spawn_heading", "loadout", "cockpit_style", "season", "war_period", "infinite_health", "infinite_ammo"]:
 		if cfg.has(k):
 			rec[k] = cfg[k]
+	if str(cfg.get("mode", "")) == "free" and cfg.has("activity"):
+		rec["activity"] = cfg["activity"]        # Enemy activity: free flight only
+	elif GameState.last_sortie.has("activity"):
+		rec["activity"] = GameState.last_sortie["activity"]      # another mode keeps the free-flight choice
 	if not cfg.has("war_period"):
 		# explicit "any" after choosing Any / custom; a mission that fixes its own date leaves the earlier choice alone
 		rec["war_period"] = "any" if str(cfg.get("mode", "")) in ["free", "dogfight"] else str(GameState.last_sortie.get("war_period", "any"))
@@ -1202,6 +1216,8 @@ func _restore_last_sortie() -> void:
 	var c: Dictionary = GameState.last_sortie
 	if c.is_empty():
 		return
+	if c.has("activity") and _activity != null:
+		_activity.select(ActivityTempo.index_of(str(c["activity"])))
 	if c.has("war_period") and _period != null:
 		_period.select(maxi(WarPeriod.IDS.find(str(c["war_period"])), 0))      # before the aircraft list is rebuilt
 	var side: String = str(c.get("side", "Allies"))

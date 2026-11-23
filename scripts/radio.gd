@@ -44,6 +44,10 @@ var _last_pick: Dictionary = {}      # line group -> last index used, so the sam
 var _hq_intro_done: bool = false
 var _chatter_t: float = 0.0        # seconds until the next bit of ambient radio chatter (set on first scan)
 var _left_field: bool = false
+var _dep_armed: bool = false         # the aircraft has been seen on the ground this sortie (take-off calls allowed)
+var _dep_stage: int = 0              # 0 waiting for the roll, 1 clearance given / rolling, 2 away said, 3 done
+var _dep_away_t: float = 0.0
+var _intro_t: float = -99.0          # when the opening Control call (which already clears the take-off) was made
 var _ui_player: AudioStreamPlayer
 var _streams: Dictionary = {}
 
@@ -176,6 +180,13 @@ const TAKES := {
 const UNNUMBERED := ["intro_takeoff", "intro_scramble", "tower_land", "tower_land_wind", "lost_contact", "smoke_warn", "leader_down"]
 
 var _clip_exists: Dictionary = {}
+const Tempo := preload("res://scripts/modes/activity_tempo.gd")
+const ChatterLines := preload("res://scripts/radio_chatter.gd")
+## Seconds before the same category may be played again by play_line (default CHATTER_COOLDOWN_DEFAULT).
+const CHATTER_COOLDOWN := {"lull_quiet": 45.0, "lull_end": 30.0, "takeoff_clear": 30.0, "takeoff_away": 30.0, "takeoff_check": 30.0}
+const CHATTER_COOLDOWN_DEFAULT := 8.0
+var _lull_chat_t: float = -1.0
+var _was_lulling: bool = false
 
 
 func _side_dir() -> String:
@@ -435,6 +446,10 @@ func story(id: String, delay: float = 0.0, prio: bool = false) -> void:
 ## Clear pending calls (new session / quit to menu).
 func reset_channel() -> void:
 	_queue.clear()
+	_left_field = false
+	_tower_called.clear()
+	_dep_armed = false
+	_dep_stage = 0
 	stop_narration()
 	_pending_clip = ""
 	if _voice_player != null:
@@ -864,6 +879,7 @@ func _process(delta: float) -> void:
 		_chatter_t = randf_range(60.0, 120.0)
 		# only on the runway (or a scramble with wingmen), and not the instant the screen fades in
 		if pl.on_ground or not wm.is_empty():
+			_intro_t = now
 			var tk: Array = take("intro_scramble" if not wm.is_empty() else "intro_takeoff", pl.team)
 			say("Control", "%s, this is Control. Wind %s. %s" % [callsign_of(pl), wd, tk[0]], Kind.CONTROL, randf_range(3.0, 8.0), tk[1])
 		for w in wm:
@@ -915,26 +931,94 @@ func _process(delta: float) -> void:
 		_chatter_t = randf_range(70.0, 150.0)
 		if now - _last_bandit_call > 20.0 and _queue.is_empty():
 			_ambient_chatter(pl)
+	# quiet-spell chatter now and then during a lull in the air war (scripts/modes/activity_tempo.gd)
+	if Tempo.lulling:
+		if not _was_lulling:
+			_was_lulling = true
+			_lull_chat_t = randf_range(30.0, 70.0)
+		_lull_chat_t -= 1.0
+		if _lull_chat_t <= 0.0:
+			_lull_chat_t = randf_range(60.0, 120.0)
+			if now - _last_bandit_call > 20.0 and _queue.is_empty():
+				play_line("lull_quiet")
+	else:
+		_was_lulling = false
 	# tower: approach to a friendly airfield, but only after having been well away from every field
 	var nearest: float = 1.0e9
 	for n0 in get_tree().get_nodes_in_group("airfield"):
 		var af0: Airfield = n0 as Airfield
 		if af0 != null and af0.team == pl.team:
 			nearest = minf(nearest, Vector2(pl.global_position.x - af0.global_position.x, pl.global_position.z - af0.global_position.z).length())
-	if nearest > 9000.0:
-		_left_field = true
-		_tower_called.clear()
+	_track_departure(pl.on_ground, nearest)
+	# take-off roll / lift-off: tower clearance, then "good luck" once away (never a landing call, see _track_departure)
+	var dep: Array = _departure_step(pl.on_ground, pl.throttle, pl.ground_airspeed(), pl.altitude_agl, nearest, not wm.is_empty(), now)
+	for dcat in dep:
+		play_line(String(dcat))
 	for n in get_tree().get_nodes_in_group("airfield"):
 		var af: Airfield = n as Airfield
 		if af == null or af.team != pl.team or _tower_called.has(af.airfield_name) or not _left_field:
 			continue
 		var dd: float = Vector2(pl.global_position.x - af.global_position.x, pl.global_position.z - af.global_position.z).length()
-		if dd < 4500.0 and pl.altitude_agl > 40.0 and not pl.on_ground:
+		if _tower_land_due(dd, pl.altitude_agl, pl.on_ground):
 			_tower_called[af.airfield_name] = true
 			var w2: Vector3 = pl.wind
 			var tt: Array = take("tower_land" if w2.length() < 16.0 else "tower_land_wind", pl.team)
 			say("%s Tower" % af.airfield_name, "%s, runway heading %03d, wind %03d at %d. %s" % [callsign_of(pl), int(af.heading_deg), int(WorldCoords.dir_to_heading(Vector3(-w2.x, 0.0, -w2.z))), int(round(w2.length())), tt[0]], Kind.CONTROL, 0.0, tt[1])
 			break
+
+
+## Departure tracking. The tower's "cleared to land / welcome back" call is only for a pilot who has been away:
+## sitting or rolling on the ground (any sortie start, runway or dispersal, or after a landing) clears the
+## "has left the field" flag, so the climb-out of the next take-off can never be mistaken for an approach.
+## It is set once the aircraft is airborne and more than 9 km from every friendly airfield (airborne starts near a
+## field only get the call after they have left and come back).
+func _track_departure(on_ground: bool, nearest_field_m: float) -> void:
+	if on_ground:
+		_left_field = false
+		_tower_called.clear()
+		return
+	if nearest_field_m > 9000.0:
+		_left_field = true
+		_tower_called.clear()
+
+
+## True when an airborne pilot who has already left the field is on the approach to a friendly airfield.
+func _tower_land_due(dist_m: float, agl_m: float, on_ground: bool) -> bool:
+	return _left_field and dist_m < 4500.0 and agl_m > 40.0 and not on_ground
+
+
+## Take-off calls for one scan: returns the chatter categories to play now. "takeoff_clear" on the start of the
+## roll (unless the opening Control call, which already clears the take-off, was heard under 25 s ago),
+## "takeoff_away" once climbing away (>= 60 m AGL), then "takeoff_check" from a wingman. One of each per sortie;
+## airborne starts are never armed (only an aircraft seen on the ground is).
+func _departure_step(on_ground: bool, throttle: float, speed: float, agl_m: float, nearest_field_m: float, has_wing: bool, now: float) -> Array:
+	var out: Array = []
+	if on_ground:
+		_dep_armed = true
+		if _dep_stage > 0 and speed < 1.0 and throttle < 0.2:
+			_dep_stage = 0        # stopped again (aborted take-off, landed): the next roll gets a fresh clearance
+		if _dep_stage == 0 and throttle >= 0.6 and speed > 3.0 and nearest_field_m < 2500.0:
+			_dep_stage = 1
+			_dep_away_t = 0.0
+			if now - _intro_t > 25.0:
+				out.append("takeoff_clear")
+		return out
+	if not _dep_armed:
+		return out
+	if _dep_stage == 0:
+		_dep_stage = 1        # lifted off without the roll being seen (very short scan gap)
+	if _dep_stage == 1 and agl_m >= 60.0:
+		_dep_stage = 2
+		_dep_away_t = now
+		out.append("takeoff_away")
+	elif _dep_stage == 2 and has_wing and now - _dep_away_t > 7.0:
+		_dep_stage = 3
+		_dep_armed = false
+		out.append("takeoff_check")
+	elif _dep_stage == 2 and not has_wing:
+		_dep_stage = 3
+		_dep_armed = false
+	return out
 
 
 ## Background traffic on the frequency: sector control vectors, other squadrons, coastal and weather reports.
@@ -1261,6 +1345,81 @@ const CHATTER_AXIS := [
 	["Freya Wissant", "Aircraft over Deal."],
 	["Jafü 2", "All aircraft, return."],
 ]
+
+
+# ------------------------------------------------------------------ quiet-spell / lull / air-support voice lines
+## Lines live in scripts/radio_chatter.gd (generated by tools/make_voice_chatter.py), clips in
+## assets/voice/<allies|axis>/<category>_<n>.mp3. Categories: lull_quiet, lull_end, support_land,
+## support_land_losing, support_land_thanks, support_naval, support_naval_attack, support_naval_end,
+## support_naval_lost, support_guns.
+func _chatter_side(side: String) -> String:
+	if side == "Allies" or side == "Axis":
+		return side
+	var pl: Aircraft = _player()
+	return "Axis" if pl != null and pl.team == "Axis" else "Allies"
+
+
+## "Allies" or "Axis": the player's side.
+func side_name() -> String:
+	return _chatter_side("")
+
+
+## Indices (into ChatterLines.LINES[category][side]) of the lines whose clip file exists.
+func chatter_indices(category: String, side: String = "") -> Array:
+	var sd: String = _chatter_side(side)
+	var out: Array = []
+	if not ChatterLines.LINES.has(category):
+		return out
+	var lines: Array = ChatterLines.LINES[category][sd]
+	for i in lines.size():
+		if has_clip("%s/%s_%d" % [sd.to_lower() if sd == "Axis" else "allies", category, i + 1]):
+			out.append(i)
+	return out
+
+
+## A random recorded line of `category` for `side` ("" = the player's side), never the one used last time:
+## [sender, text, clip] or [] if nothing is recorded. Wingman lines are skipped when the player has no wingmen.
+func pick_line(category: String, side: String = "") -> Array:
+	var sd: String = _chatter_side(side)
+	var idx: Array = chatter_indices(category, sd)
+	if idx.is_empty():
+		return []
+	var lines: Array = ChatterLines.LINES[category][sd]
+	if _wingmen().is_empty():
+		var ctl: Array = idx.filter(func(k): return String(lines[k][0]) != "wing")
+		if not ctl.is_empty():
+			idx = ctl
+	var key: String = "chat_%s_%s" % [category, sd]
+	var last: int = int(_last_pick.get(key, -1))
+	if idx.size() > 1:
+		idx.erase(last)
+	var i: int = int(idx[randi() % idx.size()])
+	_last_pick[key] = i
+	var ln: Array = lines[i]
+	var sender: String = String(ln[1])
+	if String(ln[0]) == "wing":
+		var wm: Array = _wingmen()
+		sender = callsign_of(wm[randi() % wm.size()]) if not wm.is_empty() else "Wingman"
+	return [sender, String(ln[2]), "%s/%s_%d" % ["axis" if sd == "Axis" else "allies", category, i + 1], String(ln[0])]
+
+
+## Clip id for a call whose text the caller keeps (land battle / convoy / gun calls): "" if none is recorded.
+func chatter_clip(category: String, side: String = "") -> String:
+	var ln: Array = pick_line(category, side)
+	return "" if ln.is_empty() else String(ln[2])
+
+
+## Say a random variant of `category` through the normal radio path (squelch, radio bus, radio volume, text
+## subtitle). Returns false when nothing is recorded or the category is still cooling down.
+func play_line(category: String, side: String = "") -> bool:
+	var ln: Array = pick_line(category, side)
+	if ln.is_empty():
+		return false
+	if not _cooled("chatter_" + category, float(CHATTER_COOLDOWN.get(category, CHATTER_COOLDOWN_DEFAULT))):
+		return false
+	var wing: bool = String(ln[3]) == "wing"
+	say(String(ln[0]), String(ln[1]), Kind.FRIENDLY if wing else Kind.CONTROL, 0.0, String(ln[2]))
+	return true
 
 
 func _ambient_chatter(pl: Aircraft) -> void:

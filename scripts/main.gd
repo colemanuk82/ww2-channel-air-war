@@ -3596,6 +3596,10 @@ func _parse_debug_args() -> void:
 			get_tree().create_timer(float(a.substr(19))).timeout.connect(func() -> void:
 				if is_instance_valid(player):
 					player.take_damage(99999.0))
+		elif a.begins_with("--bail-after="):   # debug: bail out of the player's aircraft after SECS (parachute / captor repro)
+			get_tree().create_timer(float(a.substr(13))).timeout.connect(func() -> void:
+				if is_instance_valid(player) and _bail != null and not _bail.active:
+					_bail._jump(player))
 		elif a == "--takeoff":
 			_auto_takeoff = true
 		elif a.begins_with("--cloudview="):   # kind:nth:distance  (0 cumulus 1 tower 2 strato 3 cirrus 4 alto 5 lens 6 castellanus 7 cirrocumulus 8 congestus 9 stratus, 99 largest)

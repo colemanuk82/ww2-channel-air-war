@@ -214,7 +214,10 @@ static func any_near(p: Vector3, team: String, radius: float) -> bool:
 static func _node(i: int) -> Node3D:
 	if i < 0:
 		return null
-	var n: Node3D = _nodes[i] as Node3D
-	if n == null or not is_instance_valid(n):
+	var nv: Variant = _nodes[i]          # the snapshot is up to 0.2 s old: the node may be freed (check before any typed cast)
+	if nv == null or not is_instance_valid(nv):
+		return null
+	var n: Node3D = nv as Node3D
+	if n == null:
 		return null
 	return n

@@ -16,6 +16,7 @@ var passing: PassingFlights
 var naval: NavalSkirmish          # occasional sea fights near convoys (scripts/ground/naval_skirmish.gd)
 var flights: EnemyFlights         # the other side's flights, each with a mission (ambient flights on)
 const LandBattles := preload("res://scripts/ground/land_battles.gd")
+const Tempo := preload("res://scripts/modes/activity_tempo.gd")     # enemy activity: busy spells and lulls (activity_tempo.gd)
 var land_battles: Node            # occasional tank / infantry battles with a radio call (scripts/ground/land_battles.gd)
 
 
@@ -26,6 +27,11 @@ func configure(cfg: Dictionary) -> void:
 	taskings = bool(cfg.get("taskings", false)) or OS.get_cmdline_user_args().has("--taskings")
 	tasking_interval = float(cfg.get("tasking_interval", 600.0))
 	passing_on = bool(cfg.get("passing_flights", true)) and not OS.get_cmdline_user_args().has("--no-passing")
+	# Enemy activity (Quiet / Normal / Busy): the tempo of busy spells and lulls (scripts/modes/activity_tempo.gd)
+	Tempo.level = Tempo.sanitize(String(cfg.get("activity", "normal")))
+	Tempo.night = String(cfg.get("time", "noon")) == "night"
+	Tempo.bad_weather = Tempo.is_bad_weather(String(cfg.get("weather", "clear")))
+	Tempo.lulling = false
 	# Free flight had no wingman count of its own, so the base default stayed at zero unless the map
 	# planner supplied one. Give fighter starts the normal pair; bomber crews still fly alone.
 	var want: int = int(cfg.get("wingmen", 2))

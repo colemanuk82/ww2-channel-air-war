@@ -24,6 +24,8 @@ func _ready() -> void:
 	_test_target_index()
 	_test_audio()
 	_test_logbook_voice()
+	_test_chatter_voices()
+	_test_takeoff_calls()
 	_test_custom_missions()
 	_test_mission_briefs()
 	_test_escape_and_backup()
@@ -88,12 +90,14 @@ func _ready() -> void:
 	_test_town_people()
 	_test_farm_people()
 	_test_enemy_flights()
+	_test_enemy_tempo()
 	_test_torpedoes()
 	_test_naval_skirmish()
 	_test_military_people()
 	_test_war_reactions()
 	_test_land_battles()
 	_test_cross_channel_guns()
+	_test_ground_support_markers()
 	_test_war_period()
 	_check(UpdateCheck.is_newer("v1.10", "1.9") and UpdateCheck.is_newer("1.5", "1.4") and not UpdateCheck.is_newer("1.4", "1.4") and not UpdateCheck.is_newer("v1.3", "1.4") and UpdateCheck.is_newer("2.0", "1.99"), "update check compares versions numerically")
 	_test_report_link()
@@ -1107,6 +1111,104 @@ func _test_logbook_voice() -> void:
 			_check(pick != prev, "logbook pick never repeats")
 		LogbookMenu._last_track = pick
 		prev = pick
+
+
+## Quiet-spell / lull / air-support radio lines (scripts/radio_chatter.gd, tools/make_voice_chatter.py).
+func _test_chatter_voices() -> void:
+	print("-- chatter voices")
+	var lines_res = load("res://scripts/radio_chatter.gd")
+	var cats: Array = ["lull_quiet", "lull_end", "support_land", "support_land_losing", "support_land_thanks", "support_naval", "support_naval_attack", "support_naval_end", "support_naval_lost", "support_guns"]
+	for cat in cats:
+		_check(lines_res.LINES.has(cat), "chatter category %s exists" % cat)
+		for side in ["Allies", "Axis"]:
+			var n: int = (lines_res.LINES[cat][side] as Array).size()
+			_check(n >= (8 if cat in ["lull_quiet", "lull_end"] else 4), "chatter %s/%s has enough variants (%d)" % [cat, side, n])
+			# every line has a clip that is imported and loads as audio
+			_check(Radio.chatter_indices(cat, side).size() == n, "chatter %s/%s: all %d clips exist" % [cat, side, n])
+			var ln: Array = Radio.pick_line(cat, side)
+			_check(ln.size() >= 3 and String(ln[1]).strip_edges() != "" and String(ln[2]).begins_with("allies/" if side == "Allies" else "axis/"), "chatter %s/%s picks a valid line" % [cat, side])
+			if not ln.is_empty():
+				var st: AudioStream = load("res://assets/voice/%s.mp3" % String(ln[2])) as AudioStream
+				_check(st != null and st.get_length() > 0.8 and st.get_length() < 20.0, "chatter %s/%s clip length sane" % [cat, side])
+	# play_line: a valid clip is queued once, the cooldown holds the next call back
+	Radio._cool_until.erase("chatter_lull_quiet")
+	Radio.reset_channel()
+	_check(Radio.play_line("lull_quiet"), "play_line plays a lull_quiet line")
+	_check(Radio._queue.size() == 1 and String((Radio._queue[0] as Dictionary)["clip"]) != "", "play_line queued one clip")
+	_check(not Radio.play_line("lull_quiet"), "play_line respects the cooldown")
+	_check(not Radio.play_line("no_such_category"), "play_line ignores an unknown category")
+	var repeats: int = 0
+	for k in 40:
+		var pl: Array = Radio.pick_line("lull_end", "Allies")
+		var c: String = String(pl[2])
+		if c == String(Radio._last_pick.get("test_chatter", "")):
+			repeats += 1
+		Radio._last_pick["test_chatter"] = c
+	_check(repeats == 0, "pick_line never repeats a line back to back")
+	Radio._cool_until.erase("chatter_lull_quiet")
+	Radio.reset_channel()
+
+
+## Take-off / departure radio calls and the tower's landing call (Radio._track_departure, _tower_land_due, _departure_step).
+func _test_takeoff_calls() -> void:
+	print("-- take-off calls")
+	var lines_res = load("res://scripts/radio_chatter.gd")
+	for cat in ["takeoff_clear", "takeoff_away", "takeoff_check"]:
+		for side in ["Allies", "Axis"]:
+			var n: int = (lines_res.LINES[cat][side] as Array).size()
+			_check(n >= 5, "%s/%s has enough variants (%d)" % [cat, side, n])
+			_check(Radio.chatter_indices(cat, side).size() == n, "%s/%s: all %d clips exist" % [cat, side, n])
+			var ln: Array = Radio.pick_line(cat, side)
+			_check(ln.size() >= 3 and String(ln[2]).begins_with("allies/" if side == "Allies" else "axis/"), "%s/%s picks a clip" % [cat, side])
+	Radio.reset_channel()
+	Radio._cool_until.erase("chatter_takeoff_clear")
+	_check(Radio.play_line("takeoff_clear", "Axis") and Radio._queue.size() == 1, "play_line queues a takeoff_clear line")
+	Radio.reset_channel()
+	Radio._cool_until.erase("chatter_takeoff_clear")
+	# a previous sortie left the "has left the field" flag set: the next runway spawn must not call "cleared to land"
+	Radio._left_field = true
+	Radio._intro_t = -99.0
+	var now: float = 1000.0
+	var called: Array = []
+	# on the runway, engine running, rolling, lift-off, climb-out at 800 m from the field
+	Radio._track_departure(true, 50.0)
+	_check(not Radio._left_field, "sitting on the runway clears the left-field flag from the last sortie")
+	called.append_array(Radio._departure_step(true, 0.0, 0.0, 0.0, 50.0, false, now))
+	_check(called.is_empty(), "no take-off call while parked")
+	now += 5.0
+	Radio._track_departure(true, 60.0)
+	var roll: Array = Radio._departure_step(true, 1.0, 12.0, 0.0, 60.0, false, now)
+	_check(roll == ["takeoff_clear"], "tower clears the take-off at the start of the roll")
+	var landing_call: bool = false
+	var away: Array = []
+	for k in 12:
+		now += 1.0
+		var agl: float = 5.0 + 20.0 * float(k)
+		var dist: float = 300.0 + 150.0 * float(k)
+		var on_g: bool = k < 3
+		Radio._track_departure(on_g, dist)
+		if Radio._tower_land_due(dist, agl, on_g):
+			landing_call = true
+		away.append_array(Radio._departure_step(on_g, 1.0, 60.0, agl if not on_g else 0.0, dist, false, now))
+	_check(not landing_call, "no landing call during the take-off roll and climb-out")
+	_check(away == ["takeoff_away"], "one good-luck call once climbing away %s" % str(away))
+	# fly away, then return: only now is the landing call due
+	Radio._track_departure(false, 12000.0)
+	_check(Radio._left_field, "more than 9 km out counts as having left the field")
+	_check(Radio._tower_land_due(3500.0, 300.0, false), "landing call due on the approach after departing")
+	_check(not Radio._tower_land_due(3500.0, 20.0, false) and not Radio._tower_land_due(3500.0, 300.0, true), "no landing call on the ground or below 40 m")
+	# an airborne start over the field never gets the landing call until it has left and come back
+	Radio.reset_channel()
+	Radio._track_departure(false, 800.0)
+	_check(not Radio._tower_land_due(800.0, 500.0, false), "airborne start near the field: no landing call")
+	_check(Radio._departure_step(false, 1.0, 80.0, 500.0, 800.0, true, now).is_empty(), "airborne start: no take-off calls")
+	# wingman check follows the good-luck call
+	Radio.reset_channel()
+	Radio._intro_t = now
+	_check(Radio._departure_step(true, 1.0, 10.0, 0.0, 100.0, true, now).is_empty(), "no clearance right after the opening Control call")
+	_check(Radio._departure_step(false, 1.0, 60.0, 100.0, 300.0, true, now + 1.0) == ["takeoff_away"], "good luck call with wingmen")
+	_check(Radio._departure_step(false, 1.0, 60.0, 200.0, 600.0, true, now + 10.0) == ["takeoff_check"], "wingman airborne check follows")
+	Radio.reset_channel()
 
 
 func _test_custom_missions() -> void:
@@ -3840,6 +3942,58 @@ func _test_land_battles() -> void:
 	dir2.free()
 	LBT.land_fn = Callable()
 
+
+## A stand-in for the HUD's minimap support list (register / unregister, the same calls the real HUD takes).
+func _support_hud_stub() -> Node:
+	var scr := GDScript.new()
+	scr.source_code = "extends Node\nvar marks: Array = []\nfunc register_support_marker(n) -> void:\n\tif not marks.has(n):\n\t\tmarks.append(n)\nfunc unregister_support_marker(n) -> void:\n\tmarks.erase(n)\n"
+	scr.reload()
+	return scr.new()
+
+
+## Ground-support requests on the minimap: a land battle's air-support call puts a ring on the battle centre (one, however
+## many calls), the battle's end takes it off; the guns' bombardment rings each battery, a silenced battery's ring goes,
+## and the rest go when the bombardment stops.
+func _test_ground_support_markers() -> void:
+	print("-- ground support markers on the minimap (land battles, guns)")
+	var LB = preload("res://scripts/ground/land_battles.gd")
+	var LBT = preload("res://scripts/ground/land_battle.gd")
+	LBT.land_fn = func(x: float, _z: float) -> bool:
+		return x < 0.0
+	var stub = _support_hud_stub()
+	var dir = LB.new()
+	dir.say_radio = false
+	dir.side = "Allies"
+	dir.hud = stub
+	add_child(dir)
+	var centre := Vector3(-3000.0, 0.0, 0.0)
+	var bb = dir.spawn_battle("raid", centre, "1942-08-17")
+	bb.manual = true
+	var anchor: Node3D = bb.get_node_or_null("SupportMark") as Node3D
+	_check(anchor != null and stub.marks.size() == 1 and stub.marks[0] == anchor and anchor.global_position.distance_to(centre) < 1.0, "the land battle's air-support call puts a minimap marker at the battle centre")
+	dir._on_losing("Allies", bb)
+	_check(stub.marks.size() == 1, "a later call in the same battle (losing) does not add a second marker")
+	bb.finished.emit("Axis")
+	_check(stub.marks.is_empty() and anchor.is_queued_for_deletion(), "the battle ending removes its marker")
+	dir.free()
+	LBT.land_fn = Callable()
+	# the guns: a ring on each battery while the bombardment runs
+	var gs: GunShelling = GunShelling.ensure(self)
+	gs.reset_all()
+	var gstub = _support_hud_stub()
+	gs.mark_support(gstub)
+	var live: int = gstub.marks.size()
+	_check(live == GunShelling.SITES.size(), "the bombardment rings every battery (%d)" % live)
+	var bid: String = "battery_grosser_kurfurst"
+	gs.on_gun_destroyed(bid, 0)
+	gs.on_gun_destroyed(bid, 1)
+	_check(gstub.marks.size() == live, "a battery that still has guns keeps its ring")
+	gs.on_gun_destroyed(bid, 2)
+	_check(gs.rec(bid)["silenced"] and gstub.marks.size() == live - 1, "the ring goes when its battery is silenced")
+	gs.stop()
+	_check(gstub.marks.is_empty(), "the bombardment ending clears the remaining rings")
+	gstub.free()
+
 ## Phase 2 (scripts/ground/farm_people.gd): life on the farms and in the fields. The new kinds and the farm wardrobe encode
 ## in INSTANCE_CUSTOM.w without renumbering the old ones, the number of work parties follows the quality setting and the
 ## month, each season has its own work, and nobody (and no prop or stook) is planned on a road-free spot that is not
@@ -4474,6 +4628,232 @@ func _test_enemy_flights() -> void:
 	AIFactory.ai_cap = cap_before
 
 
+const _Tempo := preload("res://scripts/modes/activity_tempo.gd")
+
+
+## Free-flight enemy activity: the tempo of busy spells and lulls, what a lull holds back, the sortie-page option.
+func _test_enemy_tempo() -> void:
+	print("-- enemy activity: tempo, lulls, the Quiet / Normal / Busy option")
+	var T = _Tempo
+	var keep_level: String = T.level
+	var mean_len: Dictionary = {}
+	# lull lengths stay inside the level's ranges and grow from Busy to Quiet
+	for lvl in T.IDS:
+		var lo: float = INF
+		var hi: float = 0.0
+		var sum: float = 0.0
+		for i in 101:
+			for j in 5:
+				var l: float = T.lull_length(lvl, float(j) / 4.0, float(i) / 100.0)
+				lo = minf(lo, l)
+				hi = maxf(hi, l)
+				sum += l
+		mean_len[lvl] = sum / 505.0
+		_check(lo >= float(T.param(lvl, "lull_min")) - 0.01 and hi <= maxf(float(T.param(lvl, "long_max")), float(T.param(lvl, "lull_max"))) + 0.01, "%s: lull lengths %.0f-%.0f s stay in range" % [lvl, lo, hi])
+	_check(mean_len["quiet"] > mean_len["normal"] and mean_len["normal"] > mean_len["busy"], "lulls are longest on Quiet, shortest on Busy (%s)" % str(mean_len))
+	_check(float(T.param("normal", "lull_min")) >= 100.0 and float(T.param("normal", "long_max")) >= 540.0 and float(T.param("busy", "lull_max")) <= 120.0, "Normal has lulls of a few minutes and sometimes 5-10; Busy lulls are short")
+	# night and bad weather make a lull likelier, never certain
+	for lvl in T.IDS:
+		var p0: float = T.lull_chance(lvl, false, false)
+		_check(T.lull_chance(lvl, true, false) >= p0 and T.lull_chance(lvl, false, true) >= p0 and T.lull_chance(lvl, true, true) < 1.0, "%s: night / bad weather make a lull likelier but not certain (%.2f -> %.2f)" % [lvl, p0, T.lull_chance(lvl, true, true)])
+	_check(T.lull_chance("busy", false, false) < T.lull_chance("normal", false, false) and T.lull_chance("normal", false, false) < T.lull_chance("quiet", false, false), "lull chance: Busy < Normal < Quiet")
+	_check(T.spell_length("normal", true, true, 0.5) < T.spell_length("normal", false, false, 0.5), "busy spells are shorter at night and in bad weather")
+	# simulate sorties: the share of time in a lull, lull counts and lengths per level
+	var share: Dictionary = {}
+	var nlulls: Dictionary = {}
+	var seen_long: bool = false
+	var first_lull_ok: bool = true
+	var any_broken: bool = false
+	var in_range: bool = true
+	for lvl in T.IDS:
+		T.level = lvl
+		T.night = false
+		T.bad_weather = false
+		var lull_s: float = 0.0
+		var total_s: float = 0.0
+		var count: int = 0
+		var with_lull_in_20min: int = 0
+		for seed_i in 120:
+			var tp = T.new()
+			tp.begin(seed_i + 1)
+			var first_lull_t: float = -1.0
+			for s in 3600:
+				var ev: String = tp.advance(1.0)
+				if tp.lull:
+					lull_s += 1.0
+				total_s += 1.0
+				if ev == "lull":
+					count += 1
+					if first_lull_t < 0.0:
+						first_lull_t = tp.elapsed
+				if ev == "broken":
+					any_broken = true
+			for h in tp.history:
+				if str(h["what"]) == "busy" and (float(h["len"]) < float(T.param(lvl, "lull_min")) - 2.0 or float(h["len"]) > maxf(float(T.param(lvl, "long_max")), float(T.param(lvl, "lull_max"))) + 2.0):
+					in_range = false
+				if lvl == "normal" and str(h["what"]) == "busy" and float(h["len"]) >= 300.0:
+					seen_long = true
+			if first_lull_t >= 0.0 and first_lull_t < 150.0:
+				first_lull_ok = false
+			if first_lull_t >= 0.0 and first_lull_t <= 1200.0:
+				with_lull_in_20min += 1
+		share[lvl] = lull_s / total_s
+		nlulls[lvl] = float(count) / 120.0
+		if lvl == "normal":
+			_check(with_lull_in_20min >= 70, "Normal: most 20-minute flights meet a lull (%d of 120)" % with_lull_in_20min)
+	_check(share["quiet"] > share["normal"] and share["normal"] > share["busy"] and share["busy"] > 0.0, "time in lulls: Quiet > Normal > Busy, and Busy still has some (%s)" % str(share))
+	_check(share["normal"] > 0.12 and share["normal"] < 0.45, "Normal: a lull is a minority of the time (%.0f%%)" % (share["normal"] * 100.0))
+	_check(nlulls["busy"] < nlulls["normal"] and float(share["busy"]) < 0.10, "Busy: fewer lulls than Normal and short (%s per hour, %.0f%% of the time)" % [str(nlulls), share["busy"] * 100.0])
+	_check(in_range and seen_long, "natural lulls last their level's length, and Normal sometimes has a 5-10 minute one")
+	_check(first_lull_ok and any_broken, "no lull in the first 150 s of a flight; a big raid sometimes breaks a lull")
+	# night / weather raise the share of lull time on Normal
+	T.level = "normal"
+	var night_lull: float = 0.0
+	var day_lull: float = 0.0
+	for night_on in [false, true]:
+		T.night = night_on
+		T.bad_weather = night_on
+		var acc: float = 0.0
+		for seed_i in 120:
+			var tn = T.new()
+			tn.begin(seed_i + 500)
+			for s in 3600:
+				tn.advance(1.0)
+				if tn.lull:
+					acc += 1.0
+		if night_on:
+			night_lull = acc / (120.0 * 3600.0)
+		else:
+			day_lull = acc / (120.0 * 3600.0)
+	_check(night_lull > day_lull and night_lull < 0.6, "Normal: night and bad weather give more lull time (%.0f%% vs %.0f%%) but never all of it" % [night_lull * 100.0, day_lull * 100.0])
+	T.night = false
+	T.bad_weather = false
+	# Busy brings more action: shorter gaps, more flights up, bigger groups, more events
+	var ql: float = float(T.param("quiet", "launch_k"))
+	_check(ql > float(T.param("normal", "launch_k")) and float(T.param("normal", "launch_k")) > float(T.param("busy", "launch_k")) and float(T.param("busy", "event_k")) < 1.0 and float(T.param("quiet", "event_k")) > 1.0, "launch and event gaps: Quiet longer, Busy shorter than Normal")
+	var big: Dictionary = {}
+	for lvl in T.IDS:
+		var b: int = 0
+		for i in 1000:
+			if EnemyFlights.size_class(float(i) / 1000.0, lvl) != EnemyFlights.Size.SMALL:
+				b += 1
+		big[lvl] = b
+	T.level = "busy"
+	var mf_busy: int = EnemyFlights.max_flights()
+	T.level = "quiet"
+	var mf_quiet: int = EnemyFlights.max_flights()
+	T.level = "normal"
+	_check(big["busy"] > big["normal"] and big["normal"] > big["quiet"] and mf_busy == 4 and mf_quiet == 2 and EnemyFlights.max_flights() == 3, "Busy: bigger groups (%s non-small per 1000) and 4 flights up; Quiet 2; Normal 3" % str(big))
+	# a lull holds back new launches and events, but not the flights already up
+	var cap_before: int = AIFactory.ai_cap
+	AIFactory.ai_cap = 0
+	var me: Aircraft = AIFactory.spawn(self, "spitfire", "Allies", Vector3(0.0, 1500.0, 0.0), 0.0, -1.0, 0.5, AIPilot.Role.FIGHTER, null, false)
+	me.player_controlled = true
+	var ef := EnemyFlights.new()
+	add_child(ef)
+	ef.radio_on = false
+	ef.setup(self, me, null, "Allies", 0.5)
+	_check(ef.tempo != null and not ef.is_lull() and not T.lulling, "EnemyFlights starts with a busy spell")
+	ef.tempo.lull = true
+	ef.tempo.t_left = 999.0
+	T.lulling = true
+	ef._t = 0.0
+	ef._process(0.1)
+	_check(ef.is_lull() and ef.lull_launches_blocked == 1 and ef.launched == 0 and is_equal_approx(ef._t, 5.0), "during a lull the launch timer is held back (no new flight)")
+	ef.tempo.lull = false
+	T.lulling = false
+	ef._t = 0.0
+	ef._process(0.1)
+	_check(ef.lull_launches_blocked == 1, "when the lull is over the timer runs normally again")
+	# sea fights are held back too
+	var nm := NavalSkirmish.new()
+	nm.radio_enabled = false
+	nm.player = me
+	add_child(nm)
+	nm.cooldown = 0.0
+	nm._tick = 100.0
+	T.lulling = true
+	nm.step(0.1)
+	_check(nm.cooldown >= 5.0, "a lull keeps the sea-fight cooldown up (%.1f s)" % nm.cooldown)
+	T.lulling = false
+	nm.cooldown = 0.0
+	nm.step(0.1)
+	_check(nm.cooldown <= 0.0, "no lull: the sea-fight cooldown is left alone")
+	nm.cleanup()
+	nm.queue_free()
+	# tank battles too
+	var LB = preload("res://scripts/ground/land_battles.gd")
+	var lb = LB.new()
+	add_child(lb)
+	var w3 := Node3D.new()
+	add_child(w3)
+	lb.enabled = true
+	lb.world = w3
+	lb.player = me
+	lb._timer = 0.0
+	T.lulling = true
+	lb._process(0.1)
+	_check(is_equal_approx(lb._timer, 15.0) and lb.battles.is_empty(), "a lull holds back new land battles")
+	T.lulling = false
+	lb.queue_free()
+	w3.queue_free()
+	# works for both sides and every war period: the pools are never empty and the tempo runs
+	var keep_period: String = WarPeriod.active
+	for sd in ["Allies", "Axis"]:
+		for p in ["any", "early", "mid", "late"]:
+			WarPeriod.active = p
+			var en: String = AircraftCatalog.opposite(sd)
+			var ok_pool: bool = not AircraftCatalog.fighters_for_side(en).is_empty() and not AircraftCatalog.bombers_for_side(en).is_empty()
+			var ef2 := EnemyFlights.new()
+			add_child(ef2)
+			ef2.radio_on = false
+			ef2.setup(self, me, null, sd, 0.5)
+			var ran: bool = true
+			for lvl in T.IDS:
+				T.level = lvl
+				var t2 = T.new()
+				t2.begin(7)
+				for s in 1500:
+					t2.advance(1.0)
+				ran = ran and t2.elapsed == 1500.0
+			ef2.queue_free()
+			_check(ok_pool and ran and ef2.enemy == en, "%s, %s war: enemy pools are filled and the tempo runs at every level" % [sd, p])
+	WarPeriod.active = keep_period
+	T.level = "normal"
+	T.lulling = false
+	ef.queue_free()
+	me.queue_free()
+	AIFactory.ai_cap = cap_before
+	# the sortie-page option: Quiet / Normal / Busy, default Normal, free flight only, remembered
+	var saved_last: Dictionary = GameState.last_sortie.duplicate(true)
+	GameState.last_sortie = {}
+	var sm := StartMenu.new()
+	add_child(sm)
+	_check(sm._activity != null and sm._activity.item_count == 3 and sm._activity.selected == 1 and sm._activity.get_item_text(0) == "Quiet" and sm._activity.get_item_text(2) == "Busy", "menu: Enemy activity offers Quiet / Normal / Busy and starts on Normal")
+	sm._mode.select(sm._mode_ids.find("free"))
+	sm._refresh_mode()
+	_check(sm._activity_row.visible, "menu: Enemy activity is shown for free flight")
+	sm._activity.select(2)
+	var got: Array = []
+	sm.start_requested.connect(func(cfg: Dictionary) -> void: got.append(cfg))
+	sm._on_start()
+	var cfg1: Dictionary = got[0] if not got.is_empty() else {}
+	_check(str(cfg1.get("activity", "")) == "busy" and str(GameState.last_sortie.get("activity", "")) == "busy" and not GameState.last_sortie.has("art_style"), "menu: Take off carries activity busy and remembers it (art_style untouched)")
+	sm._mode.select(sm._mode_ids.find("historical"))
+	sm._refresh_mode()
+	_check(not sm._activity_row.visible, "menu: Enemy activity is hidden outside free flight")
+	remove_child(sm)
+	sm.free()
+	var sm2 := StartMenu.new()
+	add_child(sm2)
+	_check(sm2._activity.selected == 2, "menu: the activity choice comes back the next time the menu opens")
+	remove_child(sm2)
+	sm2.free()
+	GameState.last_sortie = saved_last
+	GameState.save_settings()
+	T.level = keep_level
+
+
 # ================================================================== controller navigation (PadNav)
 ## Every menu / overlay screen is built headless and checked for: registered with PadNav, an initial focus, every visible
 ## enabled Button / Slider / OptionButton / CheckBox / SpinBox reachable by walking focus neighbours from it, and B
@@ -4716,6 +5096,18 @@ func _test_pad_navigation() -> void:
 	await _pad_frames(2)
 	sm._nav_btns[0].grab_focus()
 	_check(sm._period.is_visible_in_tree() and sm._period.focus_mode != Control.FOCUS_NONE and _pad_reach(sm._nav_btns[0]).has(sm._period), "start menu: the War period selector is reachable by pad focus like the other sortie controls")
+	var prev_mode: int = sm._mode.selected
+	sm._mode.select(sm._mode_ids.find("free"))      # Enemy activity is a free-flight option; a clean profile opens on another mode
+	sm._refresh_mode()
+	sm._show_page(1)
+	await _pad_frames(2)
+	sm._nav_btns[1].grab_focus()
+	_check(sm._activity.is_visible_in_tree() and sm._activity.focus_mode != Control.FOCUS_NONE and _pad_reach(sm._nav_btns[1]).has(sm._activity), "start menu: the Enemy activity selector is reachable by pad focus")
+	sm._mode.select(prev_mode)
+	sm._refresh_mode()
+	sm._show_page(0)
+	await _pad_frames(2)
+	sm._nav_btns[0].grab_focus()
 	await _pad_tap(JOY_BUTTON_RIGHT_SHOULDER)
 	_check(sm._pages[1].visible and not sm._pages[0].visible, "start menu: RB flips to the next page")
 	await _pad_tap(JOY_BUTTON_LEFT_SHOULDER)

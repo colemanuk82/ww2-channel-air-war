@@ -15,6 +15,7 @@ extends Node
 
 const LandBattle := preload("res://scripts/ground/land_battle.gd")
 
+const Tempo := preload("res://scripts/modes/activity_tempo.gd")     # lulls hold back new battles; Busy / Quiet scale the gap
 const FIRST_DELAY: float = 75.0
 const GAP_MIN: float = 240.0
 const GAP_MAX: float = 540.0
@@ -194,6 +195,9 @@ func _process(delta: float) -> void:
 	_timer -= delta
 	if _timer > 0.0:
 		return
+	if Tempo.lulling and every_override <= 0.0 and not test_mode:
+		_timer = 15.0             # a lull in the air war (activity_tempo.gd): no new battle until it is over
+		return
 	var active: int = 0
 	for b in battles:
 		if is_instance_valid(b) and not (b as Node3D).ended:
@@ -202,7 +206,7 @@ func _process(delta: float) -> void:
 		_timer = 30.0
 		return
 	if start_battle():
-		_timer = every_override if every_override > 0.0 else next_delay(rng.randf())
+		_timer = every_override if every_override > 0.0 else next_delay(rng.randf()) * Tempo.event_scale()
 		if test_mode:
 			_timer = 99999.0
 	else:
@@ -319,13 +323,15 @@ func call_text(b: Node3D, stage: int) -> String:
 	return "%s, Control. %s attacking at %s, our lads are hard pressed, requesting air support!" % [cs, theirs, place]
 
 
-func _say(text: String) -> void:
+func _say(text: String, voice_cat: String = "") -> void:
 	calls.append(text)
 	call_made.emit(text)
 	if say_radio:
 		var r: Node = get_node_or_null("/root/Radio")
 		if r != null and r.has_method("say"):
-			r.call("say", "Control", text, 1, 1.0)     # Radio.Kind.CONTROL
+			# a generic recorded call of the same kind (support_land / _losing / _thanks), if there is one
+			var vclip: String = str(r.call("chatter_clip", voice_cat)) if (voice_cat != "" and r.has_method("chatter_clip")) else ""
+			r.call("say", "Control", text, 1, 1.0, vclip)     # Radio.Kind.CONTROL
 	if hud != null and is_instance_valid(hud) and hud.has_method("show_message") and say_radio:
 		hud.call("show_message", text.get_slice("Control. ", 1), 6.0)
 
@@ -333,20 +339,49 @@ func _say(text: String) -> void:
 func _announce_start(b: Node3D) -> void:
 	var d: float = Vector2(player.global_position.x - b.centre.x, player.global_position.z - b.centre.z).length() if player != null else 0.0
 	if d < 14000.0:
-		_say(call_text(b, 0))
+		_say(call_text(b, 0), "support_land")
+		_support_mark(b)
 
 
 func _on_losing(team: String, b: Node3D) -> void:
 	if team == side and is_instance_valid(b) and not b.ended:
-		_say(call_text(b, 1))
+		_say(call_text(b, 1), "support_land_losing")
+		_support_mark(b)
+
+
+## Minimap: a "ground support requested" ring at the battle centre (same style as the naval fights). The anchor is a
+## child of the battle, so it goes with the battle; it is unregistered when the battle ends (_drop_support).
+func _support_mark(b: Node3D) -> void:
+	if hud == null or not is_instance_valid(hud) or not hud.has_method("register_support_marker"):
+		return
+	var a: Node3D = b.get_node_or_null("SupportMark") as Node3D
+	if a == null:
+		a = Node3D.new()
+		a.name = "SupportMark"
+		b.add_child(a)
+	if a.is_inside_tree():
+		a.global_position = b.centre
+	else:
+		a.position = b.centre
+	hud.call("register_support_marker", a)
+
+
+func _drop_support(b: Node3D) -> void:
+	var a: Node = b.get_node_or_null("SupportMark")
+	if a == null:
+		return
+	if hud != null and is_instance_valid(hud) and hud.has_method("unregister_support_marker"):
+		hud.call("unregister_support_marker", a)
+	a.queue_free()
 
 
 func _on_finished(winner: String, b: Node3D) -> void:
 	if not is_instance_valid(b):
 		return
+	_drop_support(b)
 	var id: int = int(b.get_meta("battle_id", 0))
 	if winner == side and b.kills_by_player > 0:
-		_say(call_text(b, 2))
+		_say(call_text(b, 2), "support_land_thanks")
 	if b.kills_by_player > 0 and not helped.has(id):
 		helped.append(id)
 

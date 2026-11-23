@@ -42,7 +42,7 @@ VOICE_DIR = os.path.join(ROOT, "assets", "voice")
 
 TABLES = ["voice_lines.csv", "voice_story.csv", "voice_generic.csv", "voice_bulk.csv",
           "voice_final.csv", "voice_ops.csv", "voice_places.csv", "voice_more.csv",
-          "voice_variants.csv", "voice_last.csv"]
+          "voice_variants.csv", "voice_last.csv", "voice_chatter.csv"]
 
 # speaker -> (edge-tts voice, rate, pitch). Chosen to match the accent in the CSV "voice" column.
 CAST = {

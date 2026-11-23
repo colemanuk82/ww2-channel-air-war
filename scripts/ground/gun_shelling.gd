@@ -22,6 +22,7 @@ const SILENCE_FRAC := 0.75
 const DISPERSION := 90.0           # metres, one sigma, with the fire-control post standing
 const CYCLE := {"casemate": 62.0, "railway": 150.0}   # seconds between rounds from one gun
 const MAX_RANGE := {"casemate": 55000.0, "railway": 62000.0}
+const Tempo := preload("res://scripts/modes/activity_tempo.gd")     # lulls hold back the ambient shelling; Busy / Quiet scale the gap
 const AMBIENT_FIRST := 150.0
 const AMBIENT_LENGTH := 1200.0
 const AMBIENT_GAP := 1500.0
@@ -66,6 +67,7 @@ var _amb_t: float = 0.0
 var _amb_gap: float = 0.0
 var _amb_player: Node3D = null
 var _amb_hud: Node = null
+var _support_hud: Node = null           # the HUD holding the minimap "support requested" rings (see mark_support)
 
 
 static func instance() -> GunShelling:
@@ -245,6 +247,7 @@ func on_gun_destroyed(id: String, i: int) -> void:
 	if not bool(r["silenced"]) and gone >= silence_at(int(r["n"])):
 		r["silenced"] = true
 		_log("battery %s silenced" % id)
+		unmark_support(id)
 		battery_silenced.emit(id)
 		var pop: Node = _populator()
 		if pop != null and pop.get("_destroyed") is Dictionary:
@@ -308,6 +311,7 @@ func reset_run_flag() -> void:
 
 func stop() -> void:
 	active = false
+	unmark_all_support()
 	for id in _bat:
 		var r: Dictionary = _bat[id]
 		for i in int(r["n"]):
@@ -585,6 +589,9 @@ func _ambient_tick(delta: float) -> void:
 	_amb_t -= delta
 	if _amb_t > 0.0:
 		return
+	if Tempo.lulling:
+		_amb_t = 20.0             # a lull in the air war (activity_tempo.gd): the guns stay quiet until it is over
+		return
 	if _amb_player == null or not is_instance_valid(_amb_player) or not era_ok():
 		_amb_t = 30.0
 		return
@@ -602,11 +609,52 @@ func _begin_ambient() -> void:
 			for i in int(r["n"]):
 				(r["next"] as Array)[i] = 1.0e9
 	start([], 25.0, AMBIENT_LENGTH)
-	_amb_t = AMBIENT_LENGTH + AMBIENT_GAP
+	_amb_t = AMBIENT_LENGTH + AMBIENT_GAP * Tempo.event_scale()
 	var line: String = "Dover under shellfire from Gris-Nez. Any aircraft: attack the batteries on the French coast."
-	Radio.say("Coastguard Dover", line, Radio.Kind.CONTROL, 1.0)
+	var gcl: Array = Radio.pick_line("support_guns")      # a recorded call: Allies keep the text above, Axis get their own wording
+	var gsender: String = "Coastguard Dover"
+	if not gcl.is_empty() and Radio.side_name() == "Axis":
+		line = String(gcl[1])
+		gsender = String(gcl[0])
+	Radio.say(gsender, line, Radio.Kind.CONTROL, 1.0, String(gcl[2]) if not gcl.is_empty() else "")
+	mark_support(_amb_hud)
 	if _amb_hud != null and is_instance_valid(_amb_hud) and _amb_hud.has_method("show_message"):
 		_amb_hud.call("show_message", "Dover shelled from Cap Gris-Nez - attack the batteries", 5.0)
+
+
+## Minimap "ground support requested" ring on each battery still firing (same style as the land battles). Each
+## ring goes when its battery is silenced, or when the bombardment stops.
+func mark_support(hud: Node) -> void:
+	if hud == null or not is_instance_valid(hud) or not hud.has_method("register_support_marker"):
+		return
+	_support_hud = hud
+	for id in SITES.keys():
+		var r: Dictionary = rec(str(id))
+		if r.is_empty() or bool(r["silenced"]) or get_node_or_null(_support_key(str(id))) != null:
+			continue
+		var a := Node3D.new()
+		a.name = _support_key(str(id))
+		add_child(a)
+		a.global_position = r["pos"]
+		hud.call("register_support_marker", a)
+
+
+func unmark_support(id: String) -> void:
+	var a: Node = get_node_or_null(_support_key(id))
+	if a == null:
+		return
+	if _support_hud != null and is_instance_valid(_support_hud) and _support_hud.has_method("unregister_support_marker"):
+		_support_hud.call("unregister_support_marker", a)
+	a.queue_free()
+
+
+func unmark_all_support() -> void:
+	for id in SITES.keys():
+		unmark_support(str(id))
+
+
+static func _support_key(id: String) -> String:
+	return "SupportMark_" + id
 
 
 ## Nearest live (not silenced) battery to a world position, or "".

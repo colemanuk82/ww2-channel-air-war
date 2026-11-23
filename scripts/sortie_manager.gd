@@ -10,6 +10,7 @@ extends Node
 const DELAY := 12.0               # seconds between aircraft rolling
 const MAX_RAIDS := 2
 const FIRST_DELAY := 90.0
+const Tempo := preload("res://scripts/modes/activity_tempo.gd")     # lulls hold back new sorties
 
 var world: Node3D
 var player: Node3D
@@ -63,7 +64,10 @@ func _process(delta: float) -> void:
 	_t -= delta
 	if _t > 0.0:
 		return
-	_t = randf_range(140.0, 220.0)
+	if Tempo.lulling:
+		_t = 20.0                 # a lull in the air war (activity_tempo.gd): no new sortie rolls until it is over
+		return
+	_t = randf_range(140.0, 220.0) * Tempo.launch_scale()
 	if _raids.size() >= MAX_RAIDS:
 		return
 	_try_launch()

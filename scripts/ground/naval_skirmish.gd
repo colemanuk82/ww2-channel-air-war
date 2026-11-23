@@ -29,6 +29,7 @@ const TORP_ARM: float = 90.0
 const TORP_DAMAGE: float = 240.0
 const FIRST_DELAY: Vector2 = Vector2(150.0, 260.0)
 const COOLDOWN: Vector2 = Vector2(330.0, 660.0)
+const Tempo := preload("res://scripts/modes/activity_tempo.gd")     # lulls hold back new sea fights; Busy / Quiet scale the gap
 const MAX_ENGAGE_AGE: float = 150.0
 const VIEW_FX: float = 6500.0           # no effects beyond this distance from the camera
 const CULL_DIST: float = 14000.0        # an engagement this far from the player is simply dropped
@@ -165,10 +166,10 @@ static func call_text(own: bool, convoy_name: String, attackers: String, place: 
 
 
 ## Small shared helper: radio call + HUD message. Nothing is queued twice here; the caller decides when to call it.
-static func request_air_support(p_hud: Node, sender: String, text: String, world_pos: Vector3, player_pos: Vector3) -> void:
+static func request_air_support(p_hud: Node, sender: String, text: String, world_pos: Vector3, player_pos: Vector3, voice_cat: String = "") -> void:
 	var miles: int = int(round(Vector2(world_pos.x - player_pos.x, world_pos.z - player_pos.z).length() / 1609.0))
 	var tail: String = " (bearing %03d, %d miles)" % [bearing_deg(player_pos, world_pos), miles]
-	Radio.say(sender, text, Radio.Kind.FRIENDLY, 0.5, "", true)
+	Radio.say(sender, text, Radio.Kind.FRIENDLY, 0.5, Radio.chatter_clip(voice_cat) if voice_cat != "" else "", true)
 	if p_hud != null and is_instance_valid(p_hud) and p_hud.has_method("show_message"):
 		p_hud.call("show_message", "Air support requested" + tail, 6.0)
 
@@ -243,6 +244,8 @@ func _process(delta: float) -> void:
 
 ## One simulation step (also called directly by the unit tests).
 func step(dt: float) -> void:
+	if Tempo.lulling and cooldown < 6.0:
+		cooldown = 6.0            # a lull in the air war (activity_tempo.gd): no new sea fight until it is over
 	if cooldown > 0.0:
 		cooldown -= dt
 	_tick -= dt
@@ -496,7 +499,7 @@ func start_engagement(att: Array, defs: Array, label: String, spawned: bool, p_n
 			d.wander = 55.0
 	engagements.append(e)
 	started += 1
-	cooldown = cooldown_every if cooldown_every >= 0.0 else _rng.randf_range(COOLDOWN.x, COOLDOWN.y)
+	cooldown = cooldown_every if cooldown_every >= 0.0 else _rng.randf_range(COOLDOWN.x, COOLDOWN.y) * Tempo.event_scale()
 	_log("engagement %d: %s (%d) vs %d ships near %s" % [int(e["id"]), label, att.size(), defs.size(), place_name(center)])
 	_announce(e)
 	return e
@@ -565,7 +568,7 @@ func _announce(e: Dictionary) -> void:
 		text = call_text(true, str(e["name"]), label, place, bearing, miles, side)
 	e["call_text"] = text
 	if radio_enabled and Radio != null:
-		request_air_support(hud, sender, text, spot, ppos)
+		request_air_support(hud, sender, text, spot, ppos, "support_naval_attack" if attackers_friendly else "support_naval")
 	_log("RADIO %s: %s" % [sender, text])
 	# minimap markers: the attackers (enemy red) or, when our own boats attack, the convoy's escorts
 	if hud != null and is_instance_valid(hud) and hud.has_method("register_minimap_marker"):
@@ -577,6 +580,31 @@ func _announce(e: Dictionary) -> void:
 			var lead: Node3D = defs[0] as Node3D
 			AIFactory.add_marker(hud, lead, Color(0.3, 0.75, 1.0))
 			(e["marked"] as Array).append(lead)
+	_support_mark(e, spot)
+
+
+## The same "support requested" ring as the land battles, at the fight; removed when the engagement is over.
+func _support_mark(e: Dictionary, spot: Vector3) -> void:
+	if hud == null or not is_instance_valid(hud) or not hud.has_method("register_support_marker"):
+		return
+	var a := Node3D.new()
+	a.name = "SupportMark%d" % int(e["id"])
+	add_child(a)
+	if a.is_inside_tree():
+		a.global_position = spot
+	else:
+		a.position = spot
+	hud.call("register_support_marker", a)
+	e["support"] = a
+
+
+func _unsupport(e: Dictionary) -> void:
+	var a: Variant = e.get("support")
+	if a is Node3D and is_instance_valid(a):
+		if hud != null and is_instance_valid(hud) and hud.has_method("unregister_support_marker"):
+			hud.call("unregister_support_marker", a)
+		(a as Node3D).queue_free()
+	e.erase("support")
 
 
 func _unmark(n: Node) -> void:
@@ -803,6 +831,7 @@ func _finish(e: Dictionary, outcome: String) -> void:
 		return
 	e["done"] = true
 	e["outcome"] = outcome
+	_unsupport(e)
 	for lst in [e["att"], e["def"]]:
 		for s in lst:
 			if not is_instance_valid(s):
@@ -847,15 +876,19 @@ func _finish(e: Dictionary, outcome: String) -> void:
 	if radio_enabled and Radio != null and player != null and is_instance_valid(player) and not (e["att"] as Array).is_empty():
 		var attackers_friendly: bool = is_instance_valid((e["att"] as Array)[0]) and ((e["att"] as Array)[0] as GroundShip).team == side
 		var line: String = ""
+		var vcat: String = ""       # a generic recorded call of the same meaning (assets/voice, scripts/radio_chatter.gd)
 		if outcome == "repelled" or outcome == "broke_off":
 			if attackers_friendly:
 				line = "Breaking off the attack. Thank you, aircraft." if bool(e["assist"]) else "We are breaking off the attack."
 			else:
 				line = ("%s: attackers driven off. Thank you for the help, aircraft!" % str(e["name"])) if bool(e["assist"]) else ("%s: the attackers have broken off." % str(e["name"]))
+			if bool(e["assist"]):
+				vcat = "support_naval_end"
 		elif outcome == "destroyed" and not attackers_friendly:
 			line = "%s is lost." % str(e["name"])
+			vcat = "support_naval_lost"
 		if line != "":
-			Radio.say(("MTB 102" if attackers_friendly else str(e["name"])), line, Radio.Kind.FRIENDLY, 1.0)
+			Radio.say(("MTB 102" if attackers_friendly else str(e["name"])), line, Radio.Kind.FRIENDLY, 1.0, Radio.chatter_clip(vcat) if vcat != "" else "")
 
 
 ## One ship's decisions: pick a target, steer, shoot, burn.
