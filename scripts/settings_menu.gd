@@ -274,7 +274,7 @@ func _build_render_page() -> VBoxContainer:
 	var page := _new_page()
 	var rtx: bool = GameState.engine_has_streamline()
 	var dlss_ok: bool = GameState.dlss_supported()
-	var up_items: Array = ["Off", "FSR 2"]
+	var up_items: Array = ["Off", "FSR 2.2"]
 	if rtx:
 		up_items.append("DLSS" if dlss_ok else "DLSS (not available)")
 	var cur_up: int = GameState.effective_upscaler() if GameState.upscaler < 0 else GameState.upscaler
@@ -332,7 +332,7 @@ func _dlss_section(page: VBoxContainer) -> void:
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	page.add_child(status)
 	if not DlssInstaller.is_windows() or not DlssInstaller.gpu_is_nvidia():
-		status.text = "DLSS needs an NVIDIA RTX graphics card on Windows. This system uses the standard renderer with AMD FSR 2 upscaling."
+		status.text = "DLSS needs an NVIDIA RTX graphics card on Windows. This system uses the standard renderer with AMD FSR 2.2 upscaling."
 		return
 	if DlssInstaller.is_installed():
 		status.text = "DLSS components are installed." if GameState.dlss_supported() else "DLSS components are installed, but this graphics card or driver does not support DLSS (or the game needs a restart). FSR 2 is used instead."

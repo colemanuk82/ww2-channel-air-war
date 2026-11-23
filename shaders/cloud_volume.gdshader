@@ -33,6 +33,12 @@ uniform float cel_lo = 0.50;           // cel bands: brightness below this is th
 uniform float cel_hi = 0.78;           // ... above this the flat white top
 uniform float storm_frac = 0.0;       // share of towering cells that are storm cells (set from the weather)
 
+// ---- perf switches (v4.36); each one can be turned off here to get exactly the old behaviour ----
+const float FADE_CULL = 0.002;         // fragments faded below this are dropped before marching (0.0 = old: march, then ALPHA ~ 0)
+const float LAZY_LIGHT_A = 0.004;      // a due sun/sky light refresh is skipped for a sample thinner than this, reusing the last one (0.0 = always refresh)
+const bool CD_EXACT_SKIPS = true;      // density: skip noise whose result is provably unused (bit-identical output; false = old code path)
+const float FAR_LIGHT_DIST = 20000.0;  // beyond this camera distance the light refresh is every (light_every + 1)th step (1e9 = off)
+
 varying vec3 l_cam;
 varying vec3 l_pos;
 varying vec3 l_sun;
@@ -82,9 +88,12 @@ float cloud_density(vec3 p, float sd, float ty, vec3 sc) {
 			shape = max(shape, (1.0 - length(lq)) * lr * 1.25);
 		}
 		if (shape <= -0.35) { return 0.0; }
+		if (CD_EXACT_SKIPS && shape <= -0.19) { return 0.0; }   // d0 <= shape*1.45 + 0.275 (fbm3 <= 1), so it is <= 0 here: same result, no noise
 		float n = fbm3(p * sc / 300.0 + off);
 		float d0 = shape * 1.45 - 0.30 + (n - 0.5) * 1.15;
-		d0 -= 0.24 * (1.0 - clamp(d0, 0.0, 1.0)) * t_vnoise3(p * sc / 95.0 + off);   // fine billow erosion at the edges
+		if (!CD_EXACT_SKIPS || (d0 > 0.0 && d0 < 1.0)) {   // the erosion term is 0 at d0 >= 1 and can only push d0 <= 0 further down
+			d0 -= 0.24 * (1.0 - clamp(d0, 0.0, 1.0)) * t_vnoise3(p * sc / 95.0 + off);   // fine billow erosion at the edges
+		}
 		return clamp(d0, 0.0, 1.0);
 	} else if (ty < 1.5) {
 		// cumulonimbus: narrower base, tall billowing tower, anvil flare at the top
@@ -93,10 +102,13 @@ float cloud_density(vec3 p, float sd, float ty, vec3 sc) {
 		vec3 q = vec3(p.x / wd, p.y < -0.15 ? (p.y + 0.15) * 2.4 : p.y * 0.92, p.z / wd);
 		float shape = 1.0 - length(q);
 		if (shape <= -0.35) { return 0.0; }
+		if (CD_EXACT_SKIPS && shape <= -0.212) { return 0.0; }   // d1 <= shape*1.35 + 0.285, so <= 0 here
 		vec3 np = p * sc / vec3(340.0, 420.0, 340.0) + off;
 		float n = fbm3(np);
 		float d1 = shape * 1.35 - 0.24 + (n - 0.5) * 1.05;
-		d1 -= 0.22 * (1.0 - clamp(d1, 0.0, 1.0)) * t_vnoise3(np * 2.9);
+		if (!CD_EXACT_SKIPS || (d1 > 0.0 && d1 < 1.0)) {
+			d1 -= 0.22 * (1.0 - clamp(d1, 0.0, 1.0)) * t_vnoise3(np * 2.9);
+		}
 		return clamp(d1, 0.0, 1.0);
 	} else if (ty < 2.5) {
 		// stratocumulus: broad low deck broken into lumpy rolls with gaps
@@ -169,7 +181,9 @@ float cloud_density(vec3 p, float sd, float ty, vec3 sc) {
 			float ng = fbm3(npg);
 			float bulge = t_vnoise3(npg * 0.45);
 			float dg = shg * 1.45 - 0.26 + (ng - 0.5) * 1.25 + (bulge - 0.5) * 0.55;
-			dg -= 0.26 * (1.0 - clamp(dg, 0.0, 1.0)) * t_vnoise3(npg * 3.1);
+			if (!CD_EXACT_SKIPS || (dg > 0.0 && dg < 1.0)) {
+				dg -= 0.26 * (1.0 - clamp(dg, 0.0, 1.0)) * t_vnoise3(npg * 3.1);
+			}
 			return clamp(dg * 1.3, 0.0, 1.0);
 		}
 		// stratus: a low featureless grey sheet with a soft ragged underside
@@ -211,6 +225,17 @@ void fragment() {
 	// world metres per local unit along this ray
 	float wl = length((MODEL_MATRIX * vec4(rd, 0.0)).xyz);
 
+	// Perf (v4.36): every cheap reject happens BEFORE the depth fetch and the march. A fragment whose back face is past the
+	// fade-out ends with ALPHA = 0 anyway, so it is dropped here instead of after a full march (identical picture).
+	float dist_cam = length(w_pos - CAMERA_POSITION_WORLD);
+	float fade = 1.0 - smoothstep(fade_near, fade_far, dist_cam);
+	if (fade < FADE_CULL) { discard; }
+	float center_dist = length(MODEL_MATRIX[3].xyz - CAMERA_POSITION_WORLD);
+	float max_r = max(max(v_sc.x, v_sc.y), v_sc.z);
+	if (center_dist - max_r > fade_far) { discard; }
+	float angular = max_r / max(center_dist, 1.0);
+	if (angular < 0.0005) { discard; }
+
 	// Clip the march at the opaque scene (terrain, aircraft).
 	float depth = texture(depth_tex, SCREEN_UV).x;
 	vec4 vp = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, depth, 1.0);
@@ -218,14 +243,8 @@ void fragment() {
 	t1 = min(t1, scene_dist / wl);
 	if (t1 <= t0) { discard; }
 
-	float dist_cam = length(w_pos - CAMERA_POSITION_WORLD);
 	// Cheap LOD: keep the near clouds at full sampling; distant or tiny clouds get coarser steps where
 	// the difference is below the pixel scale. Clouds whose whole extent is past the fade-out are not drawn.
-	float center_dist = length(MODEL_MATRIX[3].xyz - CAMERA_POSITION_WORLD);
-	float max_r = max(max(v_sc.x, v_sc.y), v_sc.z);
-	if (center_dist - max_r > fade_far) { discard; }
-	float angular = max_r / max(center_dist, 1.0);
-	if (angular < 0.0005) { discard; }
 	float lod_k = clamp(1.0 + (0.02 - angular) * 14.0, 1.0, 1.2);
 	// fewer steps for far clouds (they cover few pixels)
 	float span_m = (t1 - t0) * wl;
@@ -259,14 +278,18 @@ void fragment() {
 	vec3 acc = vec3(0.0);
 	float od = 0.0;        // sun optical depth and sky occlusion are refreshed every other step (cost)
 	float up_occ = 1.0;
+	bool lit_ok = false;   // a light refresh has happened on this ray (lazy refresh below reuses it)
+	int le_n = dist_cam > FAR_LIGHT_DIST ? light_every + 1 : light_every;
 	for (int i = 0; i < 60; i++) {
 		if (i >= steps) { break; }
 		vec3 p = ro + rd * t;
 		float d = cloud_density(p, sd, ty, v_sc);
 		if (d > 0.005) {
 			float sig = d * sigma_m * dt * wl;
+			float a = 1.0 - exp(-sig);
 			// optical depth toward the sun: three samples with growing spacing (integrated by segment length)
-			if ((i % light_every) == 0 && !thin_hi) {
+			if ((i % le_n) == 0 && !thin_hi && (!lit_ok || a >= LAZY_LIGHT_A)) {
+				lit_ok = true;
 				float da = cloud_density(p + l_sun * sh1 * 0.4, sd, ty, v_sc);
 				float db = cloud_density(p + l_sun * sh1, sd, ty, v_sc);
 				float dc = cloud_density(p + l_sun * sh1 * 2.2, sd, ty, v_sc);
@@ -283,7 +306,6 @@ void fragment() {
 			vec3 col = sun_e + amb * (thin_hi ? 1.4 : 1.0);
 			if (thin_hi) { col = mix(col, cloud_color.rgb, 0.55); }   // cirrus / cirrocumulus: bright, high, thin
 			if (ty > 8.5) { col *= 0.86; }                          // stratus: flat grey
-			float a = 1.0 - exp(-sig);
 			acc += T * a * col;
 			T *= 1.0 - a;
 			if (T < 0.03) { break; }
@@ -291,7 +313,6 @@ void fragment() {
 		t += dt;
 	}
 	float alpha = 1.0 - T;
-	float fade = 1.0 - smoothstep(fade_near, fade_far, dist_cam);
 	vec3 out_col = min(acc / max(alpha, 0.001) * light_level, vec3(1.15)) * mix(1.0, 0.40, stormy);
 	float out_a = clamp(alpha, 0.0, 1.0);
 	if (cel_k > 0.5) {

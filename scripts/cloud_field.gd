@@ -575,6 +575,9 @@ func set_detail(level: int) -> void:
 	var ms: Array = [30, 44, 60]
 	var le: Array = [3, 2, 2]
 	var l: int = clampi(level, 0, 2)
+	for ua in OS.get_cmdline_user_args():     # debug (--cloud-detail=0..2): force a level for a run, never saved
+		if String(ua).begins_with("--cloud-detail="):
+			l = clampi(int(String(ua).substr(15)), 0, 2)
 	mat.set_shader_parameter("step_k", sk[l])
 	mat.set_shader_parameter("max_steps", ms[l])
 	mat.set_shader_parameter("light_every", le[l])
